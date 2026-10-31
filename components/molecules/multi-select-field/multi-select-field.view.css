@@ -1,0 +1,176 @@
+@include "control.css";
+@include "field.css";
+
+.box {
+    box-sizing: border-box;
+    flex-wrap: wrap;
+    gap: var(--ui-space-gap-sm);
+    anchor-name: --c;
+    min-block-size: var(--control-height, var(--ui-size-control-md));
+    padding-block: var(--ui-space-gap-sm);
+    padding-inline: var(--ui-control-padding-inline);
+    color: var(--ui-color-text-base);
+    background: var(--ui-color-surface-base);
+    border: var(--ui-control-border) solid var(--ui-color-border-strong);
+    border-radius: var(--ui-control-radius);
+    cursor: text;
+    transition: border-color var(--ui-motion-duration-fast) var(--ui-motion-easing-standard);
+}
+
+.box:hover {
+    border-color: var(--ui-color-text-muted);
+}
+
+.box:focus-within {
+    border-color: var(--ui-color-focus);
+}
+
+.box:has(.control[aria-invalid="true"]) {
+    border-color: var(--ui-field-error-color);
+}
+
+.box:has(.control:disabled) {
+    color: var(--ui-color-text-disabled);
+    background: var(--ui-color-surface-sunken);
+    border-color: var(--ui-color-border-base);
+    cursor: not-allowed;
+}
+
+.box .control {
+    flex: 1 1 8ch;
+    inline-size: auto;
+    min-block-size: calc(var(--ui-size-icon-md) + var(--ui-space-gap-sm));
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    outline-color: transparent;
+}
+
+.chip {
+    box-sizing: border-box;
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: var(--ui-space-gap-sm);
+    max-inline-size: 100%;
+    padding-block: 0;
+    padding-inline: var(--ui-space-gap-md) var(--ui-space-gap-sm);
+    color: var(--ui-color-text-base);
+    background: var(--ui-color-surface-sunken);
+    border: var(--ui-border-width-thin) solid var(--ui-color-border-base);
+    border-radius: var(--ui-radius-sm);
+    font-size: var(--ui-text-caption-size);
+    line-height: var(--ui-text-caption-leading);
+}
+
+.chip-label {
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.remove {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
+    color: inherit;
+    background: transparent;
+    border: 0;
+    border-radius: var(--ui-radius-sm);
+    cursor: pointer;
+}
+
+.remove:hover:not(:disabled) {
+    color: var(--ui-field-error-color);
+}
+
+.remove:focus-visible {
+    outline: 2px solid var(--ui-color-focus);
+}
+
+.remove:disabled {
+    color: var(--ui-color-text-disabled);
+    cursor: not-allowed;
+}
+
+.popup {
+    box-sizing: border-box;
+    margin: 0;
+    margin-block: var(--ui-space-gap-sm);
+    border: 0;
+    inset: auto;
+    inline-size: anchor-size(inline);
+    max-block-size: calc(var(--ui-size-control-md) * 8);
+    padding: var(--ui-space-gap-sm);
+    overflow: auto;
+    position-anchor: --c;
+    position-area: block-end span-inline-end;
+    position-try-fallbacks: flip-block;
+    color: var(--ui-color-text-base);
+    background: var(--ui-color-surface-base);
+    border-radius: var(--ui-radius-md);
+    box-shadow: var(--ui-elevation-overlay-shadow);
+    font-family: var(--ui-text-body-family);
+    font-size: var(--ui-text-body-size);
+    line-height: var(--ui-text-body-leading);
+}
+
+.option,
+.busy,
+.hint {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    min-block-size: var(--ui-size-control-md);
+    padding-block: var(--ui-space-gap-sm);
+    padding-inline: var(--ui-space-inset-md);
+    border-radius: var(--ui-radius-sm);
+}
+
+.option {
+    cursor: pointer;
+}
+
+.option[data-active] {
+    background: var(--ui-color-surface-sunken);
+}
+
+.option[aria-selected="true"] {
+    font-weight: 600;
+    box-shadow: inset var(--ui-border-width-thick) 0 0 var(--ui-field-selected-fill);
+}
+
+.busy {
+    gap: var(--ui-space-gap-md);
+    color: var(--ui-color-text-muted);
+    font-size: var(--ui-text-caption-size);
+    cursor: default;
+}
+
+.ring {
+    box-sizing: border-box;
+    flex: none;
+    inline-size: var(--ui-size-icon-md);
+    block-size: var(--ui-size-icon-md);
+    border: var(--ui-border-width-thick) solid var(--ui-color-border-base);
+    border-top-color: currentColor;
+    border-radius: var(--ui-radius-full);
+    animation: spin calc(var(--ui-motion-duration-slow) * 2) linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.hint {
+    color: var(--ui-color-text-muted);
+    font-size: var(--ui-text-caption-size);
+    cursor: default;
+}

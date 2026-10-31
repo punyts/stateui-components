@@ -134,6 +134,7 @@ export function createField({ element, store, basePath }: ControllerContext, val
     const read = (name: string): unknown => store.get<unknown>(`${basePath}.${name}`);
     const same = (a: unknown, b: unknown): boolean => a === b || JSON.stringify(a) === JSON.stringify(b);
     let baseline = store.get<unknown>(valuePath);
+    let announced = JSON.stringify(baseline);
     const settings = (): FieldSettings => ({
         required: read('required') === true,
         minLength: typeof read('minLength') === 'number' ? (read('minLength') as number) : 0,
@@ -141,6 +142,8 @@ export function createField({ element, store, basePath }: ControllerContext, val
         min: read('min'),
         max: read('max'),
         step: typeof read('step') === 'number' ? (read('step') as number) : 0,
+        minSelected: typeof read('minSelected') === 'number' ? (read('minSelected') as number) : 0,
+        maxSelected: typeof read('maxSelected') === 'number' ? (read('maxSelected') as number) : 0,
         pattern: typeof read('pattern') === 'string' ? (read('pattern') as string) : ''
     });
     const raise = (name: string, detail: unknown): void => {
@@ -186,9 +189,12 @@ export function createField({ element, store, basePath }: ControllerContext, val
     };
     const onValue = (): void => {
         const value = store.get<unknown>(valuePath);
+        const snapshot = JSON.stringify(value);
+        if (snapshot === announced) return;
+        announced = snapshot;
         store.set(`${basePath}.dirty`, !same(value, baseline));
         if (read('touched') === true && managed === 'none') validate();
-        raise('change', { value });
+        raise('change', { value: Array.isArray(value) ? [...(value as unknown[])] : value });
     };
     const onBlur = (): void => {
         store.set(`${basePath}.touched`, true);

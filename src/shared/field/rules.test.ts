@@ -135,7 +135,23 @@ describe('failingRule', () => {
 
         // Assert
         expect(results).toEqual(['required', 'minLength', 'maxLength', 'min', 'max']);
-        expect(FIELD_RULES).toEqual(['required', 'minLength', 'maxLength', 'min', 'max', 'step', 'pattern']);
+        expect(FIELD_RULES).toEqual(['required', 'minLength', 'maxLength', 'min', 'max', 'step', 'minSelected', 'maxSelected', 'pattern']);
+    });
+
+    it('should fail minSelected and maxSelected by the number of chosen values, and pass an empty list unless it is required', () => {
+        // Act
+        const results = [
+            failingRule(['a'], settings({ minSelected: 2 })),
+            failingRule(['a', 'b'], settings({ minSelected: 2 })),
+            failingRule(['a', 'b', 'c'], settings({ maxSelected: 2 })),
+            failingRule(['a', 'b'], settings({ maxSelected: 2 })),
+            failingRule(['a', 'b', 'c'], settings({ minSelected: 0, maxSelected: 0 })),
+            failingRule([], settings({ minSelected: 2 })),
+            failingRule([], settings({ minSelected: 2, required: true }))
+        ];
+
+        // Assert
+        expect(results).toEqual(['minSelected', '', 'maxSelected', '', '', '', 'required']);
     });
 
     it('should reach pattern only when every earlier rule passes', () => {

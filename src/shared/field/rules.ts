@@ -1,5 +1,5 @@
 /** The rules a field checks, in the order it checks them; `error` holds the name of the first that fails */
-export const FIELD_RULES = ['required', 'minLength', 'maxLength', 'min', 'max', 'step', 'pattern'] as const;
+export const FIELD_RULES = ['required', 'minLength', 'maxLength', 'min', 'max', 'step', 'minSelected', 'maxSelected', 'pattern'] as const;
 
 export type FieldRule = (typeof FIELD_RULES)[number];
 
@@ -17,6 +17,9 @@ export interface FieldSettings {
     max: unknown;
     /** A number field's step: a value must lie a whole number of steps from `min` (from 0 without one). Absent or 0 means no step rule */
     step?: number;
+    /** A multi-select field's smallest and largest number of chosen values. Absent or 0 means no bound; an empty list fails only `required` */
+    minSelected?: number;
+    maxSelected?: number;
     /** A name from `NAMED_PATTERNS` or a regular expression; empty means none */
     pattern: string;
 }
@@ -86,6 +89,10 @@ export function failingRule(value: unknown, settings: FieldSettings): FieldRule 
     if (beyond(value, settings.min, 'below')) return 'min';
     if (beyond(value, settings.max, 'above')) return 'max';
     if (offStep(value, settings.step, settings.min)) return 'step';
+    if (Array.isArray(value)) {
+        if (typeof settings.minSelected === 'number' && settings.minSelected > 0 && value.length < settings.minSelected) return 'minSelected';
+        if (typeof settings.maxSelected === 'number' && settings.maxSelected > 0 && value.length > settings.maxSelected) return 'maxSelected';
+    }
     if (settings.pattern !== '') {
         const expression = patternOf(settings.pattern);
         if (expression === null || typeof value !== 'string' || !expression.test(value)) return 'pattern';

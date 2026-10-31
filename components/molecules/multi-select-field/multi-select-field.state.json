@@ -1,0 +1,62 @@
+{
+    "summary": "A labelled field whose value is a list: chosen options show as removable chips, a combobox adds more, optional tag mode",
+    "events": ["change", "invalid", "valid", "query"],
+    "commands": ["validate", "reset", "focus", "clear"],
+    "tokenGroup": "field",
+    "tokens": {
+        "selected": { "fill": "{color.accent.base}", "on": "{color.accent.on}" },
+        "error": { "color": "{color.danger.base}" },
+        "label": { "gap": "{space.gap.sm}", "width": "calc({size.control.lg} * 3)" },
+        "help": { "size": "{text.caption.size}" }
+    },
+    "shared": { "size": { "default": "md" }, "density": {} },
+    "properties": {
+        "options": {
+            "type": ["array", "map"],
+            "default": [],
+            "items": { "_label": { "type": "string", "kind": "content" } }
+        },
+        "optionValue": { "type": "string", "default": "value" },
+        "optionLabel": { "type": "string", "default": "label" },
+        "allowCustom": { "type": "boolean", "default": false },
+        "minChars": { "type": "integer", "default": 0, "validators": { "range": { "min": 0 } } },
+        "maxResults": { "type": "integer", "default": 50, "validators": { "range": { "min": 1 } } },
+        "minSelected": { "type": "integer", "default": 0, "validators": { "range": { "min": 0 } } },
+        "maxSelected": { "type": "integer", "default": 0, "validators": { "range": { "min": 0 } } },
+        "value": { "type": "array", "default": [] },
+        "disabled": { "type": "boolean", "default": false },
+        "readonly": { "type": "boolean", "default": false },
+        "titlePosition": { "type": "string", "values": ["top", "left", "inner", "hidden"], "default": "top", "reflect": true },
+        "width": { "type": ["string", "integer"], "default": "fill" },
+        "required": { "type": "boolean", "default": false },
+        "error": { "type": "string", "default": "", "runtime": true },
+        "touched": { "type": "boolean", "default": false, "runtime": true },
+        "dirty": { "type": "boolean", "default": false, "runtime": true },
+        "locked": { "type": "boolean", "default": false, "runtime": true },
+        "message": { "type": "string", "default": "", "runtime": true },
+        "text": { "type": "string", "default": "", "runtime": true },
+        "open": { "type": "boolean", "default": false, "runtime": true },
+        "chips": { "type": "object", "default": {}, "runtime": true },
+        "results": { "type": "object", "default": {}, "runtime": true },
+        "busy": { "type": "boolean", "default": false, "runtime": true },
+        "hint": { "type": "string", "default": "", "runtime": true },
+        "activeId": { "type": "string", "default": "", "runtime": true },
+        "_label": { "type": "string", "kind": "content", "default": "Label" },
+        "_placeholder": { "type": "string", "kind": "content", "default": "" },
+        "_help": { "type": "string", "kind": "content", "default": "" },
+        "_remove": { "type": "string", "kind": "content", "default": "Remove {label}" },
+        "_more": { "type": "string", "kind": "content", "default": "Keep typing to narrow the results" },
+        "_loading": { "type": "string", "kind": "content", "default": "Searching" },
+        "_empty": { "type": "string", "kind": "content", "default": "No matches" },
+        "_errors": {
+            "type": "map",
+            "items": "string",
+            "kind": "content",
+            "default": {
+                "required": "This field is required",
+                "minSelected": "Choose more options",
+                "maxSelected": "Too many options chosen"
+            }
+        }
+    }
+}
