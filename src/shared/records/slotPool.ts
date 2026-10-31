@@ -20,6 +20,11 @@ export interface SlotPoolOptions {
     overscan: () => number;
     /** Whether the record with that key is selected; a slot shows it as `slotSelected` */
     isSelected?: (key: string) => boolean;
+    /**
+     * Whether the records are paged (`total` is set): a position that has no record yet is then shown, as a pending slot
+     * (`slotPending`) whose `row` links to the shared empty record, instead of being hidden
+     */
+    paged?: () => boolean;
     /** Called once after a refresh that found the pinned record gone, with the position it had */
     onPinLost?: (position: number) => void;
     /** Called at the end of every refresh, when the slots show their positions */
@@ -77,6 +82,8 @@ interface Slot {
     target: string;
     selected: boolean;
     tab: boolean;
+    /** Whether the slot shows a position that has no record yet (paged data) */
+    pending: boolean;
 }
 
 const isEntry = (value: unknown): value is Entry => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -131,7 +138,7 @@ function removeLinked(tree: Entry, nodePath: string, links: readonly Link[]): vo
  * microtask
  */
 export function createSlotPool(options: SlotPoolOptions): SlotPool {
-    const { store, nodePath, rowPath, viewPath, countPath, index, overscan, isSelected, onPinLost, onSettled } = options;
+    const { store, nodePath, rowPath, viewPath, countPath, index, overscan, isSelected, paged, onPinLost, onSettled } = options;
     const runtime = runtimePath(nodePath);
     const slotsPath = `${runtime}.slots`;
     const windowPath = `${runtime}.window`;
@@ -172,12 +179,13 @@ export function createSlotPool(options: SlotPoolOptions): SlotPool {
         tree['slotIndex'] = -1;
         tree['slotSelected'] = false;
         tree['slotTab'] = false;
+        tree['slotPending'] = false;
         store.set(path, tree);
         store.link(rowLink(path), RUNTIME_PATHS.empty);
         for (const error of applyLinks(store, links)) {
             report.error(error.message, { code: error.code, path });
         }
-        return { path, links, position: -1, key: undefined, target: RUNTIME_PATHS.empty, selected: false, tab: false };
+        return { path, links, position: -1, key: undefined, target: RUNTIME_PATHS.empty, selected: false, tab: false, pending: false };
     };
 
     const destroySlot = (slot: Slot): void => {
@@ -212,6 +220,12 @@ export function createSlotPool(options: SlotPoolOptions): SlotPool {
         if (slot.selected === selected) return;
         slot.selected = selected;
         store.set(`${slot.path}.slotSelected`, selected);
+    };
+
+    const markPending = (slot: Slot, pending: boolean): void => {
+        if (slot.pending === pending) return;
+        slot.pending = pending;
+        store.set(`${slot.path}.slotPending`, pending);
     };
 
     const markTab = (first: number): void => {
@@ -287,6 +301,7 @@ export function createSlotPool(options: SlotPoolOptions): SlotPool {
         if (held !== undefined && pinKey !== undefined) {
             point(held, index.pathOf(pinKey) ?? RUNTIME_PATHS.empty);
             place(held, pinPosition);
+            markPending(held, false);
             mark(held);
         }
         for (let position = start; span > 0 && position < start + span; position++) {
@@ -295,6 +310,7 @@ export function createSlotPool(options: SlotPoolOptions): SlotPool {
                 point(slot, RUNTIME_PATHS.empty);
                 slot.key = undefined;
                 place(slot, -1);
+                markPending(slot, false);
                 mark(slot);
                 continue;
             }
@@ -307,7 +323,9 @@ export function createSlotPool(options: SlotPoolOptions): SlotPool {
                 slot.target = RUNTIME_PATHS.empty;
             }
             point(slot, target ?? RUNTIME_PATHS.empty);
-            place(slot, target === undefined ? -1 : position);
+            const pending = target === undefined && paged?.() === true;
+            place(slot, target === undefined && !pending ? -1 : position);
+            markPending(slot, pending);
             mark(slot);
         }
         markTab(win.first);

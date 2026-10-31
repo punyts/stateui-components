@@ -1,6 +1,7 @@
 import type { ControllerContext } from '@punyts/stateui';
 import { runtimePath } from '@punyts/stateui-app/core';
 import { createSortOrder, readSortDirection } from '../shared/order/sortOrder.js';
+import { readTotal } from '../shared/records/recordIndex.js';
 import type { RecordViewElement } from '../shared/records/recordView.js';
 import { createSelection, readSelectionMode } from '../shared/selection/selection.js';
 
@@ -83,7 +84,8 @@ function rowTemplate(columns: unknown): Entry {
  * too, through `createSortOrder`: `sortBy` and `sortDir` give the key array `order` in the table's runtime branch, aliased
  * as the body's `order`, so the data is not reordered and a selection survives a sort (it is held by key). A press on a
  * `sortable` column header with a `field` sorts by that field ascending, or flips the direction when it already sorts
- * the table, and raises `sort` with `{ sortBy, sortDir }`
+ * the table, and raises `sort` with `{ sortBy, sortDir }`. With `total` set the data is paged and the source sorts: no `order`
+ * is computed, and the header press still writes `sortBy` and `sortDir` (so the header shows them) and raises `sort`
  */
 export default function controller({ element, store, basePath }: ControllerContext) {
     const host = element as HTMLElement & CommandHost;
@@ -95,6 +97,7 @@ export default function controller({ element, store, basePath }: ControllerConte
     const selectablePath = `${basePath}.selectable`;
     const sortByPath = `${basePath}.sortBy`;
     const sortDirPath = `${basePath}.sortDir`;
+    const totalPath = `${basePath}.total`;
     const runtime = runtimePath(basePath);
     const currentPath = `${runtime}.current`;
     const currentAlias = `${basePath}.current`;
@@ -109,6 +112,7 @@ export default function controller({ element, store, basePath }: ControllerConte
         const value = read(keyPath);
         return typeof value === 'string' && value !== '' ? value : 'id';
     };
+    const paged = (): boolean => readTotal(read(totalPath)) !== undefined;
     const mode = () => readSelectionMode(read(selectablePath));
 
     //the store creates no parents, so each missing object between `$.runtime.nodes` and the table's branch is written first
@@ -182,7 +186,7 @@ export default function controller({ element, store, basePath }: ControllerConte
         recordsPath: itemsPath,
         orderPath,
         key: keyText,
-        sortBy: () => text(read(sortByPath)),
+        sortBy: () => (paged() ? '' : text(read(sortByPath))),
         direction: () => readSortDirection(read(sortDirPath)),
         schedule: (run) => {
             const id = requestAnimationFrame(run);
@@ -202,6 +206,7 @@ export default function controller({ element, store, basePath }: ControllerConte
         selection.relocate();
     };
     const onSort = (): void => sort.refresh();
+    const onTotal = (): void => sort.refresh();
 
     host.setAttribute('role', 'table');
     syncColumns();
@@ -213,6 +218,7 @@ export default function controller({ element, store, basePath }: ControllerConte
     store.on([keyPath], onKey);
     store.on([selectablePath], onSelectable);
     store.on(sortPaths, onSort);
+    store.on([totalPath], onTotal);
 
     /**
      * The body renders after the controller has returned, so `current` finds the selected record once it is there. The
@@ -300,6 +306,7 @@ export default function controller({ element, store, basePath }: ControllerConte
             store.off([keyPath], onKey);
             store.off([selectablePath], onSelectable);
             store.off(sortPaths, onSort);
+            store.off([totalPath], onTotal);
             sort.dispose();
             if (aliased) store.unlink(currentAlias);
             selection.dispose();

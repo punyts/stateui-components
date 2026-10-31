@@ -70,3 +70,24 @@
 .slot[hidden] {
     display: none;
 }
+
+.pending {
+    display: none;
+}
+
+.slot[data-pending] > sui-node {
+    visibility: hidden;
+}
+
+.slot[data-pending] > .pending {
+    position: absolute;
+    inset: 0;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    padding-inline: var(--ui-space-inset-md);
+}
+
+.pending ui-skeleton {
+    inline-size: 100%;
+}

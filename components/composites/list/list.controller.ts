@@ -1,6 +1,7 @@
 import type { ControllerContext } from '@punyts/stateui';
 import { runtimePath } from '@punyts/stateui-app/core';
 import { createSortOrder, readSortDirection } from '../shared/order/sortOrder.js';
+import { readTotal } from '../shared/records/recordIndex.js';
 import type { RecordViewElement } from '../shared/records/recordView.js';
 import { createSelection, readSelectionMode } from '../shared/selection/selection.js';
 
@@ -36,7 +37,9 @@ interface CommandHost {
  * record, found with the body's `locate`, or at the protected empty record `$.runtime.empty`.
  *
  * Sort: `sortBy` and `sortDir` give the key array `order`, written into the list's runtime branch and aliased as the
- * body's `order`; the data is not reordered. It is recomputed at most once per animation frame
+ * body's `order`; the data is not reordered. It is recomputed at most once per animation frame. With `total` set the data is
+ * paged and sorting is the source's job: no `order` is computed, and a change of `sortBy` or `sortDir` raises `sort`
+ * (`{ sortBy, sortDir }`) once per microtask
  */
 export default function controller({ element, store, basePath }: ControllerContext) {
     const host = element as Element & CommandHost;
@@ -47,6 +50,7 @@ export default function controller({ element, store, basePath }: ControllerConte
     const selectablePath = `${basePath}.selectable`;
     const sortByPath = `${basePath}.sortBy`;
     const sortDirPath = `${basePath}.sortDir`;
+    const totalPath = `${basePath}.total`;
     const currentPath = `${runtime}.current`;
     const currentAlias = `${basePath}.current`;
     const orderPath = `${runtime}.order`;
@@ -57,6 +61,7 @@ export default function controller({ element, store, basePath }: ControllerConte
         const value = store.get<unknown>(path);
         return typeof value === 'string' && value !== '' ? value : fallback;
     };
+    const paged = (): boolean => readTotal(store.get<unknown>(totalPath)) !== undefined;
     const mode = () => readSelectionMode(store.get<unknown>(selectablePath));
 
     //the store creates no parents, so each missing object between `$.runtime.nodes` and the list's branch is written first
@@ -115,7 +120,7 @@ export default function controller({ element, store, basePath }: ControllerConte
         recordsPath: itemsPath,
         orderPath,
         key: () => text(keyPath, 'id'),
-        sortBy: () => text(sortByPath, ''),
+        sortBy: () => (paged() ? '' : text(sortByPath, '')),
         direction: () => readSortDirection(store.get<unknown>(sortDirPath)),
         schedule: (run) => {
             const id = requestAnimationFrame(run);
@@ -134,11 +139,24 @@ export default function controller({ element, store, basePath }: ControllerConte
         syncRole();
         selection.relocate();
     };
-    const onSort = (): void => sort.refresh();
+    let raising = false;
+    const onSort = (): void => {
+        sort.refresh();
+        if (!paged() || raising) return;
+        raising = true;
+        queueMicrotask(() => {
+            raising = false;
+            if (disposed || !paged()) return;
+            const detail = { sortBy: text(sortByPath, ''), sortDir: readSortDirection(store.get<unknown>(sortDirPath)) };
+            element.dispatchEvent(new CustomEvent('sort', { detail, bubbles: true, composed: true }));
+        });
+    };
+    const onTotal = (): void => sort.refresh();
     const sortPaths = [sortByPath, sortDirPath];
     store.on([keyPath], onKey);
     store.on([selectablePath], onSelectable);
     store.on(sortPaths, onSort);
+    store.on([totalPath], onTotal);
 
     /**
      * The body renders after the controller has returned, so `current` finds the selected record once it is there. The
@@ -209,6 +227,7 @@ export default function controller({ element, store, basePath }: ControllerConte
             store.off([keyPath], onKey);
             store.off([selectablePath], onSelectable);
             store.off(sortPaths, onSort);
+            store.off([totalPath], onTotal);
             sort.dispose();
             if (aliased) store.unlink(currentAlias);
             selection.dispose();

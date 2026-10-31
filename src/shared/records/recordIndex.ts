@@ -14,6 +14,12 @@ export interface RecordIndexOptions {
     /** The field of an array record that holds its key (`id`); a keyed map is keyed by its own keys */
     key: string;
     /**
+     * The optional path of `total`, the number of positions at a paged source. With a non-negative integer there, the
+     * records are read by position (an array, or a map keyed by position; the key is the `key` field of the record),
+     * `size()` is the total, `order` is ignored and a position with no record has no key
+     */
+    totalPath?: string;
+    /**
      * Called after the positions or the keys changed, so a pool can show the new ones. `reload` is true when records moved
      * to other array indexes without the store announcing it, so the slots that show them must be pointed again even at the same path
      */
@@ -32,6 +38,10 @@ export interface RecordIndex {
     locate(key: string): string;
     /** The position of the record with that key, or `undefined` when no position shows it */
     positionOf(key: string): number | undefined;
+    /** Whether `total` is set, so the records are paged and read by position */
+    paged(): boolean;
+    /** The keys of the loaded records in position order; for a paged source, only the positions that hold a record */
+    loadedKeys(): string[];
     /** Takes another key field and reads the records again */
     setKey(key: string): void;
     /** Removes every listener */
@@ -47,6 +57,11 @@ const keyText = (value: unknown): string | undefined => {
     return typeof value === 'number' && Number.isFinite(value) ? String(value) : undefined;
 };
 
+/** The total a stored value names: a non-negative integer, otherwise `undefined` (the records are not paged) */
+export function readTotal(value: unknown): number | undefined {
+    return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : undefined;
+}
+
 const keyOf = (record: unknown, field: string): string | undefined =>
     record !== null && typeof record === 'object' ? keyText((record as Record<string, unknown>)[field]) : undefined;
 
@@ -57,13 +72,14 @@ const keyOf = (record: unknown, field: string): string | undefined =>
  * are its entries that name a record
  */
 export function createRecordIndex(options: RecordIndexOptions): RecordIndex {
-    const { store, recordsPath, orderPath, onChange } = options;
+    const { store, recordsPath, orderPath, totalPath, onChange } = options;
     let field = options.key;
     let kind: Kind = 'none';
     const indexOfKey = new Map<string, number>();
     const mapKeys: string[] = [];
     const mapKeySet = new Set<string>();
     let knownLength = 0;
+    let pagedTotal: number | undefined = totalPath === undefined ? undefined : readTotal(store.get<unknown>(totalPath));
     let ordered: string[] | undefined;
     const orderedAt = new Map<string, number>();
 
@@ -90,6 +106,11 @@ export function createRecordIndex(options: RecordIndexOptions): RecordIndex {
             kind = 'map';
             for (const key of store.keys(recordsPath)) {
                 if (typeof key !== 'string') continue;
+                if (pagedTotal !== undefined) {
+                    const recordKey = keyOf((records as Record<string, unknown>)[key], field);
+                    if (recordKey !== undefined && ARRAY_INDEX.test(key)) indexOfKey.set(recordKey, Number(key));
+                    continue;
+                }
                 mapKeys.push(key);
                 mapKeySet.add(key);
             }
@@ -101,7 +122,7 @@ export function createRecordIndex(options: RecordIndexOptions): RecordIndex {
     const readOrder = (): void => {
         const order = store.get<unknown>(orderPath);
         orderedAt.clear();
-        if (!Array.isArray(order)) {
+        if (pagedTotal !== undefined || !Array.isArray(order)) {
             ordered = undefined;
             return;
         }
@@ -155,6 +176,12 @@ export function createRecordIndex(options: RecordIndexOptions): RecordIndex {
             return;
         }
         if (kind !== 'map') return;
+        if (pagedTotal !== undefined) {
+            if (!ARRAY_INDEX.test(segment)) return;
+            moveKey(Number(segment), keyOf(oldValue, field), action === 'delete' ? undefined : keyOf(value, field));
+            changed();
+            return;
+        }
         if (action === 'insert' && !mapKeySet.has(segment)) {
             mapKeySet.add(segment);
             mapKeys.push(segment);
@@ -179,7 +206,7 @@ export function createRecordIndex(options: RecordIndexOptions): RecordIndex {
         if (segment === undefined) return;
         if (segments.length === 1) {
             onElement(segment, value, oldValue, action);
-        } else if (segments.length === 2 && rest === field && kind === 'array' && ARRAY_INDEX.test(segment)) {
+        } else if (segments.length === 2 && rest === field && (kind === 'array' || (kind === 'map' && pagedTotal !== undefined)) && ARRAY_INDEX.test(segment)) {
             moveKey(Number(segment), keyText(oldValue), keyText(value));
             changed();
         }
@@ -190,14 +217,31 @@ export function createRecordIndex(options: RecordIndexOptions): RecordIndex {
         onChange(false);
     };
 
+    const onTotal = (): void => {
+        const next = totalPath === undefined ? undefined : readTotal(store.get<unknown>(totalPath));
+        if (next === pagedTotal) return;
+        const modeChanged = (next === undefined) !== (pagedTotal === undefined);
+        pagedTotal = next;
+        if (modeChanged) {
+            readRecords();
+            readOrder();
+        }
+        onChange(modeChanged);
+    };
+
     const recordPaths = (): string[] => [recordsPath, `${recordsPath}.$every`, `${recordsPath}.$every.${field}`];
     const orderPaths = [orderPath, `${orderPath}.$all`];
     store.on(recordPaths(), onRecords);
     store.on(orderPaths, onOrder);
+    if (totalPath !== undefined) store.on([totalPath], onTotal);
     readRecords();
     readOrder();
 
     const pathOf = (key: string): string | undefined => {
+        if (pagedTotal !== undefined) {
+            const at = indexOfKey.get(key);
+            return at === undefined || at >= pagedTotal ? undefined : `${recordsPath}.${at}`;
+        }
         if (kind === 'array') {
             const index = indexOfKey.get(key);
             return index === undefined ? undefined : `${recordsPath}.${index}`;
@@ -206,21 +250,47 @@ export function createRecordIndex(options: RecordIndexOptions): RecordIndex {
     };
 
     const positionOf = (key: string): number | undefined => {
+        if (pagedTotal !== undefined) {
+            const at = indexOfKey.get(key);
+            return at === undefined || at >= pagedTotal ? undefined : at;
+        }
         if (ordered !== undefined) return orderedAt.get(key);
         if (kind === 'array') return indexOfKey.get(key);
         const at = kind === 'map' && mapKeySet.has(key) ? mapKeys.indexOf(key) : -1;
         return at < 0 ? undefined : at;
     };
 
+    const size = (): number => {
+        if (pagedTotal !== undefined) return pagedTotal;
+        if (ordered !== undefined) return ordered.length;
+        return kind === 'array' ? arrayLength() : mapKeys.length;
+    };
+
+    const keyAt = (position: number): string | undefined => {
+        if (pagedTotal !== undefined) return position < pagedTotal ? keyText(store.get<unknown>(`${recordsPath}.${position}.${field}`)) : undefined;
+        if (ordered !== undefined) return ordered[position];
+        if (kind === 'array') return keyText(store.get<unknown>(`${recordsPath}.${position}.${field}`));
+        return mapKeys[position];
+    };
+
     return {
-        size() {
-            if (ordered !== undefined) return ordered.length;
-            return kind === 'array' ? arrayLength() : mapKeys.length;
-        },
-        keyAt(position) {
-            if (ordered !== undefined) return ordered[position];
-            if (kind === 'array') return keyText(store.get<unknown>(`${recordsPath}.${position}.${field}`));
-            return mapKeys[position];
+        size,
+        keyAt,
+        paged: () => pagedTotal !== undefined,
+        loadedKeys() {
+            if (pagedTotal === undefined) {
+                const keys: string[] = [];
+                for (let position = 0; position < size(); position++) {
+                    const key = keyAt(position);
+                    if (key !== undefined) keys.push(key);
+                }
+                return keys;
+            }
+            const limit = pagedTotal;
+            return [...indexOfKey]
+                .filter(([, position]) => position < limit)
+                .sort((a, b) => a[1] - b[1])
+                .map(([key]) => key);
         },
         pathOf,
         positionOf,
@@ -237,6 +307,7 @@ export function createRecordIndex(options: RecordIndexOptions): RecordIndex {
         dispose() {
             store.off(recordPaths(), onRecords);
             store.off(orderPaths, onOrder);
+            if (totalPath !== undefined) store.off([totalPath], onTotal);
         }
     };
 }

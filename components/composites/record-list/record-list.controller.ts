@@ -24,6 +24,12 @@ const TEXT_ENTRY = new Set(['input', 'textarea', 'select']);
  * the window and then its slot is focused. The slot that holds focus is pinned while its record is out of the window;
  * when its record is deleted focus moves to the neighbouring row. `locate(key)`, `keyAt(position)` and `recordKeys()` are
  * on the element, `scrollTo` is a command, and `loading` shows skeleton rows over the visible rows.
+ *
+ * Paged data: with `total` set (a non-negative integer) the count, `aria-rowcount` / `aria-setsize` and the `range` event's
+ * `total` come from it, the records are read by position (an array, or a map keyed by position) and `order` is ignored. A
+ * position with no record yet is a pending slot: a `skeleton` is shown in it and its `row` links to `$.runtime.empty` until the
+ * source writes the record. `recordKeys()` lists only the loaded records. The view never fetches; `range` tells the source
+ * which positions to load.
  */
 export default function controller({ element, store, basePath }: ControllerContext) {
     const host = element as RecordViewElement;
@@ -90,6 +96,7 @@ export default function controller({ element, store, basePath }: ControllerConte
         store,
         recordsPath: `${basePath}.records`,
         orderPath: `${basePath}.order`,
+        totalPath: `${basePath}.total`,
         key: text(keyPath, 'id'),
         onChange: (reload) => pool?.invalidate(reload)
     });
@@ -127,6 +134,7 @@ export default function controller({ element, store, basePath }: ControllerConte
             return typeof value === 'number' ? value : 5;
         },
         isSelected: (key) => selection.has(key),
+        paged: () => index.paged(),
         onPinLost: (position) => moveTo(Math.min(position, index.size() - 1)),
         onSettled: () => {
             const key = pool?.pinned();
@@ -209,14 +217,7 @@ export default function controller({ element, store, basePath }: ControllerConte
 
     host.locate = (key) => index.locate(key);
     host.keyAt = (position) => index.keyAt(position);
-    host.recordKeys = () => {
-        const keys: string[] = [];
-        for (let position = 0; position < index.size(); position++) {
-            const key = index.keyAt(position);
-            if (key !== undefined) keys.push(key);
-        }
-        return keys;
-    };
+    host.recordKeys = () => index.loadedKeys();
     host.commands = {
         scrollTo: (value) => {
             const key = typeof value === 'string' || typeof value === 'number' ? String(value) : '';

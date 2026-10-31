@@ -1,4 +1,4 @@
-export { createRecordIndex } from './recordIndex.js';
+export { createRecordIndex, readTotal } from './recordIndex.js';
 export type { RecordIndex, RecordIndexOptions, RecordStore } from './recordIndex.js';
 export { createSlotPool } from './slotPool.js';
 export type { SlotPool, SlotPoolOptions } from './slotPool.js';
