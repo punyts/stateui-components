@@ -1,0 +1,94 @@
+:host {
+    display: block;
+}
+
+.nav {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--ui-pagination-gap);
+    font-family: var(--ui-text-body-family);
+    font-size: var(--ui-text-body-size);
+    line-height: var(--ui-text-body-leading);
+    color: var(--ui-color-text-base);
+}
+
+.pages {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--ui-pagination-gap);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.entry {
+    display: inline-flex;
+}
+
+.step,
+.page {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--ui-pagination-gap);
+    min-inline-size: var(--ui-size-control-md);
+    min-block-size: var(--ui-size-control-md);
+    margin: 0;
+    padding-block: 0;
+    padding-inline: var(--ui-space-inset-sm);
+    font: inherit;
+    color: var(--ui-color-text-base);
+    background: var(--ui-color-surface-base);
+    border: var(--ui-border-width-thin) solid var(--ui-color-border-strong);
+    border-radius: var(--ui-pagination-radius);
+    cursor: pointer;
+    transition:
+        background-color var(--ui-motion-duration-fast) var(--ui-motion-easing-standard),
+        border-color var(--ui-motion-duration-fast) var(--ui-motion-easing-standard);
+}
+
+.step:hover:not(:disabled),
+.page:hover:not([aria-current]) {
+    background: var(--ui-color-surface-sunken);
+}
+
+.step:focus-visible,
+.page:focus-visible {
+    outline: 2px solid var(--ui-color-focus);
+    outline-offset: 2px;
+}
+
+.page[aria-current] {
+    color: var(--ui-pagination-selected-on);
+    background: var(--ui-pagination-selected-fill);
+    border-color: var(--ui-pagination-selected-fill);
+    font-weight: 600;
+    cursor: default;
+}
+
+.step:disabled {
+    color: var(--ui-color-text-disabled);
+    background: var(--ui-color-surface-sunken);
+    border-color: var(--ui-color-border-base);
+    cursor: not-allowed;
+}
+
+.gap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--ui-size-control-md);
+    color: var(--ui-color-text-muted);
+}
+
+.status {
+    color: var(--ui-color-text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.size {
+    margin-inline-start: auto;
+}

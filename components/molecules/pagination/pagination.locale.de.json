@@ -1,0 +1,7 @@
+{
+    "_label": "Seitennavigation",
+    "_previous": "Zurück",
+    "_next": "Weiter",
+    "_page": "Seite {page}",
+    "_pageSize": "Zeilen pro Seite"
+}

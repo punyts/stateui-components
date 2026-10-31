@@ -1,0 +1,18 @@
+<nav class="nav" aria-label="{{ $._label }}">
+    <button class="step previous" type="button" disabled="{{ $.current &lt;= 1 }}" onclick="{{ onPrevious }}">
+        <ui-icon name="chevron-left" size="sm"></ui-icon>
+        <span class="text">{{ $._previous }}</span>
+    </button>
+    <ol class="pages" if="{{ !$.compact }}">
+        <li class="entry" repeat="{{ $k,$i,$v in $.entries }}" key="{{ $k }}">
+            <button class="page" type="button" if="{{ $v.kind === 'page' }}" data-page="{{ $v.page }}" aria-label="{{ $v.name }}" aria-current="{{ $v.current ? 'page' : null }}" onclick="{{ onPage }}">{{ $v.page }}</button>
+            <span class="gap" if="{{ $v.kind === 'gap' }}" aria-hidden="true">&#8230;</span>
+        </li>
+    </ol>
+    <span class="status" if="{{ $.compact }}" aria-live="polite">{{ $.current }} / {{ $.pages }}</span>
+    <button class="step next" type="button" disabled="{{ $.current &gt;= $.pages }}" onclick="{{ onNext }}">
+        <span class="text">{{ $._next }}</span>
+        <ui-icon name="chevron-right" size="sm"></ui-icon>
+    </button>
+    <ui-select class="size" if="{{ $.pageSizes.length &gt; 0 }}" state=".sizes" onchange="{{ onSizeEvent }}"></ui-select>
+</nav>

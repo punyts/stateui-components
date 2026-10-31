@@ -1,0 +1,12 @@
+<nav class="nav" aria-label="{{ $._label }}">
+    <ol class="list">
+        <li class="crumb" repeat="{{ $k,$i,$v in $.crumbs }}" key="{{ $k }}" data-kind="{{ $v.kind }}" onselect="{{ onMenuSelect }}">
+            <span class="separator" aria-hidden="true" if="{{ $i > 0 }}"><ui-icon name="chevron-right" size="sm"></ui-icon></span>
+            <button class="link" type="button" if="{{ $v.kind === 'item' }}" data-key="{{ $v.key }}" onclick="{{ onPick }}">{{ $v.label }}</button>
+            <span class="page" if="{{ $v.kind === 'current' }}" aria-current="page">{{ $v.label }}</span>
+            <span class="more" if="{{ $v.kind === 'more' &amp;&amp; $v.ready }}">
+                <sui-node if="{{ $.overflow }}" repeat="{{ $ok,$oi,$ov in $.overflow }}" key="{{ $ok }}" state="{{ $ov }}"></sui-node>
+            </span>
+        </li>
+    </ol>
+</nav>

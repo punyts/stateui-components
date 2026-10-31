@@ -1,0 +1,26 @@
+{
+    "summary": "Page buttons for server-paged data: first, last, pages around the current one, previous, next, page size",
+    "events": ["change"],
+    "tokens": {
+        "selected": { "fill": "{color.accent.base}", "on": "{color.accent.on}" },
+        "radius": "{radius.md}",
+        "gap": "{space.gap.sm}"
+    },
+    "properties": {
+        "siblings": { "type": "integer", "default": 1, "validators": { "range": { "min": 0 } } },
+        "pageSizes": { "type": "array", "default": [] },
+        "compact": { "type": "boolean", "default": false, "reflect": true },
+        "page": { "type": "integer", "default": 1, "validators": { "range": { "min": 1 } } },
+        "pageSize": { "type": "integer", "default": 10, "validators": { "range": { "min": 1 } } },
+        "total": { "type": "integer", "default": 0, "validators": { "range": { "min": 0 } } },
+        "pages": { "type": "integer", "default": 1, "runtime": true },
+        "current": { "type": "integer", "default": 1, "runtime": true },
+        "entries": { "type": "object", "default": {}, "runtime": true },
+        "sizes": { "type": "object", "default": {}, "runtime": true },
+        "_label": { "type": "string", "kind": "content", "default": "Pagination" },
+        "_previous": { "type": "string", "kind": "content", "default": "Previous" },
+        "_next": { "type": "string", "kind": "content", "default": "Next" },
+        "_page": { "type": "string", "kind": "content", "default": "Page {page}" },
+        "_pageSize": { "type": "string", "kind": "content", "default": "Rows per page" }
+    }
+}

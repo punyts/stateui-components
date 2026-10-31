@@ -1,0 +1,22 @@
+{
+    "summary": "A breadcrumb trail of where the user is: links to the levels above, the current page, the middle collapsed into a menu",
+    "events": ["select"],
+    "tokens": {
+        "gap": "{space.gap.sm}"
+    },
+    "properties": {
+        "items": {
+            "type": "map",
+            "items": {
+                "_label": { "type": "string", "kind": "content", "default": "" }
+            },
+            "default": {}
+        },
+        "current": { "type": "string", "default": "" },
+        "maxVisible": { "type": "integer", "default": 4, "validators": { "range": { "min": 2 } } },
+        "crumbs": { "type": "object", "default": {}, "runtime": true },
+        "overflow": { "type": "object", "default": {}, "runtime": true },
+        "_label": { "type": "string", "kind": "content", "default": "Breadcrumb" },
+        "_more": { "type": "string", "kind": "content", "default": "Show hidden levels" }
+    }
+}
