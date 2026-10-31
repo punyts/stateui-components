@@ -1,0 +1,21 @@
+{
+    "summary": "A surface with media, header, body and footer slots; interactive raises press",
+    "shared": { "elevation": { "default": "raised" }, "density": {} },
+    "layout": true,
+    "events": ["press"],
+    "tokens": {
+        "radius": "{radius.md}",
+        "padding": "{space.inset.md}",
+        "gap": "{space.gap.md}"
+    },
+    "properties": {
+        "interactive": { "type": "boolean", "default": false, "reflect": true },
+        "selected": { "type": "boolean", "default": false, "reflect": true },
+        "padding": { "type": "string", "values": ["md", "none", "sm", "lg"], "default": "md", "reflect": true },
+        "_title": { "type": "string", "kind": "content", "default": "" },
+        "_subtitle": { "type": "string", "kind": "content", "default": "" },
+        "media": { "type": "node" },
+        "actions": { "type": "node" },
+        "footer": { "type": "node" }
+    }
+}

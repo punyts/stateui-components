@@ -1,0 +1,7 @@
+<div class="search">
+    <ui-icon class="icon" name="search" size="{{ $.size }}"></ui-icon>
+    <input class="control" type="search" aria-label="{{ $._label }}" placeholder="{{ $._placeholder }}" value="{{ $.value }}" bind="value" oninput="{{ onInput }}" onchange="{{ onChange }}" onkeydown="{{ onKeydown }}" onsearch="{{ onSearch }}" />
+    <button class="clear" type="button" aria-label="{{ $._clearLabel }}" if="{{ $.value !== '' }}" onclick="{{ onClear }}">
+        <ui-icon name="x" size="{{ $.size }}"></ui-icon>
+    </button>
+</div>

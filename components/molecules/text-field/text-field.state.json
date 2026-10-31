@@ -1,5 +1,7 @@
 {
     "summary": "A labelled single-line text field with optional icon, help and error text",
+    "events": ["change"],
+    "commands": ["validate", "reset"],
     "tokenGroup": "field",
     "tokens": {
         "label": { "gap": "{space.gap.sm}", "width": "calc({size.control.lg} * 3)" },
@@ -14,7 +16,15 @@
         "readonly": { "type": "boolean", "default": false },
         "titlePosition": { "type": "string", "values": ["top", "left", "inner", "hidden"], "default": "top", "reflect": true },
         "width": { "type": ["string", "integer"], "default": "fill" },
+        "required": { "type": "boolean", "default": false },
+        "minLength": { "type": "integer", "default": 0, "validators": { "range": { "min": 0 } } },
+        "maxLength": { "type": "integer", "default": 0, "validators": { "range": { "min": 0 } } },
+        "min": { "type": ["number", "string"], "default": "" },
+        "max": { "type": ["number", "string"], "default": "" },
+        "pattern": { "type": "string", "default": "", "validators": { "regex": 120 } },
         "error": { "type": "string", "default": "", "runtime": true },
+        "touched": { "type": "boolean", "default": false, "runtime": true },
+        "dirty": { "type": "boolean", "default": false, "runtime": true },
         "message": { "type": "string", "default": "", "runtime": true },
         "glyph": { "type": "object", "default": { "name": "", "decorative": true }, "runtime": true },
         "_label": { "type": "string", "kind": "content", "default": "Label" },

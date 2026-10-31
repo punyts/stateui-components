@@ -1,0 +1,8 @@
+<button class="item" type="button" aria-current="{{ $.selected ? 'true' : null }}" aria-describedby="{{ $._description !== '' ? 'description' : null }}" disabled="{{ $.disabled }}" onclick="{{ onClick }}">
+    <span class="glyph" icon-paths="icon" aria-hidden="true" if="{{ $.icon !== '' }}"></span>
+    <span class="text">
+        <span class="label">{{ $._label }}</span>
+        <span class="description" id="description" if="{{ $._description !== '' }}">{{ $._description }}</span>
+    </span>
+    <kbd class="shortcut" if="{{ $.shortcut !== '' }}">{{ $.shortcut }}</kbd>
+</button>

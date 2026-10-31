@@ -1,0 +1,81 @@
+:host {
+    display: block;
+}
+
+.item {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space-gap-md);
+    inline-size: 100%;
+    min-block-size: var(--ui-size-control-md);
+    margin: 0;
+    padding-block: var(--ui-space-gap-sm);
+    padding-inline: var(--ui-space-inset-md);
+    font-family: var(--ui-text-body-family);
+    font-size: var(--ui-text-body-size);
+    font-weight: var(--ui-text-body-weight);
+    line-height: var(--ui-text-body-leading);
+    color: var(--ui-color-text-base);
+    text-align: start;
+    background: transparent;
+    border: 0;
+    border-radius: var(--ui-radius-md);
+    cursor: pointer;
+    transition: background-color var(--ui-motion-duration-fast) var(--ui-motion-easing-standard);
+}
+
+.item:hover:not(:disabled) {
+    background: var(--ui-color-surface-sunken);
+}
+
+:host([selected]) .item {
+    font-weight: 600;
+    background: var(--ui-color-surface-sunken);
+    box-shadow: inset var(--ui-border-width-thick) 0 0 var(--ui-color-text-base);
+}
+
+.glyph {
+    display: inline-flex;
+    flex: none;
+    inline-size: var(--ui-size-icon-md);
+    block-size: var(--ui-size-icon-md);
+}
+
+.glyph svg {
+    inline-size: 100%;
+    block-size: 100%;
+}
+
+.glyph .outline {
+    stroke-width: var(--ui-icon-stroke);
+}
+
+.text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-inline-size: 0;
+}
+
+.description {
+    font-size: var(--ui-text-caption-size);
+    color: var(--ui-color-text-muted);
+}
+
+.shortcut {
+    flex: none;
+    font-family: inherit;
+    font-size: var(--ui-text-caption-size);
+    color: var(--ui-color-text-muted);
+}
+
+.item:disabled {
+    color: var(--ui-color-text-disabled);
+    cursor: not-allowed;
+}
+
+.item:disabled .description,
+.item:disabled .shortcut {
+    color: var(--ui-color-text-disabled);
+}

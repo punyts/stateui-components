@@ -1,0 +1,94 @@
+:host {
+    display: block;
+}
+
+.surface {
+    --pad: var(--ui-card-padding);
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: var(--ui-card-gap);
+    padding-block: var(--pad);
+    overflow: hidden;
+    color: var(--ui-color-text-base);
+    background: var(--surface);
+    border: var(--ui-border-width-thin) solid var(--ui-color-border-base);
+    border-radius: var(--ui-card-radius);
+    box-shadow: var(--shadow);
+    font-family: var(--ui-text-body-family);
+    font-size: var(--ui-text-body-size);
+    line-height: var(--ui-text-body-leading);
+}
+
+:host([padding=none]) .surface {
+    --pad: 0px;
+}
+
+:host([padding=sm]) .surface {
+    --pad: calc(var(--ui-card-padding) * 0.5);
+}
+
+:host([padding=lg]) .surface {
+    --pad: calc(var(--ui-card-padding) * 1.5);
+}
+
+:host([interactive]) .surface {
+    cursor: pointer;
+}
+
+:host([selected]) .surface {
+    background: var(--ui-color-accent-soft);
+    border-color: var(--ui-color-accent-base);
+}
+
+.media {
+    display: block;
+    margin-block-start: calc(var(--pad) * -1);
+    margin-inline: calc(var(--pad) * -1);
+}
+
+.media > sui-node > * {
+    display: block;
+}
+
+.header,
+.body,
+.footer {
+    padding-inline: var(--pad);
+}
+
+.body:not(:has(> sui-node)) {
+    display: none;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--ui-card-gap);
+}
+
+.heading {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+}
+
+.title {
+    font-family: var(--ui-text-heading-family);
+    font-size: var(--ui-text-heading-size);
+    font-weight: var(--ui-text-heading-weight);
+    line-height: var(--ui-text-heading-leading);
+}
+
+.subtitle {
+    color: var(--ui-color-text-muted);
+    font-size: var(--ui-text-caption-size);
+    line-height: var(--ui-text-caption-leading);
+}
+
+.actions {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: var(--ui-card-gap);
+}

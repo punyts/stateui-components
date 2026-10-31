@@ -1,0 +1,49 @@
+@include "control.css";
+
+:host {
+    display: block;
+}
+
+.search {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.control {
+    padding-inline-start: calc(var(--icon-size, var(--ui-size-icon-md)) + (var(--ui-control-padding-inline) * 2));
+    padding-inline-end: calc(var(--icon-size, var(--ui-size-icon-md)) + (var(--ui-control-padding-inline) * 2));
+    block-size: var(--control-height, var(--ui-size-control-md));
+}
+
+.control::-webkit-search-cancel-button,
+.control::-webkit-search-decoration {
+    appearance: none;
+    display: none;
+}
+
+.icon {
+    position: absolute;
+    inset-inline-start: var(--ui-control-padding-inline);
+    color: var(--ui-color-text-muted);
+    pointer-events: none;
+}
+
+.clear {
+    position: absolute;
+    inset-inline-end: var(--ui-control-padding-inline);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
+    color: var(--ui-color-text-muted);
+    background: transparent;
+    border: 0;
+    border-radius: var(--ui-control-radius);
+    cursor: pointer;
+}
+
+.clear:hover {
+    color: var(--ui-color-text-base);
+}

@@ -1,0 +1,12 @@
+{
+    "summary": "One entry of a menu or navigation: an icon, a label, a description and a shortcut hint",
+    "events": ["press"],
+    "properties": {
+        "icon": { "type": "icon", "default": "" },
+        "disabled": { "type": "boolean", "default": false },
+        "selected": { "type": "boolean", "default": false, "reflect": true },
+        "shortcut": { "type": "string", "default": "" },
+        "_label": { "type": "string", "kind": "content", "default": "Menu item" },
+        "_description": { "type": "string", "kind": "content", "default": "" }
+    }
+}

@@ -1,0 +1,10 @@
+{
+    "summary": "What a list, table or page shows when it has no content: an icon, a title, a text and actions",
+    "shared": {},
+    "properties": {
+        "icon": { "type": "icon", "default": "" },
+        "_title": { "type": "string", "kind": "content", "default": "Nothing here yet" },
+        "_text": { "type": "string", "kind": "content", "default": "" },
+        "actions": { "type": "node" }
+    }
+}

@@ -1,0 +1,20 @@
+<div class="surface" role="{{ $.interactive ? 'button' : null }}" tabindex="{{ $.interactive ? 0 : null }}" aria-pressed="{{ $.interactive ? ($.selected ? 'true' : 'false') : null }}" onclick="{{ onClick }}" onkeydown="{{ onKeyDown }}" onpress="{{ onInnerPress }}">
+    <div class="media" if="{{ $.media }}">
+        <sui-node state=".media"></sui-node>
+    </div>
+    <div class="header" if="{{ ($._title !== '') || ($._subtitle !== '') || $.actions }}">
+        <div class="heading">
+            <div class="title" if="{{ $._title !== '' }}">{{ $._title }}</div>
+            <div class="subtitle" if="{{ $._subtitle !== '' }}">{{ $._subtitle }}</div>
+        </div>
+        <div class="actions" if="{{ $.actions }}">
+            <sui-node state=".actions"></sui-node>
+        </div>
+    </div>
+    <div class="body" layout-host="">
+        <sui-node repeat="{{ $k,$i,$v in $.children }}" key="{{ $k }}" state="{{ $v }}"></sui-node>
+    </div>
+    <div class="footer" if="{{ $.footer }}">
+        <sui-node state=".footer"></sui-node>
+    </div>
+</div>

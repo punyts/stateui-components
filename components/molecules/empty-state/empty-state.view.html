@@ -1,0 +1,8 @@
+<div class="empty">
+    <span class="glyph" icon-paths="icon" aria-hidden="true" if="{{ $.icon !== '' }}"></span>
+    <p class="title" if="{{ $._title !== '' }}">{{ $._title }}</p>
+    <p class="text" if="{{ $._text !== '' }}">{{ $._text }}</p>
+    <div class="actions" if="{{ $.actions }}">
+        <sui-node state=".actions"></sui-node>
+    </div>
+</div>

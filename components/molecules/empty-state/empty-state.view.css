@@ -1,0 +1,33 @@
+:host { display: block; }
+.empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--ui-space-gap-md);
+    padding: var(--ui-space-inset-lg);
+    text-align: center;
+}
+.glyph {
+    display: inline-flex;
+    inline-size: calc(var(--ui-size-icon-md) * 2);
+    block-size: calc(var(--ui-size-icon-md) * 2);
+    color: var(--ui-color-text-muted);
+}
+.glyph svg { inline-size: 100%; block-size: 100%; }
+.glyph .outline { stroke-width: var(--ui-icon-stroke); }
+.title, .text { margin: 0; }
+.title {
+    color: var(--ui-color-text-base);
+    font-family: var(--ui-text-heading-family);
+    font-size: var(--ui-text-heading-size);
+    font-weight: var(--ui-text-heading-weight);
+    line-height: var(--ui-text-heading-leading);
+}
+.text {
+    max-inline-size: 60ch;
+    color: var(--ui-color-text-muted);
+    font-family: var(--ui-text-body-family);
+    font-size: var(--ui-text-body-size);
+    line-height: var(--ui-text-body-leading);
+}
+.actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--ui-space-gap-sm); }

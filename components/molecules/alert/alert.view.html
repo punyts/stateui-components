@@ -1,0 +1,13 @@
+<div class="alert" role="{{ $.tone === 'danger' || $.tone === 'warning' ? 'alert' : 'status' }}">
+    <span class="glyph" icon-paths="glyph" aria-hidden="true"></span>
+    <div class="body">
+        <p class="title" if="{{ $._title !== '' }}">{{ $._title }}</p>
+        <p class="text" if="{{ $._text !== '' }}">{{ $._text }}</p>
+        <div class="actions" if="{{ $.actions }}">
+            <sui-node state=".actions"></sui-node>
+        </div>
+    </div>
+    <button class="close" type="button" if="{{ $.dismissible }}" aria-label="{{ $._closeLabel }}" onclick="{{ onClose }}">
+        <span class="glyph" icon-paths="closeGlyph" aria-hidden="true"></span>
+    </button>
+</div>

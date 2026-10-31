@@ -1,0 +1,17 @@
+{
+    "summary": "An inline message with a tone, an icon, an optional title and actions, which the user can dismiss",
+    "events": ["close"],
+    "commands": ["open", "close"],
+    "shared": { "tone": { "default": "info" }, "variant": { "default": "soft" } },
+    "properties": {
+        "icon": { "type": "icon", "default": "" },
+        "dismissible": { "type": "boolean", "default": false },
+        "open": { "type": "boolean", "default": true, "reflect": true },
+        "_title": { "type": "string", "kind": "content", "default": "" },
+        "_text": { "type": "string", "kind": "content", "default": "Message" },
+        "_closeLabel": { "type": "string", "kind": "content", "default": "Close" },
+        "actions": { "type": "node" },
+        "glyph": { "type": "icon", "default": "", "runtime": true },
+        "closeGlyph": { "type": "icon", "default": "x", "runtime": true }
+    }
+}

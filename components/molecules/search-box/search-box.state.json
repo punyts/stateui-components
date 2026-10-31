@@ -1,0 +1,18 @@
+{
+    "summary": "A search input with a search icon and a clear button, for filtering lists",
+    "tokenGroup": "control",
+    "tokens": {
+        "radius": "{radius.md}",
+        "border": "{border.width.thin}",
+        "padding": { "inline": "{space.inset.sm}" }
+    },
+    "shared": { "size": { "default": "md" } },
+    "events": ["change", "search"],
+    "commands": ["focus", "clear"],
+    "properties": {
+        "value": { "type": "string", "default": "" },
+        "_placeholder": { "type": "string", "kind": "content", "default": "Search" },
+        "_label": { "type": "string", "kind": "content", "default": "Search" },
+        "_clearLabel": { "type": "string", "kind": "content", "default": "Clear search" }
+    }
+}
