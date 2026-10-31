@@ -245,6 +245,21 @@ describe('recordList accessibility in Chromium', () => {
         expect(shownSlots(mounted).every((slot) => slot.getAttribute('role') === 'option' && slot.hasAttribute('aria-posinset'))).toBe(true);
     });
 
+    it('should make a rowgroup with rows counted from rowIndexOffset and no rowcount', async () => {
+        // Arrange and Act
+        const mounted = await mountList(20, 200, { role: 'rowgroup', rowIndexOffset: 1 });
+
+        // Assert
+        expect(mounted.element.getAttribute('role')).toBe('rowgroup');
+        expect(mounted.element.hasAttribute('aria-rowcount')).toBe(false);
+        expect(shownSlots(mounted).length).toBeGreaterThan(0);
+        for (const slot of shownSlots(mounted)) {
+            expect(slot.getAttribute('role')).toBe('row');
+            expect(slot.getAttribute('aria-rowindex')).toBe(String(position(slot) + 2));
+            expect(slot.hasAttribute('aria-posinset')).toBe(false);
+        }
+    });
+
     it('should bind aria-rowcount on the host and aria-rowindex on each slot for a table', async () => {
         // Arrange
         const mounted = await mountList(1000, 200, { role: 'table' });

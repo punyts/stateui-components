@@ -1,0 +1,7 @@
+<div class="list">
+    <sui-node state=".body"></sui-node>
+    <div class="empty" if="{{ $.body.count === 0 }}">
+        <sui-node if="{{ $.empty }}" state=".empty"></sui-node>
+        <p class="text" if="{{ !$.empty }}">{{ $._empty }}</p>
+    </div>
+</div>

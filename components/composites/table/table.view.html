@@ -1,0 +1,16 @@
+<div class="table">
+    <div class="header" role="rowgroup">
+        <div class="head-row" role="row" aria-rowindex="1">
+            <div class="head" role="columnheader" if="{{ $.columns }}" repeat="{{ $k,$i,$v in $.columns }}" key="{{ $k }}" data-key="{{ $k }}" data-align="{{ $v.align || 'start' }}">
+                <span class="title">{{ $v._title }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="body">
+        <sui-node state=".body"></sui-node>
+        <div class="empty" if="{{ $.body.count === 0 }}">
+            <sui-node if="{{ $.empty }}" state=".empty"></sui-node>
+            <p class="empty-text" if="{{ !$.empty }}">{{ $._empty }}</p>
+        </div>
+    </div>
+</div>

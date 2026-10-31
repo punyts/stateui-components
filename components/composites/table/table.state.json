@@ -1,0 +1,50 @@
+{
+    "summary": "A read-only table over a list of records: a keyed map of columns, a fixed header and a virtualised body",
+    "commands": ["delete"],
+    "shared": { "density": {} },
+    "tokenGroup": "table",
+    "tokens": {
+        "cell": { "padding": "{space.inset.md}" },
+        "header": { "fill": "{color.surface.sunken}", "color": "{color.text.muted}" },
+        "stripe": "{color.surface.sunken}",
+        "border": "{color.border.base}"
+    },
+    "properties": {
+        "key": { "type": "string", "validators": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" }, "default": "id" },
+        "striped": { "type": "boolean", "default": false, "reflect": true },
+        "columns": {
+            "type": "map",
+            "items": {
+                "_title": { "type": "string", "kind": "content", "default": "" },
+                "field": { "type": "string", "validators": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*$" } },
+                "width": { "type": "string", "validators": { "pattern": "^(auto|(0|[1-9][0-9]*)(\\.[0-9]+)?(fr|px|%))$" }, "default": "auto" },
+                "align": { "type": "string", "values": ["start", "center", "end"], "default": "start" },
+                "sortable": { "type": "boolean", "default": false },
+                "format": { "type": "string", "values": ["number", "percent", "currency", "duration"] },
+                "currency": { "type": "string", "validators": { "pattern": "^[A-Z]{3}$" } },
+                "cell": { "type": "node", "row": true }
+            },
+            "default": {}
+        },
+        "items": { "type": ["array", "object"] },
+        "total": { "type": "integer", "validators": { "range": { "min": 0 } } },
+        "empty": { "type": "node" },
+        "_empty": { "type": "string", "kind": "content", "default": "No records" },
+        "body": {
+            "type": "object",
+            "default": {
+                "component": "recordList",
+                "rowHeight": "md",
+                "overscan": 5,
+                "role": "rowgroup",
+                "rowIndexOffset": 1,
+                "loading": false,
+                "count": 0,
+                "slots": {},
+                "loadingRows": 0,
+                "loadingFirst": 0
+            },
+            "runtime": true
+        }
+    }
+}

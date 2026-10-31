@@ -1,0 +1,50 @@
+:host {
+    display: block;
+    block-size: 100%;
+}
+
+.row {
+    box-sizing: border-box;
+    display: grid;
+    grid-template-columns: var(--table-columns, minmax(0, 1fr));
+    align-items: center;
+    block-size: 100%;
+    color: var(--ui-color-text-base);
+    font-family: var(--ui-text-body-family);
+    font-size: var(--ui-text-body-size);
+    line-height: var(--ui-text-body-leading);
+    border-block-end: var(--ui-border-width-thin) solid var(--ui-table-border);
+}
+
+.row[data-odd] {
+    background: var(--table-stripe, transparent);
+}
+
+.cell {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    min-inline-size: 0;
+    padding-inline: var(--ui-table-cell-padding);
+    overflow: hidden;
+    text-align: start;
+}
+
+.cell[data-align="center"] {
+    justify-content: center;
+    text-align: center;
+}
+
+.cell[data-align="end"] {
+    justify-content: flex-end;
+    text-align: end;
+}
+
+.text {
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}

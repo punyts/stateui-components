@@ -1,0 +1,28 @@
+{
+    "summary": "A list of records that renders its row template for the visible records through recordList, with an empty state",
+    "shared": { "density": {} },
+    "properties": {
+        "key": { "type": "string", "validators": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" }, "default": "id" },
+        "divided": { "type": "boolean", "default": false, "reflect": true },
+        "items": { "type": ["array", "object"] },
+        "total": { "type": "integer", "validators": { "range": { "min": 0 } } },
+        "row": { "type": "node", "row": true },
+        "empty": { "type": "node" },
+        "_empty": { "type": "string", "kind": "content", "default": "No items" },
+        "body": {
+            "type": "object",
+            "default": {
+                "component": "recordList",
+                "rowHeight": "md",
+                "overscan": 5,
+                "role": "list",
+                "loading": false,
+                "count": 0,
+                "slots": {},
+                "loadingRows": 0,
+                "loadingFirst": 0
+            },
+            "runtime": true
+        }
+    }
+}

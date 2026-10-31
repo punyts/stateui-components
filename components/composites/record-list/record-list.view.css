@@ -33,6 +33,7 @@
     block-size: var(--sui-row-h);
     overflow: hidden;
     transform: translateY(calc(var(--sui-index, 0) * var(--sui-row-h)));
+    box-shadow: var(--sui-row-divider, none);
 }
 
 .slot:focus-visible {

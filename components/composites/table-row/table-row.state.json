@@ -1,0 +1,17 @@
+{
+    "summary": "One row of a table: the cells the table builds from its columns for each visible record",
+    "properties": {
+        "cells": {
+            "type": "map",
+            "items": {
+                "align": { "type": "string", "values": ["start", "center", "end"], "default": "start" },
+                "format": { "type": "string", "values": ["number", "percent", "currency", "duration"] },
+                "currency": { "type": "string", "validators": { "pattern": "^[A-Z]{3}$" } },
+                "value": { "type": "any" },
+                "text": { "type": "string", "default": "" },
+                "content": { "type": "object" }
+            },
+            "default": {}
+        }
+    }
+}
