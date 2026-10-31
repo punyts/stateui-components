@@ -1,0 +1,18 @@
+{
+    "summary": "A titled section that opens and closes, with a summary while closed and an actions slot: hide advanced settings",
+    "layout": true,
+    "events": ["toggle"],
+    "commands": ["open", "close", "toggle"],
+    "tokens": {
+        "padding": "{space.inset.md}",
+        "gap": "{space.gap.md}"
+    },
+    "properties": {
+        "open": { "type": "boolean", "default": false, "reflect": true },
+        "icon": { "type": "icon", "default": "" },
+        "disabled": { "type": "boolean", "default": false, "reflect": true },
+        "_title": { "type": "string", "kind": "content", "default": "Details" },
+        "_summary": { "type": "string", "kind": "content", "default": "" },
+        "actions": { "type": "node" }
+    }
+}

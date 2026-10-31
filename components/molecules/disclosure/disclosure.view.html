@@ -1,0 +1,17 @@
+<section class="disclosure">
+    <div class="header">
+        <button class="toggle" id="header" type="button" aria-expanded="{{ $.open ? 'true' : 'false' }}" aria-controls="content" disabled="{{ $.disabled }}" onclick="{{ onToggle }}">
+            <ui-icon class="chevron" size="sm" name="{{ $.icon === '' ? 'chevron-down' : $.icon }}" data-turn="{{ $.icon === '' ? 'true' : null }}"></ui-icon>
+            <span class="title">{{ $._title }}</span>
+            <span class="summary" if="{{ ($._summary !== '') &amp;&amp; !$.open }}">{{ $._summary }}</span>
+        </button>
+        <div class="actions" if="{{ $.actions }}">
+            <sui-node state=".actions"></sui-node>
+        </div>
+    </div>
+    <div class="content" id="content" role="region" aria-labelledby="header">
+        <div class="body" layout-host="">
+            <sui-node if="{{ $.children }}" repeat="{{ $k,$i,$v in $.children }}" key="{{ $k }}" state="{{ $v }}"></sui-node>
+        </div>
+    </div>
+</section>
