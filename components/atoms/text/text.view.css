@@ -1,0 +1,20 @@
+:host { display: block; }
+:host([element=span]) { display: inline; }
+.text {
+    margin: 0;
+    color: var(--ui-color-text-base);
+    font-family: var(--text-family);
+    font-size: var(--text-size);
+    font-weight: var(--text-weight);
+    line-height: var(--text-leading);
+    overflow-wrap: anywhere;
+}
+:host([tone]) .text { color: var(--tone); }
+:host([align=center]) .text { text-align: center; }
+:host([align=end]) .text { text-align: end; }
+.text[data-clamp] {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: {{ $.truncate }};
+    overflow: hidden;
+}

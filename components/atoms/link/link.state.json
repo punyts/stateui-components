@@ -1,0 +1,9 @@
+{
+    "summary": "A text-styled link for in-application navigation; it raises press and never navigates by itself",
+    "events": ["press"],
+    "shared": { "tone": { "default": "accent" } },
+    "properties": {
+        "_text": { "type": "string", "kind": "content", "default": "Link text" },
+        "href": { "type": "url", "default": "#", "validators": { "pattern": "^(?!data:)" } }
+    }
+}

@@ -1,0 +1,26 @@
+:host { display: block; }
+:host([orientation=vertical]) { display: inline-block; align-self: stretch; min-block-size: 1em; }
+.divider {
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space-gap-md);
+    color: var(--ui-color-text-muted);
+    font-family: var(--ui-text-caption-family);
+    font-size: var(--ui-text-caption-size);
+}
+.divider::before,
+.divider::after {
+    content: "";
+    flex: 1 1 0;
+    border-block-start: var(--ui-border-width-thin) solid var(--ui-color-border-base);
+}
+.divider:not(:has(.label))::after { display: none; }
+:host([orientation=vertical]) .divider {
+    flex-direction: column;
+    block-size: 100%;
+}
+:host([orientation=vertical]) .divider::before,
+:host([orientation=vertical]) .divider::after {
+    border-block-start: none;
+    border-inline-start: var(--ui-border-width-thin) solid var(--ui-color-border-base);
+}

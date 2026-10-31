@@ -1,0 +1,46 @@
+/* The look of a bare control: border, radius, padding, height, disabled and focus states. A component includes it
+   with `@include "control.css";` and puts class="control" on its native element */
+.control {
+    box-sizing: border-box;
+    inline-size: 100%;
+    min-block-size: var(--control-height, var(--ui-size-control-md));
+    margin: 0;
+    padding-block: 0;
+    padding-inline: var(--ui-control-padding-inline);
+    font-family: var(--ui-text-body-family);
+    font-size: var(--ui-text-body-size);
+    font-weight: var(--ui-text-body-weight);
+    line-height: var(--ui-text-body-leading);
+    color: var(--ui-color-text-base);
+    background: var(--ui-color-surface-base);
+    border: var(--ui-control-border) solid var(--ui-color-border-strong);
+    border-radius: var(--ui-control-radius);
+    transition: border-color var(--ui-motion-duration-fast) var(--ui-motion-easing-standard);
+}
+
+.control::placeholder {
+    color: var(--ui-color-text-muted);
+}
+
+.control:hover:not(:disabled) {
+    border-color: var(--ui-color-text-muted);
+}
+
+.control:focus-visible {
+    border-color: var(--ui-color-focus);
+}
+
+.control:read-only {
+    background: var(--ui-color-surface-sunken);
+}
+
+.control:disabled {
+    color: var(--ui-color-text-disabled);
+    background: var(--ui-color-surface-sunken);
+    border-color: var(--ui-color-border-base);
+    cursor: not-allowed;
+}
+
+.control:disabled::placeholder {
+    color: var(--ui-color-text-disabled);
+}

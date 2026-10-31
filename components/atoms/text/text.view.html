@@ -1,0 +1,8 @@
+<h1 if="{{ $.element === 'h1' }}" class="text" data-clamp="{{ $.truncate > 0 }}">{{ $._text }}</h1>
+<h2 ifelse="{{ $.element === 'h2' }}" class="text" data-clamp="{{ $.truncate > 0 }}">{{ $._text }}</h2>
+<h3 ifelse="{{ $.element === 'h3' }}" class="text" data-clamp="{{ $.truncate > 0 }}">{{ $._text }}</h3>
+<h4 ifelse="{{ $.element === 'h4' }}" class="text" data-clamp="{{ $.truncate > 0 }}">{{ $._text }}</h4>
+<h5 ifelse="{{ $.element === 'h5' }}" class="text" data-clamp="{{ $.truncate > 0 }}">{{ $._text }}</h5>
+<h6 ifelse="{{ $.element === 'h6' }}" class="text" data-clamp="{{ $.truncate > 0 }}">{{ $._text }}</h6>
+<p ifelse="{{ $.element === 'p' }}" class="text" data-clamp="{{ $.truncate > 0 }}">{{ $._text }}</p>
+<span else="" class="text" data-clamp="{{ $.truncate > 0 }}">{{ $._text }}</span>

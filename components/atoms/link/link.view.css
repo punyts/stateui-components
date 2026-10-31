@@ -1,0 +1,10 @@
+:host { display: inline; }
+.link {
+    color: var(--tone);
+    font-family: var(--ui-text-body-family);
+    font-size: inherit;
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+    cursor: pointer;
+}
+.link:hover { text-decoration-thickness: var(--ui-border-width-thick); }

@@ -14,6 +14,7 @@
         "declaration": false,
         "declarationMap": false,
         "isolatedModules": true,
+        "allowImportingTsExtensions": true,
         "allowJs": true
     },
     "include": [

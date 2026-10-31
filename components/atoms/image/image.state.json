@@ -1,0 +1,11 @@
+{
+    "summary": "A picture shown from inline data, with a fit, an aspect ratio and a corner radius",
+    "properties": {
+        "src": { "type": "url", "default": "", "validators": { "pattern": "^(?:data:|$)" } },
+        "_alt": { "type": "string", "kind": "content", "requiredWhen": { "property": "decorative", "equals": false } },
+        "decorative": { "type": "boolean", "default": false },
+        "fit": { "type": "string", "values": ["cover", "contain"], "default": "cover", "reflect": true },
+        "ratio": { "type": "string", "values": ["1:1", "4:3", "16:9", "auto"], "default": "16:9", "reflect": true },
+        "radius": { "type": "string", "values": ["none", "sm", "md", "lg", "full"], "default": "none", "reflect": true }
+    }
+}

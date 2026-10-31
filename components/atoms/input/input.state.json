@@ -1,0 +1,25 @@
+{
+    "summary": "A bare single-line input with no visible label, for toolbars and table cells",
+    "tokenGroup": "control",
+    "tokens": {
+        "radius": "{radius.md}",
+        "border": "{border.width.thin}",
+        "padding": { "inline": "{space.inset.sm}" }
+    },
+    "shared": { "size": { "default": "md" } },
+    "events": ["change", "input"],
+    "commands": ["focus", "clear"],
+    "properties": {
+        "inputType": { "type": "string", "values": ["text", "email", "password", "number", "url", "tel", "search", "date", "time"], "default": "text" },
+        "value": { "type": ["string", "number"], "default": "" },
+        "disabled": { "type": "boolean", "default": false },
+        "readonly": { "type": "boolean", "default": false },
+        "required": { "type": "boolean", "default": false },
+        "min": { "type": ["string", "number"] },
+        "max": { "type": ["string", "number"] },
+        "step": { "type": ["string", "number"] },
+        "maxLength": { "type": "integer", "validators": { "range": { "min": 0 } } },
+        "_placeholder": { "type": "string", "kind": "content", "default": "Type here" },
+        "_label": { "type": "string", "kind": "content", "default": "Input" }
+    }
+}

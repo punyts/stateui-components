@@ -2,6 +2,9 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { buildLibrary } from '@punyts/stateui-app/build';
 
+/** The shared CSS partials a component's `view.css` pulls in with `@include "<name>.css";` */
+const SHARED_CSS_DIR = resolve(import.meta.dirname, '../src/shared/css');
+
 const REGISTER_JS = `import { components } from './components/index.js';
 
 /**
@@ -30,7 +33,7 @@ export declare function register(window: { readonly customElements: CustomElemen
  * @returns {Promise<import('@punyts/stateui-app/build').BuildResult>}
  */
 export async function buildComponents(sourceDir, outDir) {
-    const result = await buildLibrary(resolve(sourceDir), resolve(outDir), { cssTransforms: [], cssChecks: [] });
+    const result = await buildLibrary(resolve(sourceDir), resolve(outDir), { cssTransforms: [], cssChecks: [], sharedCssDir: SHARED_CSS_DIR });
     const registerDir = dirname(resolve(outDir));
     await mkdir(registerDir, { recursive: true });
     await writeFile(join(registerDir, 'register.js'), REGISTER_JS);

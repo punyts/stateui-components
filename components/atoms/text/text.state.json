@@ -1,0 +1,15 @@
+{
+    "summary": "Text in a typographic role, as a span, a paragraph or a heading",
+    "shared": { "tone": {}, "textRole": { "default": "body" } },
+    "properties": {
+        "_text": { "type": "string", "kind": "content", "default": "Sample text" },
+        "align": { "type": "string", "values": ["start", "center", "end"], "default": "start", "reflect": true },
+        "truncate": { "type": "integer", "default": 0, "validators": { "range": { "min": 0, "max": 20 } } },
+        "element": {
+            "type": "string",
+            "values": ["span", "p", "h1", "h2", "h3", "h4", "h5", "h6"],
+            "default": "span",
+            "reflect": true
+        }
+    }
+}

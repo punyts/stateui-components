@@ -1,0 +1,16 @@
+@include "control.css";
+
+:host {
+    display: block;
+}
+
+.control {
+    display: block;
+    padding-block: var(--ui-space-gap-sm);
+    resize: vertical;
+}
+
+.control.grow {
+    overflow: hidden;
+    resize: none;
+}

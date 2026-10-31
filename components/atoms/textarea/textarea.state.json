@@ -1,0 +1,23 @@
+{
+    "summary": "A bare multi-line text area with no visible label, optionally growing with its text",
+    "tokenGroup": "control",
+    "tokens": {
+        "radius": "{radius.md}",
+        "border": "{border.width.thin}",
+        "padding": { "inline": "{space.inset.sm}" }
+    },
+    "shared": { "size": { "default": "md" } },
+    "events": ["change", "input"],
+    "commands": ["focus", "clear"],
+    "properties": {
+        "value": { "type": "string", "default": "" },
+        "rows": { "type": "integer", "default": 3, "validators": { "range": { "min": 1, "max": 50 } } },
+        "autoGrow": { "type": "boolean", "default": false },
+        "disabled": { "type": "boolean", "default": false },
+        "readonly": { "type": "boolean", "default": false },
+        "required": { "type": "boolean", "default": false },
+        "maxLength": { "type": "integer", "validators": { "range": { "min": 0 } } },
+        "_placeholder": { "type": "string", "kind": "content", "default": "Type here" },
+        "_label": { "type": "string", "kind": "content", "default": "Text area" }
+    }
+}

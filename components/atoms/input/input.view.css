@@ -1,0 +1,9 @@
+@include "control.css";
+
+:host {
+    display: block;
+}
+
+.control {
+    block-size: var(--control-height, var(--ui-size-control-md));
+}

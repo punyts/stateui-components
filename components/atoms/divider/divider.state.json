@@ -1,0 +1,8 @@
+{
+    "summary": "A separating line, horizontal or vertical, with an optional label in the line",
+    "shared": {},
+    "properties": {
+        "orientation": { "type": "string", "values": ["horizontal", "vertical"], "default": "horizontal", "reflect": true },
+        "_label": { "type": "string", "kind": "content", "default": "" }
+    }
+}

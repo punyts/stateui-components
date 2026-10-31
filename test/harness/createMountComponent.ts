@@ -20,6 +20,8 @@ export interface MountOptions {
     motion?: string;
     /** The language to switch to after mount; a component's own text is `en` */
     locale?: string;
+    /** The document's `data`, so a `<-` link to `$.data.<name>` has a target when the node mounts (none by default) */
+    data?: Readonly<Record<string, unknown>>;
 }
 
 /** What `mountComponent` gives back */
@@ -104,7 +106,12 @@ export function createMountComponent(build: ComponentBuild): MountComponent {
             const chosen = options[kind];
             if (chosen !== undefined) active[kind] = chosen;
         }
-        const document = { locale: 'en', theme: { active }, app: { component: name, ...nodeState } } as unknown as AppDocument;
+        const document = {
+            locale: 'en',
+            theme: { active },
+            ...(options.data === undefined ? {} : { data: options.data }),
+            app: { component: name, ...nodeState }
+        } as unknown as AppDocument;
         const host = globalThis.document.body.appendChild(globalThis.document.createElement('div'));
         const locale = registerLocaleStep(overlays);
         const app = mountApp(host, document, library);
