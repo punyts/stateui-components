@@ -1,0 +1,112 @@
+@include "field.css";
+
+.slider {
+    --thumb: calc(var(--control-height, var(--ui-size-control-md)) * 0.6);
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    padding-inline: calc(var(--thumb) / 2);
+}
+
+.box:has(.mark-label) .slider {
+    padding-block-end: 1.5em;
+}
+
+.track {
+    position: relative;
+    box-sizing: border-box;
+    block-size: var(--control-height, var(--ui-size-control-md));
+    touch-action: none;
+    cursor: pointer;
+}
+
+.track::before {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    inset-block-start: 50%;
+    block-size: calc(var(--thumb) / 3);
+    background: var(--ui-color-border-strong);
+    border-radius: var(--ui-radius-full);
+    translate: 0 -50%;
+}
+
+.fill {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: calc(var(--sui-from) * 1%);
+    inline-size: calc((var(--sui-to) - var(--sui-from)) * 1%);
+    block-size: calc(var(--thumb) / 3);
+    background: var(--ui-field-selected-fill);
+    border-radius: var(--ui-radius-full);
+    translate: 0 -50%;
+    pointer-events: none;
+}
+
+.mark {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: calc(var(--sui-value) * 1%);
+    inline-size: 0;
+    pointer-events: none;
+}
+
+.tick {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: -1px;
+    inline-size: 2px;
+    block-size: calc(var(--thumb) / 2);
+    background: var(--ui-color-border-strong);
+    translate: 0 -50%;
+}
+
+.mark-label {
+    position: absolute;
+    inset-block-start: 100%;
+    inset-inline-start: 0;
+    color: var(--ui-color-text-muted);
+    font-size: var(--ui-text-caption-size);
+    white-space: nowrap;
+    translate: -50% 0;
+}
+
+:host(:dir(rtl)) .mark-label {
+    translate: 50% 0;
+}
+
+.thumb {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: calc(var(--sui-value) * 1%);
+    box-sizing: border-box;
+    inline-size: var(--thumb);
+    block-size: var(--thumb);
+    margin-inline-start: calc(var(--thumb) / -2);
+    background: var(--ui-field-selected-on);
+    border: 2px solid var(--ui-field-selected-fill);
+    border-radius: var(--ui-radius-full);
+    translate: 0 -50%;
+    cursor: grab;
+}
+
+.thumb:focus-visible {
+    outline: 2px solid var(--ui-color-focus);
+    outline-offset: 2px;
+}
+
+.thumb[aria-invalid="true"] {
+    border-color: var(--ui-field-error-color);
+}
+
+.thumb[aria-disabled="true"] {
+    border-color: var(--ui-color-border-base);
+    cursor: not-allowed;
+}
+
+.value {
+    flex: none;
+    min-inline-size: 4ch;
+    margin-inline-start: var(--ui-field-label-gap);
+    font-variant-numeric: tabular-nums;
+    text-align: end;
+}

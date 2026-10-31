@@ -14,6 +14,9 @@ Partials a component's `view.css` pulls in with a line `@include "<name>.css";` 
 ## format/
 `format.ts`: `formatValue(value, { format, locale, currency, signed })` formats a number with `Intl` for a language (`number`; `percent` from 0 to 1, up to one decimal; `currency` with an ISO 4217 code; `duration` from seconds as `m:ss`, or `h:mm:ss` from one hour) and returns an empty string for a value that is not a number. An unusable locale falls back to `en`, a currency code `Intl` refuses to a plain number. `stat` uses it; the `table` and `descriptionList` columns will. Controllers import it as `../shared/format/format.js`.
 
+## slider/
+`slider.ts`: the pure parts of `sliderField`: `readScale` (min, max and step from the node), `snapValue`, `readThumbs`, `percentOf`, `limitsOf` (a range's thumbs hold each other), `valueForKey`, `valueAtFraction` and `nearestThumb`. `sliderField` imports it as `../shared/slider/slider.js`.
+
 ## tone/
 `toneGlyph.ts`: `toneIcon(tone)` gives the default icon of a tone (`info-circle` for `info`, `neutral` and `accent`, `alert-circle`, `alert-triangle` and `circle-check` for `danger`, `warning` and `success`). `toast` uses it; a controller imports it as `../shared/tone/toneGlyph.js`.
 

@@ -1,0 +1,12 @@
+{
+    "_label": "Beschriftung",
+    "_help": "",
+    "_low": "Minimum",
+    "_high": "Maximum",
+    "_errors": {
+        "required": "Dieses Feld ist erforderlich",
+        "min": "Zu klein",
+        "max": "Zu groß",
+        "step": "Kein gültiger Schritt"
+    }
+}

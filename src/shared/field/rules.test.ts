@@ -74,6 +74,19 @@ describe('failingRule', () => {
         expect(results).toEqual(['', 'step', '', 'step', '', 'step', '', '']);
     });
 
+    it('should judge each number of a pair against min, max and step, as a range slider holds its value', () => {
+        // Act
+        const results = [
+            failingRule([10, 20], settings({ min: 0, max: 100, step: 5 })),
+            failingRule([-5, 20], settings({ min: 0, max: 100 })),
+            failingRule([10, 120], settings({ min: 0, max: 100 })),
+            failingRule([10, 22], settings({ min: 0, max: 100, step: 5 }))
+        ];
+
+        // Assert
+        expect(results).toEqual(['', 'min', 'max', 'step']);
+    });
+
     it('should judge min and max before step', () => {
         // Act
         const result = failingRule(3, settings({ step: 5, min: 5 }));

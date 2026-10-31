@@ -1,0 +1,23 @@
+<div class="field" style="--field-width: {{ widthOf($.width) }}">
+    <span class="label" id="label">{{ $._label }}</span>
+    <div class="box">
+        <div class="slider">
+            <div class="track" onpointerdown="{{ onPointerDown }}" onpointermove="{{ onPointerMove }}" onpointerup="{{ onPointerUp }}" onpointercancel="{{ onPointerUp }}" style="--sui-from: {{ $.range ? $.lowPercent : 0 }}; --sui-to: {{ $.range ? $.highPercent : $.lowPercent }}">
+                <span class="fill"></span>
+                <span class="mark" repeat="{{ $k,$i,$v in $.marks }}" key="{{ $k }}" hidden="{{ markPercent($k, $.min, $.max) === '' }}" style="--sui-value: {{ markPercent($k, $.min, $.max) }}">
+                    <span class="tick"></span>
+                    <span class="mark-label" if="{{ $v._label !== '' }}">{{ $v._label }}</span>
+                </span>
+                <span class="thumb" id="control" role="slider" tabindex="{{ ($.disabled || $.locked) ? -1 : 0 }}" data-thumb="low" aria-labelledby="label" aria-label="{{ $.range ? $._low : null }}" aria-valuemin="{{ $.min }}" aria-valuemax="{{ $.range ? $.high : $.max }}" aria-valuenow="{{ $.low }}" aria-valuetext="{{ $.lowText }}" aria-disabled="{{ ($.disabled || $.locked) ? 'true' : null }}" aria-readonly="{{ $.readonly ? 'true' : null }}" aria-invalid="{{ $.error !== '' ? 'true' : null }}" aria-describedby="{{ describedBy($._help, $.message) }}" style="--sui-value: {{ $.lowPercent }}" onkeydown="{{ onKeyDown }}" onblur="{{ onBlur }}"></span>
+                <span class="thumb" role="slider" tabindex="{{ ($.disabled || $.locked) ? -1 : 0 }}" data-thumb="high" if="{{ $.range }}" aria-label="{{ $._high }}" aria-valuemin="{{ $.low }}" aria-valuemax="{{ $.max }}" aria-valuenow="{{ $.high }}" aria-valuetext="{{ $.highText }}" aria-disabled="{{ ($.disabled || $.locked) ? 'true' : null }}" aria-readonly="{{ $.readonly ? 'true' : null }}" aria-invalid="{{ $.error !== '' ? 'true' : null }}" aria-describedby="{{ describedBy($._help, $.message) }}" style="--sui-value: {{ $.highPercent }}" onkeydown="{{ onKeyDown }}" onblur="{{ onBlur }}"></span>
+            </div>
+        </div>
+        <output class="value" if="{{ $.showValue }}" for="control">{{ $.valueText }}</output>
+    </div>
+    <div class="messages">
+        <p class="help" id="help" if="{{ $._help !== '' }}">{{ $._help }}</p>
+        <div class="alert" role="status" aria-live="polite">
+            <p class="error" id="error" if="{{ $.message !== '' }}">{{ $.message }}</p>
+        </div>
+    </div>
+</div>

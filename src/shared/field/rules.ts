@@ -59,6 +59,7 @@ const isSet = (bound: unknown): boolean => bound !== undefined && bound !== null
 /** True when `value` is below `min` or above `max`: numbers compare as numbers, a string bound compares the text (ISO dates sort that way) */
 function beyond(value: unknown, bound: unknown, direction: 'below' | 'above'): boolean {
     if (!isSet(bound)) return false;
+    if (Array.isArray(value) && typeof bound === 'number') return value.some((item) => beyond(item, bound, direction));
     if (typeof bound === 'number') {
         const number = typeof value === 'number' ? value : typeof value === 'string' && value.trim() !== '' ? Number(value) : Number.NaN;
         if (Number.isNaN(number)) return true;
@@ -71,6 +72,7 @@ function beyond(value: unknown, bound: unknown, direction: 'below' | 'above'): b
 /** True when a number is not a whole number of `step`s from the base (`min` when it is a number, else 0); a tolerance absorbs floating-point error */
 function offStep(value: unknown, step: number | undefined, min: unknown): boolean {
     if (typeof step !== 'number' || !(step > 0)) return false;
+    if (Array.isArray(value)) return value.some((item) => offStep(item, step, min));
     const number = typeof value === 'number' ? value : typeof value === 'string' && value.trim() !== '' ? Number(value) : Number.NaN;
     if (Number.isNaN(number)) return false;
     const ratio = (number - (typeof min === 'number' ? min : 0)) / step;
