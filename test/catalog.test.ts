@@ -2,7 +2,7 @@ import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { exposedPathResolves, libraryFromCatalog, resolveNode, validateDocument } from '@punyts/stateui-app/core';
+import { DEFAULT_LEAVES, KIND_GROUPS, OVERLAY_KINDS, SHIPPED_OVERLAYS, exposedPathResolves, libraryFromCatalog, resolveNode, validateDocument } from '@punyts/stateui-app/core';
 import type { JsonValue, PropertyShape } from '@punyts/stateui-app/core';
 import { formatError } from '@punyts/stateui-app/build';
 import type { Catalog, ComposedCatalogEntry, RootCatalogEntry } from '@punyts/stateui-app/build';
@@ -419,5 +419,42 @@ describe('the accessible-name and runtime rules', () => {
 
         // Assert
         expect(offenders).toEqual([]);
+    });
+});
+
+describe('the theme section of the catalog', () => {
+    const semantic = DEFAULT_LEAVES.filter((leaf) => leaf.layer === 'semantic');
+
+    it('should list every semantic token of the default tree and no primitive', () => {
+        // Arrange
+        const listed = catalog.theme.tokens.map((token) => token.path);
+
+        // Assert
+        expect(listed).toEqual(semantic.map((leaf) => leaf.path));
+        expect(catalog.theme.tokens.filter((token) => ['palette', 'scale', 'font'].includes(token.group))).toEqual([]);
+    });
+
+    it('should give every token a type, a default and a one-line description', () => {
+        for (const token of catalog.theme.tokens) {
+            expect(token.type, token.path).toBeTruthy();
+            expect(token.default, token.path).not.toBe('');
+            expect(token.description, token.path).toMatch(/^[^\r\n]+$/);
+        }
+    });
+
+    it('should list the shipped overlays by kind with the groups the kind may touch', () => {
+        expect(Object.keys(catalog.theme.overlays)).toEqual([...OVERLAY_KINDS]);
+        for (const kind of OVERLAY_KINDS) {
+            expect(catalog.theme.overlays[kind].map((overlay) => overlay.name)).toEqual(Object.keys(SHIPPED_OVERLAYS[kind] ?? {}));
+            for (const overlay of catalog.theme.overlays[kind]) expect(overlay.groups).toEqual([...KIND_GROUPS[kind]]);
+        }
+    });
+
+    it('should keep component tokens on the component entries, not in the theme section', () => {
+        const groups = new Set(catalog.theme.tokens.map((token) => token.group));
+        const componentGroups = roots.flatMap((entry) => (entry.tokens ?? []).map((token) => token.group));
+
+        expect(componentGroups.length).toBeGreaterThan(0);
+        for (const group of componentGroups) expect(groups.has(group), group).toBe(false);
     });
 });
