@@ -35,6 +35,7 @@ describe('buildComponents', () => {
             locales: string[];
         };
         expect(catalog.components.map(({ name, tag, size }) => ({ name, tag, size }))).toEqual([
+            { name: 'orderEditor', tag: 'ui-order-editor', size: 'composite' },
             { name: 'probe', tag: 'ui-probe', size: 'atom' }
         ]);
         expect(catalog.locales).toEqual(['de']);

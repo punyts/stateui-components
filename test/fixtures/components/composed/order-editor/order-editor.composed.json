@@ -1,0 +1,50 @@
+{
+    "component": "modal",
+    "_title": "Edit order",
+    "theme": { "color": { "accent": { "base": "#2f6f4f" } } },
+    "on": { "close": { "command": "reset", "target": ".body.children.form" } },
+    "body": {
+        "component": "panel",
+        "layout": { "type": "region" },
+        "children": {
+            "form": {
+                "component": "form",
+                "placement": { "region": "w" },
+                "children": {
+                    "customer": { "component": "textField", "_label": "Customer", "required": true, "<-value": "$.data.order.customer" },
+                    "status": {
+                        "component": "selectField",
+                        "_label": "Status",
+                        "titlePosition": "left",
+                        "<-value": "$.data.order.status",
+                        "<-options": "$.data.statuses"
+                    }
+                }
+            },
+            "lines": {
+                "component": "list",
+                "placement": { "region": "e" },
+                "<-items": "$.data.order.lines",
+                "row": { "component": "text", "<-_text": "$row.description" }
+            }
+        }
+    },
+    "footer": {
+        "component": "toolbar",
+        "children": {
+            "save": { "component": "button", "_title": "Save", "on": { "press": { "command": "submit", "target": "^orderEditor.body.children.form" } } },
+            "cancel": { "component": "button", "_title": "Cancel", "variant": "ghost", "on": { "press": { "command": "close", "target": "$parent" } } }
+        }
+    },
+    "exposes": {
+        "_title": "Dialog title",
+        "body.children.form.children.customer._label": "Customer field label",
+        "body.children.form.children.customer.<-value": "Where the customer name is read from and written to",
+        "body.children.form.children.status._label": "Status field label",
+        "body.children.form.children.status.<-options": "The status options, an array of { value, label } records",
+        "body.children.lines.<-items": "The order lines shown in the list",
+        "body.children.lines.row": "The row template of a line; link its content to $row fields",
+        "footer.children.save._title": "Save button text",
+        "footer.children.cancel._title": "Cancel button text"
+    }
+}

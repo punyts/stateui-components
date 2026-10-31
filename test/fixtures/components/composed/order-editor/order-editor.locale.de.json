@@ -1,0 +1,19 @@
+{
+    "_title": "Bestellung bearbeiten",
+    "body": {
+        "children": {
+            "form": {
+                "children": {
+                    "customer": { "_label": "Kunde" },
+                    "status": { "_label": "Status" }
+                }
+            }
+        }
+    },
+    "footer": {
+        "children": {
+            "save": { "_title": "Speichern" },
+            "cancel": { "_title": "Abbrechen" }
+        }
+    }
+}
