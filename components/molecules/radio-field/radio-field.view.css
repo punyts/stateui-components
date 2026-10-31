@@ -40,7 +40,7 @@
 }
 
 .radio:checked {
-    border-color: var(--ui-color-accent-base);
+    border-color: var(--ui-field-selected-fill);
 }
 
 .radio:checked::after {
@@ -48,7 +48,7 @@
     position: absolute;
     inset: 22%;
     border-radius: 50%;
-    background: var(--ui-color-accent-base);
+    background: var(--ui-field-selected-fill);
 }
 
 .radio:focus-visible {
@@ -71,5 +71,5 @@
 }
 
 .options[aria-invalid="true"] .radio:not(:checked) {
-    border-color: var(--ui-color-danger-base);
+    border-color: var(--ui-field-error-color);
 }

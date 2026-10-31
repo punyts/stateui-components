@@ -13,7 +13,7 @@
         </div>
     </div>
     <div class="body" layout-host="">
-        <sui-node repeat="{{ $k,$i,$v in $.children }}" key="{{ $k }}" state="{{ $v }}"></sui-node>
+        <sui-node if="{{ $.children }}" repeat="{{ $k,$i,$v in $.children }}" key="{{ $k }}" state="{{ $v }}"></sui-node>
     </div>
     <div class="body-skeleton" if="{{ $.loading }}">
         <ui-skeleton lines="3"></ui-skeleton>

@@ -67,6 +67,31 @@ describe('select in Chromium', () => {
         expect(mounted.store.get('$.data.picked')).toBe(2);
     });
 
+    it('should show a static value set at mount once the options have rendered', async () => {
+        // Arrange
+        const options = { open: { _label: 'Open' }, done: { _label: 'Done' } };
+
+        // Act
+        const mounted = mountComponent('select', { options, value: 'done' });
+        await flush();
+
+        // Assert
+        expect(labels(mounted.element)).toEqual(['Open', 'Done']);
+        expect(control(mounted.element).value).toBe('done');
+    });
+
+    it('should show a static value and a static multiple selection at mount', async () => {
+        // Arrange
+        const options = { a: { _label: 'A' }, b: { _label: 'B' }, c: { _label: 'C' } };
+
+        // Act
+        const mounted = mountComponent('select', { options, multiple: true, value: ['a', 'c'] });
+        await flush();
+
+        // Assert
+        expect(Array.from(control(mounted.element).selectedOptions).map((option) => option.value)).toEqual(['a', 'c']);
+    });
+
     it('should list a static map by key and write the key when selected', async () => {
         // Arrange
         const mounted = mountComponent('select', { options: { open: { _label: 'Open' }, done: { _label: 'Done' } }, '<-value': '$.data.status' }, { data: { status: '' } });

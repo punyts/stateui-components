@@ -23,5 +23,5 @@
 }
 
 .control[aria-invalid="true"] {
-    border-color: var(--ui-color-danger-base);
+    border-color: var(--ui-field-error-color);
 }

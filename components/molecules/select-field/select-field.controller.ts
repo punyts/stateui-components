@@ -33,7 +33,7 @@ export default function controller(context: ControllerContext) {
 
     return {
         ...field,
-        valueOf: options.valueOf,
+        optionKeyOf: options.optionKeyOf,
         labelOf: options.labelOf,
         clear,
         onChange: () => {

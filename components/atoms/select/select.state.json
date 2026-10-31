@@ -2,6 +2,7 @@
     "summary": "A bare dropdown of options from data or a translated static map, single or multiple, with no visible label",
     "tokenGroup": "control",
     "tokens": {
+        "selected": { "fill": "{color.accent.base}", "on": "{color.accent.on}" },
         "radius": "{radius.md}",
         "border": "{border.width.thin}",
         "padding": { "inline": "{space.inset.sm}" }

@@ -24,8 +24,8 @@
 }
 
 .box:checked {
-    background: var(--ui-color-accent-base);
-    border-color: var(--ui-color-accent-base);
+    background: var(--ui-control-selected-fill);
+    border-color: var(--ui-control-selected-fill);
 }
 
 .box:checked::after {
@@ -35,7 +35,7 @@
     inset-inline-start: 34%;
     inline-size: 26%;
     block-size: 50%;
-    border: solid var(--ui-color-accent-on);
+    border: solid var(--ui-control-selected-on);
     border-width: 0 2px 2px 0;
     transform: rotate(45deg);
 }

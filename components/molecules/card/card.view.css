@@ -37,8 +37,8 @@
 }
 
 :host([selected]) .surface {
-    background: var(--ui-color-accent-soft);
-    border-color: var(--ui-color-accent-base);
+    background: var(--ui-card-selected-fill);
+    border-color: var(--ui-card-selected-border);
 }
 
 .media {

@@ -50,7 +50,7 @@
 }
 
 .toggle:checked {
-    background: var(--ui-color-accent-base);
+    background: var(--ui-field-selected-fill);
 }
 
 .toggle:checked::after {

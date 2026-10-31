@@ -19,7 +19,7 @@ export default function controller(context: ControllerContext) {
 
     return {
         ...field,
-        valueOf: options.valueOf,
+        optionKeyOf: options.optionKeyOf,
         labelOf: options.labelOf,
         onChange: () => {
             const chosen = radios().find((radio) => radio.checked);

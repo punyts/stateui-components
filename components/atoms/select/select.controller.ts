@@ -1,4 +1,5 @@
 import type { ControllerContext } from '@punyts/stateui';
+import { watchRenderedOptions } from '../shared/field/options.js';
 
 interface CommandHost {
     commands?: Record<string, () => void>;
@@ -27,7 +28,7 @@ export default function controller({ element, store, basePath }: ControllerConte
     };
 
     /** The native option value of a repeat entry: a map entry (it holds `_label`) is keyed, a data entry carries its own value */
-    const valueOf = (key: string, entry: Entry, field: string): string => String('_label' in entry ? key : entry[field]);
+    const optionKeyOf = (key: string, entry: Entry, field: string): string => String('_label' in entry ? key : entry[field]);
     const labelOf = (entry: Entry, field: string, content: unknown): string => String('_label' in entry ? content : entry[field] ?? '');
 
     const sync = (): void => {
@@ -41,6 +42,7 @@ export default function controller({ element, store, basePath }: ControllerConte
     const watched = [`${basePath}.value`, `${basePath}.multiple`, `${basePath}.optionValue`, `${basePath}.options`, `${basePath}.options.$all`];
     store.on(watched, resync);
     resync();
+    const stopWatching = watchRenderedOptions(element, sync);
 
     const host = element as Element & CommandHost;
     host.commands = {
@@ -50,7 +52,7 @@ export default function controller({ element, store, basePath }: ControllerConte
         }
     };
     return {
-        valueOf,
+        optionKeyOf,
         labelOf,
         onChange: () => {
             const current = control();
@@ -63,6 +65,7 @@ export default function controller({ element, store, basePath }: ControllerConte
         },
         dispose: () => {
             store.off(watched, resync);
+            stopWatching();
             delete host.commands;
         }
     };

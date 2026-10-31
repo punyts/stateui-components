@@ -5,7 +5,7 @@ type Entry = Record<string, unknown>;
 /** The members the view of an option field calls, and what its controller needs to read and write the chosen value */
 export interface OptionMembers {
     /** The native value of a repeat entry: a map entry (it holds `_label`) is keyed, a data entry carries its own value */
-    valueOf(key: string, entry: Entry, field: string): string;
+    optionKeyOf(key: string, entry: Entry, field: string): string;
     /** The label of a repeat entry: the translated content of a map entry, the `optionLabel` field of a data entry */
     labelOf(entry: Entry, field: string, content: unknown): string;
     /** True when the field takes several values */
@@ -38,7 +38,7 @@ export function createOptions({ store, basePath }: ControllerContext): OptionMem
         return entry === undefined ? key : (entry as Entry)[field];
     };
     return {
-        valueOf: (key, entry, field) => String('_label' in entry ? key : entry[field]),
+        optionKeyOf: (key, entry, field) => String('_label' in entry ? key : entry[field]),
         labelOf: (entry, field, content) => String('_label' in entry ? content : (entry[field] ?? '')),
         multiple,
         selectedKeys,

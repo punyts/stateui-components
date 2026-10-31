@@ -2,7 +2,7 @@
     <label class="label" for="control">{{ $._label }}</label>
     <div class="box">
         <ui-icon class="icon" if="{{ $.icon !== '' }}" state=".glyph" size="{{ $.size }}"></ui-icon>
-        <select id="control" class="control" multiple="{{ $.multiple }}" disabled="{{ $.disabled || $.locked }}" aria-describedby="{{ describedBy($._help, $.message) }}" aria-invalid="{{ $.error !== '' ? 'true' : null }}" onchange="{{ onChange }}" onblur="{{ onBlur }}"><option repeat="{{ $k,$i,$v in $.options }}" key="{{ $k }}" value="{{ valueOf($k, $v, $.optionValue) }}">{{ labelOf($v, $.optionLabel, $v._label) }}</option></select>
+        <select id="control" class="control" multiple="{{ $.multiple }}" disabled="{{ $.disabled || $.locked }}" aria-describedby="{{ describedBy($._help, $.message) }}" aria-invalid="{{ $.error !== '' ? 'true' : null }}" onchange="{{ onChange }}" onblur="{{ onBlur }}"><option repeat="{{ $k,$i,$v in $.options }}" key="{{ $k }}" value="{{ optionKeyOf($k, $v, $.optionValue) }}">{{ labelOf($v, $.optionLabel, $v._label) }}</option></select>
     </div>
     <div class="messages">
         <p class="help" id="help" if="{{ $._help !== '' }}">{{ $._help }}</p>

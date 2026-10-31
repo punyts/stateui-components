@@ -4,6 +4,8 @@
     "commands": ["validate", "reset", "focus", "clear"],
     "tokenGroup": "field",
     "tokens": {
+        "selected": { "fill": "{color.accent.base}", "on": "{color.accent.on}" },
+        "error": { "color": "{color.danger.base}" },
         "label": {
             "gap": "{space.gap.sm}",
             "width": "calc({size.control.lg} * 3)"

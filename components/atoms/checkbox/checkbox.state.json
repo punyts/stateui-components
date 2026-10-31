@@ -2,6 +2,7 @@
     "summary": "A bare checkbox with no visible label",
     "tokenGroup": "control",
     "tokens": {
+        "selected": { "fill": "{color.accent.base}", "on": "{color.accent.on}" },
         "radius": "{radius.md}",
         "border": "{border.width.thin}",
         "padding": { "inline": "{space.inset.sm}" }

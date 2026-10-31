@@ -46,8 +46,8 @@
 }
 
 .toggle:checked {
-    background: var(--ui-color-accent-base);
-    border-color: var(--ui-color-accent-base);
+    background: var(--ui-field-selected-fill);
+    border-color: var(--ui-field-selected-fill);
 }
 
 .toggle:checked::after {
@@ -57,7 +57,7 @@
     inset-inline-start: 34%;
     inline-size: 26%;
     block-size: 50%;
-    border: solid var(--ui-color-accent-on);
+    border: solid var(--ui-field-selected-on);
     border-width: 0 2px 2px 0;
     transform: rotate(45deg);
 }

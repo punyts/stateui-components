@@ -28,7 +28,7 @@
 }
 
 .box:checked {
-    background: var(--ui-color-accent-base);
+    background: var(--ui-control-selected-fill);
 }
 
 .box:checked::after {

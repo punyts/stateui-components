@@ -75,7 +75,7 @@
 }
 
 .error {
-    color: var(--ui-color-danger-base);
+    color: var(--ui-field-error-color);
 }
 
 :host([title-position="left"]) .field {

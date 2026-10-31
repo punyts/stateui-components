@@ -4,6 +4,7 @@
     "layout": true,
     "events": ["press"],
     "tokens": {
+        "selected": { "fill": "{color.accent.soft}", "border": "{color.accent.base}" },
         "radius": "{radius.md}",
         "padding": "{space.inset.md}",
         "gap": "{space.gap.md}"

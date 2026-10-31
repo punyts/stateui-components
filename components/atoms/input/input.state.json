@@ -2,6 +2,7 @@
     "summary": "A bare single-line input with no visible label, for toolbars and table cells",
     "tokenGroup": "control",
     "tokens": {
+        "selected": { "fill": "{color.accent.base}", "on": "{color.accent.on}" },
         "radius": "{radius.md}",
         "border": "{border.width.thin}",
         "padding": { "inline": "{space.inset.sm}" }

@@ -2,6 +2,7 @@
     "summary": "A search input with a search icon and a clear button, for filtering lists",
     "tokenGroup": "control",
     "tokens": {
+        "selected": { "fill": "{color.accent.base}", "on": "{color.accent.on}" },
         "radius": "{radius.md}",
         "border": "{border.width.thin}",
         "padding": { "inline": "{space.inset.sm}" }
