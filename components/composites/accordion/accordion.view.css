@@ -1,0 +1,29 @@
+:host {
+    display: block;
+}
+
+.accordion {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: var(--ui-accordion-gap);
+    color: var(--ui-color-text-base);
+    font-family: var(--ui-text-body-family);
+    font-size: var(--ui-text-body-size);
+    line-height: var(--ui-text-body-leading);
+}
+
+:host([bordered]) .accordion {
+    gap: 0;
+    overflow: hidden;
+    border: var(--ui-border-width-thin) solid var(--ui-color-border-base);
+    border-radius: var(--ui-accordion-radius);
+}
+
+:host([bordered]) sui-node {
+    padding-block: var(--ui-accordion-padding);
+}
+
+:host([bordered]) sui-node + sui-node {
+    border-block-start: var(--ui-border-width-thin) solid var(--ui-color-border-base);
+}

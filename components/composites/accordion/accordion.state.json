@@ -1,0 +1,17 @@
+{
+    "summary": "A stack of disclosures with one or many open: an FAQ or a settings list",
+    "shared": { "density": {} },
+    "childComponents": ["disclosure"],
+    "events": ["change"],
+    "commands": ["open", "close", "expandAll", "collapseAll"],
+    "tokens": {
+        "gap": "{space.gap.sm}",
+        "radius": "{radius.md}",
+        "padding": "{space.inset.sm}"
+    },
+    "properties": {
+        "multiple": { "type": "boolean", "default": false, "reflect": true },
+        "open": { "type": ["string", "array"], "default": "" },
+        "bordered": { "type": "boolean", "default": false, "reflect": true }
+    }
+}
