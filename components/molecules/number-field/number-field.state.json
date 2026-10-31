@@ -1,0 +1,54 @@
+{
+    "summary": "A labelled number field that reads and shows its value in the locale, with min, max, step and plus and minus buttons",
+    "events": ["change", "invalid", "valid"],
+    "commands": ["validate", "reset", "focus", "clear"],
+    "tokenGroup": "field",
+    "tokens": {
+        "selected": { "fill": "{color.accent.base}", "on": "{color.accent.on}" },
+        "error": { "color": "{color.danger.base}" },
+        "label": { "gap": "{space.gap.sm}", "width": "calc({size.control.lg} * 3)" },
+        "help": { "size": "{text.caption.size}" }
+    },
+    "shared": { "size": { "default": "md" }, "density": {} },
+    "properties": {
+        "value": { "type": ["number", "string"], "default": "" },
+        "min": { "type": "number" },
+        "max": { "type": "number" },
+        "step": { "type": "number", "default": 0, "validators": { "range": { "min": 0 } } },
+        "format": { "type": "string", "values": ["number", "percent", "currency"], "default": "number" },
+        "currency": {
+            "type": "string",
+            "validators": { "pattern": "^[A-Z]{3}$" },
+            "requiredWhen": { "property": "format", "equals": "currency" }
+        },
+        "stepper": { "type": "boolean", "default": true, "reflect": true },
+        "disabled": { "type": "boolean", "default": false },
+        "readonly": { "type": "boolean", "default": false },
+        "titlePosition": { "type": "string", "values": ["top", "left", "inner", "hidden"], "default": "top", "reflect": true },
+        "width": { "type": ["string", "integer"], "default": "fill" },
+        "required": { "type": "boolean", "default": false },
+        "error": { "type": "string", "default": "", "runtime": true },
+        "touched": { "type": "boolean", "default": false, "runtime": true },
+        "dirty": { "type": "boolean", "default": false, "runtime": true },
+        "locked": { "type": "boolean", "default": false, "runtime": true },
+        "message": { "type": "string", "default": "", "runtime": true },
+        "text": { "type": "string", "default": "", "runtime": true },
+        "_label": { "type": "string", "kind": "content", "default": "Label" },
+        "_placeholder": { "type": "string", "kind": "content", "default": "" },
+        "_help": { "type": "string", "kind": "content", "default": "" },
+        "_decrement": { "type": "string", "kind": "content", "default": "Decrease" },
+        "_increment": { "type": "string", "kind": "content", "default": "Increase" },
+        "_errors": {
+            "type": "map",
+            "items": "string",
+            "kind": "content",
+            "default": {
+                "required": "This field is required",
+                "min": "Too small",
+                "max": "Too large",
+                "step": "Not a valid step",
+                "number": "Enter a number"
+            }
+        }
+    }
+}

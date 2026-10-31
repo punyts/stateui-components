@@ -1,0 +1,18 @@
+<div class="field" style="--field-width: {{ widthOf($.width) }}">
+    <label class="label" for="control">{{ $._label }}</label>
+    <div class="box">
+        <button class="step decrement" type="button" tabindex="-1" if="{{ $.stepper }}" aria-label="{{ $._decrement }}" disabled="{{ $.disabled || $.locked || $.readonly }}" onclick="{{ onDecrement }}">
+            <ui-icon name="minus" size="sm"></ui-icon>
+        </button>
+        <input id="control" class="control" type="text" inputmode="decimal" autocomplete="off" role="spinbutton" placeholder="{{ $._placeholder }}" disabled="{{ $.disabled || $.locked }}" readonly="{{ $.readonly }}" aria-valuenow="{{ ($.value === '' || $.error === 'number') ? null : $.value }}" aria-valuemin="{{ $.min !== undefined ? $.min : null }}" aria-valuemax="{{ $.max !== undefined ? $.max : null }}" aria-valuetext="{{ ($.text === '' || $.error === 'number') ? null : $.text }}" aria-describedby="{{ describedBy($._help, $.message) }}" aria-invalid="{{ $.error !== '' ? 'true' : null }}" value="{{ $.text }}" oninput="{{ onInput }}" onkeydown="{{ onKeyDown }}" onblur="{{ onBlur }}" />
+        <button class="step increment" type="button" tabindex="-1" if="{{ $.stepper }}" aria-label="{{ $._increment }}" disabled="{{ $.disabled || $.locked || $.readonly }}" onclick="{{ onIncrement }}">
+            <ui-icon name="plus" size="sm"></ui-icon>
+        </button>
+    </div>
+    <div class="messages">
+        <p class="help" id="help" if="{{ $._help !== '' }}">{{ $._help }}</p>
+        <div class="alert" role="status" aria-live="polite">
+            <p class="error" id="error" if="{{ $.message !== '' }}">{{ $.message }}</p>
+        </div>
+    </div>
+</div>

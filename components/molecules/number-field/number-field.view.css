@@ -1,0 +1,56 @@
+@include "control.css";
+@include "field.css";
+
+.control {
+    font-variant-numeric: tabular-nums;
+    text-align: end;
+}
+
+:host([stepper]) .control {
+    text-align: center;
+    border-radius: 0;
+}
+
+.step {
+    box-sizing: border-box;
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--control-height, var(--ui-size-control-md));
+    block-size: var(--control-height, var(--ui-size-control-md));
+    margin: 0;
+    padding: 0;
+    color: var(--ui-color-text-base);
+    background: var(--ui-color-surface-sunken);
+    border: var(--ui-control-border) solid var(--ui-color-border-strong);
+    cursor: pointer;
+    transition: background-color var(--ui-motion-duration-fast) var(--ui-motion-easing-standard);
+}
+
+.decrement {
+    border-start-start-radius: var(--ui-control-radius);
+    border-end-start-radius: var(--ui-control-radius);
+    border-inline-end-width: 0;
+}
+
+.increment {
+    border-start-end-radius: var(--ui-control-radius);
+    border-end-end-radius: var(--ui-control-radius);
+    border-inline-start-width: 0;
+}
+
+.step:hover:not(:disabled) {
+    background: var(--ui-color-surface-base);
+}
+
+.step:focus-visible {
+    outline: 2px solid var(--ui-color-focus);
+    outline-offset: -2px;
+}
+
+.step:disabled {
+    color: var(--ui-color-text-disabled);
+    border-color: var(--ui-color-border-base);
+    cursor: not-allowed;
+}

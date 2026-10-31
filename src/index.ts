@@ -14,5 +14,7 @@ export { validateIconNode } from './icons/validate.js';
 export type { IconEntry, IconPath, IconStyledPath, IconsFile } from './icons/types.js';
 export { VALUE_FORMATS, formatValue, toNumber } from './shared/format/format.js';
 export type { FormatOptions, ValueFormat } from './shared/format/format.js';
+export { NUMBER_INPUT_FORMATS, formatNumberInput, parseNumberInput } from './shared/format/numberInput.js';
+export type { NumberInputFormat, NumberInputOptions } from './shared/format/numberInput.js';
 export { ALIGNED_PLACEMENTS, PLACEMENTS, createPopover, isAlignedPlacement, isAnchorName, isPlacement, positionAreaOf } from './shared/popover/popover.js';
 export type { AlignedPlacement, AnyPlacement, Placement, PopoverDismissReason, PopoverHandle, PopoverOptions } from './shared/popover/popover.js';

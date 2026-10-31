@@ -57,6 +57,15 @@ export interface FieldMembers {
     dispose(): void;
 }
 
+/** What a field may add to the base behaviour */
+export interface FieldOptions {
+    /**
+     * A rule of the field's own that comes before every other: a non-empty name fails validation with that name. A number
+     * field uses it for text that is not a number, which is not in `value`, so the other rules cannot see it
+     */
+    readonly entryRule?: () => string;
+}
+
 /** The element of a field as the command dispatcher sees it */
 interface CommandHost {
     commands?: Record<string, () => void>;
@@ -107,11 +116,11 @@ export function fieldDescribedBy(help: unknown, message: unknown): string | null
  * It returns the members the view calls (`widthOf`, `describedBy`, `onBlur`); a field's own controller returns them,
  * together with anything its control needs.
  * The field also raises `invalid` (`detail: { rule }`) on every failing validation and `valid` (`detail: { value }`) when
- * a validation passes after one failed; it answers the commands `focus` and `clear`; and on attach it dispatches the
+ * a validation passes after one failed; `options.entryRule` adds a rule that is checked first; it answers the commands `focus` and `clear`; and on attach it dispatches the
  * bubbling, composed `ui-field-connect` event whose detail is a `FieldConnect`, so a form finds it. With no form
  * listening nothing happens. On dispose the connect interface is released (`onRelease` callbacks run once)
  */
-export function createField({ element, store, basePath }: ControllerContext, valueName = 'value'): FieldMembers {
+export function createField({ element, store, basePath }: ControllerContext, valueName = 'value', options: FieldOptions = {}): FieldMembers {
     const iconPath = `${basePath}.icon`;
     const syncGlyph = (): void => {
         const icon = store.get<unknown>(iconPath);
@@ -131,6 +140,7 @@ export function createField({ element, store, basePath }: ControllerContext, val
         maxLength: typeof read('maxLength') === 'number' ? (read('maxLength') as number) : 0,
         min: read('min'),
         max: read('max'),
+        step: typeof read('step') === 'number' ? (read('step') as number) : 0,
         pattern: typeof read('pattern') === 'string' ? (read('pattern') as string) : ''
     });
     const raise = (name: string, detail: unknown): void => {
@@ -139,7 +149,8 @@ export function createField({ element, store, basePath }: ControllerContext, val
     const validate = (): string => {
         const before = read('error');
         const value = store.get<unknown>(valuePath);
-        const rule = failingRule(value, settings());
+        const entry = options.entryRule?.() ?? '';
+        const rule = entry !== '' ? entry : failingRule(value, settings());
         store.set(`${basePath}.error`, rule);
         if (rule !== '') raise('invalid', { rule });
         else if (typeof before === 'string' && before !== '') raise('valid', { value });

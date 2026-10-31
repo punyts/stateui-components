@@ -57,6 +57,31 @@ describe('failingRule', () => {
         expect(results).toEqual(['min', '', 'max', '', 'min', 'max']);
     });
 
+    it('should fail step for a value that is not a whole number of steps from min, from 0 without a min', () => {
+        // Act
+        const results = [
+            failingRule(10, settings({ step: 5 })),
+            failingRule(12, settings({ step: 5 })),
+            failingRule(12, settings({ step: 5, min: 2 })),
+            failingRule(13, settings({ step: 5, min: 2 })),
+            failingRule(0.3, settings({ step: 0.1 })),
+            failingRule(0.35, settings({ step: 0.1 })),
+            failingRule(7, settings({ step: 0 })),
+            failingRule(7.5, settings({}))
+        ];
+
+        // Assert
+        expect(results).toEqual(['', 'step', '', 'step', '', 'step', '', '']);
+    });
+
+    it('should judge min and max before step', () => {
+        // Act
+        const result = failingRule(3, settings({ step: 5, min: 5 }));
+
+        // Assert
+        expect(result).toBe('min');
+    });
+
     it('should compare a string bound as text, so ISO dates order correctly', () => {
         // Act
         const results = [
@@ -110,7 +135,7 @@ describe('failingRule', () => {
 
         // Assert
         expect(results).toEqual(['required', 'minLength', 'maxLength', 'min', 'max']);
-        expect(FIELD_RULES).toEqual(['required', 'minLength', 'maxLength', 'min', 'max', 'pattern']);
+        expect(FIELD_RULES).toEqual(['required', 'minLength', 'maxLength', 'min', 'max', 'step', 'pattern']);
     });
 
     it('should reach pattern only when every earlier rule passes', () => {

@@ -1,0 +1,14 @@
+{
+    "_label": "Beschriftung",
+    "_placeholder": "",
+    "_help": "",
+    "_decrement": "Verringern",
+    "_increment": "Erhöhen",
+    "_errors": {
+        "required": "Dieses Feld ist erforderlich",
+        "min": "Zu klein",
+        "max": "Zu groß",
+        "step": "Kein gültiger Schritt",
+        "number": "Bitte eine Zahl eingeben"
+    }
+}

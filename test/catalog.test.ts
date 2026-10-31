@@ -51,10 +51,10 @@ const difference = (found: readonly string[], spec: readonly string[]): { missin
 
 /** Components of Epic 8 that joined the library after the first set; the Epic 4 and 5 counts below stay as the spec fixed them */
 const LATER_ATOMS: readonly string[] = ['segmented'];
-const LATER_MOLECULES: readonly string[] = [];
+const LATER_MOLECULES: readonly string[] = ['numberField'];
 const LATER_COMPOSITES: readonly string[] = ['popover'];
 
-const FIELDS = ['textField', 'textareaField', 'selectField', 'checkField', 'switchField', 'radioField', 'dateField'] as const;
+const FIELDS = ['textField', 'textareaField', 'selectField', 'checkField', 'switchField', 'radioField', 'dateField', 'numberField'] as const;
 
 let names: IconNames;
 const isIconName = (name: string): boolean => names.isIconName(name);

@@ -1,7 +1,10 @@
 /** The rules a field checks, in the order it checks them; `error` holds the name of the first that fails */
-export const FIELD_RULES = ['required', 'minLength', 'maxLength', 'min', 'max', 'pattern'] as const;
+export const FIELD_RULES = ['required', 'minLength', 'maxLength', 'min', 'max', 'step', 'pattern'] as const;
 
 export type FieldRule = (typeof FIELD_RULES)[number];
+
+/** The rule a number field reports when what was typed is not a number; the field's own controller raises it, so `failingRule` never returns it */
+export const NUMBER_RULE = 'number';
 
 /** The settings the rules read from a field's node. `min` and `max` are a number or a string; an empty string means unset */
 export interface FieldSettings {
@@ -12,6 +15,8 @@ export interface FieldSettings {
     maxLength: number;
     min: unknown;
     max: unknown;
+    /** A number field's step: a value must lie a whole number of steps from `min` (from 0 without one). Absent or 0 means no step rule */
+    step?: number;
     /** A name from `NAMED_PATTERNS` or a regular expression; empty means none */
     pattern: string;
 }
@@ -60,6 +65,15 @@ function beyond(value: unknown, bound: unknown, direction: 'below' | 'above'): b
     return direction === 'below' ? text < String(bound) : text > String(bound);
 }
 
+/** True when a number is not a whole number of `step`s from the base (`min` when it is a number, else 0); a tolerance absorbs floating-point error */
+function offStep(value: unknown, step: number | undefined, min: unknown): boolean {
+    if (typeof step !== 'number' || !(step > 0)) return false;
+    const number = typeof value === 'number' ? value : typeof value === 'string' && value.trim() !== '' ? Number(value) : Number.NaN;
+    if (Number.isNaN(number)) return false;
+    const ratio = (number - (typeof min === 'number' ? min : 0)) / step;
+    return Math.abs(ratio - Math.round(ratio)) > 1e-7 * Math.max(1, Math.abs(ratio));
+}
+
 /**
  * The name of the first rule the value fails, or an empty string. Rules run in `FIELD_RULES` order. An empty value
  * fails only `required`: the other rules judge what was typed
@@ -71,6 +85,7 @@ export function failingRule(value: unknown, settings: FieldSettings): FieldRule 
     if (settings.maxLength > 0 && length > settings.maxLength) return 'maxLength';
     if (beyond(value, settings.min, 'below')) return 'min';
     if (beyond(value, settings.max, 'above')) return 'max';
+    if (offStep(value, settings.step, settings.min)) return 'step';
     if (settings.pattern !== '') {
         const expression = patternOf(settings.pattern);
         if (expression === null || typeof value !== 'string' || !expression.test(value)) return 'pattern';
