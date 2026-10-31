@@ -1,5 +1,7 @@
 {
     "summary": "Hierarchical records drawn through recordList: keyed by parent or children, expandable, indented by level",
+    "events": ["select", "activate", "expand"],
+    "commands": ["expand", "collapse", "expandAll", "collapseAll"],
     "shared": { "density": {} },
     "properties": {
         "key": { "type": "string", "validators": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" }, "default": "id" },
@@ -8,6 +10,8 @@
         "hasChildrenField": { "type": "string", "validators": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" }, "default": "hasChildren" },
         "labelField": { "type": "string", "validators": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" }, "default": "label" },
         "expanded": { "type": "array", "default": [] },
+        "selectable": { "type": "string", "values": ["none", "single", "multi"], "default": "none", "reflect": true },
+        "selected": { "type": ["string", "number", "array"] },
         "indent": { "type": "string", "values": ["sm", "md", "lg"], "default": "md", "reflect": true },
         "records": { "type": ["array", "object"] },
         "row": { "type": "node", "row": true },

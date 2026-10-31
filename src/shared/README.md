@@ -37,6 +37,8 @@ Partials a component's `view.css` pulls in with a line `@include "<name>.css";` 
 
 `tree.ts`: the pure parts of `tree`: `buildTree` (records to a `TreeModel`: nodes, roots in display order and the keys a cycle hides), `flattenModel` (the visible `TreeRow`s for a set of expanded keys, iterative) and `flattenTree` (both). `recordView.ts`: the element hooks of a record view, including `slotMeta` (what a wrapping component tells the pool about each record in a slot) and `invalidate`.
 
+`placeholder.ts`: `placeholderKey(owner)`, `isPlaceholderKey` and `placeholderOwner`: a key in `order` that names no record, for a row a view shows while it waits for records (`tree`: the busy row under a record whose children are loading). The record index accepts such keys in `order`, the pool shows their positions as pending slots, and `recordKeys()` leaves them out.
+
 ## selection/
 `selection.ts`: `createSelection({ store, selectedPath, currentPath, mode, locate, onSelect })` keeps a record view's selection in `selected` (`pick` replaces or toggles by mode, `selectAll` in `multi` mode only, `clear`) and the store link `current`, pointed at the selected record from `locate` in `single` mode, otherwise at the protected `$.runtime.empty`; `relocate` re-points it after the records changed. Pure helpers: `readSelectionMode`, `selectionKeys`, `selectionValue`, `pickKey`, `sameKeys`, `SELECTION_MODES`. `list` uses it as `../shared/selection/selection.js`; `table` uses it too.
 

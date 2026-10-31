@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { placeholderKey } from './placeholder.js';
 import { buildTree, flattenModel, flattenTree } from './tree.js';
 import type { TreeOptions } from './tree.js';
 
@@ -117,6 +118,32 @@ describe('flattenTree', () => {
         expect(rows['leaf']).toMatchObject({ expandable: false, expanded: false, unloaded: false });
         expect(rows['lazy']).toMatchObject({ expandable: true, expanded: true, unloaded: true });
         expect(rows['full']).toMatchObject({ expandable: true, expanded: true, unloaded: false });
+    });
+
+    it('should put one placeholder row under an expanded record that is marked and has no children loaded', () => {
+        // Arrange
+        const records = [{ id: 'lazy', hasChildren: true }, { id: 'other' }];
+
+        // Act
+        const rows = flattenTree(records, options, ['lazy']).rows;
+
+        // Assert
+        expect(rows.map((row) => [row.key, row.level, row.placeholder])).toEqual([
+            ['lazy', 0, false],
+            [placeholderKey('lazy'), 1, true],
+            ['other', 0, false]
+        ]);
+        expect(rows[1]).toMatchObject({ parent: 'lazy', expandable: false, setsize: 1, posinset: 1 });
+    });
+
+    it('should show no placeholder while the marked record is closed, and none once its children are loaded', () => {
+        // Arrange
+        const marked = [{ id: 'lazy', hasChildren: true }];
+        const loaded = [{ id: 'lazy', hasChildren: true }, { id: 'c', parentId: 'lazy' }];
+
+        // Assert
+        expect(flattenTree(marked, options, []).rows.map((row) => row.placeholder)).toEqual([false]);
+        expect(flattenTree(loaded, options, ['lazy']).rows.map((row) => row.placeholder)).toEqual([false, false]);
     });
 
     it('should not call a record unloaded once children are present, whatever its marker says', () => {

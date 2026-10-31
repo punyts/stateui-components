@@ -1,3 +1,5 @@
+import { placeholderKey } from './placeholder.js';
+
 /** What a tree is read with: the record key field and how records relate */
 export interface TreeOptions {
     /** The field of an array record that holds its key; a keyed map is keyed by its own keys */
@@ -43,6 +45,8 @@ export interface TreeRow {
     expanded: boolean;
     /** The record is marked as having children and none are loaded */
     unloaded: boolean;
+    /** The row is the busy placeholder under an expanded record whose children are not loaded; its key names no record */
+    placeholder: boolean;
 }
 
 /** The visible rows in display order, and the keys a cycle hides */
@@ -145,9 +149,24 @@ export function flattenModel(model: TreeModel, expanded: ReadonlySet<string>): T
             posinset: next.posinset,
             expandable,
             expanded: open,
-            unloaded: node.children.length === 0 && node.marked
+            unloaded: node.children.length === 0 && node.marked,
+            placeholder: false
         });
         if (!open) continue;
+        if (node.children.length === 0) {
+            rows.push({
+                key: placeholderKey(next.key),
+                level: next.level + 1,
+                parent: next.key,
+                setsize: 1,
+                posinset: 1,
+                expandable: false,
+                expanded: false,
+                unloaded: false,
+                placeholder: true
+            });
+            continue;
+        }
         for (let index = node.children.length - 1; index >= 0; index--) {
             stack.push({ key: node.children[index] as string, level: next.level + 1, setsize: node.children.length, posinset: index + 1 });
         }
@@ -158,7 +177,8 @@ export function flattenModel(model: TreeModel, expanded: ReadonlySet<string>): T
 /**
  * The records of a tree as the rows to show, in display order, each with its level. A record is a root when it has no
  * parent (or its parent is not among the records); the children of a record whose key is in `expanded` follow it, in the
- * order of the records (or of the `childrenField` list). `cyclic` lists the records a cycle of parent keys hides: a record
+ * order of the records (or of the `childrenField` list), or, for a record that is marked as having children and has none
+ * loaded, one placeholder row (`placeholder: true`) that stands for them until they arrive. `cyclic` lists the records a cycle of parent keys hides: a record
  * that is its own ancestor is never reachable from a root, so neither it nor anything below it is shown
  */
 export function flattenTree(records: unknown, options: TreeOptions, expanded: Iterable<string>): FlatTree {

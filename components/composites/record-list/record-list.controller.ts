@@ -169,7 +169,8 @@ export default function controller({ element, store, basePath }: ControllerConte
     };
     const syncMultiselectable = (): void => {
         if (disposed) return;
-        if (text(rolePath, 'list') === 'listbox') element.setAttribute('aria-multiselectable', store.get<unknown>(multiPath) === true ? 'true' : 'false');
+        const role = text(rolePath, 'list');
+        if (role === 'listbox' || role === 'tree') element.setAttribute('aria-multiselectable', store.get<unknown>(multiPath) === true ? 'true' : 'false');
         else element.removeAttribute('aria-multiselectable');
     };
     const syncLoading = (): void => {
@@ -220,6 +221,10 @@ export default function controller({ element, store, basePath }: ControllerConte
     host.keyAt = (position) => index.keyAt(position);
     host.recordKeys = () => index.loadedKeys();
     host.invalidate = () => pool?.invalidate();
+    host.focusKey = (key) => {
+        const position = index.positionOf(key);
+        if (position !== undefined) moveTo(position);
+    };
     host.commands = {
         scrollTo: (value) => {
             const key = typeof value === 'string' || typeof value === 'number' ? String(value) : '';
@@ -282,6 +287,7 @@ export default function controller({ element, store, basePath }: ControllerConte
             delete host.keyAt;
             delete host.recordKeys;
             delete host.invalidate;
+            delete host.focusKey;
             delete host.slotMeta;
             delete host.commands;
         }

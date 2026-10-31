@@ -88,6 +88,10 @@
     padding-inline: var(--ui-space-inset-md);
 }
 
+.slot[data-pending] > .pending {
+    padding-inline-start: calc(var(--sui-level, 0) * var(--sui-indent, 0px) + var(--ui-space-inset-md));
+}
+
 .pending ui-skeleton {
     inline-size: 100%;
 }

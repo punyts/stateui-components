@@ -1,6 +1,7 @@
 import { report } from '@punyts/core';
 import { RUNTIME_PATHS, applyLinks, disposeLinks, resolveRowLinks, runtimePath } from '@punyts/stateui-app/core';
 import type { Link, Node } from '@punyts/stateui-app/core';
+import { isPlaceholderKey } from './placeholder.js';
 import type { RecordIndex, RecordStore } from './recordIndex.js';
 import type { SlotMeta } from './recordView.js';
 import { MAX_SLOTS, poolSize, poolStart, readWindow } from './window.js';
@@ -27,8 +28,10 @@ export interface SlotPoolOptions {
      */
     paged?: () => boolean;
     /**
-     * What the component around the view knows about the record in a slot (a tree's level), asked for each slot a refresh
-     * points at a record; the slot shows it as `slotLevel`. A slot with no record, or an answer of `undefined`, shows 0
+     * What the component around the view knows about the record in a slot (a tree's level, expansion and place among its
+     * siblings), asked for each slot a refresh points at a record; the slot shows it as `slotLevel`, `slotExpanded` (1 open,
+     * 0 closed, -1 not expandable), `slotSetsize`, `slotPosinset` and `slotLabel`. A slot with no record, or an answer of
+     * `undefined`, shows 0, -1, 0, 0 and the empty string
      */
     meta?: (key: string, position: number) => SlotMeta | undefined;
     /** Called once after a refresh that found the pinned record gone, with the position it had */
@@ -90,9 +93,19 @@ interface Slot {
     tab: boolean;
     /** Whether the slot shows a position that has no record yet (paged data) */
     pending: boolean;
-    /** The level written to `slotLevel` */
-    level: number;
+    /** What was written to `slotLevel`, `slotExpanded`, `slotSetsize`, `slotPosinset` and `slotLabel` */
+    shown: ShownMeta;
 }
+
+interface ShownMeta {
+    level: number;
+    expanded: number;
+    setsize: number;
+    posinset: number;
+    label: string;
+}
+
+const NO_META: ShownMeta = { level: 0, expanded: -1, setsize: 0, posinset: 0, label: '' };
 
 const isEntry = (value: unknown): value is Entry => value !== null && typeof value === 'object' && !Array.isArray(value);
 
@@ -188,13 +201,17 @@ export function createSlotPool(options: SlotPoolOptions): SlotPool {
         tree['slotSelected'] = false;
         tree['slotTab'] = false;
         tree['slotPending'] = false;
-        tree['slotLevel'] = 0;
+        tree['slotLevel'] = NO_META.level;
+        tree['slotExpanded'] = NO_META.expanded;
+        tree['slotSetsize'] = NO_META.setsize;
+        tree['slotPosinset'] = NO_META.posinset;
+        tree['slotLabel'] = NO_META.label;
         store.set(path, tree);
         store.link(rowLink(path), RUNTIME_PATHS.empty);
         for (const error of applyLinks(store, links)) {
             report.error(error.message, { code: error.code, path });
         }
-        return { path, links, position: -1, key: undefined, target: RUNTIME_PATHS.empty, selected: false, tab: false, pending: false, level: 0 };
+        return { path, links, position: -1, key: undefined, target: RUNTIME_PATHS.empty, selected: false, tab: false, pending: false, shown: NO_META };
     };
 
     const destroySlot = (slot: Slot): void => {
@@ -240,10 +257,27 @@ export function createSlotPool(options: SlotPoolOptions): SlotPool {
     const markMeta = (slot: Slot): void => {
         if (meta === undefined) return;
         const info = slot.key !== undefined && slot.position >= 0 ? meta(slot.key, slot.position) : undefined;
-        const level = info?.level ?? 0;
-        if (slot.level === level) return;
-        slot.level = level;
-        store.set(`${slot.path}.slotLevel`, level);
+        const next: ShownMeta =
+            info === undefined
+                ? NO_META
+                : {
+                      level: info.level,
+                      expanded: info.expanded === undefined ? NO_META.expanded : info.expanded ? 1 : 0,
+                      setsize: info.setsize ?? NO_META.setsize,
+                      posinset: info.posinset ?? NO_META.posinset,
+                      label: info.label ?? NO_META.label
+                  };
+        const fields: [keyof ShownMeta, string][] = [
+            ['level', 'slotLevel'],
+            ['expanded', 'slotExpanded'],
+            ['setsize', 'slotSetsize'],
+            ['posinset', 'slotPosinset'],
+            ['label', 'slotLabel']
+        ];
+        for (const [field, name] of fields) {
+            if (slot.shown[field] !== next[field]) store.set<unknown>(`${slot.path}.${name}`, next[field]);
+        }
+        slot.shown = next;
     };
 
     const markTab = (first: number): void => {
@@ -343,7 +377,7 @@ export function createSlotPool(options: SlotPoolOptions): SlotPool {
                 slot.target = RUNTIME_PATHS.empty;
             }
             point(slot, target ?? RUNTIME_PATHS.empty);
-            const pending = target === undefined && paged?.() === true;
+            const pending = target === undefined && (paged?.() === true || (key !== undefined && isPlaceholderKey(key)));
             place(slot, target === undefined && !pending ? -1 : position);
             markPending(slot, pending);
             mark(slot);

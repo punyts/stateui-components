@@ -1,5 +1,6 @@
 import type { ControllerContext } from '@punyts/stateui';
 import { RUNTIME_PATHS } from '@punyts/stateui-app/core';
+import { isPlaceholderKey } from './placeholder.js';
 
 /** The store a controller receives */
 export type RecordStore = ControllerContext['store'];
@@ -69,7 +70,7 @@ const keyOf = (record: unknown, field: string): string | undefined =>
  * Keeps the key of every record and where it is. For an array it holds a key-to-index map that the store's change
  * events keep current (insert, delete, reorder, replace), so a window move never reads the array to find a record. For a
  * keyed map the key is the map key and the position is the order of the keys. `order` filters and sorts: the positions
- * are its entries that name a record
+ * are its entries that name a record, and its placeholder keys (`placeholder.ts`), which name no record
  */
 export function createRecordIndex(options: RecordIndexOptions): RecordIndex {
     const { store, recordsPath, orderPath, totalPath, onChange } = options;
@@ -129,7 +130,7 @@ export function createRecordIndex(options: RecordIndexOptions): RecordIndex {
         const keys: string[] = [];
         for (let index = 0; index < order.length; index++) {
             const key = keyText(order[index]);
-            if (key === undefined || !has(key)) continue;
+            if (key === undefined || !(has(key) || isPlaceholderKey(key))) continue;
             if (!orderedAt.has(key)) orderedAt.set(key, keys.length);
             keys.push(key);
         }
@@ -282,7 +283,7 @@ export function createRecordIndex(options: RecordIndexOptions): RecordIndex {
                 const keys: string[] = [];
                 for (let position = 0; position < size(); position++) {
                     const key = keyAt(position);
-                    if (key !== undefined) keys.push(key);
+                    if (key !== undefined && !isPlaceholderKey(key)) keys.push(key);
                 }
                 return keys;
             }
