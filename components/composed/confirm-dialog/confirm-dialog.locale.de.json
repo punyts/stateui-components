@@ -1,0 +1,10 @@
+{
+    "_title": "Sind Sie sicher?",
+    "body": { "_text": "Dies kann nicht rückgängig gemacht werden." },
+    "footer": {
+        "children": {
+            "cancel": { "_title": "Abbrechen" },
+            "confirm": { "_title": "Löschen" }
+        }
+    }
+}

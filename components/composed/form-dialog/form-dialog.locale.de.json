@@ -1,0 +1,10 @@
+{
+    "_title": "Bearbeiten",
+    "body": { "children": { "name": { "_label": "Name" } } },
+    "footer": {
+        "children": {
+            "cancel": { "_title": "Abbrechen" },
+            "save": { "_title": "Speichern" }
+        }
+    }
+}

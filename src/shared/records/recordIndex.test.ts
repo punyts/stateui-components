@@ -17,6 +17,21 @@ const setup = (records: unknown, order?: string[]) => {
 };
 
 describe('createRecordIndex', () => {
+    it('should give the position of a key in an array, a keyed map and an order', () => {
+        // Arrange
+        const array = setup(rows('a', 'b', 'c'));
+        const map = setup({ x: { id: 'x' }, y: { id: 'y' } });
+        const ordered = setup(rows('a', 'b', 'c'), ['c', 'zzz', 'a']);
+
+        // Act and Assert
+        expect(array.index.positionOf('c')).toBe(2);
+        expect(array.index.positionOf('zzz')).toBeUndefined();
+        expect(map.index.positionOf('y')).toBe(1);
+        expect(ordered.index.positionOf('c')).toBe(0);
+        expect(ordered.index.positionOf('a')).toBe(1);
+        expect(ordered.index.positionOf('b')).toBeUndefined();
+    });
+
     it('should list the keys of an array and find a record by key', () => {
         // Arrange
         const { index, keys } = setup(rows('a', 'b', 'c'));

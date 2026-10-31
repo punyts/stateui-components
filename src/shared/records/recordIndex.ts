@@ -30,6 +30,8 @@ export interface RecordIndex {
     pathOf(key: string): string | undefined;
     /** The store path of the record with that key, or the shared empty record `$.runtime.empty` */
     locate(key: string): string;
+    /** The position of the record with that key, or `undefined` when no position shows it */
+    positionOf(key: string): number | undefined;
     /** Takes another key field and reads the records again */
     setKey(key: string): void;
     /** Removes every listener */
@@ -63,6 +65,7 @@ export function createRecordIndex(options: RecordIndexOptions): RecordIndex {
     const mapKeySet = new Set<string>();
     let knownLength = 0;
     let ordered: string[] | undefined;
+    const orderedAt = new Map<string, number>();
 
     const has = (key: string): boolean => (kind === 'array' ? indexOfKey.has(key) : kind === 'map' && mapKeySet.has(key));
 
@@ -97,6 +100,7 @@ export function createRecordIndex(options: RecordIndexOptions): RecordIndex {
 
     const readOrder = (): void => {
         const order = store.get<unknown>(orderPath);
+        orderedAt.clear();
         if (!Array.isArray(order)) {
             ordered = undefined;
             return;
@@ -104,7 +108,9 @@ export function createRecordIndex(options: RecordIndexOptions): RecordIndex {
         const keys: string[] = [];
         for (let index = 0; index < order.length; index++) {
             const key = keyText(order[index]);
-            if (key !== undefined && has(key)) keys.push(key);
+            if (key === undefined || !has(key)) continue;
+            if (!orderedAt.has(key)) orderedAt.set(key, keys.length);
+            keys.push(key);
         }
         ordered = keys;
     };
@@ -199,6 +205,13 @@ export function createRecordIndex(options: RecordIndexOptions): RecordIndex {
         return kind === 'map' && mapKeySet.has(key) ? `${recordsPath}.${key}` : undefined;
     };
 
+    const positionOf = (key: string): number | undefined => {
+        if (ordered !== undefined) return orderedAt.get(key);
+        if (kind === 'array') return indexOfKey.get(key);
+        const at = kind === 'map' && mapKeySet.has(key) ? mapKeys.indexOf(key) : -1;
+        return at < 0 ? undefined : at;
+    };
+
     return {
         size() {
             if (ordered !== undefined) return ordered.length;
@@ -210,6 +223,7 @@ export function createRecordIndex(options: RecordIndexOptions): RecordIndex {
             return mapKeys[position];
         },
         pathOf,
+        positionOf,
         locate: (key) => pathOf(key) ?? RUNTIME_PATHS.empty,
         setKey(key) {
             if (key === field) return;

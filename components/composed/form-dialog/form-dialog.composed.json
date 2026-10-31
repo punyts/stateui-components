@@ -1,0 +1,33 @@
+{
+    "component": "modal",
+    "_title": "Edit",
+    "body": {
+        "component": "form",
+        "children": {
+            "name": { "component": "textField", "_label": "Name", "required": true }
+        },
+        "on": { "submitted": [{ "command": "close", "target": "^formDialog" }] }
+    },
+    "footer": {
+        "component": "toolbar",
+        "align": "end",
+        "children": {
+            "cancel": {
+                "component": "button",
+                "variant": "ghost",
+                "_title": "Cancel",
+                "on": { "press": [{ "command": "close", "target": "^formDialog" }] }
+            },
+            "save": {
+                "component": "button",
+                "_title": "Save",
+                "on": { "press": [{ "command": "submit", "target": "^formDialog.body" }] }
+            }
+        }
+    },
+    "exposes": {
+        "_title": "Dialog title",
+        "body.children": "The fields of the form, keyed by the name that appears in the submitted values: replace the map (null removes the default field) and link each field's value to $.data",
+        "footer.children.save._title": "Save button text"
+    }
+}

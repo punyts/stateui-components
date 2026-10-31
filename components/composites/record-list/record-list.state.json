@@ -1,6 +1,7 @@
 {
     "summary": "Draws only the visible records of a long list through a small pool of recycled row nodes",
     "events": ["range"],
+    "commands": ["scrollTo"],
     "shared": { "density": {} },
     "tokenGroup": "recordlist",
     "tokens": {
@@ -13,11 +14,15 @@
         "records": { "type": ["array", "object"] },
         "order": { "type": "array" },
         "role": { "type": "string", "values": ["list", "listbox", "table"], "default": "list", "reflect": true },
+        "selected": { "type": ["string", "number", "array"] },
+        "loading": { "type": "boolean", "default": false, "reflect": true },
         "total": { "type": "integer", "validators": { "range": { "min": 0 } } },
         "row": { "type": "node", "row": true },
         "empty": { "type": "node" },
         "ariaRowcount": { "type": "integer", "reflect": true },
         "count": { "type": "integer", "default": 0, "runtime": true },
-        "slots": { "type": "object", "default": {}, "runtime": true }
+        "slots": { "type": "object", "default": {}, "runtime": true },
+        "loadingRows": { "type": "integer", "default": 0, "runtime": true },
+        "loadingFirst": { "type": "integer", "default": 0, "runtime": true }
     }
 }

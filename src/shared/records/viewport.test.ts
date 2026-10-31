@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { windowFor } from './viewport.js';
+import { offsetFor, windowFor } from './viewport.js';
 import { sameWindow } from './window.js';
 
 describe('windowFor', () => {
@@ -28,5 +28,20 @@ describe('sameWindow', () => {
         // Act and Assert
         expect(sameWindow({ first: 1, count: 2 }, { first: 1, count: 2 })).toBe(true);
         expect(sameWindow({ first: 1, count: 2 }, { first: 1, count: 3 })).toBe(false);
+    });
+});
+
+describe('offsetFor', () => {
+    it('should put a row at the top for start and clamp at the end of the rows', () => {
+        // Act and Assert
+        expect(offsetFor(10, 100, 0, 100, 20, 'start')).toBe(200);
+        expect(offsetFor(99, 100, 0, 100, 20, 'start')).toBe(1900);
+    });
+
+    it('should move only as far as needed for nearest', () => {
+        // Act and Assert
+        expect(offsetFor(2, 100, 0, 100, 20, 'nearest')).toBe(0);
+        expect(offsetFor(5, 100, 0, 100, 20, 'nearest')).toBe(20);
+        expect(offsetFor(1, 100, 60, 100, 20, 'nearest')).toBe(20);
     });
 });

@@ -35,6 +35,31 @@
     transform: translateY(calc(var(--sui-index, 0) * var(--sui-row-h)));
 }
 
+.slot:focus-visible {
+    outline: var(--ui-border-width-thick) solid var(--ui-color-focus);
+    outline-offset: calc(var(--ui-border-width-thick) * -1);
+}
+
+.placeholder {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline: 0;
+    block-size: var(--sui-row-h);
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    padding-inline: var(--ui-space-inset-md);
+    transform: translateY(calc(var(--sui-index, 0) * var(--sui-row-h)));
+}
+
+.placeholder ui-skeleton {
+    inline-size: 100%;
+}
+
+.list[aria-busy="true"] .slot {
+    visibility: hidden;
+}
+
 .slot[hidden] {
     display: none;
 }

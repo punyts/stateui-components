@@ -18,6 +18,12 @@ export interface SlotPoolOptions {
     index: RecordIndex;
     /** The rows drawn above and below the viewport, read when the pool is sized */
     overscan: () => number;
+    /** Whether the record with that key is selected; a slot shows it as `slotSelected` */
+    isSelected?: (key: string) => boolean;
+    /** Called once after a refresh that found the pinned record gone, with the position it had */
+    onPinLost?: (position: number) => void;
+    /** Called at the end of every refresh, when the slots show their positions */
+    onSettled?: () => void;
 }
 
 /** The record view's slot nodes; E5.23 writes the window, `invalidate` is for anything that changes what a position shows */
@@ -35,6 +41,26 @@ export interface SlotPool {
     size(): number;
     /** The state path of slot `i` (`$.runtime.nodes.app.….slots.<i>`) */
     slotPath(i: number): string;
+    /**
+     * Keeps the slot that shows the record with that key (`undefined` releases it). While the record is out of the window
+     * its slot is not recycled, so the element in it keeps focus; the other slots then cover one position fewer. When the
+     * record is deleted the pin is released and `onPinLost` is called
+     */
+    pin(key: string | undefined): void;
+    /** The key of the pinned record */
+    pinned(): string | undefined;
+    /** The record that holds the single tab stop; with none, or when no slot shows it, the first visible position holds it */
+    setTab(key: string | undefined): void;
+    /** Writes `slotSelected` of every slot again, for a change of the selection */
+    syncSelection(): void;
+    /** The index of the slot that shows a position, or `undefined` */
+    slotAt(position: number): number | undefined;
+    /** The index of the slot that shows the record with that key, or `undefined` */
+    slotOfKey(key: string): number | undefined;
+    /** The key the slot shows, or `undefined` */
+    keyOfSlot(i: number): string | undefined;
+    /** The position the slot shows, or `undefined` when it shows none */
+    positionOfSlot(i: number): number | undefined;
     /** Removes the listeners and every slot, link and alias the pool made */
     dispose(): void;
 }
@@ -49,6 +75,8 @@ interface Slot {
     key: string | undefined;
     /** The record path `row` points at */
     target: string;
+    selected: boolean;
+    tab: boolean;
 }
 
 const isEntry = (value: unknown): value is Entry => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -103,7 +131,7 @@ function removeLinked(tree: Entry, nodePath: string, links: readonly Link[]): vo
  * microtask
  */
 export function createSlotPool(options: SlotPoolOptions): SlotPool {
-    const { store, nodePath, rowPath, viewPath, countPath, index, overscan } = options;
+    const { store, nodePath, rowPath, viewPath, countPath, index, overscan, isSelected, onPinLost, onSettled } = options;
     const runtime = runtimePath(nodePath);
     const slotsPath = `${runtime}.slots`;
     const windowPath = `${runtime}.window`;
@@ -115,6 +143,9 @@ export function createSlotPool(options: SlotPoolOptions): SlotPool {
     let pending = false;
     let disposed = false;
     let shownCount = -1;
+    let pinKey: string | undefined;
+    let pinPosition = 0;
+    let tabKey: string | undefined;
 
     const slotPath = (i: number): string => `${slotsPath}.${i}`;
     const rowLink = (path: string): string => `${path}.row`;
@@ -139,12 +170,14 @@ export function createSlotPool(options: SlotPoolOptions): SlotPool {
         const path = slotPath(i);
         const { tree, links } = rewrite(templateJson, path);
         tree['slotIndex'] = -1;
+        tree['slotSelected'] = false;
+        tree['slotTab'] = false;
         store.set(path, tree);
         store.link(rowLink(path), RUNTIME_PATHS.empty);
         for (const error of applyLinks(store, links)) {
             report.error(error.message, { code: error.code, path });
         }
-        return { path, links, position: -1, key: undefined, target: RUNTIME_PATHS.empty };
+        return { path, links, position: -1, key: undefined, target: RUNTIME_PATHS.empty, selected: false, tab: false };
     };
 
     const destroySlot = (slot: Slot): void => {
@@ -172,6 +205,24 @@ export function createSlotPool(options: SlotPoolOptions): SlotPool {
         if (slot.position === position) return;
         slot.position = position;
         store.set(`${slot.path}.slotIndex`, position);
+    };
+
+    const mark = (slot: Slot): void => {
+        const selected = slot.key !== undefined && slot.position >= 0 && isSelected !== undefined && isSelected(slot.key);
+        if (slot.selected === selected) return;
+        slot.selected = selected;
+        store.set(`${slot.path}.slotSelected`, selected);
+    };
+
+    const markTab = (first: number): void => {
+        let stop = tabKey === undefined ? undefined : slots.find((slot) => slot.position >= 0 && slot.key === tabKey);
+        stop ??= slots.find((slot) => slot.position === first);
+        for (const slot of slots) {
+            const tab = slot === stop;
+            if (slot.tab === tab) continue;
+            slot.tab = tab;
+            store.set(`${slot.path}.slotTab`, tab);
+        }
     };
 
     const syncTemplate = (): void => {
@@ -212,30 +263,58 @@ export function createSlotPool(options: SlotPoolOptions): SlotPool {
             store.set(countPath, total);
         }
         const size = slots.length;
-        if (size > 0) {
-            const start = poolStart(win.first, total, size, overscan());
-            for (let position = start; position < start + size; position++) {
-                const slot = slots[position % size] as Slot;
-                if (position >= total) {
-                    point(slot, RUNTIME_PATHS.empty);
-                    slot.key = undefined;
-                    place(slot, -1);
-                    continue;
+        let lost: number | undefined;
+        let held: Slot | undefined;
+        let ring: Slot[] = slots;
+        let span = size;
+        let start = poolStart(win.first, total, size, overscan());
+        if (pinKey !== undefined) {
+            const at = index.positionOf(pinKey);
+            if (at === undefined) {
+                lost = pinPosition;
+                pinKey = undefined;
+            } else {
+                pinPosition = at;
+                const slot = slots.find((candidate) => candidate.key === pinKey);
+                if (slot !== undefined && size > 1 && (at < start || at >= start + size)) {
+                    held = slot;
+                    ring = slots.filter((candidate) => candidate !== slot);
+                    span = size - 1;
+                    start = poolStart(win.first, total, span, overscan());
                 }
-                if (!dirty && slot.position === position) continue;
-                const key = index.keyAt(position);
-                const target = key === undefined ? undefined : index.pathOf(key);
-                slot.key = key;
-                if (reload && target !== undefined && slot.target === target) {
-                    store.link(rowLink(slot.path), RUNTIME_PATHS.empty);
-                    slot.target = RUNTIME_PATHS.empty;
-                }
-                point(slot, target ?? RUNTIME_PATHS.empty);
-                place(slot, target === undefined ? -1 : position);
             }
         }
+        if (held !== undefined && pinKey !== undefined) {
+            point(held, index.pathOf(pinKey) ?? RUNTIME_PATHS.empty);
+            place(held, pinPosition);
+            mark(held);
+        }
+        for (let position = start; span > 0 && position < start + span; position++) {
+            const slot = ring[position % span] as Slot;
+            if (position >= total) {
+                point(slot, RUNTIME_PATHS.empty);
+                slot.key = undefined;
+                place(slot, -1);
+                mark(slot);
+                continue;
+            }
+            if (!dirty && slot.position === position) continue;
+            const key = index.keyAt(position);
+            const target = key === undefined ? undefined : index.pathOf(key);
+            slot.key = key;
+            if (reload && target !== undefined && slot.target === target) {
+                store.link(rowLink(slot.path), RUNTIME_PATHS.empty);
+                slot.target = RUNTIME_PATHS.empty;
+            }
+            point(slot, target ?? RUNTIME_PATHS.empty);
+            place(slot, target === undefined ? -1 : position);
+            mark(slot);
+        }
+        markTab(win.first);
         dirty = false;
         reload = false;
+        if (lost !== undefined) onPinLost?.(lost);
+        onSettled?.();
     };
 
     const schedule = (): void => {
@@ -276,6 +355,37 @@ export function createSlotPool(options: SlotPoolOptions): SlotPool {
         },
         size: () => slots.length,
         slotPath,
+        pin(key) {
+            if (key === pinKey) return;
+            pinKey = key;
+            if (key !== undefined) {
+                pinPosition = index.positionOf(key) ?? pinPosition;
+                tabKey = key;
+            }
+            schedule();
+        },
+        pinned: () => pinKey,
+        setTab(key) {
+            if (key === tabKey) return;
+            tabKey = key;
+            schedule();
+        },
+        syncSelection() {
+            for (const slot of slots) mark(slot);
+        },
+        slotAt(position) {
+            const at = slots.findIndex((slot) => slot.position === position);
+            return at < 0 ? undefined : at;
+        },
+        slotOfKey(key) {
+            const at = slots.findIndex((slot) => slot.position >= 0 && slot.key === key);
+            return at < 0 ? undefined : at;
+        },
+        keyOfSlot: (i) => slots[i]?.key,
+        positionOfSlot(i) {
+            const position = slots[i]?.position;
+            return position === undefined || position < 0 ? undefined : position;
+        },
         dispose() {
             if (disposed) return;
             disposed = true;
