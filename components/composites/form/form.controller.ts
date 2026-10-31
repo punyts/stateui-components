@@ -1,4 +1,6 @@
+import { report } from '@punyts/core';
 import type { ControllerContext } from '@punyts/stateui';
+import { buildError } from '@punyts/stateui-app';
 import { FIELD_CONNECT_EVENT } from '../shared/field/field.js';
 import type { FieldConnect, FieldManaged } from '../shared/field/field.js';
 import { inDocumentOrder } from '../shared/field/order.js';
@@ -16,7 +18,11 @@ const MODES: readonly FieldManaged[] = ['blur', 'change', 'submit'];
  * error is checked again on each change so the error clears when the value is fixed.
  * It keeps the runtime properties `errorCount` (fields with an error) and `status` (`invalid` after a failed validation
  * while errors remain, else `dirty` when a field is dirty, else `pristine`), and raises `changed` (`{ key, value }`) on a
- * field change and `invalid` (`{ keys }`, the keys of the failing fields) when the `validate` command fails
+ * field change and `invalid` (`{ keys }`, the keys of the failing fields) when the `validate` command fails.
+ * The commands `submit`, `reset` and `commit` add the reset point and the submission: `submit` validates, then raises
+ * `submitted` with the values keyed by child key (`status` goes `submitting` then `submitted`) or `invalid`; `reset` restores
+ * every field to its baseline; `commit` takes the current values as the new baseline. The form saves nothing: the fields'
+ * links already hold the data
  */
 export default function controller({ element, store, basePath }: ControllerContext) {
     const host = element as Element & CommandHost;
@@ -24,6 +30,9 @@ export default function controller({ element, store, basePath }: ControllerConte
     const path = (name: string): string => `${basePath}.${name}`;
     let failed = false;
     let validated = false;
+    let submitting = false;
+    let submitted = false;
+    let busy = false;
 
     const mode = (): FieldManaged => {
         const value = store.get<unknown>(path('validateOn'));
@@ -38,9 +47,13 @@ export default function controller({ element, store, basePath }: ControllerConte
             if (field.dirty) dirty = true;
         }
         if (count === 0) failed = false;
-        const status = failed ? 'invalid' : dirty ? 'dirty' : 'pristine';
+        const status = failed ? 'invalid' : submitting ? 'submitting' : submitted ? 'submitted' : dirty ? 'dirty' : 'pristine';
         if (store.get<unknown>(path('errorCount')) !== count) store.set(path('errorCount'), count);
         if (store.get<unknown>(path('status')) !== status) store.set(path('status'), status);
+    };
+    const ordered = (): FieldConnect[] => {
+        const root = element.shadowRoot;
+        return root ? inDocumentOrder(root, fields) : [...fields.values()];
     };
     const check = (field: FieldConnect): void => {
         if (field.validate() !== '') failed = true;
@@ -62,12 +75,53 @@ export default function controller({ element, store, basePath }: ControllerConte
         const root = element.shadowRoot;
         if (root) inDocumentOrder(root, failing)[0]?.focus();
     };
+    const submit = (): void => {
+        submitting = true;
+        submitted = false;
+        sync();
+        const keys = validate();
+        submitting = false;
+        if (keys.length > 0) {
+            sync();
+            return;
+        }
+        const values: Record<string, unknown> = {};
+        for (const field of ordered()) {
+            if (Object.hasOwn(values, field.key)) {
+                const message = buildError('SUI-RUN-BINDING', { component: 'form', path: basePath, statePath: basePath }).message;
+                report.error(`${message}: two fields share the key "${field.key}", the later one wins`, { code: 'SUI-RUN-BINDING', path: basePath });
+            }
+            values[field.key] = Array.isArray(field.value) ? [...field.value] : field.value;
+        }
+        submitted = true;
+        sync();
+        element.dispatchEvent(new CustomEvent('submitted', { detail: { values }, bubbles: true, composed: true }));
+    };
+    const reset = (): void => {
+        busy = true;
+        for (const field of fields.values()) field.reset();
+        busy = false;
+        failed = false;
+        validated = false;
+        submitted = false;
+        sync();
+    };
+    const commit = (): void => {
+        busy = true;
+        for (const field of fields.values()) field.rebase();
+        busy = false;
+        submitted = false;
+        sync();
+    };
     const onConnect = (event: Event): void => {
         const field = (event as CustomEvent<FieldConnect>).detail;
         event.stopPropagation();
         fields.set(field.element, field);
         field.setManaged(mode());
         field.setDisabled(disabled());
+        field.onStatus(() => {
+            if (!busy) sync();
+        });
         field.onRelease(() => {
             fields.delete(field.element);
             sync();
@@ -77,7 +131,8 @@ export default function controller({ element, store, basePath }: ControllerConte
     const onChange = (event: Event): void => {
         const origin = event.composedPath()[0];
         const field = origin instanceof Element ? fields.get(origin) : undefined;
-        if (!field) return;
+        if (!field || busy) return;
+        submitted = false;
         if (mode() === 'change' || (validated && field.error !== '')) check(field);
         else sync();
         element.dispatchEvent(new CustomEvent('changed', { detail: { key: field.key, value: field.value }, bubbles: true, composed: true }));
@@ -98,7 +153,7 @@ export default function controller({ element, store, basePath }: ControllerConte
     element.addEventListener('focusout', onBlur);
     store.on([path('validateOn')], onMode);
     store.on([path('disabled')], onDisabled);
-    host.commands = { validate: () => void validate(), focusFirstError };
+    host.commands = { validate: () => void validate(), focusFirstError, submit, reset, commit };
     return {
         dispose: () => {
             element.removeEventListener(FIELD_CONNECT_EVENT, onConnect);

@@ -3,6 +3,9 @@ import { mountComponent } from '../harness/mountComponent.js';
 import type { MountedComponent } from '../harness/createMountComponent.js';
 
 const flush = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
+const frames = async (count: number): Promise<void> => {
+    for (let i = 0; i < count; i++) await new Promise((resolve) => requestAnimationFrame(resolve));
+};
 const RUNTIME = '$.runtime.nodes.app';
 
 interface Person {
@@ -46,6 +49,7 @@ const mountList = async (
 ): Promise<MountedComponent> => {
     const mounted = mountComponent('recordList', { '<-records': '$.data.records', row: rowTemplate, ...extra }, { data: { records, ...data } });
     await flush();
+    await frames(3);
     await setWindow(mounted, window.first, window.count);
     return mounted;
 };

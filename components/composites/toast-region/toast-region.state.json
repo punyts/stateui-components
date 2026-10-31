@@ -1,0 +1,30 @@
+{
+    "summary": "Toasts shown from named messages with one command, stacked at a corner, with a queue beyond max",
+    "tokenGroup": "toastregion",
+    "tokens": {
+        "gap": "{space.gap.sm}",
+        "offset": "{space.inset.md}",
+        "width": "calc({size.control.md} * 10)"
+    },
+    "events": ["close"],
+    "commands": ["show", "dismissAll"],
+    "commandValues": { "show": "messages" },
+    "properties": {
+        "position": { "type": "string", "values": ["bottomEnd", "bottomCenter", "topEnd", "topCenter"], "default": "bottomEnd", "reflect": true },
+        "max": { "type": "integer", "validators": { "range": { "min": 1, "max": 10 } }, "default": 3 },
+        "duration": { "type": "integer", "validators": { "range": { "min": 0 } } },
+        "messages": {
+            "type": "map",
+            "items": {
+                "tone": { "type": "string", "values": ["neutral", "accent", "danger", "warning", "success", "info"], "default": "neutral" },
+                "_title": { "type": "string", "kind": "content", "default": "" },
+                "_text": { "type": "string", "kind": "content", "default": "" },
+                "action": { "type": "node" }
+            },
+            "default": {}
+        },
+        "_label": { "type": "string", "kind": "content", "default": "Notifications" },
+        "_closeLabel": { "type": "string", "kind": "content", "default": "Close" },
+        "items": { "type": "object", "default": {}, "runtime": true }
+    }
+}

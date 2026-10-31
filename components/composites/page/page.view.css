@@ -75,3 +75,7 @@
 :host([max-width=xl]) .content {
     max-inline-size: 1280px;
 }
+
+.toasts {
+    display: contents;
+}

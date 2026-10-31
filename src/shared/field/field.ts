@@ -34,6 +34,8 @@ export interface FieldConnect {
     focus(): void;
     /** Registers a function that runs once when the field is removed; a form drops the field there */
     onRelease(callback: () => void): void;
+    /** Registers a function that runs whenever the field's `error` or `dirty` is written, whatever wrote it (a `clear`, a `reset`, a validation) */
+    onStatus(callback: () => void): void;
 }
 
 /** The names a field's controller members take in its view; every field of the family uses these */
@@ -145,6 +147,11 @@ export function createField({ element, store, basePath }: ControllerContext, val
     };
     let managed: FieldManaged = 'none';
     const releases: Array<() => void> = [];
+    const watchers: Array<() => void> = [];
+    const statusPaths = [`${basePath}.error`, `${basePath}.dirty`];
+    const onStatus = (): void => {
+        for (const watcher of watchers) watcher();
+    };
     const focus = (): void => {
         const control = element.shadowRoot?.querySelector<HTMLElement>('#control');
         if (!control) return;
@@ -180,6 +187,7 @@ export function createField({ element, store, basePath }: ControllerContext, val
     store.on(valuePath, onValue);
     store.on(iconPath, syncGlyph);
     store.on(messagePaths, syncMessage);
+    store.on(statusPaths, onStatus);
     syncGlyph();
     syncMessage();
     const connect: FieldConnect = {
@@ -207,6 +215,9 @@ export function createField({ element, store, basePath }: ControllerContext, val
         focus,
         onRelease: (callback) => {
             releases.push(callback);
+        },
+        onStatus: (callback) => {
+            watchers.push(callback);
         }
     };
     raise(FIELD_CONNECT_EVENT, connect);
@@ -221,6 +232,8 @@ export function createField({ element, store, basePath }: ControllerContext, val
         dispose: () => {
             delete host.commands;
             managed = 'none';
+            watchers.length = 0;
+            store.off(statusPaths, onStatus);
             for (const callback of releases.splice(0)) callback();
             store.off(valuePath, onValue);
             store.off(iconPath, syncGlyph);

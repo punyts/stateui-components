@@ -11,6 +11,7 @@
         "_title": { "type": "string", "kind": "content", "default": "" },
         "header": { "type": "node" },
         "nav": { "type": "node" },
-        "footer": { "type": "node" }
+        "footer": { "type": "node" },
+        "toasts": { "type": "node", "default": { "component": "toastRegion" } }
     }
 }

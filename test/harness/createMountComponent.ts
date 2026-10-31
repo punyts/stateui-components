@@ -24,6 +24,8 @@ export interface MountOptions {
     data?: Readonly<Record<string, unknown>>;
     /** The document's `locales`: the overlay per language the application itself brings (relative to the node), on top of the component overlays */
     locales?: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
+    /** The host's hooks: `onEmit` receives the name and payload of an `emit` command (none by default) */
+    hooks?: { onEmit?(name: string, payload: unknown): void };
 }
 
 /** What `mountComponent` gives back */
@@ -117,7 +119,7 @@ export function createMountComponent(build: ComponentBuild): MountComponent {
         } as unknown as AppDocument;
         const host = globalThis.document.body.appendChild(globalThis.document.createElement('div'));
         const locale = registerLocaleStep(overlays);
-        const app = mountApp(host, document, library);
+        const app = mountApp(host, document, library, options.hooks);
         if (!app.store) {
             locale.unregister();
             host.remove();

@@ -1,0 +1,31 @@
+{
+    "component": "page",
+    "layout": { "type": "grid", "cols": 3, "collapseBelow": "md" },
+    "children": {
+        "revenue": {
+            "component": "card",
+            "_title": "Revenue",
+            "children": {
+                "stat": { "component": "stat", "_label": "This month", "format": "number", "value": 0 }
+            }
+        },
+        "orders": {
+            "component": "card",
+            "_title": "Orders",
+            "children": {
+                "stat": { "component": "stat", "_label": "This month", "format": "number", "value": 0 }
+            }
+        },
+        "customers": {
+            "component": "card",
+            "_title": "Customers",
+            "children": {
+                "stat": { "component": "stat", "_label": "Active", "format": "number", "value": 0 }
+            }
+        }
+    },
+    "exposes": {
+        "children": "The cards of the dashboard in display order: replace the map to show other numbers, or add a card with a stat for another key figure",
+        "layout.cols": "The number of columns above the collapse width (the grid stacks to one column below 768 px)"
+    }
+}

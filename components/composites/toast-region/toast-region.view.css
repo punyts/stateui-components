@@ -1,0 +1,49 @@
+:host {
+    position: fixed;
+    z-index: 1000;
+    box-sizing: border-box;
+    inline-size: min(var(--ui-toastregion-width), calc(100vw - 2 * var(--ui-toastregion-offset)));
+    pointer-events: none;
+}
+
+:host([position=bottomEnd]) {
+    inset-block-end: var(--ui-toastregion-offset);
+    inset-inline-end: var(--ui-toastregion-offset);
+}
+
+:host([position=bottomCenter]) {
+    inset-block-end: var(--ui-toastregion-offset);
+    inset-inline-start: 50%;
+    translate: -50% 0;
+}
+
+:host([position=topEnd]) {
+    inset-block-start: var(--ui-toastregion-offset);
+    inset-inline-end: var(--ui-toastregion-offset);
+}
+
+:host([position=topCenter]) {
+    inset-block-start: var(--ui-toastregion-offset);
+    inset-inline-start: 50%;
+    translate: -50% 0;
+}
+
+:host(:dir(rtl)[position=bottomCenter]),
+:host(:dir(rtl)[position=topCenter]) {
+    translate: 50% 0;
+}
+
+.region {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ui-toastregion-gap);
+}
+
+:host([position=bottomEnd]) .region,
+:host([position=bottomCenter]) .region {
+    flex-direction: column-reverse;
+}
+
+.item {
+    pointer-events: auto;
+}

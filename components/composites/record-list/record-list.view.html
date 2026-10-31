@@ -1,6 +1,7 @@
 <div class="list">
     <div class="rows" style="--sui-count: {{ $.count }}">
-        <div class="slot" if="{{ $.slots }}" repeat="{{ $k,$i,$v in $.slots }}" key="{{ $k }}" hidden="{{ $v.slotIndex &lt; 0 }}" style="--sui-index: {{ $v.slotIndex }}">
+        <div class="probe" aria-hidden="true"></div>
+        <div class="slot" if="{{ $.slots }}" repeat="{{ $k,$i,$v in $.slots }}" key="{{ $k }}" role="{{ $.role === 'table' ? 'row' : ($.role === 'listbox' ? 'option' : 'listitem') }}" aria-setsize="{{ $.role !== 'table' &amp;&amp; $v.slotIndex &gt;= 0 ? $.count : null }}" aria-posinset="{{ $.role !== 'table' &amp;&amp; $v.slotIndex &gt;= 0 ? $v.slotIndex + 1 : null }}" aria-rowindex="{{ $.role === 'table' &amp;&amp; $v.slotIndex &gt;= 0 ? $v.slotIndex + 1 : null }}" hidden="{{ $v.slotIndex &lt; 0 }}" style="--sui-index: {{ $v.slotIndex }}">
             <sui-node state="{{ $v }}"></sui-node>
         </div>
     </div>

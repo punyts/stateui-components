@@ -1,9 +1,9 @@
 {
-    "summary": "A form that finds the fields inside it, validates them together and reports the number of errors",
+    "summary": "A form that finds its fields, validates them together, and submits, resets and commits their values",
     "shared": { "density": {} },
     "layout": true,
-    "events": ["invalid", "changed"],
-    "commands": ["validate", "focusFirstError"],
+    "events": ["invalid", "changed", "submitted"],
+    "commands": ["validate", "focusFirstError", "submit", "reset", "commit"],
     "tokens": {
         "gap": "{space.gap.md}",
         "summary": {
@@ -16,7 +16,7 @@
         "validateOn": { "type": "string", "values": ["blur", "change", "submit"], "default": "blur" },
         "disabled": { "type": "boolean", "default": false },
         "actions": { "type": "node" },
-        "status": { "type": "string", "values": ["pristine", "dirty", "invalid"], "default": "pristine", "reflect": true, "runtime": true },
+        "status": { "type": "string", "values": ["pristine", "dirty", "invalid", "submitting", "submitted"], "default": "pristine", "reflect": true, "runtime": true },
         "errorCount": { "type": "integer", "default": 0, "runtime": true },
         "_errorSummary": { "type": "string", "kind": "content", "default": "Please correct the highlighted fields" }
     }

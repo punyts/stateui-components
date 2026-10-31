@@ -34,3 +34,6 @@ export function poolStart(first: number, total: number, size: number, overscan: 
     const wanted = Math.max(0, first - Math.max(0, Math.floor(overscan)));
     return Math.min(wanted, Math.max(0, total - size));
 }
+
+/** Whether two windows show the same rows */
+export const sameWindow = (a: RecordWindow, b: RecordWindow): boolean => a.first === b.first && a.count === b.count;

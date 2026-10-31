@@ -1,0 +1,5 @@
+<div class="region" role="region" aria-live="polite" aria-label="{{ $._label }}">
+    <div class="item" if="{{ $.items }}" repeat="{{ $k,$i,$v in $.items }}" key="{{ $k }}" data-id="{{ $k }}" onpointerenter="{{ onEnter }}" onpointerleave="{{ onLeave }}" onfocusin="{{ onEnter }}" onfocusout="{{ onFocusOut }}" onclose="{{ onClose }}">
+        <sui-node state="{{ $v }}"></sui-node>
+    </div>
+</div>

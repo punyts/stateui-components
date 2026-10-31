@@ -134,7 +134,7 @@ describe('textField contract in Chromium', () => {
         expect(connected).toHaveLength(1);
         expect(first?.shadowRoots).toBeGreaterThanOrEqual(3);
         expect(Object.keys(first?.field ?? {}).sort()).toEqual(
-            ['dirty', 'element', 'error', 'focus', 'key', 'onRelease', 'rebase', 'reset', 'setDisabled', 'setManaged', 'validate', 'value'].sort()
+            ['dirty', 'element', 'error', 'focus', 'key', 'onRelease', 'onStatus', 'rebase', 'reset', 'setDisabled', 'setManaged', 'validate', 'value'].sort()
         );
         expect(first?.field.key).toBe('name');
         expect(first?.field.value).toBe('Ada');

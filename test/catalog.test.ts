@@ -207,7 +207,7 @@ describe('the library build and its styles', () => {
 
         // Assert
         expect(result.errors.map(formatError)).toEqual([]);
-        expect(result.built).toHaveLength(catalog.components.length);
+        expect(result.built).toHaveLength(roots.length);
     });
 
     it('should reference no tone colour token in any component or shared stylesheet', async () => {
