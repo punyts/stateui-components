@@ -1,0 +1,63 @@
+:host {
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.trigger {
+    display: inline-flex;
+    anchor-name: --t;
+}
+
+.tip {
+    box-sizing: border-box;
+    margin: 0;
+    border: 0;
+    inset: auto;
+    inline-size: max-content;
+    max-inline-size: var(--ui-tooltip-maxsize);
+    padding: var(--ui-tooltip-padding);
+    overflow: visible;
+    position-anchor: --t;
+    position-area: top;
+    position-try-fallbacks: flip-block, flip-inline;
+    font-family: var(--ui-text-caption-family);
+    font-size: var(--ui-text-caption-size);
+    font-weight: var(--ui-text-caption-weight);
+    line-height: var(--ui-text-caption-leading);
+    color: var(--ui-color-text-inverse);
+    background: var(--ui-color-text-base);
+    border-radius: var(--ui-tooltip-radius);
+    box-shadow: var(--ui-elevation-overlay-shadow);
+    pointer-events: none;
+    opacity: 0;
+    transition:
+        opacity var(--ui-motion-duration-fast) var(--ui-motion-easing-standard),
+        display var(--ui-motion-duration-fast) allow-discrete,
+        overlay var(--ui-motion-duration-fast) allow-discrete;
+}
+
+.tip:popover-open {
+    opacity: 1;
+}
+
+@starting-style {
+    .tip:popover-open {
+        opacity: 0;
+    }
+}
+
+:host([side=top]) .tip {
+    margin-block-end: var(--ui-space-gap-sm);
+}
+
+:host([side=bottom]) .tip {
+    margin-block-start: var(--ui-space-gap-sm);
+}
+
+:host([side=start]) .tip {
+    margin-inline-end: var(--ui-space-gap-sm);
+}
+
+:host([side=end]) .tip {
+    margin-inline-start: var(--ui-space-gap-sm);
+}

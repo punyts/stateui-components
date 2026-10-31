@@ -14,3 +14,5 @@ export { validateIconNode } from './icons/validate.js';
 export type { IconEntry, IconPath, IconStyledPath, IconsFile } from './icons/types.js';
 export { VALUE_FORMATS, formatValue, toNumber } from './shared/format/format.js';
 export type { FormatOptions, ValueFormat } from './shared/format/format.js';
+export { PLACEMENTS, createPopover, isAnchorName, isPlacement, positionAreaOf } from './shared/popover/popover.js';
+export type { Placement, PopoverDismissReason, PopoverHandle, PopoverOptions } from './shared/popover/popover.js';

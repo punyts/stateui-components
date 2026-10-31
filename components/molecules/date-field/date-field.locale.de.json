@@ -1,0 +1,9 @@
+{
+    "_label": "Datum",
+    "_help": "",
+    "_errors": {
+        "required": "Dieses Feld ist erforderlich",
+        "min": "Zu früh",
+        "max": "Zu spät"
+    }
+}

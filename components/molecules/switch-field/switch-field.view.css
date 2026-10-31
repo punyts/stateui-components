@@ -1,0 +1,69 @@
+@include "field.css";
+
+.field {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+        "box label"
+        ". messages";
+    align-items: center;
+    column-gap: var(--ui-field-label-gap);
+}
+
+.box {
+    line-height: 0;
+}
+
+.box .toggle {
+    flex: 0 0 auto;
+}
+
+.label {
+    cursor: pointer;
+}
+
+.field:has(.toggle:disabled) .label {
+    cursor: not-allowed;
+}
+
+.toggle {
+    appearance: none;
+    position: relative;
+    box-sizing: border-box;
+    inline-size: calc(var(--control-height, var(--ui-size-control-md)) * 0.8);
+    block-size: calc(var(--control-height, var(--ui-size-control-md)) * 0.45);
+    margin: 0;
+    background: var(--ui-color-border-strong);
+    border: var(--ui-control-border) solid transparent;
+    border-radius: var(--ui-radius-full);
+    cursor: pointer;
+    transition: background-color var(--ui-motion-duration-fast) var(--ui-motion-easing-standard);
+}
+
+.toggle::after {
+    content: "";
+    position: absolute;
+    inset-block: 2px;
+    inset-inline-start: 2px;
+    aspect-ratio: 1;
+    background: var(--ui-color-surface-base);
+    border-radius: var(--ui-radius-full);
+}
+
+.toggle:checked {
+    background: var(--ui-color-accent-base);
+}
+
+.toggle:checked::after {
+    inset-inline-start: auto;
+    inset-inline-end: 2px;
+}
+
+.toggle:focus-visible {
+    outline: 2px solid var(--ui-color-focus);
+    outline-offset: 2px;
+}
+
+.toggle:disabled {
+    background: var(--ui-color-border-base);
+    cursor: not-allowed;
+}

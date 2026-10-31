@@ -1,0 +1,75 @@
+@include "field.css";
+
+.options {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ui-field-label-gap);
+    min-inline-size: 0;
+}
+
+:host([orientation="horizontal"]) .options {
+    flex-direction: row;
+    flex-wrap: wrap;
+    column-gap: calc(var(--ui-control-padding-inline) * 2);
+}
+
+.option {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ui-field-label-gap);
+    min-block-size: var(--control-height, var(--ui-size-control-md));
+    cursor: pointer;
+}
+
+.radio {
+    appearance: none;
+    position: relative;
+    flex: none;
+    box-sizing: border-box;
+    inline-size: calc(var(--control-height, var(--ui-size-control-md)) * 0.5);
+    block-size: calc(var(--control-height, var(--ui-size-control-md)) * 0.5);
+    margin: 0;
+    background: var(--ui-color-surface-base);
+    border: var(--ui-control-border) solid var(--ui-color-border-strong);
+    border-radius: 50%;
+    cursor: inherit;
+}
+
+.radio:hover:not(:disabled) {
+    border-color: var(--ui-color-text-muted);
+}
+
+.radio:checked {
+    border-color: var(--ui-color-accent-base);
+}
+
+.radio:checked::after {
+    content: "";
+    position: absolute;
+    inset: 22%;
+    border-radius: 50%;
+    background: var(--ui-color-accent-base);
+}
+
+.radio:focus-visible {
+    outline: 2px solid var(--ui-color-focus);
+    outline-offset: 2px;
+}
+
+.radio:disabled {
+    background: var(--ui-color-surface-sunken);
+    border-color: var(--ui-color-border-base);
+}
+
+.radio:disabled:checked::after {
+    background: var(--ui-color-text-disabled);
+}
+
+.option:has(.radio:disabled) {
+    color: var(--ui-color-text-disabled);
+    cursor: not-allowed;
+}
+
+.options[aria-invalid="true"] .radio:not(:checked) {
+    border-color: var(--ui-color-danger-base);
+}

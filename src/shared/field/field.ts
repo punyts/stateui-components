@@ -46,7 +46,7 @@ export interface FieldMembers {
     validate(): string;
     /** Restores the baseline value and clears `error`, `touched` and `dirty` */
     reset(): void;
-    /** Moves focus to the control (the element with id `control`) */
+    /** Moves focus to the control (the element with id `control`; for a group that cannot take focus, its checked or first enabled input) */
     focus(): void;
     /** Empties the value, writes data and clears `error` */
     clear(): void;
@@ -145,7 +145,9 @@ export function createField({ element, store, basePath }: ControllerContext, val
     const releases: Array<() => void> = [];
     const focus = (): void => {
         const control = element.shadowRoot?.querySelector<HTMLElement>('#control');
-        control?.focus();
+        if (!control) return;
+        if (control.tabIndex >= 0) control.focus();
+        else (control.querySelector<HTMLElement>('input:checked:not(:disabled)') ?? control.querySelector<HTMLElement>('input:not(:disabled)'))?.focus();
     };
     const clear = (): void => {
         const empty: unknown = emptyLike(baseline);

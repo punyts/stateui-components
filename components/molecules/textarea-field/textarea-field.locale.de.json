@@ -1,0 +1,11 @@
+{
+    "_label": "Beschriftung",
+    "_placeholder": "Hier eingeben",
+    "_help": "",
+    "_errors": {
+        "required": "Dieses Feld ist erforderlich",
+        "minLength": "Zu kurz",
+        "maxLength": "Zu lang",
+        "pattern": "Nicht im erwarteten Format"
+    }
+}

@@ -1,0 +1,14 @@
+{
+    "summary": "A short text label shown next to another node on hover and keyboard focus",
+    "tokens": {
+        "padding": "{space.inset.sm}",
+        "radius": "{radius.sm}",
+        "maxsize": "calc({size.control.md} * 8)"
+    },
+    "properties": {
+        "side": { "type": "string", "values": ["top", "bottom", "start", "end"], "default": "top", "reflect": true },
+        "delay": { "type": "number", "default": 500 },
+        "_text": { "type": "string", "kind": "content", "default": "Tooltip" },
+        "trigger": { "type": "node" }
+    }
+}

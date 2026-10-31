@@ -1,0 +1,12 @@
+<div class="field">
+    <div class="box">
+        <input id="control" class="toggle" type="checkbox" aria-required="{{ $.required ? 'true' : null }}" disabled="{{ $.disabled || $.locked }}" aria-describedby="{{ describedBy($._help, $.message) }}" aria-invalid="{{ $.error !== '' ? 'true' : null }}" onclick="{{ onClick }}" checked="{{ $.checked }}" bind="checked" onblur="{{ onBlur }}" />
+    </div>
+    <label class="label" for="control">{{ $._label }}</label>
+    <div class="messages">
+        <p class="help" id="help" if="{{ $._help !== '' }}">{{ $._help }}</p>
+        <div class="alert" role="status" aria-live="polite">
+            <p class="error" id="error" if="{{ $.message !== '' }}">{{ $.message }}</p>
+        </div>
+    </div>
+</div>

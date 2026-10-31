@@ -1,0 +1,147 @@
+{
+    "summary": "A labelled multi-line text field that can grow with its text, with help and error text",
+    "events": ["change", "invalid", "valid"],
+    "commands": ["validate", "reset", "focus", "clear"],
+    "tokenGroup": "field",
+    "tokens": {
+        "label": {
+            "gap": "{space.gap.sm}",
+            "width": "calc({size.control.lg} * 3)"
+        },
+        "help": {
+            "size": "{text.caption.size}"
+        }
+    },
+    "shared": {
+        "size": {
+            "default": "md"
+        },
+        "density": {}
+    },
+    "properties": {
+        "value": {
+            "type": "string",
+            "default": ""
+        },
+        "rows": {
+            "type": "integer",
+            "default": 3,
+            "validators": {
+                "range": {
+                    "min": 1,
+                    "max": 50
+                }
+            }
+        },
+        "autoGrow": {
+            "type": "boolean",
+            "default": false
+        },
+        "disabled": {
+            "type": "boolean",
+            "default": false
+        },
+        "readonly": {
+            "type": "boolean",
+            "default": false
+        },
+        "titlePosition": {
+            "type": "string",
+            "values": ["top", "left", "inner", "hidden"],
+            "default": "top",
+            "reflect": true
+        },
+        "width": {
+            "type": ["string", "integer"],
+            "default": "fill"
+        },
+        "required": {
+            "type": "boolean",
+            "default": false
+        },
+        "minLength": {
+            "type": "integer",
+            "default": 0,
+            "validators": {
+                "range": {
+                    "min": 0
+                }
+            }
+        },
+        "maxLength": {
+            "type": "integer",
+            "default": 0,
+            "validators": {
+                "range": {
+                    "min": 0
+                }
+            }
+        },
+        "pattern": {
+            "type": "string",
+            "default": "",
+            "validators": {
+                "regex": 120
+            }
+        },
+        "error": {
+            "type": "string",
+            "default": "",
+            "runtime": true
+        },
+        "touched": {
+            "type": "boolean",
+            "default": false,
+            "runtime": true
+        },
+        "dirty": {
+            "type": "boolean",
+            "default": false,
+            "runtime": true
+        },
+        "locked": {
+            "type": "boolean",
+            "default": false,
+            "runtime": true
+        },
+        "message": {
+            "type": "string",
+            "default": "",
+            "runtime": true
+        },
+        "glyph": {
+            "type": "object",
+            "default": {
+                "name": "",
+                "decorative": true
+            },
+            "runtime": true
+        },
+        "_label": {
+            "type": "string",
+            "kind": "content",
+            "default": "Label"
+        },
+        "_placeholder": {
+            "type": "string",
+            "kind": "content",
+            "default": "Type here"
+        },
+        "_help": {
+            "type": "string",
+            "kind": "content",
+            "default": ""
+        },
+        "_errors": {
+            "type": "map",
+            "items": "string",
+            "kind": "content",
+            "default": {
+                "required": "This field is required",
+                "minLength": "Too short",
+                "maxLength": "Too long",
+                "pattern": "Not in the expected format"
+            }
+        }
+    }
+}

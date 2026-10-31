@@ -15,3 +15,6 @@ Partials a component's `view.css` pulls in with a line `@include "<name>.css";` 
 
 ## tone/
 `toneGlyph.ts`: `toneIcon(tone)` gives the default icon of a tone (`info-circle` for `info`, `neutral` and `accent`, `alert-circle`, `alert-triangle` and `circle-check` for `danger`, `warning` and `success`). `toast` uses it; a controller imports it as `../shared/tone/toneGlyph.js`.
+
+## popover/
+`popover.ts`: `createPopover` (popover API, CSS anchor positioning from a `placement` or an `anchor` name, Escape and outside-press dismissal, no layout reads; no component needed, exported from the package), `positionAreaOf`, `isPlacement`, `isAnchorName` and `PLACEMENTS`. `tip.ts`: `attachTip` (show after a hover delay, at once on focus, hide on leave and blur). `tipMixin.ts`: the `tip` and `tip-describes` attribute directives and `registerTipMixins()`; `tooltip` and the icon-only `button` import it as `../shared/popover/tipMixin.js` and put `tip="" tip-describes="_text"` on their popover element, the element after the trigger.

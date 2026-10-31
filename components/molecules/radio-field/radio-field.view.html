@@ -1,0 +1,12 @@
+<div class="field" style="--field-width: {{ widthOf($.width) }}">
+    <label class="label" id="label">{{ $._label }}</label>
+    <div class="box">
+        <div id="control" class="options" role="radiogroup" aria-labelledby="label" aria-required="{{ $.required ? 'true' : null }}" aria-describedby="{{ describedBy($._help, $.message) }}" aria-invalid="{{ $.error !== '' ? 'true' : null }}"><label class="option" repeat="{{ $k,$i,$v in $.options }}" key="{{ $k }}"><input class="radio" type="radio" name="option" value="{{ valueOf($k, $v, $.optionValue) }}" disabled="{{ $.disabled || $.locked }}" onchange="{{ onChange }}" onblur="{{ onBlur }}" /><span class="text">{{ labelOf($v, $.optionLabel, $v._label) }}</span></label></div>
+    </div>
+    <div class="messages">
+        <p class="help" id="help" if="{{ $._help !== '' }}">{{ $._help }}</p>
+        <div class="alert" role="status" aria-live="polite">
+            <p class="error" id="error" if="{{ $.message !== '' }}">{{ $.message }}</p>
+        </div>
+    </div>
+</div>

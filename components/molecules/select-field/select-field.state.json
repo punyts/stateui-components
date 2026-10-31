@@ -1,0 +1,44 @@
+{
+    "summary": "A labelled dropdown of options from data or a translated static map, single or multiple, with help and error text",
+    "events": ["change", "invalid", "valid"],
+    "commands": ["validate", "reset", "focus", "clear"],
+    "tokenGroup": "field",
+    "tokens": {
+        "label": { "gap": "{space.gap.sm}", "width": "calc({size.control.lg} * 3)" },
+        "help": { "size": "{text.caption.size}" }
+    },
+    "shared": { "size": { "default": "md" }, "density": {} },
+    "properties": {
+        "options": {
+            "type": ["array", "map"],
+            "default": [],
+            "items": { "_label": { "type": "string", "kind": "content" } }
+        },
+        "optionValue": { "type": "string", "default": "value" },
+        "optionLabel": { "type": "string", "default": "label" },
+        "multiple": { "type": "boolean", "default": false },
+        "value": { "type": "any", "default": "" },
+        "icon": { "type": "icon", "default": "" },
+        "disabled": { "type": "boolean", "default": false },
+        "readonly": { "type": "boolean", "default": false },
+        "titlePosition": { "type": "string", "values": ["top", "left", "inner", "hidden"], "default": "top", "reflect": true },
+        "width": { "type": ["string", "integer"], "default": "fill" },
+        "required": { "type": "boolean", "default": false },
+        "error": { "type": "string", "default": "", "runtime": true },
+        "touched": { "type": "boolean", "default": false, "runtime": true },
+        "dirty": { "type": "boolean", "default": false, "runtime": true },
+        "locked": { "type": "boolean", "default": false, "runtime": true },
+        "message": { "type": "string", "default": "", "runtime": true },
+        "glyph": { "type": "object", "default": { "name": "", "decorative": true }, "runtime": true },
+        "_label": { "type": "string", "kind": "content", "default": "Label" },
+        "_help": { "type": "string", "kind": "content", "default": "" },
+        "_errors": {
+            "type": "map",
+            "items": "string",
+            "kind": "content",
+            "default": {
+                "required": "This field is required"
+            }
+        }
+    }
+}
