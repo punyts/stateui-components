@@ -2,10 +2,10 @@ import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { validateDocument } from '@punyts/stateui-app/core';
+import { exposedPathResolves, libraryFromCatalog, resolveNode, validateDocument } from '@punyts/stateui-app/core';
 import type { JsonValue, PropertyShape } from '@punyts/stateui-app/core';
 import { formatError } from '@punyts/stateui-app/build';
-import type { Catalog, RootCatalogEntry } from '@punyts/stateui-app/build';
+import type { Catalog, ComposedCatalogEntry, RootCatalogEntry } from '@punyts/stateui-app/build';
 import { buildComponents } from '../scripts/buildComponents.mjs';
 import catalogJson from '../.test-build/real/components/catalog.json';
 import { CORE_ICON_NAMES } from '../src/icons/coreNames.js';
@@ -28,6 +28,26 @@ const SPEC_MOLECULES = [
     'textField', 'textareaField', 'selectField', 'checkField', 'switchField', 'radioField', 'dateField', 'card',
     'alert', 'stat', 'emptyState', 'avatar', 'searchBox', 'menuItem', 'descriptionList', 'toast'
 ] as const;
+
+/** The 13 composites of Epic 5 (the Epic 8 composites, such as recordGrid, accordion and wizard, are not in this set) */
+const SPEC_COMPOSITES = [
+    'panel', 'toolbar', 'page', 'nav', 'form', 'recordList', 'list', 'modal', 'drawer', 'tabs', 'table', 'menu', 'toastRegion'
+] as const;
+
+/** Root components that are parts of another component, not placed by a minion: the row `table` builds per record */
+const PART_COMPONENTS = ['tableRow'] as const;
+
+/** The six composed components of Epic 5 */
+const SPEC_COMPOSED = ['confirmDialog', 'formDialog', 'masterDetail', 'settingsPage', 'crudTable', 'dashboardGrid'] as const;
+
+const composedEntries = catalog.components.filter((entry): entry is ComposedCatalogEntry => entry.tier === 'composed');
+const library = libraryFromCatalog(catalog);
+
+/** Lists what the catalog has that the spec does not, and what it lacks */
+const difference = (found: readonly string[], spec: readonly string[]): { missing: string[]; extra: string[] } => ({
+    missing: spec.filter((name) => !found.includes(name)),
+    extra: found.filter((name) => !spec.includes(name))
+});
 
 const FIELDS = ['textField', 'textareaField', 'selectField', 'checkField', 'switchField', 'radioField', 'dateField'] as const;
 
@@ -112,6 +132,70 @@ describe('the component catalog holds the first library', () => {
             expect(entry.shared, entry.name).toContain('hidden');
             expect(entry.example.component, entry.name).toBe(entry.name);
         }
+    });
+});
+
+describe('the component catalog holds the whole Epic 5 set', () => {
+    it('should hold exactly the 13 composites of Epic 5 as root composites, besides the parts of other components', () => {
+        // Arrange
+        const found = roots.filter((entry) => entry.size === 'composite').map((entry) => entry.name);
+        const placeable = found.filter((name) => !(PART_COMPONENTS as readonly string[]).includes(name));
+
+        // Assert
+        expect(difference(placeable, SPEC_COMPOSITES)).toEqual({ missing: [], extra: [] });
+        expect(placeable).toHaveLength(13);
+        expect(found.filter((name) => (PART_COMPONENTS as readonly string[]).includes(name))).toEqual([...PART_COMPONENTS]);
+    });
+
+    it('should hold 45 root components besides the parts: 32 atoms and molecules and 13 composites', () => {
+        // Arrange
+        const placeable = roots.filter((entry) => !(PART_COMPONENTS as readonly string[]).includes(entry.name));
+
+        // Assert
+        expect(difference(placeable.map((entry) => entry.name), [...SPEC_ATOMS, ...SPEC_MOLECULES, ...SPEC_COMPOSITES])).toEqual({ missing: [], extra: [] });
+        expect(placeable).toHaveLength(45);
+    });
+
+    it('should hold exactly the six composed components of Epic 5', () => {
+        // Arrange
+        const found = composedEntries.map((entry) => entry.name);
+
+        // Assert
+        expect(difference(found, SPEC_COMPOSED)).toEqual({ missing: [], extra: [] });
+        expect(found).toHaveLength(6);
+    });
+
+    it('should give every root and composed component a German overlay', () => {
+        // Arrange
+        const without = catalog.components.filter((entry) => !entry.locales.includes('de')).map((entry) => entry.name);
+
+        // Assert
+        expect(without).toEqual([]);
+    });
+});
+
+describe('every composed component', () => {
+    it.each(composedEntries.map((entry) => [entry.name, entry] as const))('should have an example that passes validateDocument: %s', (_name, entry) => {
+        // Act
+        const result = validateDocument(documentOf(entry.example), catalog, { isIconName });
+
+        // Assert
+        expect(entry.example.component).toBe(entry.name);
+        expect(result.errors.map(formatError)).toEqual([]);
+        expect(result.valid).toBe(true);
+    });
+
+    it.each(composedEntries.map((entry) => [entry.name, entry] as const))('should list exposed paths that each resolve in its resolved default tree: %s', (_name, entry) => {
+        // Arrange
+        const resolved = resolveNode(entry.tree, library, {}, { path: '$' });
+
+        // Act
+        const unresolved = (entry.exposes ?? []).map((exposed) => exposed.path).filter((path) => !exposedPathResolves(resolved.node, path, library));
+
+        // Assert
+        expect(resolved.errors.map(formatError)).toEqual([]);
+        expect(entry.exposes?.length ?? 0).toBeGreaterThan(0);
+        expect(unresolved).toEqual([]);
     });
 });
 
