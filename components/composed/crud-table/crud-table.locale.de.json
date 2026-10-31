@@ -1,0 +1,13 @@
+{
+    "actions": { "children": { "add": { "_title": "Hinzufügen" } } },
+    "children": {
+        "table": {
+            "columns": {
+                "name": { "_title": "Name" },
+                "actions": { "_title": "Aktionen", "cell": { "_title": "Löschen" } }
+            }
+        },
+        "form": { "_title": "Datensatz bearbeiten" },
+        "confirm": { "_title": "Datensatz löschen?" }
+    }
+}

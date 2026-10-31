@@ -1,0 +1,84 @@
+{
+    "component": "panel",
+    "actions": {
+        "component": "toolbar",
+        "children": {
+            "search": {
+                "component": "searchBox",
+                "on": { "search": { "command": "emit", "target": "crudTable.search" } }
+            },
+            "add": {
+                "component": "button",
+                "_title": "Add",
+                "on": { "press": { "command": "open", "target": "^crudTable.children.form" } }
+            }
+        }
+    },
+    "children": {
+        "table": {
+            "component": "table",
+            "selectable": "single",
+            "columns": {
+                "name": { "_title": "Name", "field": "name", "sortable": true },
+                "actions": {
+                    "_title": "Actions",
+                    "align": "end",
+                    "width": "120px",
+                    "cell": {
+                        "component": "button",
+                        "variant": "ghost",
+                        "tone": "danger",
+                        "_title": "Delete",
+                        "on": {
+                            "press": [
+                                { "command": "set", "target": "^crudTable.children.table.selected", "value": "$row.id" },
+                                { "command": "open", "target": "^crudTable.children.confirm" }
+                            ]
+                        }
+                    }
+                }
+            },
+            "on": {
+                "activate": [
+                    { "command": "emit", "target": "crudTable.edit" },
+                    { "command": "open", "target": "^crudTable.children.form" }
+                ]
+            }
+        },
+        "form": {
+            "component": "formDialog",
+            "_title": "Edit record",
+            "body": {
+                "on": {
+                    "submitted": [
+                        { "command": "close", "target": "^formDialog" },
+                        { "command": "emit", "target": "crudTable.save" }
+                    ]
+                }
+            }
+        },
+        "confirm": {
+            "component": "confirmDialog",
+            "_title": "Delete record?",
+            "footer": {
+                "children": {
+                    "confirm": {
+                        "on": {
+                            "press": [
+                                { "command": "close", "target": "^confirmDialog" },
+                                { "command": "emit", "target": "crudTable.delete" }
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "exposes": {
+        "children.table.items": "The records shown in the table: link it with <-items to an array in $.data; each record needs a key field (id by default)",
+        "children.table.columns": "The columns, keyed by name: replace the map (null removes a column) and keep a delete button in a cell node that sets the table's selected to the row key and opens the confirm dialog",
+        "children.form.body.children": "The fields of the add and edit form, keyed by the name that appears in the saved values: link each field's value to $.data",
+        "children.form._title": "Title of the add and edit dialog",
+        "children.confirm._title": "Title of the delete confirmation dialog"
+    }
+}
