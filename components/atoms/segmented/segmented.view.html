@@ -1,0 +1,9 @@
+<div class="group" role="{{ $.multiple ? 'group' : 'radiogroup' }}" aria-label="{{ $._label }}" aria-disabled="{{ $.disabled ? 'true' : null }}" onkeydown="{{ onKeyDown }}">
+    <span class="cell" repeat="{{ $k,$i,$v in $.options }}" key="{{ $k }}">
+        <button class="segment" type="button" data-key="{{ $k }}" role="{{ $.multiple ? null : 'radio' }}" aria-label="{{ $.iconOnly ? ($v._label || $k) : null }}" disabled="{{ $.disabled }}" onclick="{{ onPick }}">
+            <ui-icon class="glyph" size="sm" name="{{ $v.icon }}" if="{{ $v.icon }}"></ui-icon>
+            <span class="label" if="{{ !$.iconOnly || !$v.icon }}">{{ $v._label || $k }}</span>
+        </button>
+        <div class="tip" tip="iconOnly" aria-hidden="true">{{ ($.iconOnly &amp;&amp; $v.icon) ? ($v._label || $k) : '' }}</div>
+    </span>
+</div>

@@ -34,7 +34,7 @@ export function describedElement(trigger: Element): Element {
  * `tip="<mode>"` on a popover element makes the element before it the trigger of a tip. The tip shows after the
  * `delay` property on hover and at once on focus, hides on pointer leave, blur and Escape, and sits on the side
  * named by the `side` property (when the node has one; otherwise the element's own `position-area` rules).
- * With the value `iconOnly` it is on only while `iconPosition` is `only`, and `delay` is the default delay
+ * With the value `iconOnly` it is on only while `iconPosition` is `only` or `iconOnly` is true, and `delay` is the default delay
  */
 function tipMixin(element: Element, attrs: Readonly<Record<string, unknown>>, scope: Scope): () => void {
     const tip = element as HTMLElement;
@@ -53,7 +53,7 @@ function tipMixin(element: Element, attrs: Readonly<Record<string, unknown>>, sc
             const value = read(scope, 'delay');
             return typeof value === 'number' && Number.isFinite(value) ? value : DEFAULT_TIP_DELAY;
         },
-        enabled: () => !iconOnly || read(scope, 'iconPosition') === 'only'
+        enabled: () => !iconOnly || read(scope, 'iconPosition') === 'only' || read(scope, 'iconOnly') === true
     });
     const subscription = scope.subscribe(['$.side'], () => {
         const placement = placementOf();

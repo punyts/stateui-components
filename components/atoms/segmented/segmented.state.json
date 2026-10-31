@@ -1,0 +1,25 @@
+{
+    "summary": "A row of exclusive (radio group) or toggled (toggle buttons) options with optional icons and an icon-only mode",
+    "shared": { "size": { "default": "md" } },
+    "events": ["change"],
+    "commands": ["focus"],
+    "tokens": {
+        "radius": "{radius.md}",
+        "padding": { "inline": "{space.inset.md}" }
+    },
+    "properties": {
+        "options": {
+            "type": "map",
+            "default": {},
+            "items": {
+                "_label": { "type": "string", "kind": "content" },
+                "icon": { "type": "icon", "default": "" }
+            }
+        },
+        "multiple": { "type": "boolean", "default": false },
+        "disabled": { "type": "boolean", "default": false },
+        "iconOnly": { "type": "boolean", "default": false, "reflect": true },
+        "value": { "type": "any", "default": "" },
+        "_label": { "type": "string", "kind": "content", "default": "Options" }
+    }
+}
