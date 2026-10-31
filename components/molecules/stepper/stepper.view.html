@@ -1,0 +1,16 @@
+<ol class="steps" aria-label="{{ $._label }}">
+    <li class="step" repeat="{{ $k,$i,$v in $.items }}" key="{{ $k }}" data-done="{{ $v.done ? 'true' : null }}" data-current="{{ $v.current ? 'true' : null }}" aria-current="{{ $v.current ? 'step' : null }}">
+        <button class="button" type="button" data-key="{{ $k }}" disabled="{{ $v.disabled }}" onclick="{{ onPick }}">
+            <span class="marker" aria-hidden="true">
+                <ui-icon name="check" size="sm" if="{{ $v.done }}"></ui-icon>
+                <span class="number" if="{{ !$v.done }}">{{ $v.number }}</span>
+            </span>
+            <span class="text">
+                <span class="label">{{ $v.label }}</span>
+                <span class="description" if="{{ $v.description !== '' }}">{{ $v.description }}</span>
+                <span class="hidden" if="{{ $v.done }}">{{ $._completed }}</span>
+            </span>
+        </button>
+        <span class="connector" aria-hidden="true"></span>
+    </li>
+</ol>

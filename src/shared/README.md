@@ -17,6 +17,9 @@ Partials a component's `view.css` pulls in with a line `@include "<name>.css";` 
 ## slider/
 `slider.ts`: the pure parts of `sliderField`: `readScale` (min, max and step from the node), `snapValue`, `readThumbs`, `percentOf`, `limitsOf` (a range's thumbs hold each other), `valueForKey`, `valueAtFraction` and `nearestThumb`. `sliderField` imports it as `../shared/slider/slider.js`.
 
+## steps/
+`steps.ts`: the pure parts of `stepper`: `planSteps` (number, done, current and disabled for every step, with the `linear` rule), `currentStep` and `keysOf`. `stepper` imports it as `../shared/steps/steps.js`.
+
 ## tone/
 `toneGlyph.ts`: `toneIcon(tone)` gives the default icon of a tone (`info-circle` for `info`, `neutral` and `accent`, `alert-circle`, `alert-triangle` and `circle-check` for `danger`, `warning` and `success`). `toast` uses it; a controller imports it as `../shared/tone/toneGlyph.js`.
 

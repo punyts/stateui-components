@@ -1,0 +1,146 @@
+:host {
+    display: block;
+}
+
+.steps {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--ui-stepper-gap);
+    margin: 0;
+    padding: 0;
+    color: var(--ui-color-text-base);
+    font-family: var(--ui-text-body-family);
+    font-size: var(--ui-text-body-size);
+    line-height: var(--ui-text-body-leading);
+    list-style: none;
+}
+
+:host([orientation=vertical]) .steps {
+    flex-direction: column;
+}
+
+.step {
+    display: flex;
+    flex: 1 1 0;
+    align-items: flex-start;
+    gap: var(--ui-stepper-gap);
+    min-inline-size: 0;
+}
+
+.step:last-child {
+    flex: none;
+}
+
+:host([orientation=vertical]) .step {
+    flex: none;
+    flex-direction: column;
+}
+
+.connector {
+    flex: 1 1 auto;
+    min-inline-size: var(--ui-stepper-gap);
+    margin-block-start: calc(var(--ui-stepper-marker-size) / 2);
+    block-size: var(--ui-border-width-thin);
+    background: var(--ui-color-border-base);
+}
+
+.step:last-child .connector {
+    display: none;
+}
+
+.step[data-done] .connector {
+    background: var(--ui-stepper-selected-fill);
+}
+
+:host([orientation=vertical]) .connector {
+    flex: none;
+    min-inline-size: 0;
+    min-block-size: var(--ui-stepper-marker-size);
+    margin-block-start: 0;
+    margin-inline-start: calc(var(--ui-stepper-marker-size) / 2);
+    inline-size: var(--ui-border-width-thin);
+    block-size: auto;
+}
+
+.button {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--ui-stepper-gap);
+    min-inline-size: 0;
+    margin: 0;
+    padding: 0;
+    color: inherit;
+    font: inherit;
+    text-align: start;
+    background: transparent;
+    border: 0;
+    border-radius: var(--ui-radius-sm);
+    cursor: pointer;
+}
+
+.button:focus-visible {
+    outline: 2px solid var(--ui-color-focus);
+    outline-offset: 2px;
+}
+
+.button:disabled {
+    color: var(--ui-color-text-disabled);
+    cursor: not-allowed;
+}
+
+.marker {
+    box-sizing: border-box;
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--ui-stepper-marker-size);
+    block-size: var(--ui-stepper-marker-size);
+    font-size: var(--ui-text-caption-size);
+    font-variant-numeric: tabular-nums;
+    background: var(--ui-color-surface-base);
+    border: var(--ui-border-width-thin) solid var(--ui-color-border-strong);
+    border-radius: var(--ui-radius-full);
+}
+
+.step[data-current] .marker {
+    border-color: var(--ui-stepper-selected-fill);
+    box-shadow: 0 0 0 var(--ui-border-width-thin) var(--ui-stepper-selected-fill);
+}
+
+.step[data-done] .marker {
+    color: var(--ui-stepper-selected-on);
+    background: var(--ui-stepper-selected-fill);
+    border-color: var(--ui-stepper-selected-fill);
+}
+
+.button:disabled .marker {
+    border-color: var(--ui-color-border-base);
+}
+
+.text {
+    display: flex;
+    flex-direction: column;
+    min-inline-size: 0;
+}
+
+.step[data-current] .label {
+    font-weight: 600;
+}
+
+.description {
+    color: var(--ui-color-text-muted);
+    font-size: var(--ui-text-caption-size);
+    line-height: var(--ui-text-caption-leading);
+}
+
+.hidden {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}

@@ -1,0 +1,28 @@
+{
+    "summary": "A step indicator for multi-step flows: numbered or checked steps, with later steps blocked while linear",
+    "events": ["select"],
+    "commands": ["complete"],
+    "commandValues": { "complete": "steps" },
+    "tokens": {
+        "gap": "{space.gap.md}",
+        "marker": { "size": "calc({size.control.md} * 0.75)" },
+        "selected": { "fill": "{color.accent.base}", "on": "{color.accent.on}" }
+    },
+    "properties": {
+        "steps": {
+            "type": "map",
+            "default": {},
+            "items": {
+                "_label": { "type": "string", "kind": "content", "default": "" },
+                "_description": { "type": "string", "kind": "content", "default": "" }
+            }
+        },
+        "active": { "type": "string", "default": "" },
+        "completed": { "type": "array", "default": [] },
+        "linear": { "type": "boolean", "default": true },
+        "orientation": { "type": "string", "values": ["horizontal", "vertical"], "default": "horizontal", "reflect": true },
+        "items": { "type": "object", "default": {}, "runtime": true },
+        "_label": { "type": "string", "kind": "content", "default": "Steps" },
+        "_completed": { "type": "string", "kind": "content", "default": "Completed" }
+    }
+}
