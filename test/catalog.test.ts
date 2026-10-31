@@ -49,6 +49,11 @@ const difference = (found: readonly string[], spec: readonly string[]): { missin
     extra: found.filter((name) => !spec.includes(name))
 });
 
+/** Components of Epic 8 that joined the library after the first set; the Epic 4 and 5 counts below stay as the spec fixed them */
+const LATER_ATOMS: readonly string[] = [];
+const LATER_MOLECULES: readonly string[] = [];
+const LATER_COMPOSITES: readonly string[] = ['popover'];
+
 const FIELDS = ['textField', 'textareaField', 'selectField', 'checkField', 'switchField', 'radioField', 'dateField'] as const;
 
 let names: IconNames;
@@ -88,38 +93,38 @@ function iconNamesOf(entry: RootCatalogEntry): string[] {
 const sizeOfName = (name: string): string | undefined => catalog.components.find((entry) => entry.name === name)?.size;
 
 describe('the component catalog holds the first library', () => {
-    it('should hold exactly the 16 atoms the component spec names, each of size atom', () => {
+    it('should hold exactly the atoms the component spec names (16 and the later ones), each of size atom', () => {
         // Arrange
         const found = catalog.components.filter((entry) => entry.size === 'atom').map((entry) => entry.name);
 
         // Assert
-        expect({ missing: SPEC_ATOMS.filter((name) => !found.includes(name)), extra: found.filter((name) => !(SPEC_ATOMS as readonly string[]).includes(name)) }).toEqual({
+        expect({ missing: [...SPEC_ATOMS, ...LATER_ATOMS].filter((name) => !found.includes(name)), extra: found.filter((name) => ![...SPEC_ATOMS, ...LATER_ATOMS].includes(name)) }).toEqual({
             missing: [],
             extra: []
         });
-        expect(found).toHaveLength(16);
+        expect(found).toHaveLength(16 + LATER_ATOMS.length);
     });
 
-    it('should hold exactly the 16 molecules the component spec names, each of size molecule', () => {
+    it('should hold exactly the molecules the component spec names (16 and the later ones), each of size molecule', () => {
         // Arrange
         const found = catalog.components.filter((entry) => entry.size === 'molecule').map((entry) => entry.name);
 
         // Assert
-        expect({ missing: SPEC_MOLECULES.filter((name) => !found.includes(name)), extra: found.filter((name) => !(SPEC_MOLECULES as readonly string[]).includes(name)) }).toEqual({
+        expect({ missing: [...SPEC_MOLECULES, ...LATER_MOLECULES].filter((name) => !found.includes(name)), extra: found.filter((name) => ![...SPEC_MOLECULES, ...LATER_MOLECULES].includes(name)) }).toEqual({
             missing: [],
             extra: []
         });
-        expect(found).toHaveLength(16);
+        expect(found).toHaveLength(16 + LATER_MOLECULES.length);
     });
 
     it('should give every spec component its size and no other component the size atom or molecule', () => {
         // Arrange
-        const specNames: readonly string[] = [...SPEC_ATOMS, ...SPEC_MOLECULES];
+        const specNames: readonly string[] = [...SPEC_ATOMS, ...SPEC_MOLECULES, ...LATER_ATOMS, ...LATER_MOLECULES];
         const others = catalog.components.filter((entry) => !specNames.includes(entry.name));
 
         // Assert
-        expect(SPEC_ATOMS.map(sizeOfName).every((size) => size === 'atom')).toBe(true);
-        expect(SPEC_MOLECULES.map(sizeOfName).every((size) => size === 'molecule')).toBe(true);
+        expect([...SPEC_ATOMS, ...LATER_ATOMS].map(sizeOfName).every((size) => size === 'atom')).toBe(true);
+        expect([...SPEC_MOLECULES, ...LATER_MOLECULES].map(sizeOfName).every((size) => size === 'molecule')).toBe(true);
         expect(others.filter((entry) => entry.size === 'atom' || entry.size === 'molecule')).toEqual([]);
     });
 
@@ -136,24 +141,24 @@ describe('the component catalog holds the first library', () => {
 });
 
 describe('the component catalog holds the whole Epic 5 set', () => {
-    it('should hold exactly the 13 composites of Epic 5 as root composites, besides the parts of other components', () => {
+    it('should hold exactly the 13 composites of Epic 5 and the later ones as root composites, besides the parts of other components', () => {
         // Arrange
         const found = roots.filter((entry) => entry.size === 'composite').map((entry) => entry.name);
         const placeable = found.filter((name) => !(PART_COMPONENTS as readonly string[]).includes(name));
 
         // Assert
-        expect(difference(placeable, SPEC_COMPOSITES)).toEqual({ missing: [], extra: [] });
-        expect(placeable).toHaveLength(13);
+        expect(difference(placeable, [...SPEC_COMPOSITES, ...LATER_COMPOSITES])).toEqual({ missing: [], extra: [] });
+        expect(placeable).toHaveLength(13 + LATER_COMPOSITES.length);
         expect(found.filter((name) => (PART_COMPONENTS as readonly string[]).includes(name))).toEqual([...PART_COMPONENTS]);
     });
 
-    it('should hold 45 root components besides the parts: 32 atoms and molecules and 13 composites', () => {
+    it('should hold 45 root components of the first library besides the parts, and the later ones', () => {
         // Arrange
         const placeable = roots.filter((entry) => !(PART_COMPONENTS as readonly string[]).includes(entry.name));
 
         // Assert
-        expect(difference(placeable.map((entry) => entry.name), [...SPEC_ATOMS, ...SPEC_MOLECULES, ...SPEC_COMPOSITES])).toEqual({ missing: [], extra: [] });
-        expect(placeable).toHaveLength(45);
+        expect(difference(placeable.map((entry) => entry.name), [...SPEC_ATOMS, ...SPEC_MOLECULES, ...SPEC_COMPOSITES, ...LATER_ATOMS, ...LATER_MOLECULES, ...LATER_COMPOSITES])).toEqual({ missing: [], extra: [] });
+        expect(placeable).toHaveLength(45 + LATER_ATOMS.length + LATER_MOLECULES.length + LATER_COMPOSITES.length);
     });
 
     it('should hold exactly the six composed components of Epic 5', () => {

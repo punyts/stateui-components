@@ -142,6 +142,32 @@ describe('createPopover in Chromium', () => {
         expect(reasons).toEqual(['outside']);
     });
 
+    it('should ignore Escape and an outside press while dismissible answers false, and still close by close()', async () => {
+        // Arrange
+        const { element, outside } = page();
+        const reasons: PopoverDismissReason[] = [];
+        let dismissible = false;
+        const popover = createPopover({ element, dismissible: () => dismissible, onDismiss: (reason) => reasons.push(reason) });
+        popover.open();
+
+        // Act
+        await userEvent.keyboard('{Escape}');
+        await userEvent.click(outside);
+        const stillOpen = popover.isOpen();
+        dismissible = true;
+        await userEvent.keyboard('{Escape}');
+        const closedWhenDismissible = !popover.isOpen();
+        popover.open();
+        dismissible = false;
+        popover.close();
+
+        // Assert
+        expect(stillOpen).toBe(true);
+        expect(closedWhenDismissible).toBe(true);
+        expect(popover.isOpen()).toBe(false);
+        expect(reasons).toEqual(['escape']);
+    });
+
     it('should not report a dismissal for close() and stop listening once closed', async () => {
         // Arrange
         const { element, outside } = page();

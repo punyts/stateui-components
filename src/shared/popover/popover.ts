@@ -23,6 +23,8 @@ export interface PopoverOptions {
     readonly anchor?: string;
     /** Elements whose presses are not outside presses (the trigger), because they toggle the popover themselves */
     readonly inside?: readonly EventTarget[];
+    /** Asked on each Escape and outside press; a popover that answers `false` ignores both (default: always dismissible). `close()` is not affected */
+    readonly dismissible?: () => boolean;
     /** Runs after the popover dismissed itself (not after `close()`) */
     readonly onDismiss?: (reason: PopoverDismissReason) => void;
 }
@@ -91,7 +93,7 @@ export function isAnchorName(value: unknown): value is string {
  * @throws TypeError when `anchor` is not a dashed identifier or `placement` is not a placement
  */
 export function createPopover(options: PopoverOptions): PopoverHandle {
-    const { element, inside = [], onDismiss } = options;
+    const { element, inside = [], onDismiss, dismissible = () => true } = options;
     const document = element.ownerDocument;
     let disposed = false;
     let listening = false;
@@ -112,13 +114,13 @@ export function createPopover(options: PopoverOptions): PopoverHandle {
     const isOpen = (): boolean => element.matches(':popover-open');
 
     const onKeyDown = (event: KeyboardEvent): void => {
-        if (event.key !== 'Escape') return;
+        if (event.key !== 'Escape' || !dismissible()) return;
         close();
         onDismiss?.('escape');
     };
     const onPointerDown = (event: PointerEvent): void => {
         const path = event.composedPath();
-        if (path.includes(element) || inside.some((target) => path.includes(target))) return;
+        if (path.includes(element) || inside.some((target) => path.includes(target)) || !dismissible()) return;
         close();
         onDismiss?.('outside');
     };

@@ -1,0 +1,6 @@
+<div class="trigger" onclick="{{ onTriggerClick }}">
+    <sui-node state=".trigger" if="{{ $.trigger }}"></sui-node>
+</div>
+<div class="popup" popover="manual" role="dialog" tabindex="-1" aria-label="{{ $._label }}">
+    <sui-node state=".body" if="{{ $.body }}"></sui-node>
+</div>

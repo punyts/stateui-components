@@ -1,0 +1,23 @@
+{
+    "summary": "A general anchored panel with a trigger and a body: filters, quick edits and info cards",
+    "shared": { "elevation": { "default": "overlay" }, "density": {} },
+    "events": ["open", "close"],
+    "commands": ["open", "close", "toggle"],
+    "tokens": {
+        "radius": "{radius.md}",
+        "padding": "{space.inset.md}",
+        "width": {
+            "sm": "calc({size.control.md} * 6)",
+            "md": "calc({size.control.md} * 10)"
+        }
+    },
+    "properties": {
+        "open": { "type": "boolean", "default": false, "reflect": true },
+        "anchor": { "type": "string", "values": ["bottomStart", "bottomEnd", "topStart", "topEnd"], "default": "bottomStart", "reflect": true },
+        "dismissible": { "type": "boolean", "default": true },
+        "width": { "type": "string", "values": ["auto", "sm", "md"], "default": "auto", "reflect": true },
+        "_label": { "type": "string", "kind": "content", "default": "Popover" },
+        "trigger": { "type": "node" },
+        "body": { "type": "node" }
+    }
+}
