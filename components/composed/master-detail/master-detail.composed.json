@@ -1,0 +1,64 @@
+{
+    "component": "panel",
+    "layout": { "type": "region" },
+    "children": {
+        "list": {
+            "component": "list",
+            "placement": { "region": "w" },
+            "selectable": "single",
+            "divided": true,
+            "row": { "component": "text", "<-_text": "$row.name" }
+        },
+        "detail": {
+            "component": "panel",
+            "placement": { "region": "center" },
+            "_title": "Details",
+            "actions": {
+                "component": "button",
+                "variant": "outline",
+                "_title": "Edit",
+                "on": {
+                    "press": [
+                        { "command": "set", "target": "^masterDetail.children.detail.children.view.hidden", "value": true },
+                        { "command": "set", "target": "^masterDetail.children.detail.children.form.hidden", "value": false }
+                    ]
+                }
+            },
+            "children": {
+                "view": {
+                    "component": "descriptionList",
+                    "<-record": "^masterDetail.children.list.current",
+                    "items": {
+                        "name": { "_term": "Name", "field": "name" },
+                        "description": { "_term": "Description", "field": "description" }
+                    }
+                },
+                "form": {
+                    "component": "form",
+                    "hidden": true,
+                    "children": {
+                        "name": { "component": "textField", "_label": "Name", "required": true, "<-value": "^masterDetail.children.list.current.name" },
+                        "description": { "component": "textField", "_label": "Description", "<-value": "^masterDetail.children.list.current.description" }
+                    },
+                    "actions": {
+                        "component": "button",
+                        "_title": "Done",
+                        "on": { "press": { "command": "submit", "target": "$parent" } }
+                    },
+                    "on": {
+                        "submitted": [
+                            { "command": "set", "target": "^masterDetail.children.detail.children.form.hidden", "value": true },
+                            { "command": "set", "target": "^masterDetail.children.detail.children.view.hidden", "value": false }
+                        ]
+                    }
+                }
+            }
+        }
+    },
+    "exposes": {
+        "children.list.items": "The records shown in the list: link it with <-items to an array in $.data; each record needs a key field (id by default)",
+        "children.list.row": "The row template of a record; link its content to $row fields",
+        "children.list.selected": "Link it with <-selected to where the key of the selected record is read from and written to",
+        "children.detail.children": "The detail views of the selected record, keyed by name: link a value or record to ^masterDetail.children.list.current (or a field of it) so it shows and edits the selected record; with nothing selected current is the shared empty record and a write to it is refused"
+    }
+}

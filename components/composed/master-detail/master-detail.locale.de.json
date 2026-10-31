@@ -1,0 +1,23 @@
+{
+    "children": {
+        "detail": {
+            "_title": "Details",
+            "actions": { "_title": "Bearbeiten" },
+            "children": {
+                "view": {
+                    "items": {
+                        "name": { "_term": "Name" },
+                        "description": { "_term": "Beschreibung" }
+                    }
+                },
+                "form": {
+                    "children": {
+                        "name": { "_label": "Name" },
+                        "description": { "_label": "Beschreibung" }
+                    },
+                    "actions": { "_title": "Fertig" }
+                }
+            }
+        }
+    }
+}
