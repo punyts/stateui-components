@@ -37,7 +37,7 @@ describe('menu in Chromium', () => {
         mountComponent.unmountAll();
     });
 
-    it('should be closed at first, with the items in the DOM and the trigger marked as a menu button', async () => {
+    it('should be closed and hidden at first, with the items in the DOM and the trigger marked as a menu button', async () => {
         // Arrange
         const mounted = mountMenu();
         await Promise.resolve();
@@ -48,6 +48,7 @@ describe('menu in Chromium', () => {
         expect(triggerButton(mounted.element).getAttribute('aria-haspopup')).toBe('menu');
         expect(triggerButton(mounted.element).getAttribute('aria-expanded')).toBe('false');
         expect(part(mounted.element, '.popup')?.getAttribute('role')).toBe('menu');
+        expect(part(mounted.element, '.popup')?.checkVisibility()).toBe(false);
     });
 
     it('should open on a press of the trigger and close on a second press', async () => {
