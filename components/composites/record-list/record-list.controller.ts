@@ -135,6 +135,7 @@ export default function controller({ element, store, basePath }: ControllerConte
         },
         isSelected: (key) => selection.has(key),
         paged: () => index.paged(),
+        meta: (key, position) => host.slotMeta?.(key, position),
         onPinLost: (position) => moveTo(Math.min(position, index.size() - 1)),
         onSettled: () => {
             const key = pool?.pinned();
@@ -218,6 +219,7 @@ export default function controller({ element, store, basePath }: ControllerConte
     host.locate = (key) => index.locate(key);
     host.keyAt = (position) => index.keyAt(position);
     host.recordKeys = () => index.loadedKeys();
+    host.invalidate = () => pool?.invalidate();
     host.commands = {
         scrollTo: (value) => {
             const key = typeof value === 'string' || typeof value === 'number' ? String(value) : '';
@@ -229,7 +231,7 @@ export default function controller({ element, store, basePath }: ControllerConte
 
     return {
         onKeyDown: (event: KeyboardEvent) => {
-            if (event.altKey || event.ctrlKey || event.metaKey || pool === undefined) return;
+            if (event.altKey || event.ctrlKey || event.metaKey || pool === undefined || text(rolePath, 'list') === 'tree') return;
             const origin = event.composedPath()[0];
             if (origin instanceof HTMLElement && (TEXT_ENTRY.has(origin.localName) || origin.isContentEditable)) return;
             const slot = slotOf(event);
@@ -279,6 +281,8 @@ export default function controller({ element, store, basePath }: ControllerConte
             delete host.locate;
             delete host.keyAt;
             delete host.recordKeys;
+            delete host.invalidate;
+            delete host.slotMeta;
             delete host.commands;
         }
     };

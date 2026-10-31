@@ -35,6 +35,8 @@ Partials a component's `view.css` pulls in with a line `@include "<name>.css";` 
 ## records/
 `window.ts`: `readWindow`, `poolSize(count, overscan)` (visible rows plus the overscan on both sides, at most `MAX_SLOTS` = 200, taken from the overscan first) and `poolStart`. `recordIndex.ts`: `createRecordIndex`, the key-to-position bookkeeping of an array (a key-to-index map kept from the store events) or a keyed map, with `order`, `keyAt`, `pathOf`, `locate` (the record path, or `$.runtime.empty`) and `size`. `slotPool.ts`: `createSlotPool`, the slot nodes in the runtime branch recycled by re-pointing one `row` link. `recordList` uses them as `../shared/records/*.js`; `recordGrid` will too.
 
+`tree.ts`: the pure parts of `tree`: `buildTree` (records to a `TreeModel`: nodes, roots in display order and the keys a cycle hides), `flattenModel` (the visible `TreeRow`s for a set of expanded keys, iterative) and `flattenTree` (both). `recordView.ts`: the element hooks of a record view, including `slotMeta` (what a wrapping component tells the pool about each record in a slot) and `invalidate`.
+
 ## selection/
 `selection.ts`: `createSelection({ store, selectedPath, currentPath, mode, locate, onSelect })` keeps a record view's selection in `selected` (`pick` replaces or toggles by mode, `selectAll` in `multi` mode only, `clear`) and the store link `current`, pointed at the selected record from `locate` in `single` mode, otherwise at the protected `$.runtime.empty`; `relocate` re-points it after the records changed. Pure helpers: `readSelectionMode`, `selectionKeys`, `selectionValue`, `pickKey`, `sameKeys`, `SELECTION_MODES`. `list` uses it as `../shared/selection/selection.js`; `table` uses it too.
 

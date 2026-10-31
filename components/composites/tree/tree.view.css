@@ -1,0 +1,25 @@
+:host {
+    display: block;
+    min-block-size: 0;
+    --sui-indent: var(--ui-space-inset-md);
+}
+
+:host([indent=sm]) {
+    --sui-indent: var(--ui-space-inset-sm);
+}
+
+:host([indent=lg]) {
+    --sui-indent: var(--ui-space-inset-lg);
+}
+
+.tree {
+    display: flex;
+    flex-direction: column;
+    block-size: 100%;
+    min-block-size: 0;
+}
+
+.tree > sui-node > ui-record-list {
+    flex: 1 1 auto;
+    min-block-size: 0;
+}

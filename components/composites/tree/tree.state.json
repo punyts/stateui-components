@@ -1,0 +1,32 @@
+{
+    "summary": "Hierarchical records drawn through recordList: keyed by parent or children, expandable, indented by level",
+    "shared": { "density": {} },
+    "properties": {
+        "key": { "type": "string", "validators": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" }, "default": "id" },
+        "parentField": { "type": "string", "validators": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" }, "default": "parentId" },
+        "childrenField": { "type": "string", "validators": { "pattern": "^$|^[A-Za-z_][A-Za-z0-9_]*$" }, "default": "" },
+        "hasChildrenField": { "type": "string", "validators": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" }, "default": "hasChildren" },
+        "labelField": { "type": "string", "validators": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" }, "default": "label" },
+        "expanded": { "type": "array", "default": [] },
+        "indent": { "type": "string", "values": ["sm", "md", "lg"], "default": "md", "reflect": true },
+        "records": { "type": ["array", "object"] },
+        "row": { "type": "node", "row": true },
+        "body": {
+            "type": "object",
+            "default": {
+                "component": "recordList",
+                "rowHeight": "md",
+                "overscan": 5,
+                "role": "tree",
+                "multiselectable": false,
+                "selectable": false,
+                "loading": false,
+                "count": 0,
+                "slots": {},
+                "loadingRows": 0,
+                "loadingFirst": 0
+            },
+            "runtime": true
+        }
+    }
+}

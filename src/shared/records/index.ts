@@ -6,4 +6,6 @@ export { createViewportObserver, offsetFor, windowFor } from './viewport.js';
 export type { ViewportObserver, ViewportOptions } from './viewport.js';
 export { MAX_SLOTS, poolSize, poolStart, readWindow, sameWindow } from './window.js';
 export type { RecordWindow } from './window.js';
-export type { RecordViewElement } from './recordView.js';
+export type { RecordViewElement, SlotMeta } from './recordView.js';
+export { buildTree, flattenModel, flattenTree } from './tree.js';
+export type { FlatTree, TreeModel, TreeNode, TreeOptions, TreeRow } from './tree.js';
