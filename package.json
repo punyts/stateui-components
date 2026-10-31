@@ -1,0 +1,58 @@
+{
+    "name": "@punyts/stateui-components",
+    "version": "0.1.0",
+    "publishConfig": {
+        "access": "public"
+    },
+    "type": "module",
+    "description": "The StateUI component library: atoms, molecules, composites and composed components",
+    "main": "dist/index.js",
+    "module": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "default": "./dist/index.js"
+        },
+        "./components": {
+            "types": "./dist/components/index.d.ts",
+            "default": "./dist/components/index.js"
+        },
+        "./components/*": "./dist/components/*",
+        "./catalog.json": "./dist/components/catalog.json",
+        "./register": {
+            "types": "./dist/register.d.ts",
+            "default": "./dist/register.js"
+        }
+    },
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "clean": "bash ../../bin/clean.sh .",
+        "typecheck": "tsc -p tsconfig.build.json --noEmit && tsc -p tsconfig.test.json --noEmit",
+        "build": "tsc -b tsconfig.build.json && node scripts/build.mjs",
+        "test": "npm run test:run",
+        "test:run": "vitest run",
+        "test:watch": "vitest --watch",
+        "test:cov": "vitest run --coverage",
+        "test:browser": "vitest run --config vitest.browser.config.ts",
+        "build:watch": "tsc -b tsconfig.build.json -w",
+        "dev": "npm run build:watch"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "MIT",
+    "dependencies": {
+        "@punyts/stateui": "^0.2.0",
+        "@punyts/stateui-app": "^0.1.0"
+    },
+    "devDependencies": {
+        "@punyts/state": "^1.2.0",
+        "@vitest/browser-playwright": "^4.1.10",
+        "happy-dom": "^21.0.4",
+        "playwright": "^1.61.1",
+        "typescript": "^5.9.3",
+        "vitest": "^4.1.10"
+    }
+}

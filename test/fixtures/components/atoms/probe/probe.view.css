@@ -1,0 +1,2 @@
+:host { display: block; }
+.probe { margin: 0; color: var(--ui-color-text-base); background: var(--ui-color-surface-base); border-inline-start: 4px solid var(--tone); }

@@ -1,0 +1,9 @@
+{
+    "summary": "A test fixture: one line of text that follows the tone and the theme",
+    "events": ["press"],
+    "shared": { "tone": { "default": "accent" } },
+    "properties": {
+        "_text": { "type": "string", "kind": "content", "default": "Hello" },
+        "count": { "type": "number", "default": 0 }
+    }
+}
