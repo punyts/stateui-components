@@ -25,3 +25,9 @@ Partials a component's `view.css` pulls in with a line `@include "<name>.css";` 
 
 ## records/
 `window.ts`: `readWindow`, `poolSize(count, overscan)` (visible rows plus the overscan on both sides, at most `MAX_SLOTS` = 200, taken from the overscan first) and `poolStart`. `recordIndex.ts`: `createRecordIndex`, the key-to-position bookkeeping of an array (a key-to-index map kept from the store events) or a keyed map, with `order`, `keyAt`, `pathOf`, `locate` (the record path, or `$.runtime.empty`) and `size`. `slotPool.ts`: `createSlotPool`, the slot nodes in the runtime branch recycled by re-pointing one `row` link. `recordList` uses them as `../shared/records/*.js`; `recordGrid` will too.
+
+## selection/
+`selection.ts`: `createSelection({ store, selectedPath, currentPath, mode, locate, onSelect })` keeps a record view's selection in `selected` (`pick` replaces or toggles by mode, `selectAll` in `multi` mode only, `clear`) and the store link `current`, pointed at the selected record from `locate` in `single` mode, otherwise at the protected `$.runtime.empty`; `relocate` re-points it after the records changed. Pure helpers: `readSelectionMode`, `selectionKeys`, `selectionValue`, `pickKey`, `sameKeys`, `SELECTION_MODES`. `list` uses it as `../shared/selection/selection.js`; `table` (E5.10) will too.
+
+## order/
+`sortOrder.ts`: `createSortOrder({ store, recordsPath, orderPath, key, sortBy, direction, schedule })` writes the sorted key array `order` (with `replace`, one event) from the records path and one `<records>.$every.<sortBy>` wildcard, once per `schedule` call; `refresh` after the sort field or direction changed. Pure helpers: `sortedKeys` (stable; empty values last in both directions), `compareSortValues`, `readSortEntries`, `fieldValue`, `readSortDirection`. `list` uses it as `../shared/order/sortOrder.js`; `table` (E5.10) will too.

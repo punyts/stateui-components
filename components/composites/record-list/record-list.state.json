@@ -16,6 +16,7 @@
         "role": { "type": "string", "values": ["list", "listbox", "table", "rowgroup"], "default": "list", "reflect": true },
         "rowIndexOffset": { "type": "integer", "default": 0, "validators": { "range": { "min": 0 } } },
         "selected": { "type": ["string", "number", "array"] },
+        "multiselectable": { "type": "boolean", "default": false },
         "loading": { "type": "boolean", "default": false, "reflect": true },
         "total": { "type": "integer", "validators": { "range": { "min": 0 } } },
         "row": { "type": "node", "row": true },

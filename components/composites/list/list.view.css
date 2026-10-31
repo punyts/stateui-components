@@ -28,3 +28,8 @@
     line-height: var(--ui-text-body-leading);
     text-align: center;
 }
+
+:host(:is([selectable=single], [selectable=multi])) {
+    --sui-row-cursor: pointer;
+    --sui-row-selected: var(--ui-color-surface-sunken);
+}

@@ -1,14 +1,21 @@
 {
-    "summary": "A list of records that renders its row template for the visible records through recordList, with an empty state",
+    "summary": "A list of records drawn through recordList, with an empty state, selection, a current record and sorting",
+    "events": ["select", "activate"],
+    "commands": ["clearSelection", "selectAll"],
     "shared": { "density": {} },
     "properties": {
         "key": { "type": "string", "validators": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" }, "default": "id" },
         "divided": { "type": "boolean", "default": false, "reflect": true },
+        "selectable": { "type": "string", "values": ["none", "single", "multi"], "default": "none", "reflect": true },
+        "sortBy": { "type": "string", "validators": { "pattern": "^$|^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*$" }, "default": "" },
+        "sortDir": { "type": "string", "values": ["asc", "desc"], "default": "asc" },
         "items": { "type": ["array", "object"] },
+        "selected": { "type": ["string", "number", "array"] },
         "total": { "type": "integer", "validators": { "range": { "min": 0 } } },
         "row": { "type": "node", "row": true },
         "empty": { "type": "node" },
         "_empty": { "type": "string", "kind": "content", "default": "No items" },
+        "current": { "type": "object", "default": {}, "runtime": true, "exposed": true },
         "body": {
             "type": "object",
             "default": {
@@ -16,6 +23,7 @@
                 "rowHeight": "md",
                 "overscan": 5,
                 "role": "list",
+                "multiselectable": false,
                 "loading": false,
                 "count": 0,
                 "slots": {},

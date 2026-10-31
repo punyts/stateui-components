@@ -34,6 +34,11 @@
     overflow: hidden;
     transform: translateY(calc(var(--sui-index, 0) * var(--sui-row-h)));
     box-shadow: var(--sui-row-divider, none);
+    cursor: var(--sui-row-cursor, auto);
+}
+
+.slot[data-selected] {
+    background: var(--sui-row-selected, none);
 }
 
 .slot:focus-visible {

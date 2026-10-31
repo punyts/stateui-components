@@ -1,4 +1,4 @@
-<div class="list">
+<div class="list" onclick="{{ onClick }}" ondblclick="{{ onDoubleClick }}" onkeydown="{{ onKeyDown }}">
     <sui-node state=".body"></sui-node>
     <div class="empty" if="{{ $.body.count === 0 }}">
         <sui-node if="{{ $.empty }}" state=".empty"></sui-node>

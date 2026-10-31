@@ -19,10 +19,11 @@ const TEXT_ENTRY = new Set(['input', 'textarea', 'select']);
  * (`{ first, count, total }`). For the role `table` the reflected `ariaRowcount` follows the count.
  *
  * Identity belongs to the record: `selected` (a key or a list of keys) is shown on the slot of each selected record
- * (`slotSelected`), one slot is the tab stop (`slotTab`), and the arrow keys, Home, End, PageUp and PageDown move the
- * focus by position: the target is scrolled into the window and then its slot is focused. The slot that holds focus is
- * pinned while its record is out of the window; when its record is deleted focus moves to the neighbouring row.
- * `locate(key)` is on the element, `scrollTo` is a command, and `loading` shows skeleton rows over the visible rows.
+ * (`slotSelected`; `aria-multiselectable` on a `listbox` host follows `multiselectable`), one slot is the tab stop
+ * (`slotTab`), and the arrow keys, Home, End, PageUp and PageDown move the focus by position: the target is scrolled into
+ * the window and then its slot is focused. The slot that holds focus is pinned while its record is out of the window;
+ * when its record is deleted focus moves to the neighbouring row. `locate(key)`, `keyAt(position)` and `recordKeys()` are
+ * on the element, `scrollTo` is a command, and `loading` shows skeleton rows over the visible rows.
  */
 export default function controller({ element, store, basePath }: ControllerContext) {
     const host = element as RecordViewElement;
@@ -32,6 +33,7 @@ export default function controller({ element, store, basePath }: ControllerConte
     const countPath = `${basePath}.count`;
     const rowcountPath = `${basePath}.ariaRowcount`;
     const selectedPath = `${basePath}.selected`;
+    const multiPath = `${basePath}.multiselectable`;
     const loadingPath = `${basePath}.loading`;
     const loadingRowsPath = `${basePath}.loadingRows`;
     const loadingFirstPath = `${basePath}.loadingFirst`;
@@ -156,6 +158,11 @@ export default function controller({ element, store, basePath }: ControllerConte
             store.delete(rowcountPath);
         }
     };
+    const syncMultiselectable = (): void => {
+        if (disposed) return;
+        if (text(rolePath, 'list') === 'listbox') element.setAttribute('aria-multiselectable', store.get<unknown>(multiPath) === true ? 'true' : 'false');
+        else element.removeAttribute('aria-multiselectable');
+    };
     const syncLoading = (): void => {
         if (disposed) return;
         const loading = store.get<unknown>(loadingPath) === true;
@@ -168,11 +175,13 @@ export default function controller({ element, store, basePath }: ControllerConte
         if (store.get<unknown>(loadingFirstPath) !== first) store.set(loadingFirstPath, first);
     };
     const watched = [rolePath, countPath];
+    const multiWatched = [rolePath, multiPath];
     const loadingWatched = [loadingPath, ...windowPaths];
     store.on([keyPath], onKey);
     store.on([overscanPath], onOverscan);
     store.on(windowPaths, onRange);
     store.on(watched, syncRowcount);
+    store.on(multiWatched, syncMultiselectable);
     store.on(selectedPaths, onSelected);
     store.on(loadingWatched, syncLoading);
 
@@ -193,11 +202,21 @@ export default function controller({ element, store, basePath }: ControllerConte
             onWindow: (next) => store.set(windowPath, { first: next.first, count: next.count })
         });
         syncRowcount();
+        syncMultiselectable();
         syncLoading();
     };
     queueMicrotask(() => start(8));
 
     host.locate = (key) => index.locate(key);
+    host.keyAt = (position) => index.keyAt(position);
+    host.recordKeys = () => {
+        const keys: string[] = [];
+        for (let position = 0; position < index.size(); position++) {
+            const key = index.keyAt(position);
+            if (key !== undefined) keys.push(key);
+        }
+        return keys;
+    };
     host.commands = {
         scrollTo: (value) => {
             const key = typeof value === 'string' || typeof value === 'number' ? String(value) : '';
@@ -246,6 +265,7 @@ export default function controller({ element, store, basePath }: ControllerConte
             store.off([overscanPath], onOverscan);
             store.off(windowPaths, onRange);
             store.off(watched, syncRowcount);
+            store.off(multiWatched, syncMultiselectable);
             store.off(selectedPaths, onSelected);
             store.off(loadingWatched, syncLoading);
             observer?.dispose();
@@ -254,7 +274,10 @@ export default function controller({ element, store, basePath }: ControllerConte
             pool?.dispose();
             pool = undefined;
             element.removeAttribute('aria-busy');
+            element.removeAttribute('aria-multiselectable');
             delete host.locate;
+            delete host.keyAt;
+            delete host.recordKeys;
             delete host.commands;
         }
     };
