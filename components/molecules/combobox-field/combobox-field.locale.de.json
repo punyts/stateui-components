@@ -1,0 +1,10 @@
+{
+    "_label": "Beschriftung",
+    "_placeholder": "",
+    "_help": "",
+    "_more": "Weiter tippen, um die Treffer einzugrenzen",
+    "_empty": "Keine Treffer",
+    "_errors": {
+        "required": "Dieses Feld ist erforderlich"
+    }
+}

@@ -1,0 +1,74 @@
+@include "control.css";
+@include "field.css";
+
+.control {
+    padding-inline-end: calc(var(--ui-control-padding-inline) * 3);
+    background-image:
+        linear-gradient(45deg, transparent 50%, var(--ui-color-text-muted) 50%),
+        linear-gradient(135deg, var(--ui-color-text-muted) 50%, transparent 50%);
+    background-position:
+        calc(100% - 1.125rem) 50%,
+        calc(100% - 0.8125rem) 50%;
+    background-size: 0.3125rem 0.3125rem;
+    background-repeat: no-repeat;
+}
+
+.control[aria-invalid="true"] {
+    border-color: var(--ui-field-error-color);
+}
+
+.box {
+    anchor-name: --c;
+}
+
+.popup {
+    box-sizing: border-box;
+    margin: 0;
+    margin-block: var(--ui-space-gap-sm);
+    border: 0;
+    inset: auto;
+    inline-size: anchor-size(inline);
+    max-block-size: calc(var(--ui-size-control-md) * 8);
+    padding: var(--ui-space-gap-sm);
+    overflow: auto;
+    position-anchor: --c;
+    position-area: block-end span-inline-end;
+    position-try-fallbacks: flip-block;
+    color: var(--ui-color-text-base);
+    background: var(--ui-color-surface-base);
+    border-radius: var(--ui-radius-md);
+    box-shadow: var(--ui-elevation-overlay-shadow);
+    font-family: var(--ui-text-body-family);
+    font-size: var(--ui-text-body-size);
+    line-height: var(--ui-text-body-leading);
+}
+
+.option,
+.hint {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    min-block-size: var(--ui-size-control-md);
+    padding-block: var(--ui-space-gap-sm);
+    padding-inline: var(--ui-space-inset-md);
+    border-radius: var(--ui-radius-sm);
+}
+
+.option {
+    cursor: pointer;
+}
+
+.option[data-active] {
+    background: var(--ui-color-surface-sunken);
+}
+
+.option[aria-selected="true"] {
+    font-weight: 600;
+    box-shadow: inset var(--ui-border-width-thick) 0 0 var(--ui-field-selected-fill);
+}
+
+.hint {
+    color: var(--ui-color-text-muted);
+    font-size: var(--ui-text-caption-size);
+    cursor: default;
+}
