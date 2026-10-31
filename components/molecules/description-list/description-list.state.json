@@ -1,0 +1,28 @@
+{
+    "summary": "Read-only term and value pairs for one record, as a description list",
+    "shared": { "density": {} },
+    "tokenGroup": "description",
+    "tokens": {
+        "gap": "{space.gap.md}",
+        "term": { "color": "{color.text.muted}" }
+    },
+    "properties": {
+        "orientation": { "type": "string", "values": ["horizontal", "vertical"], "default": "horizontal", "reflect": true },
+        "columns": { "type": "integer", "validators": { "range": { "min": 1, "max": 4 } }, "default": 1, "reflect": true },
+        "termWidth": { "type": "integer", "validators": { "range": { "min": 4, "max": 60 } }, "default": 16 },
+        "items": {
+            "type": "map",
+            "items": {
+                "_term": { "type": "string", "kind": "content", "default": "" },
+                "field": { "type": "string" },
+                "format": { "type": "string", "values": ["number", "percent", "currency", "duration"] },
+                "currency": { "type": "string", "validators": { "pattern": "^[A-Z]{3}$" } },
+                "node": { "type": "node", "row": true }
+            },
+            "default": {}
+        },
+        "_empty": { "type": "string", "kind": "content", "default": "—" },
+        "record": { "type": "object" },
+        "rows": { "type": "object", "default": {}, "runtime": true }
+    }
+}

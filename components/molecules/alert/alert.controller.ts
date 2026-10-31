@@ -1,15 +1,9 @@
 import type { ControllerContext } from '@punyts/stateui';
+import { toneIcon } from '../shared/tone/toneGlyph.js';
 
 interface CommandHost {
     commands?: Record<string, () => void>;
 }
-
-const TONE_ICONS: Readonly<Record<string, string>> = {
-    danger: 'alert-circle',
-    warning: 'alert-triangle',
-    success: 'circle-check'
-};
-const DEFAULT_ICON = 'info-circle';
 
 const text = (value: unknown): string => (typeof value === 'string' ? value : '');
 
@@ -27,7 +21,7 @@ export default function controller({ element, store, basePath }: ControllerConte
 
     const syncGlyph = (): void => {
         const icon = text(store.get<unknown>(iconPath));
-        store.set(`${basePath}.glyph`, icon !== '' ? icon : (TONE_ICONS[text(store.get<unknown>(tonePath))] ?? DEFAULT_ICON));
+        store.set(`${basePath}.glyph`, icon !== '' ? icon : toneIcon(store.get<unknown>(tonePath)));
     };
     const close = (): void => {
         if (store.get<unknown>(openPath) === false) return;

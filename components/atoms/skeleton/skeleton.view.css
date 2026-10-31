@@ -1,0 +1,34 @@
+:host { display: block; }
+.skeleton {
+    --w: {{ $.width === 'fill' ? ($.shape === 'circle' ? 'var(--ui-size-control-md)' : '100%') : $.width }};
+    --shine: linear-gradient(90deg, transparent, var(--ui-color-surface-raised), transparent);
+}
+.line,
+.block {
+    background-color: var(--ui-color-surface-sunken);
+    background-image: var(--shine);
+    background-repeat: no-repeat;
+    background-size: 50% 100%;
+    background-position: -100% 0;
+    animation: shimmer calc(var(--ui-motion-duration-slow) * 5) var(--ui-motion-easing-standard) infinite;
+}
+.lines { display: flex; flex-direction: column; gap: var(--ui-space-gap-sm); }
+.line {
+    box-sizing: border-box;
+    inline-size: var(--w);
+    block-size: var(--ui-text-body-size);
+    border-radius: var(--ui-skeleton-radius);
+}
+.line:last-child:not(:first-child) { inline-size: calc(var(--w) * 0.6); }
+.block {
+    box-sizing: border-box;
+    inline-size: var(--w);
+    border-radius: var(--ui-skeleton-radius);
+    aspect-ratio: 16 / 9;
+}
+:host([ratio="1:1"]) .block { aspect-ratio: 1 / 1; }
+:host([ratio="4:3"]) .block { aspect-ratio: 4 / 3; }
+:host([shape="circle"]) .block { aspect-ratio: 1 / 1; border-radius: var(--ui-radius-full); }
+@keyframes shimmer {
+    to { background-position: 200% 0; }
+}

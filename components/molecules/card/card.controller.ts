@@ -5,14 +5,24 @@ const OWN_ACTION = 'button, a[href], input, select, textarea, summary, [tabindex
 
 /**
  * `press` fires only while `interactive`. A click counts unless it started in a control inside the card (a button in
- * `actions`; a `press` raised inside the card stays inside it), and Enter or Space counts only when the card itself has the focus
+ * `actions`; a `press` raised inside the card stays inside it), and Enter or Space counts only when the card itself has the focus.
+ * The host carries `aria-busy` while `loading`
  */
 export default function controller({ element, store, basePath }: ControllerContext) {
     const interactive = (): boolean => store.get(`${basePath}.interactive`) === true;
     const press = (): void => {
         element.dispatchEvent(new CustomEvent('press', { bubbles: true, composed: true }));
     };
+    const syncBusy = (): void => {
+        if (store.get(`${basePath}.loading`) === true) element.setAttribute('aria-busy', 'true');
+        else element.removeAttribute('aria-busy');
+    };
+    store.on([`${basePath}.loading`], syncBusy);
+    syncBusy();
     return {
+        dispose: () => {
+            store.off([`${basePath}.loading`], syncBusy);
+        },
         onInnerPress: (event: Event) => event.stopPropagation(),
         onClick: (event: Event) => {
             if (!interactive()) return;

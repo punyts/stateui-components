@@ -1,0 +1,44 @@
+:host {
+    display: block;
+    container-type: inline-size;
+}
+.list {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--ui-description-gap);
+    margin: 0;
+    font-family: var(--ui-text-body-family);
+    font-size: var(--ui-text-body-size);
+    line-height: var(--ui-text-body-leading);
+}
+:host([columns="2"]) .list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+:host([columns="3"]) .list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+:host([columns="4"]) .list { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@container (max-width: 767.98px) {
+    :host([columns]) .list { grid-template-columns: 1fr; }
+}
+.item {
+    display: grid;
+    grid-template-columns: var(--term-width) minmax(0, 1fr);
+    column-gap: var(--ui-description-gap);
+    align-items: baseline;
+    min-width: 0;
+}
+:host([orientation="vertical"]) .item {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: var(--ui-space-gap-sm);
+}
+.term {
+    color: var(--ui-description-term-color);
+    font-family: var(--ui-text-label-family);
+    font-size: var(--ui-text-label-size);
+    font-weight: var(--ui-text-label-weight);
+    line-height: var(--ui-text-label-leading);
+}
+.value {
+    margin: 0;
+    min-width: 0;
+    color: var(--ui-color-text-base);
+    overflow-wrap: anywhere;
+    font-variant-numeric: tabular-nums;
+}

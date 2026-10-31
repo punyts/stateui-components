@@ -2,6 +2,38 @@ import type { ControllerContext } from '@punyts/stateui';
 import { failingRule } from './rules.js';
 import type { FieldSettings } from './rules.js';
 
+/** The event a field raises on its host when it connects; a form listens for it. Bubbles and is composed */
+export const FIELD_CONNECT_EVENT = 'ui-field-connect';
+
+/** Who runs the field's validation: the field itself (`none`) or a form that validates on `blur`, `change` or `submit` */
+export type FieldManaged = 'none' | 'blur' | 'change' | 'submit';
+
+/** The `detail` of `ui-field-connect`: what a form needs to find and drive a field without walking state */
+export interface FieldConnect {
+    /** The node key: the last segment of the field's path */
+    readonly key: string;
+    /** The field's host element (document order, focus) */
+    readonly element: Element;
+    /** The current failing rule's name, or an empty string */
+    readonly error: string;
+    /** The current value (`checked` for a field whose value lives there) */
+    readonly value: unknown;
+    /** Runs the rules and sets `error`; returns the failing rule's name or an empty string */
+    validate(): string;
+    /** Restores the baseline value and clears `error`, `touched` and `dirty` */
+    reset(): void;
+    /** Takes the current value as the new baseline and clears `dirty` */
+    rebase(): void;
+    /** Hands validation to a form (a mode other than `none` stops the field validating itself on `change`) */
+    setManaged(mode: FieldManaged): void;
+    /** Disables the control from outside, on top of the field's own `disabled` */
+    setDisabled(flag: boolean): void;
+    /** Moves focus to the control */
+    focus(): void;
+    /** Registers a function that runs once when the field is removed; a form drops the field there */
+    onRelease(callback: () => void): void;
+}
+
 /** The names a field's controller members take in its view; every field of the family uses these */
 export interface FieldMembers {
     /** The CSS length a field's `width` stands for: `fill` is the whole row, `auto` fits the content, a number is a `ch` count */
@@ -14,6 +46,10 @@ export interface FieldMembers {
     validate(): string;
     /** Restores the baseline value and clears `error`, `touched` and `dirty` */
     reset(): void;
+    /** Moves focus to the control (the element with id `control`) */
+    focus(): void;
+    /** Empties the value, writes data and clears `error` */
+    clear(): void;
     dispose(): void;
 }
 
@@ -39,6 +75,12 @@ export function fieldMessage(errors: unknown, error: unknown): string {
     return typeof message === 'string' ? message : '';
 }
 
+/** The empty value of the same kind as the baseline: `false`, an empty list or an empty string */
+function emptyLike(value: unknown): unknown {
+    if (typeof value === 'boolean') return false;
+    return Array.isArray(value) ? [] : '';
+}
+
 const isShown = (text: unknown): boolean => typeof text === 'string' && text !== '';
 
 /** The ids of the help and error text for `aria-describedby`: only text that is rendered can describe the control */
@@ -59,7 +101,11 @@ export function fieldDescribedBy(help: unknown, message: unknown): string | null
  * change of `value`). A field validates itself on `change` once it is touched. A field whose value lives in another
  * property (`checked`) passes `valueName`.
  * It returns the members the view calls (`widthOf`, `describedBy`, `onBlur`); a field's own controller returns them,
- * together with anything its control needs
+ * together with anything its control needs.
+ * The field also raises `invalid` (`detail: { rule }`) on every failing validation and `valid` (`detail: { value }`) when
+ * a validation passes after one failed; it answers the commands `focus` and `clear`; and on attach it dispatches the
+ * bubbling, composed `ui-field-connect` event whose detail is a `FieldConnect`, so a form finds it. With no form
+ * listening nothing happens. On dispose the connect interface is released (`onRelease` callbacks run once)
  */
 export function createField({ element, store, basePath }: ControllerContext, valueName = 'value'): FieldMembers {
     const iconPath = `${basePath}.icon`;
@@ -74,7 +120,7 @@ export function createField({ element, store, basePath }: ControllerContext, val
     const valuePath = `${basePath}.${valueName}`;
     const read = (name: string): unknown => store.get<unknown>(`${basePath}.${name}`);
     const same = (a: unknown, b: unknown): boolean => a === b || JSON.stringify(a) === JSON.stringify(b);
-    const baseline = store.get<unknown>(valuePath);
+    let baseline = store.get<unknown>(valuePath);
     const settings = (): FieldSettings => ({
         required: read('required') === true,
         minLength: typeof read('minLength') === 'number' ? (read('minLength') as number) : 0,
@@ -83,10 +129,32 @@ export function createField({ element, store, basePath }: ControllerContext, val
         max: read('max'),
         pattern: typeof read('pattern') === 'string' ? (read('pattern') as string) : ''
     });
+    const raise = (name: string, detail: unknown): void => {
+        element.dispatchEvent(new CustomEvent(name, { detail, bubbles: true, composed: true }));
+    };
     const validate = (): string => {
-        const rule = failingRule(store.get<unknown>(valuePath), settings());
+        const before = read('error');
+        const value = store.get<unknown>(valuePath);
+        const rule = failingRule(value, settings());
         store.set(`${basePath}.error`, rule);
+        if (rule !== '') raise('invalid', { rule });
+        else if (typeof before === 'string' && before !== '') raise('valid', { value });
         return rule;
+    };
+    let managed: FieldManaged = 'none';
+    const releases: Array<() => void> = [];
+    const focus = (): void => {
+        const control = element.shadowRoot?.querySelector<HTMLElement>('#control');
+        control?.focus();
+    };
+    const clear = (): void => {
+        const empty: unknown = emptyLike(baseline);
+        store.set(valuePath, empty as never);
+        store.set(`${basePath}.error`, '');
+    };
+    const rebase = (): void => {
+        baseline = store.get<unknown>(valuePath);
+        store.set(`${basePath}.dirty`, false);
     };
     const reset = (): void => {
         store.set(`${basePath}.touched`, false);
@@ -97,27 +165,56 @@ export function createField({ element, store, basePath }: ControllerContext, val
     const onValue = (): void => {
         const value = store.get<unknown>(valuePath);
         store.set(`${basePath}.dirty`, !same(value, baseline));
-        if (read('touched') === true) validate();
-        element.dispatchEvent(new CustomEvent('change', { detail: { value }, bubbles: true, composed: true }));
+        if (read('touched') === true && managed === 'none') validate();
+        raise('change', { value });
     };
     const onBlur = (): void => {
         store.set(`${basePath}.touched`, true);
     };
     const host = element as Element & CommandHost;
-    host.commands = { validate: () => void validate(), reset };
+    host.commands = { validate: () => void validate(), reset, focus, clear };
     store.on(valuePath, onValue);
     store.on(iconPath, syncGlyph);
     store.on(messagePaths, syncMessage);
     syncGlyph();
     syncMessage();
+    const connect: FieldConnect = {
+        key: basePath.slice(basePath.lastIndexOf('.') + 1),
+        element,
+        get error(): string {
+            const error = read('error');
+            return typeof error === 'string' ? error : '';
+        },
+        get value(): unknown {
+            return store.get<unknown>(valuePath);
+        },
+        validate,
+        reset,
+        rebase,
+        setManaged: (mode) => {
+            managed = mode;
+        },
+        setDisabled: (flag) => {
+            store.set(`${basePath}.locked`, flag);
+        },
+        focus,
+        onRelease: (callback) => {
+            releases.push(callback);
+        }
+    };
+    raise(FIELD_CONNECT_EVENT, connect);
     return {
         widthOf: fieldWidth,
         describedBy: fieldDescribedBy,
         onBlur,
         validate,
         reset,
+        focus,
+        clear,
         dispose: () => {
             delete host.commands;
+            managed = 'none';
+            for (const callback of releases.splice(0)) callback();
             store.off(valuePath, onValue);
             store.off(iconPath, syncGlyph);
             store.off(messagePaths, syncMessage);

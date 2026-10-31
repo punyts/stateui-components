@@ -222,4 +222,49 @@ describe('card in Chromium', () => {
         expect(part(mounted.element, '.title')?.textContent?.trim()).toBe('Einstellungen');
         expect(part(mounted.element, '.subtitle')?.textContent?.trim()).toBe('Konto');
     });
+
+    it('should replace the title and body with skeletons and set aria-busy while loading', () => {
+        // Arrange
+        const mounted = mountComponent('card', { _title: 'Plan', _subtitle: 'Monthly', loading: true, children: { a: text('Body text') } });
+
+        // Assert
+        expect(part(mounted.element, '.title-skeleton')).not.toBeNull();
+        expect(part(mounted.element, '.title')).toBeNull();
+        expect(part(mounted.element, '.subtitle')).toBeNull();
+        expect(part(mounted.element, '.body-skeleton ui-skeleton')).not.toBeNull();
+        expect(getComputedStyle(part(mounted.element, '.body') as HTMLElement).display).toBe('none');
+        expect(mounted.element.getAttribute('aria-busy')).toBe('true');
+    });
+
+    it('should show the title and body and drop aria-busy when loading is off or turned off', () => {
+        // Arrange
+        const off = mountComponent('card', { _title: 'Plan', children: { a: text('Body text') } });
+        const mounted = mountComponent('card', { _title: 'Plan', loading: true, children: { a: text('Body text') } });
+
+        // Act
+        mounted.store.set('$.app.loading', false);
+
+        // Assert
+        expect(off.element.hasAttribute('aria-busy')).toBe(false);
+        expect(part(off.element, '.title-skeleton')).toBeNull();
+        expect(part(off.element, '.title')?.textContent?.trim()).toBe('Plan');
+        expect(part(off.element, '.body-skeleton')).toBeNull();
+        expect(mounted.element.hasAttribute('aria-busy')).toBe(false);
+        expect(part(mounted.element, '.title')?.textContent?.trim()).toBe('Plan');
+        expect(part(mounted.element, '.body-skeleton')).toBeNull();
+        expect(getComputedStyle(part(mounted.element, '.body') as HTMLElement).display).not.toBe('none');
+    });
+
+    it('should keep the actions and the interactive press while loading', () => {
+        // Arrange
+        const mounted = mountComponent('card', { interactive: true, loading: true, actions: { component: 'button', _title: 'Edit' } });
+        const seen = presses(mounted.element);
+
+        // Act
+        surface(mounted.element).click();
+
+        // Assert
+        expect(part(mounted.element, '.actions ui-button')).not.toBeNull();
+        expect(seen.count).toBe(1);
+    });
 });

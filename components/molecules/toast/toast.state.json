@@ -1,0 +1,15 @@
+{
+    "summary": "A transient message with a tone, an icon, a title, a text and an optional action, which the user can dismiss",
+    "events": ["close"],
+    "shared": { "tone": { "default": "neutral" } },
+    "properties": {
+        "icon": { "type": "icon", "default": "" },
+        "dismissible": { "type": "boolean", "default": true },
+        "_title": { "type": "string", "kind": "content", "default": "" },
+        "_text": { "type": "string", "kind": "content", "default": "Message" },
+        "_closeLabel": { "type": "string", "kind": "content", "default": "Close" },
+        "action": { "type": "node" },
+        "glyph": { "type": "icon", "default": "", "runtime": true },
+        "closeGlyph": { "type": "icon", "default": "x", "runtime": true }
+    }
+}

@@ -28,6 +28,7 @@
     font-weight: var(--ui-text-display-weight);
     line-height: var(--ui-text-display-leading);
 }
+.value-skeleton { align-self: center; min-inline-size: 6ch; }
 .unit {
     color: var(--ui-color-text-muted);
     font-family: var(--ui-text-body-family);

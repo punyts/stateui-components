@@ -1,7 +1,8 @@
 <div class="stat">
     <span class="label">{{ $._label }}</span>
     <span class="figure">
-        <span class="value">{{ $.shown }}</span>
+        <ui-skeleton class="value-skeleton" if="{{ $.loading }}" width="6ch"></ui-skeleton>
+        <span class="value" if="{{ !$.loading }}">{{ $.shown }}</span>
         <span if="{{ $._unit }}" class="unit">{{ $._unit }}</span>
     </span>
     <span if="{{ $.trend || $.deltaShown }}" class="change">

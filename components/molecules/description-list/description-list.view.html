@@ -1,0 +1,9 @@
+<dl class="list" style="--term-width: {{ $.termWidth }}ch">
+    <div class="item" repeat="{{ $k,$i,$v in $.rows }}" key="{{ $k }}">
+        <dt class="term">{{ $v.term }}</dt>
+        <dd class="value">
+            <sui-node repeat="{{ $nk,$ni,$np in $v.node }}" key="{{ $nk }}" state="{{ $np }}"></sui-node>
+            <span if="{{ $v.text !== '' }}" class="text">{{ $v.text }}</span>
+        </dd>
+    </div>
+</dl>

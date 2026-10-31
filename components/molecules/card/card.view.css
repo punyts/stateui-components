@@ -57,8 +57,13 @@
     padding-inline: var(--pad);
 }
 
-.body:not(:has(> sui-node)) {
+.body:not(:has(> sui-node)),
+:host([loading]) .body {
     display: none;
+}
+
+.body-skeleton {
+    padding-inline: var(--pad);
 }
 
 .header {

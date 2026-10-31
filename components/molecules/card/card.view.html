@@ -2,10 +2,11 @@
     <div class="media" if="{{ $.media }}">
         <sui-node state=".media"></sui-node>
     </div>
-    <div class="header" if="{{ ($._title !== '') || ($._subtitle !== '') || $.actions }}">
+    <div class="header" if="{{ $.loading || ($._title !== '') || ($._subtitle !== '') || $.actions }}">
         <div class="heading">
-            <div class="title" if="{{ $._title !== '' }}">{{ $._title }}</div>
-            <div class="subtitle" if="{{ $._subtitle !== '' }}">{{ $._subtitle }}</div>
+            <ui-skeleton class="title-skeleton" if="{{ $.loading }}" width="50%"></ui-skeleton>
+            <div class="title" if="{{ !$.loading &amp;&amp; ($._title !== '') }}">{{ $._title }}</div>
+            <div class="subtitle" if="{{ !$.loading &amp;&amp; ($._subtitle !== '') }}">{{ $._subtitle }}</div>
         </div>
         <div class="actions" if="{{ $.actions }}">
             <sui-node state=".actions"></sui-node>
@@ -13,6 +14,9 @@
     </div>
     <div class="body" layout-host="">
         <sui-node repeat="{{ $k,$i,$v in $.children }}" key="{{ $k }}" state="{{ $v }}"></sui-node>
+    </div>
+    <div class="body-skeleton" if="{{ $.loading }}">
+        <ui-skeleton lines="3"></ui-skeleton>
     </div>
     <div class="footer" if="{{ $.footer }}">
         <sui-node state=".footer"></sui-node>

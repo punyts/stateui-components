@@ -1,0 +1,6 @@
+<div class="skeleton" aria-hidden="true">
+    <div class="lines" if="{{ $.shape === 'text' }}">
+        <div class="line" repeat="{{ $k,$i for $.lines }}" key="{{ $k }}"></div>
+    </div>
+    <div class="block" if="{{ $.shape !== 'text' }}"></div>
+</div>

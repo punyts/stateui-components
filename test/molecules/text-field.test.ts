@@ -47,7 +47,7 @@ describe('textField shape', () => {
         expect(result).toEqual([]);
     });
 
-    it.each(['error', 'touched', 'dirty'])('should report SUI-STATE-RUNTIME for a node that sets %s', (name) => {
+    it.each(['error', 'touched', 'dirty', 'locked'])('should report SUI-STATE-RUNTIME for a node that sets %s', (name) => {
         // Arrange
         const value = name === 'error' ? 'required' : true;
 
@@ -74,9 +74,9 @@ describe('textField shape', () => {
         expect(result).toEqual(['SUI-STATE-INVALID']);
     });
 
-    it('should declare the change event and the validate and reset commands', () => {
+    it('should declare the change, invalid and valid events and the validate, reset, focus and clear commands', () => {
         // Assert
-        expect(shape.events).toEqual(['change']);
-        expect(shape.commands).toEqual(['validate', 'reset']);
+        expect(shape.events).toEqual(['change', 'invalid', 'valid']);
+        expect(shape.commands).toEqual(['validate', 'reset', 'focus', 'clear']);
     });
 });

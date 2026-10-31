@@ -8,9 +8,10 @@ const text = (value: unknown): string => (typeof value === 'string' ? value : ''
 
 /**
  * Keeps the runtime properties the view shows (`shown`, `deltaShown`, `trendIcon`) in step with `value`, `delta`,
- * `format`, `currency`, `trend` and the application language, so a data write or a language switch reformats the number
+ * `format`, `currency`, `trend` and the application language, so a data write or a language switch reformats the number.
+ * The host carries `aria-busy` while `loading`
  */
-export default function controller({ store, basePath }: ControllerContext) {
+export default function controller({ element, store, basePath }: ControllerContext) {
     const read = (name: string): unknown => store.get<unknown>(`${basePath}.${name}`);
 
     const refresh = (): void => {
@@ -20,12 +21,21 @@ export default function controller({ store, basePath }: ControllerContext) {
         store.set(`${basePath}.trendIcon`, TREND_ICONS[text(read('trend'))] ?? '');
     };
 
+    const syncBusy = (): void => {
+        if (read('loading') === true) element.setAttribute('aria-busy', 'true');
+        else element.removeAttribute('aria-busy');
+    };
+
     const watched = ['value', 'delta', 'format', 'currency', 'trend'].map((name) => `${basePath}.${name}`).concat('$.locale');
+    const busy = [`${basePath}.loading`];
     store.on(watched, refresh);
+    store.on(busy, syncBusy);
     refresh();
+    syncBusy();
     return {
         dispose: () => {
             store.off(watched, refresh);
+            store.off(busy, syncBusy);
         }
     };
 }

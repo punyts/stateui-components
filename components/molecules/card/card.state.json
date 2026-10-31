@@ -1,5 +1,5 @@
 {
-    "summary": "A surface with media, header, body and footer slots; interactive raises press",
+    "summary": "A surface with media, header, body and footer slots; interactive raises press; loading shows skeletons",
     "shared": { "elevation": { "default": "raised" }, "density": {} },
     "layout": true,
     "events": ["press"],
@@ -11,6 +11,7 @@
     "properties": {
         "interactive": { "type": "boolean", "default": false, "reflect": true },
         "selected": { "type": "boolean", "default": false, "reflect": true },
+        "loading": { "type": "boolean", "default": false, "reflect": true },
         "padding": { "type": "string", "values": ["md", "none", "sm", "lg"], "default": "md", "reflect": true },
         "_title": { "type": "string", "kind": "content", "default": "" },
         "_subtitle": { "type": "string", "kind": "content", "default": "" },

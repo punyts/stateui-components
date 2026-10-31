@@ -151,6 +151,33 @@ describe('stat in Chromium', () => {
         // Assert
         expect(colour()).not.toBe(light);
     });
+
+    it('should show a skeleton for the value and set aria-busy on the host while loading', () => {
+        // Arrange
+        const mounted = mountComponent('stat', { value: 42, loading: true });
+
+        // Assert
+        expect(part(mounted.element, '.value-skeleton')).not.toBeNull();
+        expect(part(mounted.element, '.value')).toBeNull();
+        expect(mounted.element.getAttribute('aria-busy')).toBe('true');
+    });
+
+    it('should show the value and drop aria-busy when loading is off or turned off', () => {
+        // Arrange
+        const off = mountComponent('stat', { value: 42 });
+        const mounted = mountComponent('stat', { value: 42, loading: true });
+
+        // Act
+        mounted.store.set('$.app.loading', false);
+
+        // Assert
+        expect(off.element.hasAttribute('aria-busy')).toBe(false);
+        expect(part(off.element, '.value-skeleton')).toBeNull();
+        expect(shown(off.element)).toBe('42');
+        expect(mounted.element.hasAttribute('aria-busy')).toBe(false);
+        expect(part(mounted.element, '.value-skeleton')).toBeNull();
+        expect(shown(mounted.element)).toBe('42');
+    });
 });
 
 describe('avatar in Chromium', () => {

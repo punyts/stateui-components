@@ -1,0 +1,10 @@
+{
+    "summary": "A placeholder block that stands in for text, a picture or an avatar while data loads",
+    "tokens": { "radius": "{radius.sm}" },
+    "properties": {
+        "shape": { "type": "string", "values": ["text", "rect", "circle"], "default": "text", "reflect": true },
+        "lines": { "type": "integer", "default": 1, "validators": { "range": { "min": 1, "max": 20 } } },
+        "width": { "type": "string", "default": "fill", "validators": { "pattern": "^(fill|[0-9]+([.][0-9]+)?(ch|%))$" } },
+        "ratio": { "type": "string", "values": ["1:1", "4:3", "16:9"], "default": "16:9", "reflect": true }
+    }
+}
