@@ -13,5 +13,6 @@
 </div>
 <div class="popup" id="listbox" popover="manual" role="listbox" aria-label="{{ $._label }}" onpointerdown="{{ onPopupDown }}" onclick="{{ onPick }}">
     <div class="option" repeat="{{ $k,$i,$v in $.results }}" key="{{ $k }}" id="{{ $v.id }}" role="option" data-index="{{ $k }}" aria-selected="{{ $v.selected ? 'true' : 'false' }}" data-active="{{ $v.active ? '' : null }}">{{ $v.label }}</div>
+    <div class="busy" role="option" aria-disabled="true" aria-selected="false" aria-busy="true" if="{{ $.busy }}"><span class="ring" aria-hidden="true"></span>{{ $._loading }}</div>
     <div class="hint" role="option" aria-disabled="true" aria-selected="false" if="{{ $.hint !== '' }}">{{ $.hint === 'more' ? $._more : $._empty }}</div>
 </div>

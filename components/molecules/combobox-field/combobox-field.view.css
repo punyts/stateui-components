@@ -44,6 +44,7 @@
 }
 
 .option,
+.busy,
 .hint {
     box-sizing: border-box;
     display: flex;
@@ -65,6 +66,30 @@
 .option[aria-selected="true"] {
     font-weight: 600;
     box-shadow: inset var(--ui-border-width-thick) 0 0 var(--ui-field-selected-fill);
+}
+
+.busy {
+    gap: var(--ui-space-gap-md);
+    color: var(--ui-color-text-muted);
+    font-size: var(--ui-text-caption-size);
+    cursor: default;
+}
+
+.ring {
+    box-sizing: border-box;
+    flex: none;
+    inline-size: var(--ui-size-icon-md);
+    block-size: var(--ui-size-icon-md);
+    border: var(--ui-border-width-thick) solid var(--ui-color-border-base);
+    border-top-color: currentColor;
+    border-radius: var(--ui-radius-full);
+    animation: spin calc(var(--ui-motion-duration-slow) * 2) linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .hint {

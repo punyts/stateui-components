@@ -1,6 +1,6 @@
 {
-    "summary": "A labelled searchable select: type to filter options, pick one, or keep typed text as the value",
-    "events": ["change", "invalid", "valid"],
+    "summary": "A labelled searchable select: type to filter or search options, pick one, or keep typed text as the value",
+    "events": ["change", "invalid", "valid", "query"],
     "commands": ["validate", "reset", "focus", "clear"],
     "tokenGroup": "field",
     "tokens": {
@@ -37,12 +37,14 @@
         "text": { "type": "string", "default": "", "runtime": true },
         "open": { "type": "boolean", "default": false, "runtime": true },
         "results": { "type": "object", "default": {}, "runtime": true },
+        "busy": { "type": "boolean", "default": false, "runtime": true },
         "hint": { "type": "string", "default": "", "runtime": true },
         "activeId": { "type": "string", "default": "", "runtime": true },
         "_label": { "type": "string", "kind": "content", "default": "Label" },
         "_placeholder": { "type": "string", "kind": "content", "default": "" },
         "_help": { "type": "string", "kind": "content", "default": "" },
         "_more": { "type": "string", "kind": "content", "default": "Keep typing to narrow the results" },
+        "_loading": { "type": "string", "kind": "content", "default": "Searching" },
         "_empty": { "type": "string", "kind": "content", "default": "No matches" },
         "_errors": {
             "type": "map",

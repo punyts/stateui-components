@@ -121,9 +121,15 @@ export interface Combo {
     onPopupDown(event: Event): void;
     /** The popup's click: picks the option that was pressed */
     onPick(event: Event): void;
+    /** The user typed `text`: once `minChars` is reached and 300 ms passed without more typing, the field raises `query` and `busy` is set */
+    typed(text: string): void;
     dispose(): void;
 }
 
+/** How long typing must pause before `query` is raised */
+export const QUERY_DELAY_MS = 300;
+/** How long `busy` stays set when the data source writes no `options` */
+export const BUSY_LIMIT_MS = 5000;
 const DEFAULT_MAX_RESULTS = 50;
 const OPTION_PREFIX = 'option-';
 
@@ -156,6 +162,8 @@ export function createCombo({ element, store, basePath }: ControllerContext, con
     let listed: ComboOption[] = [];
     let activeKey: string | undefined;
     let open = false;
+    let debounce: ReturnType<typeof setTimeout> | undefined;
+    let busyTimer: ReturnType<typeof setTimeout> | undefined;
 
     const popoverOf = (): PopoverHandle | undefined => {
         if (popover) return popover;
@@ -176,13 +184,15 @@ export function createCombo({ element, store, basePath }: ControllerContext, con
             results[`r${index}`] = { id: `${OPTION_PREFIX}${index}`, label: option.label, selected: config.isSelected(option), active: option.key === activeKey };
         });
         store.set(`${basePath}.results`, results);
-        store.set(`${basePath}.hint`, shown.length === 0 ? 'empty' : more ? 'more' : '');
+        store.set(`${basePath}.hint`, shown.length === 0 ? (read('busy') === true ? '' : 'empty') : more ? 'more' : '');
         const index = activeIndex();
         store.set(`${basePath}.activeId`, index < 0 ? '' : `${OPTION_PREFIX}${index}`);
         if (index >= 0) queueMicrotask(() => part(`#${OPTION_PREFIX}${index}`)?.scrollIntoView({ block: 'nearest' }));
     };
 
     const close = (): void => {
+        clearTimeout(debounce);
+        debounce = undefined;
         const was = open;
         open = false;
         activeKey = undefined;
@@ -242,7 +252,38 @@ export function createCombo({ element, store, basePath }: ControllerContext, con
         `${basePath}.value.$all`,
         '$.locale'
     ];
-    store.on(watched, refresh);
+    /** A write to `options` raises one event per changed entry, so the list is drawn once, from the settled state, in a microtask */
+    let scheduled = false;
+    const scheduleRefresh = (): void => {
+        if (scheduled) return;
+        scheduled = true;
+        queueMicrotask(() => {
+            scheduled = false;
+            refresh();
+        });
+    };
+    store.on(watched, scheduleRefresh);
+
+    /** `busy` is the combobox's alone: set when `query` is raised, cleared by the next write to `options` or after `BUSY_LIMIT_MS` */
+    const setBusy = (flag: boolean): void => {
+        if ((read('busy') === true) === flag) return;
+        store.set(`${basePath}.busy`, flag);
+        refresh();
+    };
+    const clearBusy = (): void => {
+        clearTimeout(busyTimer);
+        busyTimer = undefined;
+        setBusy(false);
+    };
+    const optionPaths = [`${basePath}.options`, `${basePath}.options.$all`];
+    store.on(optionPaths, clearBusy);
+    const raiseQuery = (text: string): void => {
+        debounce = undefined;
+        clearTimeout(busyTimer);
+        busyTimer = setTimeout(clearBusy, BUSY_LIMIT_MS);
+        setBusy(true);
+        element.dispatchEvent(new CustomEvent('query', { detail: text, bubbles: true, composed: true }));
+    };
 
     return {
         options,
@@ -275,6 +316,12 @@ export function createCombo({ element, store, basePath }: ControllerContext, con
             }
             return false;
         },
+        typed: (text) => {
+            clearTimeout(debounce);
+            debounce = undefined;
+            if (text.length < whole('minChars', 0)) return;
+            debounce = setTimeout(() => raiseQuery(text), QUERY_DELAY_MS);
+        },
         onPopupDown: (event) => event.preventDefault(),
         onPick: (event) => {
             const target = event.composedPath().find((node): node is HTMLElement => node instanceof HTMLElement && node.dataset.index !== undefined);
@@ -282,7 +329,10 @@ export function createCombo({ element, store, basePath }: ControllerContext, con
             if (option) pick(option);
         },
         dispose: () => {
-            store.off(watched, refresh);
+            store.off(watched, scheduleRefresh);
+            store.off(optionPaths, clearBusy);
+            clearTimeout(debounce);
+            clearTimeout(busyTimer);
             popover?.dispose();
         }
     };

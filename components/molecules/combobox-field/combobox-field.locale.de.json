@@ -3,6 +3,7 @@
     "_placeholder": "",
     "_help": "",
     "_more": "Weiter tippen, um die Treffer einzugrenzen",
+    "_loading": "Suche läuft",
     "_empty": "Keine Treffer",
     "_errors": {
         "required": "Dieses Feld ist erforderlich"

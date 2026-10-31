@@ -116,6 +116,7 @@ export default function controller(context: ControllerContext) {
             store.set(textPath, input.value);
             combo.open();
             combo.refresh();
+            combo.typed(input.value);
         },
         onKeyDown: (event: KeyboardEvent) => {
             if (combo.onKey(event)) return;
