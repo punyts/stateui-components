@@ -1,0 +1,21 @@
+{
+    "summary": "A titled region that groups children, with a header action slot and an optional collapse control",
+    "shared": { "elevation": { "default": "flat" }, "density": {} },
+    "layout": true,
+    "events": ["toggle"],
+    "commands": ["expand", "collapse", "toggle"],
+    "tokens": {
+        "radius": "{radius.md}",
+        "padding": "{space.inset.md}",
+        "gap": "{space.gap.md}"
+    },
+    "properties": {
+        "collapsible": { "type": "boolean", "default": false, "reflect": true },
+        "collapsed": { "type": "boolean", "default": false, "reflect": true },
+        "bordered": { "type": "boolean", "default": false, "reflect": true },
+        "_title": { "type": "string", "kind": "content", "default": "" },
+        "_description": { "type": "string", "kind": "content", "default": "" },
+        "_toggleLabel": { "type": "string", "kind": "content", "default": "Toggle section" },
+        "actions": { "type": "node" }
+    }
+}

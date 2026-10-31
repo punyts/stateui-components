@@ -1,0 +1,12 @@
+{
+    "summary": "A row of controls laid out by the toolbar itself, with alignment and optional wrapping",
+    "shared": { "density": {} },
+    "tokens": {
+        "gap": "{space.gap.md}",
+        "padding": "{space.inset.sm}"
+    },
+    "properties": {
+        "align": { "type": "string", "values": ["start", "center", "end", "between"], "default": "start", "reflect": true },
+        "wrap": { "type": "boolean", "default": false, "reflect": true }
+    }
+}

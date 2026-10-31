@@ -92,11 +92,15 @@ describe('the component catalog holds the first library', () => {
         expect(found).toHaveLength(16);
     });
 
-    it('should give every spec component its size and nothing else a size of composite', () => {
+    it('should give every spec component its size and no other component the size atom or molecule', () => {
+        // Arrange
+        const specNames: readonly string[] = [...SPEC_ATOMS, ...SPEC_MOLECULES];
+        const others = catalog.components.filter((entry) => !specNames.includes(entry.name));
+
         // Assert
         expect(SPEC_ATOMS.map(sizeOfName).every((size) => size === 'atom')).toBe(true);
         expect(SPEC_MOLECULES.map(sizeOfName).every((size) => size === 'molecule')).toBe(true);
-        expect(catalog.components.filter((entry) => entry.size === 'composite')).toEqual([]);
+        expect(others.filter((entry) => entry.size === 'atom' || entry.size === 'molecule')).toEqual([]);
     });
 
     it('should give every component a tag, a summary, a shape, tokens or none, locales and an example', () => {
@@ -203,7 +207,7 @@ describe('the library build and its styles', () => {
 
         // Assert
         expect(result.errors.map(formatError)).toEqual([]);
-        expect(result.built).toHaveLength(32);
+        expect(result.built).toHaveLength(catalog.components.length);
     });
 
     it('should reference no tone colour token in any component or shared stylesheet', async () => {

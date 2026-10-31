@@ -112,10 +112,7 @@ export default function controller({ store, basePath }: ControllerContext) {
             if (isEntry(node)) {
                 live.add(key);
                 instantiate(key, node);
-                if (aliased.has(key)) {
-                    // a re-point of `record` does not reach a listener below this alias (two aliases in the chain), so the alias is re-linked to notify it
-                    store.link(`${rowsPath}.${key}.node`, holderPath(key));
-                } else {
+                if (!aliased.has(key)) {
                     store.link(`${rowsPath}.${key}.node`, holderPath(key));
                     aliased.add(key);
                 }

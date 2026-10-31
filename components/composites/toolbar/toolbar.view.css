@@ -1,0 +1,29 @@
+:host {
+    display: block;
+}
+
+.row {
+    box-sizing: border-box;
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: var(--ui-toolbar-gap);
+    padding: var(--ui-toolbar-padding);
+}
+
+:host([wrap]) .row {
+    flex-wrap: wrap;
+}
+
+:host([align=center]) .row {
+    justify-content: center;
+}
+
+:host([align=end]) .row {
+    justify-content: flex-end;
+}
+
+:host([align=between]) .row {
+    justify-content: space-between;
+}

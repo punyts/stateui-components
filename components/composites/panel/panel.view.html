@@ -1,0 +1,20 @@
+<section class="panel">
+    <div class="header" if="{{ $.collapsible || ($._title !== '') || ($._description !== '') || $.actions }}">
+        <div class="heading">
+            <button class="toggle" type="button" if="{{ $.collapsible }}" aria-expanded="{{ $.collapsed ? 'false' : 'true' }}" aria-controls="content" aria-label="{{ $._title === '' ? $._toggleLabel : null }}" onclick="{{ onToggle }}">
+                <ui-icon class="chevron" name="chevron-down" size="sm"></ui-icon>
+                <span class="title">{{ $._title }}</span>
+            </button>
+            <div class="title" if="{{ !$.collapsible &amp;&amp; ($._title !== '') }}">{{ $._title }}</div>
+            <div class="description" if="{{ $._description !== '' }}">{{ $._description }}</div>
+        </div>
+        <div class="actions" if="{{ $.actions }}">
+            <sui-node state=".actions"></sui-node>
+        </div>
+    </div>
+    <div class="content" id="content">
+        <div class="body" layout-host="">
+            <sui-node if="{{ $.children }}" repeat="{{ $k,$i,$v in $.children }}" key="{{ $k }}" state="{{ $v }}"></sui-node>
+        </div>
+    </div>
+</section>
