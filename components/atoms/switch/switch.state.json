@@ -1,0 +1,19 @@
+{
+    "summary": "A bare on and off switch with no visible label",
+    "tokenGroup": "control",
+    "tokens": {
+        "radius": "{radius.md}",
+        "border": "{border.width.thin}",
+        "padding": { "inline": "{space.inset.sm}" }
+    },
+    "shared": { "size": { "default": "md" } },
+    "events": ["change"],
+    "commands": ["focus", "clear"],
+    "properties": {
+        "checked": { "type": "boolean", "default": false },
+        "disabled": { "type": "boolean", "default": false },
+        "readonly": { "type": "boolean", "default": false },
+        "required": { "type": "boolean", "default": false },
+        "_label": { "type": "string", "kind": "content", "default": "Switch" }
+    }
+}

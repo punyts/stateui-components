@@ -1,0 +1,1 @@
+<select class="control" aria-label="{{ $._label }}" disabled="{{ $.disabled }}" required="{{ $.required }}" multiple="{{ $.multiple }}" onchange="{{ onChange }}"><option repeat="{{ $k,$i,$v in $.options }}" key="{{ $k }}" value="{{ valueOf($k, $v, $.optionValue) }}">{{ labelOf($v, $.optionLabel, $v._label) }}</option></select>

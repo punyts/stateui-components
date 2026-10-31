@@ -5,3 +5,10 @@
 export const COMPONENT_GROUPS = ['atoms', 'molecules', 'composites', 'composed'] as const;
 
 export type ComponentGroup = (typeof COMPONENT_GROUPS)[number];
+
+export { ICON_ALIASES } from './icons/aliases.js';
+export { CORE_ICON_NAMES } from './icons/coreNames.js';
+export { createIconNames, isIconName, loadIconsFile, packagedIconNames } from './icons/names.js';
+export type { IconNames } from './icons/names.js';
+export { validateIconNode } from './icons/validate.js';
+export type { IconEntry, IconPath, IconStyledPath, IconsFile } from './icons/types.js';

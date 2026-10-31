@@ -22,6 +22,8 @@ export interface MountOptions {
     locale?: string;
     /** The document's `data`, so a `<-` link to `$.data.<name>` has a target when the node mounts (none by default) */
     data?: Readonly<Record<string, unknown>>;
+    /** The document's `locales`: the overlay per language the application itself brings (relative to the node), on top of the component overlays */
+    locales?: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
 }
 
 /** What `mountComponent` gives back */
@@ -110,6 +112,7 @@ export function createMountComponent(build: ComponentBuild): MountComponent {
             locale: 'en',
             theme: { active },
             ...(options.data === undefined ? {} : { data: options.data }),
+            ...(options.locales === undefined ? {} : { locales: options.locales }),
             app: { component: name, ...nodeState }
         } as unknown as AppDocument;
         const host = globalThis.document.body.appendChild(globalThis.document.createElement('div'));

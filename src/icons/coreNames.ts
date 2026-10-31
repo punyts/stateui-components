@@ -1,0 +1,25 @@
+/**
+ * The icons the library's own components draw, compiled into the library so components work before or without an
+ * app's icon list. Every name is a Tabler icon name; `scripts/core-icons.ts` reads their path data from the pinned
+ * `@tabler/icons` package. A test fails when a template or shape uses an icon that is not listed here
+ */
+export const CORE_ICON_NAMES: readonly string[] = [
+    'alert-circle',
+    'alert-triangle',
+    'calendar',
+    'check',
+    'chevron-down',
+    'chevron-left',
+    'chevron-right',
+    'chevron-up',
+    'circle-check',
+    'dots',
+    'grip-vertical',
+    'info-circle',
+    'menu-2',
+    'minus',
+    'plus',
+    'search',
+    'upload',
+    'x'
+];

@@ -1,0 +1,10 @@
+{
+    "summary": "A named icon drawn from path data: outline or filled, in a tone and a size",
+    "shared": { "tone": {}, "size": { "default": "md" } },
+    "properties": {
+        "name": { "type": "icon", "default": "" },
+        "filled": { "type": "boolean", "default": false },
+        "decorative": { "type": "boolean", "default": true },
+        "_label": { "type": "string", "kind": "content", "requiredWhen": { "property": "decorative", "equals": false } }
+    }
+}

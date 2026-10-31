@@ -1,0 +1,26 @@
+{
+    "summary": "A bare dropdown of options from data or a translated static map, single or multiple, with no visible label",
+    "tokenGroup": "control",
+    "tokens": {
+        "radius": "{radius.md}",
+        "border": "{border.width.thin}",
+        "padding": { "inline": "{space.inset.sm}" }
+    },
+    "shared": { "size": { "default": "md" } },
+    "events": ["change"],
+    "commands": ["focus", "clear"],
+    "properties": {
+        "options": {
+            "type": ["array", "map"],
+            "default": [],
+            "items": { "_label": { "type": "string", "kind": "content" } }
+        },
+        "optionValue": { "type": "string", "default": "value" },
+        "optionLabel": { "type": "string", "default": "label" },
+        "multiple": { "type": "boolean", "default": false },
+        "value": { "type": "any", "default": "" },
+        "disabled": { "type": "boolean", "default": false },
+        "required": { "type": "boolean", "default": false },
+        "_label": { "type": "string", "kind": "content", "default": "Select" }
+    }
+}

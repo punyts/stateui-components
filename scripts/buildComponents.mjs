@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { buildLibrary } from '@punyts/stateui-app/build';
+import { buildCoreIcons, coreIconsModule, coreIconsTypes } from './core-icons.ts';
 
 /** The shared CSS partials a component's `view.css` pulls in with `@include "<name>.css";` */
 const SHARED_CSS_DIR = resolve(import.meta.dirname, '../src/shared/css');
@@ -38,5 +39,8 @@ export async function buildComponents(sourceDir, outDir) {
     await mkdir(registerDir, { recursive: true });
     await writeFile(join(registerDir, 'register.js'), REGISTER_JS);
     await writeFile(join(registerDir, 'register.d.ts'), REGISTER_DTS);
+    await mkdir(join(registerDir, 'icons'), { recursive: true });
+    await writeFile(join(registerDir, 'icons', 'core.js'), coreIconsModule(await buildCoreIcons()));
+    await writeFile(join(registerDir, 'icons', 'core.d.ts'), coreIconsTypes());
     return result;
 }
