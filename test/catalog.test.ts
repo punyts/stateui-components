@@ -53,6 +53,7 @@ const difference = (found: readonly string[], spec: readonly string[]): { missin
 const LATER_ATOMS: readonly string[] = ['segmented'];
 const LATER_MOLECULES: readonly string[] = ['numberField', 'comboboxField', 'multiSelectField', 'breadcrumb', 'pagination', 'sliderField', 'disclosure', 'stepper'];
 const LATER_COMPOSITES: readonly string[] = ['popover'];
+const LATER_COMPOSED: readonly string[] = ['wizard'];
 
 const FIELDS = ['textField', 'textareaField', 'selectField', 'checkField', 'switchField', 'radioField', 'dateField', 'numberField', 'comboboxField', 'multiSelectField', 'sliderField'] as const;
 
@@ -161,13 +162,13 @@ describe('the component catalog holds the whole Epic 5 set', () => {
         expect(placeable).toHaveLength(45 + LATER_ATOMS.length + LATER_MOLECULES.length + LATER_COMPOSITES.length);
     });
 
-    it('should hold exactly the six composed components of Epic 5', () => {
+    it('should hold exactly the six composed components of Epic 5 and the later ones', () => {
         // Arrange
         const found = composedEntries.map((entry) => entry.name);
 
         // Assert
-        expect(difference(found, SPEC_COMPOSED)).toEqual({ missing: [], extra: [] });
-        expect(found).toHaveLength(6);
+        expect(difference(found, [...SPEC_COMPOSED, ...LATER_COMPOSED])).toEqual({ missing: [], extra: [] });
+        expect(found).toHaveLength(6 + LATER_COMPOSED.length);
     });
 
     it('should give every root and composed component a German overlay', () => {

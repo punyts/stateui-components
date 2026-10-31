@@ -1,0 +1,217 @@
+{
+    "component": "panel",
+    "children": {
+        "stepper": {
+            "component": "stepper",
+            "steps": {
+                "details": {
+                    "_label": "Details"
+                },
+                "options": {
+                    "_label": "Options"
+                },
+                "review": {
+                    "_label": "Review"
+                }
+            }
+        },
+        "tabs": {
+            "component": "tabs",
+            "strip": "hidden",
+            "children": {
+                "details": {
+                    "component": "form",
+                    "placement": {
+                        "_tab": "Details"
+                    },
+                    "children": {
+                        "name": {
+                            "component": "textField",
+                            "_label": "Name",
+                            "required": true
+                        },
+                        "email": {
+                            "component": "textField",
+                            "_label": "Email address",
+                            "pattern": "email"
+                        }
+                    },
+                    "actions": {
+                        "component": "toolbar",
+                        "align": "end",
+                        "children": {
+                            "next": {
+                                "component": "button",
+                                "_title": "Next",
+                                "on": {
+                                    "press": {
+                                        "command": "submit",
+                                        "target": "$parent"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "on": {
+                        "submitted": [
+                            {
+                                "command": "complete",
+                                "target": "^wizard.children.stepper",
+                                "value": "details"
+                            },
+                            {
+                                "command": "set",
+                                "target": "^wizard.children.stepper.active",
+                                "value": "options"
+                            },
+                            {
+                                "command": "select",
+                                "target": "^wizard.children.tabs",
+                                "value": "options"
+                            }
+                        ]
+                    }
+                },
+                "options": {
+                    "component": "form",
+                    "placement": {
+                        "_tab": "Options"
+                    },
+                    "children": {
+                        "plan": {
+                            "component": "selectField",
+                            "_label": "Plan",
+                            "required": true,
+                            "options": {
+                                "basic": {
+                                    "_label": "Basic"
+                                },
+                                "pro": {
+                                    "_label": "Pro"
+                                }
+                            }
+                        },
+                        "newsletter": {
+                            "component": "switchField",
+                            "_label": "Send me the newsletter"
+                        }
+                    },
+                    "actions": {
+                        "component": "toolbar",
+                        "align": "end",
+                        "children": {
+                            "back": {
+                                "component": "button",
+                                "variant": "ghost",
+                                "_title": "Back",
+                                "on": {
+                                    "press": [
+                                        {
+                                            "command": "set",
+                                            "target": "^wizard.children.stepper.active",
+                                            "value": "details"
+                                        },
+                                        {
+                                            "command": "select",
+                                            "target": "^wizard.children.tabs",
+                                            "value": "details"
+                                        }
+                                    ]
+                                }
+                            },
+                            "next": {
+                                "component": "button",
+                                "_title": "Next",
+                                "on": {
+                                    "press": {
+                                        "command": "submit",
+                                        "target": "$parent"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "on": {
+                        "submitted": [
+                            {
+                                "command": "complete",
+                                "target": "^wizard.children.stepper",
+                                "value": "options"
+                            },
+                            {
+                                "command": "set",
+                                "target": "^wizard.children.stepper.active",
+                                "value": "review"
+                            },
+                            {
+                                "command": "select",
+                                "target": "^wizard.children.tabs",
+                                "value": "review"
+                            }
+                        ]
+                    }
+                },
+                "review": {
+                    "component": "form",
+                    "placement": {
+                        "_tab": "Review"
+                    },
+                    "children": {
+                        "confirm": {
+                            "component": "checkField",
+                            "_label": "The details are correct",
+                            "required": true
+                        }
+                    },
+                    "actions": {
+                        "component": "toolbar",
+                        "align": "end",
+                        "children": {
+                            "back": {
+                                "component": "button",
+                                "variant": "ghost",
+                                "_title": "Back",
+                                "on": {
+                                    "press": [
+                                        {
+                                            "command": "set",
+                                            "target": "^wizard.children.stepper.active",
+                                            "value": "options"
+                                        },
+                                        {
+                                            "command": "select",
+                                            "target": "^wizard.children.tabs",
+                                            "value": "options"
+                                        }
+                                    ]
+                                }
+                            },
+                            "next": {
+                                "component": "button",
+                                "_title": "Finish",
+                                "on": {
+                                    "press": {
+                                        "command": "submit",
+                                        "target": "$parent"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "on": {
+                        "submitted": [
+                            {
+                                "command": "emit",
+                                "target": "wizard.done"
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    },
+    "exposes": {
+        "children.tabs.children": "The step forms, keyed by name (details, options, review): replace the fields of a form, link each field value to $.data, and act on the last form submitted values or on the wizard.done event with on. A new step needs a stepper step, a form here and the Back and Next lines of its neighbours",
+        "children.stepper.steps": "The step labels shown above the forms, one per form key in the same order"
+    }
+}

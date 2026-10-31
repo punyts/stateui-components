@@ -210,4 +210,60 @@ describe('tabs in Chromium', () => {
         // Assert
         expect(labels(mounted.element)).toEqual(['Eins', 'Zwei', 'Three']);
     });
+
+    it('should show the strip by default', () => {
+        // Arrange
+        const mounted = mountComponent('tabs', { children: three });
+
+        // Assert
+        expect(mounted.element.getAttribute('strip')).toBe('visible');
+        expect(getComputedStyle(part(mounted.element, '[role=tablist]') as HTMLElement).display).toBe('flex');
+    });
+
+    it('should hide the strip with strip hidden, keep its tabs out of the tab order and still switch panels through active', async () => {
+        // Arrange
+        const mounted = mountComponent('tabs', { strip: 'hidden', children: three });
+        const strip = part(mounted.element, '[role=tablist]') as HTMLElement;
+
+        // Assert
+        expect(getComputedStyle(strip).display).toBe('none');
+        expect(strip.getBoundingClientRect().height).toBe(0);
+        expect(hiddenFlags(mounted.element)).toEqual([false, true, true]);
+
+        // Act
+        mounted.store.set('$.app.active', 'two' as never);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        // Assert
+        expect(selectedKeys(mounted.element)).toEqual(['two']);
+        expect(hiddenFlags(mounted.element)).toEqual([true, false, true]);
+        expect(all(mounted.element, '[role=tab]').every((tab) => tab.offsetParent === null)).toBe(true);
+    });
+
+    it('should switch panels of a hidden strip through the select command and raise change', () => {
+        // Arrange
+        const mounted = mountComponent('tabs', { strip: 'hidden', children: three });
+        const seen = changes(mounted.element);
+
+        // Act
+        command(mounted.element, 'select', 'three');
+
+        // Assert
+        expect(hiddenFlags(mounted.element)).toEqual([true, true, false]);
+        expect(seen).toEqual(['three']);
+    });
+
+    it('should not reach a tab of a hidden strip with the Tab key', async () => {
+        // Arrange
+        const mounted = mountComponent('tabs', { strip: 'hidden', children: { one: text('First', { _tab: 'One' }), two: text('Second', { _tab: 'Two' }) } });
+        const before = document.activeElement;
+
+        // Act
+        await userEvent.tab();
+
+        // Assert
+        expect(mounted.element.shadowRoot?.activeElement ?? null).toBeNull();
+        expect(document.activeElement).not.toBe(mounted.element);
+        expect(before).not.toBe(mounted.element);
+    });
 });

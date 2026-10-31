@@ -115,3 +115,7 @@
 .panel[hidden] {
     display: none;
 }
+
+:host([strip=hidden]) .tablist {
+    display: none;
+}

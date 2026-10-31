@@ -1,0 +1,92 @@
+{
+    "children": {
+        "stepper": {
+            "steps": {
+                "details": {
+                    "_label": "Angaben"
+                },
+                "options": {
+                    "_label": "Optionen"
+                },
+                "review": {
+                    "_label": "Prüfen"
+                }
+            }
+        },
+        "tabs": {
+            "children": {
+                "details": {
+                    "placement": {
+                        "_tab": "Angaben"
+                    },
+                    "children": {
+                        "name": {
+                            "_label": "Name"
+                        },
+                        "email": {
+                            "_label": "E-Mail-Adresse"
+                        }
+                    },
+                    "actions": {
+                        "children": {
+                            "next": {
+                                "_title": "Weiter"
+                            }
+                        }
+                    }
+                },
+                "options": {
+                    "placement": {
+                        "_tab": "Optionen"
+                    },
+                    "children": {
+                        "plan": {
+                            "_label": "Tarif",
+                            "options": {
+                                "basic": {
+                                    "_label": "Basis"
+                                },
+                                "pro": {
+                                    "_label": "Pro"
+                                }
+                            }
+                        },
+                        "newsletter": {
+                            "_label": "Newsletter senden"
+                        }
+                    },
+                    "actions": {
+                        "children": {
+                            "back": {
+                                "_title": "Zurück"
+                            },
+                            "next": {
+                                "_title": "Weiter"
+                            }
+                        }
+                    }
+                },
+                "review": {
+                    "placement": {
+                        "_tab": "Prüfen"
+                    },
+                    "children": {
+                        "confirm": {
+                            "_label": "Die Angaben sind richtig"
+                        }
+                    },
+                    "actions": {
+                        "children": {
+                            "back": {
+                                "_title": "Zurück"
+                            },
+                            "next": {
+                                "_title": "Fertig"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,5 +1,5 @@
 <div class="tabs">
-    <div class="tablist" role="tablist" aria-orientation="{{ $.orientation }}" if="{{ $.children }}" onkeydown="{{ onKeydown }}">
+    <div class="tablist" role="tablist" aria-orientation="{{ $.orientation }}" if="{{ $.children }}" hidden="{{ $.strip === 'hidden' }}" onkeydown="{{ onKeydown }}">
         <button class="tab" type="button" role="tab" repeat="{{ $k,$i,$v in $.children }}" key="{{ $k }}" data-key="{{ $k }}" id="tab-{{ $k }}" aria-controls="panel-{{ $k }}" aria-selected="{{ $k === $.shown ? 'true' : 'false' }}" tabindex="{{ $k === $.shown ? 0 : -1 }}" onclick="{{ onTab }}">
             <ui-icon class="glyph" size="sm" name="{{ $v.placement.icon }}" if="{{ $v.placement.icon }}"></ui-icon>
             <span class="label">{{ $v.placement._tab || $k }}</span>

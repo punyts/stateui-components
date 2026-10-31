@@ -15,6 +15,7 @@
         "active": { "type": "string", "default": "" },
         "orientation": { "type": "string", "values": ["horizontal", "vertical"], "default": "horizontal", "reflect": true },
         "appearance": { "type": "string", "values": ["line", "pill"], "default": "line", "reflect": true },
+        "strip": { "type": "string", "values": ["visible", "hidden"], "default": "visible", "reflect": true },
         "shown": { "type": "string", "default": "", "runtime": true }
     }
 }
