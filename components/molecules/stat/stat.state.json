@@ -1,0 +1,20 @@
+{
+    "summary": "A headline number with a label, a unit and a trend, formatted for the locale",
+    "shared": { "tone": {}, "size": { "default": "md" } },
+    "properties": {
+        "format": { "type": "string", "values": ["number", "percent", "currency", "duration"], "default": "number" },
+        "currency": {
+            "type": "string",
+            "validators": { "pattern": "^[A-Z]{3}$" },
+            "requiredWhen": { "property": "format", "equals": "currency" }
+        },
+        "trend": { "type": "string", "values": ["up", "down", "flat"] },
+        "_label": { "type": "string", "kind": "content", "default": "Label" },
+        "_unit": { "type": "string", "kind": "content", "default": "" },
+        "value": { "type": ["number", "string"] },
+        "delta": { "type": ["number", "string"] },
+        "shown": { "type": "string", "default": "", "runtime": true },
+        "deltaShown": { "type": "string", "default": "", "runtime": true },
+        "trendIcon": { "type": "icon", "default": "", "runtime": true }
+    }
+}

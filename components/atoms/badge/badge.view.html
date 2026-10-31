@@ -1,0 +1,5 @@
+<span if="{{ $.dot }}" class="dot" role="img" aria-label="{{ $._text }}"></span>
+<span else="" class="badge">
+    <span if="{{ $.icon }}" class="icon" icon-paths="icon"></span>
+    <span class="label">{{ $.count !== undefined &amp;&amp; $.count !== null ? ($.count &gt; $.max ? $.max + '+' : $.count) : $._text }}</span>
+</span>

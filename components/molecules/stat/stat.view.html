@@ -1,0 +1,11 @@
+<div class="stat">
+    <span class="label">{{ $._label }}</span>
+    <span class="figure">
+        <span class="value">{{ $.shown }}</span>
+        <span if="{{ $._unit }}" class="unit">{{ $._unit }}</span>
+    </span>
+    <span if="{{ $.trend || $.deltaShown }}" class="change">
+        <span if="{{ $.trend }}" class="glyph" icon-paths="trendIcon" data-trend="{{ $.trend }}"></span>
+        <span if="{{ $.deltaShown }}" class="delta">{{ $.deltaShown }}</span>
+    </span>
+</div>

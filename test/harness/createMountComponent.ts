@@ -61,7 +61,7 @@ export interface ComponentBuild {
     localeFiles: Readonly<Record<string, Overlay>>;
 }
 
-const LOCALE_FILE = /^(?:.*\/)?([a-z0-9-]+)\.locale\.([a-zA-Z-]+)\.json$/;
+const LOCALE_FILE = /^(?:.*\/)?([a-zA-Z0-9-]+)\.locale\.([a-zA-Z-]+)\.json$/;
 
 /** Groups the locale files by component name (camel-cased, as the catalog names it), then by language code */
 export function overlaysFromFiles(files: ComponentBuild['localeFiles']): ComponentOverlays {

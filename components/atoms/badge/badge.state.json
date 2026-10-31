@@ -1,0 +1,11 @@
+{
+    "summary": "A small status label or count, as a soft, solid, outline or ghost pill, or a dot",
+    "shared": { "tone": { "default": "neutral" }, "variant": { "default": "soft" }, "size": { "default": "md" } },
+    "properties": {
+        "icon": { "type": "icon", "default": "" },
+        "dot": { "type": "boolean", "default": false, "reflect": true },
+        "_text": { "type": "string", "kind": "content", "default": "Badge" },
+        "count": { "type": "number" },
+        "max": { "type": "integer", "default": 99, "validators": { "range": { "min": 1 } } }
+    }
+}

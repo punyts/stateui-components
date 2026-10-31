@@ -100,15 +100,18 @@ function drawIcon(document: Document, paths: readonly IconPath[], filled: boolea
 
 /**
  * The `icon-paths` attribute of the icon's view: draws the node's icon into the element with `createElementNS` and
- * redraws when `name`, `filled` or the app's icon map change. Path data only, never markup. An unknown name draws
- * nothing and is reported once as `SUI-RUN-ICON`
+ * redraws when the name property, `filled` or the app's icon map change. The attribute value may name another
+ * property that holds the icon name (`icon-paths="icon"` on a button); empty means `name`. Path data only, never
+ * markup. An unknown name draws nothing and is reported once as `SUI-RUN-ICON`
  */
-function drawInto(element: Element, _attributes: unknown, scope: IconScope): () => void {
+function drawInto(element: Element, attributes: Record<string, unknown>, scope: IconScope): () => void {
     const { store, basePath } = scope;
+    const given = attributes['icon-paths'];
+    const nameKey = typeof given === 'string' && given !== '' ? given : 'name';
     let reported = '';
     const draw = (): void => {
         element.replaceChildren();
-        const name = store.get(`${basePath}.name`);
+        const name = store.get(`${basePath}.${nameKey}`);
         if (typeof name !== 'string' || name === '') {
             reported = '';
             return;
@@ -125,7 +128,7 @@ function drawInto(element: Element, _attributes: unknown, scope: IconScope): () 
         const filled = store.get(`${basePath}.filled`) === true && icon.filled !== undefined;
         element.append(drawIcon(element.ownerDocument, filled ? (icon.filled as readonly IconPath[]) : icon.outline, filled));
     };
-    const subscription = scope.subscribe(['$.name', '$.filled'], draw);
+    const subscription = scope.subscribe([`$.${nameKey}`, '$.filled'], draw);
     store.on(RUNTIME_ICONS, draw);
     draw();
     return () => {

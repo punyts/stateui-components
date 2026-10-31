@@ -1,0 +1,24 @@
+:host { display: block; }
+.progress {
+    overflow: hidden;
+    inline-size: 100%;
+    block-size: calc(var(--icon-size) / 3);
+    border-radius: var(--ui-radius-full);
+    background: var(--tone-soft);
+}
+.bar {
+    --fill: {{ $.value <= 0 ? 0 : ($.value >= $.max ? 100 : ($.value * 100) / $.max) }};
+    block-size: 100%;
+    inline-size: calc(var(--fill) * 1%);
+    border-radius: var(--ui-radius-full);
+    background: var(--tone);
+}
+:host([indeterminate]) .bar {
+    inline-size: 40%;
+    transition: none;
+    animation: slide calc(var(--ui-motion-duration-slow) * 4) var(--ui-motion-easing-standard) infinite;
+}
+@keyframes slide {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(250%); }
+}

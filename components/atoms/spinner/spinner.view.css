@@ -1,0 +1,13 @@
+:host { display: inline-flex; flex: none; vertical-align: middle; }
+.spinner {
+    box-sizing: border-box;
+    inline-size: var(--icon-size);
+    block-size: var(--icon-size);
+    border: var(--ui-border-width-thick) solid var(--tone-soft, var(--ui-color-border-base));
+    border-top-color: var(--tone, currentColor);
+    border-radius: var(--ui-radius-full);
+    animation: spin calc(var(--ui-motion-duration-slow) * 2) linear infinite;
+}
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}

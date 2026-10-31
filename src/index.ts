@@ -12,3 +12,5 @@ export { createIconNames, isIconName, loadIconsFile, packagedIconNames } from '.
 export type { IconNames } from './icons/names.js';
 export { validateIconNode } from './icons/validate.js';
 export type { IconEntry, IconPath, IconStyledPath, IconsFile } from './icons/types.js';
+export { VALUE_FORMATS, formatValue, toNumber } from './shared/format/format.js';
+export type { FormatOptions, ValueFormat } from './shared/format/format.js';

@@ -1,0 +1,7 @@
+{
+    "summary": "A turning ring that shows work in progress; it stops under reduced motion",
+    "shared": { "tone": {}, "size": { "default": "md" } },
+    "properties": {
+        "_label": { "type": "string", "kind": "content", "default": "Loading" }
+    }
+}

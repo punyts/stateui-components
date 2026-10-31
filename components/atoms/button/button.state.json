@@ -1,0 +1,19 @@
+{
+    "summary": "The actionable atom: a labelled button with an optional icon, five variants and a busy state",
+    "events": ["press"],
+    "commands": ["focus"],
+    "shared": { "tone": { "default": "accent" }, "variant": { "default": "solid" }, "size": { "default": "md" } },
+    "tokens": {
+        "radius": "{radius.md}",
+        "padding": { "inline": "{space.inset.md}" },
+        "gap": "{space.gap.sm}"
+    },
+    "properties": {
+        "icon": { "type": "icon", "default": "" },
+        "iconPosition": { "type": "string", "values": ["start", "end", "only"], "default": "start", "reflect": true },
+        "disabled": { "type": "boolean", "default": false },
+        "busy": { "type": "boolean", "default": false },
+        "fill": { "type": "boolean", "default": false, "reflect": true },
+        "_title": { "type": "string", "kind": "content", "default": "Button" }
+    }
+}

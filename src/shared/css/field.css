@@ -1,0 +1,136 @@
+/* The layout of a field: label, control box (with an optional icon), help and error text. A field includes it with
+   `@include "field.css";` and gives its view the classes `field`, `label`, `box`, `icon`, `messages`, `help` and
+   `alert` (the polite live region that holds the error). `title-position` and `width` come from the field's node */
+:host {
+    display: block;
+}
+
+.field {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+        "label"
+        "box"
+        "messages";
+    row-gap: var(--ui-field-label-gap);
+    box-sizing: border-box;
+    inline-size: var(--field-width, 100%);
+    max-inline-size: 100%;
+    font-family: var(--ui-text-body-family);
+    font-size: var(--ui-text-body-size);
+    color: var(--ui-color-text-base);
+}
+
+.label {
+    grid-area: label;
+    font-family: var(--ui-text-label-family);
+    font-size: var(--ui-text-label-size);
+    font-weight: var(--ui-text-label-weight);
+    line-height: var(--ui-text-label-leading);
+}
+
+.box {
+    grid-area: box;
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-inline-size: 0;
+}
+
+.box .control {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+}
+
+.icon {
+    position: absolute;
+    inset-inline-start: var(--ui-control-padding-inline);
+    color: var(--ui-color-text-muted);
+    pointer-events: none;
+}
+
+.box:has(.icon) .control {
+    padding-inline-start: calc(var(--ui-control-padding-inline) * 2 + var(--ui-size-icon-md));
+}
+
+.messages {
+    grid-area: messages;
+    display: grid;
+    row-gap: var(--ui-field-label-gap);
+    font-size: var(--ui-field-help-size);
+    line-height: var(--ui-text-caption-leading);
+}
+
+.messages > :empty {
+    display: none;
+}
+
+.help,
+.error {
+    margin: 0;
+}
+
+.help {
+    color: var(--ui-color-text-muted);
+}
+
+.error {
+    color: var(--ui-color-danger-base);
+}
+
+:host([title-position="left"]) .field {
+    grid-template-columns: var(--ui-field-label-width) minmax(0, 1fr);
+    grid-template-areas:
+        "label box"
+        ". messages";
+    column-gap: var(--ui-field-label-gap);
+}
+
+:host([title-position="left"]) .label {
+    display: flex;
+    align-items: center;
+    min-block-size: var(--control-height, var(--ui-size-control-md));
+}
+
+:host([title-position="inner"]) .field {
+    grid-template-areas:
+        "box"
+        "messages";
+}
+
+:host([title-position="inner"]) .label {
+    grid-area: box;
+    z-index: 1;
+    align-self: start;
+    justify-self: start;
+    margin-block-start: var(--ui-field-label-gap);
+    margin-inline-start: var(--ui-control-padding-inline);
+    font-size: var(--ui-text-caption-size);
+    color: var(--ui-color-text-muted);
+    pointer-events: none;
+}
+
+:host([title-position="inner"]) .field:has(.icon) .label {
+    margin-inline-start: calc(var(--ui-control-padding-inline) * 2 + var(--ui-size-icon-md));
+}
+
+:host([title-position="inner"]) .control {
+    padding-block-start: calc(var(--ui-text-caption-size) + var(--ui-field-label-gap));
+}
+
+:host([title-position="hidden"]) .field {
+    grid-template-areas:
+        "box"
+        "messages";
+}
+
+:host([title-position="hidden"]) .label {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}

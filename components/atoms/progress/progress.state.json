@@ -1,0 +1,10 @@
+{
+    "summary": "A bar that shows how far a task has got, or that it is running with no known end",
+    "shared": { "tone": { "default": "accent" }, "size": { "default": "md" } },
+    "properties": {
+        "_label": { "type": "string", "kind": "content", "default": "Progress" },
+        "value": { "type": "number", "default": 0, "validators": { "range": { "min": 0 } } },
+        "max": { "type": "number", "default": 100, "validators": { "range": { "min": 1 } } },
+        "indeterminate": { "type": "boolean", "default": false, "reflect": true }
+    }
+}
