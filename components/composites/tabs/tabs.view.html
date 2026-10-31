@@ -1,0 +1,14 @@
+<div class="tabs">
+    <div class="tablist" role="tablist" aria-orientation="{{ $.orientation }}" if="{{ $.children }}" onkeydown="{{ onKeydown }}">
+        <button class="tab" type="button" role="tab" repeat="{{ $k,$i,$v in $.children }}" key="{{ $k }}" data-key="{{ $k }}" id="tab-{{ $k }}" aria-controls="panel-{{ $k }}" aria-selected="{{ $k === $.shown ? 'true' : 'false' }}" tabindex="{{ $k === $.shown ? 0 : -1 }}" onclick="{{ onTab }}">
+            <ui-icon class="glyph" size="sm" name="{{ $v.placement.icon }}" if="{{ $v.placement.icon }}"></ui-icon>
+            <span class="label">{{ $v.placement._tab || $k }}</span>
+            <span class="badge" if="{{ ($v.placement.badge !== undefined) &amp;&amp; ($v.placement.badge !== '') }}">{{ $v.placement.badge }}</span>
+        </button>
+    </div>
+    <div class="panels">
+        <div class="panel" role="tabpanel" if="{{ $.children }}" repeat="{{ $k,$i,$v in $.children }}" key="{{ $k }}" id="panel-{{ $k }}" aria-labelledby="tab-{{ $k }}" hidden="{{ $k !== $.shown }}">
+            <sui-node state="{{ $v }}"></sui-node>
+        </div>
+    </div>
+</div>

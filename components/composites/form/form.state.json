@@ -1,0 +1,23 @@
+{
+    "summary": "A form that finds the fields inside it, validates them together and reports the number of errors",
+    "shared": { "density": {} },
+    "layout": true,
+    "events": ["invalid", "changed"],
+    "commands": ["validate", "focusFirstError"],
+    "tokens": {
+        "gap": "{space.gap.md}",
+        "summary": {
+            "padding": "{space.inset.md}",
+            "radius": "{radius.md}",
+            "color": "{color.danger.base}"
+        }
+    },
+    "properties": {
+        "validateOn": { "type": "string", "values": ["blur", "change", "submit"], "default": "blur" },
+        "disabled": { "type": "boolean", "default": false },
+        "actions": { "type": "node" },
+        "status": { "type": "string", "values": ["pristine", "dirty", "invalid"], "default": "pristine", "reflect": true, "runtime": true },
+        "errorCount": { "type": "integer", "default": 0, "runtime": true },
+        "_errorSummary": { "type": "string", "kind": "content", "default": "Please correct the highlighted fields" }
+    }
+}

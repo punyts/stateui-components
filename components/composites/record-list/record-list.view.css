@@ -1,0 +1,22 @@
+:host {
+    display: block;
+    --sui-row-h: var(--ui-recordlist-row);
+}
+
+.rows {
+    position: relative;
+    block-size: calc(var(--sui-count, 0) * var(--sui-row-h));
+}
+
+.slot {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline: 0;
+    block-size: var(--sui-row-h);
+    overflow: hidden;
+    transform: translateY(calc(var(--sui-index, 0) * var(--sui-row-h)));
+}
+
+.slot[hidden] {
+    display: none;
+}

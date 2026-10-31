@@ -1,0 +1,22 @@
+{
+    "summary": "A panel that slides in from an edge on a native dialog element, with header, body and footer slots",
+    "shared": { "elevation": { "default": "overlay" }, "density": {} },
+    "events": ["open", "close"],
+    "commands": ["open", "close", "toggle"],
+    "tokens": {
+        "radius": "{radius.lg}",
+        "padding": "{space.inset.lg}",
+        "gap": "{space.gap.md}"
+    },
+    "properties": {
+        "open": { "type": "boolean", "default": false },
+        "side": { "type": "string", "values": ["end", "start", "bottom"], "default": "end", "reflect": true },
+        "dismissible": { "type": "boolean", "default": true },
+        "_title": { "type": "string", "kind": "content", "default": "" },
+        "_closeLabel": { "type": "string", "kind": "content", "default": "Close" },
+        "header": { "type": "node" },
+        "body": { "type": "node" },
+        "footer": { "type": "node" },
+        "closeGlyph": { "type": "icon", "default": "x", "runtime": true }
+    }
+}

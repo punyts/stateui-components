@@ -1,0 +1,58 @@
+@include "overlay.css";
+
+.dialog {
+    --pad: var(--ui-drawer-padding);
+    --gap: var(--ui-drawer-gap);
+    --radius: 0px;
+    --flip: 1;
+    position: fixed;
+    inset-block: 0;
+    inset-inline: auto 0;
+    inline-size: min(28rem, 100%);
+    block-size: 100dvb;
+    max-inline-size: 100%;
+    max-block-size: none;
+    translate: calc(100% * var(--flip)) 0;
+    transition:
+        translate var(--ui-motion-duration-base) var(--ui-motion-easing-standard),
+        display var(--ui-motion-duration-base) allow-discrete,
+        overlay var(--ui-motion-duration-base) allow-discrete;
+}
+
+.dialog:dir(rtl) {
+    --flip: -1;
+}
+
+:host([side=start]) .dialog {
+    inset-inline: 0 auto;
+    translate: calc(-100% * var(--flip)) 0;
+}
+
+:host([side=bottom]) .dialog {
+    inset-block: auto 0;
+    inset-inline: 0;
+    inline-size: 100%;
+    block-size: auto;
+    max-block-size: 80dvb;
+    translate: 0 100%;
+}
+
+.dialog[open],
+:host([side=start]) .dialog[open],
+:host([side=bottom]) .dialog[open] {
+    translate: 0 0;
+}
+
+@starting-style {
+    .dialog[open] {
+        translate: calc(100% * var(--flip)) 0;
+    }
+
+    :host([side=start]) .dialog[open] {
+        translate: calc(-100% * var(--flip)) 0;
+    }
+
+    :host([side=bottom]) .dialog[open] {
+        translate: 0 100%;
+    }
+}

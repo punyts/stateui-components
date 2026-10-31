@@ -1,0 +1,11 @@
+<nav class="nav" aria-label="{{ $._label }}">
+    <div class="header" if="{{ $.header }}">
+        <sui-node state=".header"></sui-node>
+    </div>
+    <div class="items" onpress="{{ onPress }}">
+        <sui-node if="{{ $.children }}" repeat="{{ $k,$i,$v in $.children }}" key="{{ $k }}" state="{{ $v }}"></sui-node>
+    </div>
+    <div class="footer" if="{{ $.footer }}">
+        <sui-node state=".footer"></sui-node>
+    </div>
+</nav>

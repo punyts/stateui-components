@@ -1,0 +1,19 @@
+<dialog class="dialog" overlay="" aria-label="{{ ($.header || ($._title === '')) ? null : $._title }}" aria-labelledby="{{ !$.header &amp;&amp; ($._title !== '') ? 'title' : null }}">
+    <div class="frame">
+        <div class="header" if="{{ $.header || ($._title !== '') || $.dismissible }}">
+            <div class="heading">
+                <sui-node if="{{ $.header }}" state=".header"></sui-node>
+                <div class="title" id="title" if="{{ !$.header &amp;&amp; ($._title !== '') }}">{{ $._title }}</div>
+            </div>
+            <button class="close" type="button" if="{{ $.dismissible }}" aria-label="{{ $._closeLabel }}" onclick="{{ onClose }}">
+                <span class="glyph" icon-paths="closeGlyph" aria-hidden="true"></span>
+            </button>
+        </div>
+        <div class="body" if="{{ $.body }}">
+            <sui-node state=".body"></sui-node>
+        </div>
+        <div class="footer" if="{{ $.footer }}">
+            <sui-node state=".footer"></sui-node>
+        </div>
+    </div>
+</dialog>

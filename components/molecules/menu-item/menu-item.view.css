@@ -6,7 +6,7 @@
     box-sizing: border-box;
     display: flex;
     align-items: center;
-    gap: var(--ui-space-gap-md);
+    gap: var(--item-gap, var(--ui-space-gap-md));
     inline-size: 100%;
     min-block-size: var(--ui-size-control-md);
     margin: 0;
@@ -56,6 +56,8 @@
     flex: 1;
     flex-direction: column;
     min-inline-size: 0;
+    max-inline-size: var(--item-text-max, none);
+    overflow: var(--item-text-overflow, visible);
 }
 
 .description {
@@ -64,6 +66,7 @@
 }
 
 .shortcut {
+    display: var(--item-extra-display, block);
     flex: none;
     font-family: inherit;
     font-size: var(--ui-text-caption-size);

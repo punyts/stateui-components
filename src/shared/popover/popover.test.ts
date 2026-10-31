@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PLACEMENTS, isAnchorName, isPlacement, positionAreaOf } from './popover.js';
+import { ALIGNED_PLACEMENTS, PLACEMENTS, isAlignedPlacement, isAnchorName, isPlacement, positionAreaOf } from './popover.js';
 
 describe('positionAreaOf', () => {
     it.each([
@@ -15,6 +15,26 @@ describe('positionAreaOf', () => {
     it('should know a position-area for every placement', () => {
         // Act and Assert
         expect(PLACEMENTS.every((placement) => positionAreaOf(placement) !== undefined)).toBe(true);
+    });
+});
+
+describe('aligned placements', () => {
+    it.each([
+        ['bottomStart', 'block-end span-inline-end'],
+        ['bottomEnd', 'block-end span-inline-start'],
+        ['topStart', 'block-start span-inline-end'],
+        ['topEnd', 'block-start span-inline-start']
+    ] as const)('should map the aligned placement %s to the position-area %s', (placement, area) => {
+        // Act and Assert
+        expect(positionAreaOf(placement)).toBe(area);
+    });
+
+    it('should accept the four aligned placements, which are not plain placements, and refuse anything else', () => {
+        // Act and Assert
+        expect(ALIGNED_PLACEMENTS.every(isAlignedPlacement)).toBe(true);
+        expect(ALIGNED_PLACEMENTS.some(isPlacement)).toBe(false);
+        expect(isAlignedPlacement('bottom')).toBe(false);
+        expect(isAlignedPlacement(undefined)).toBe(false);
     });
 });
 

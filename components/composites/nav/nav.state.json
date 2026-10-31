@@ -1,0 +1,17 @@
+{
+    "summary": "The application navigation: a list of menu items with an active one, and header and footer slots",
+    "events": ["select"],
+    "tokens": {
+        "width": "calc({size.control.md} * 6)",
+        "padding": "{space.inset.sm}",
+        "gap": "{space.gap.sm}"
+    },
+    "properties": {
+        "orientation": { "type": "string", "values": ["vertical", "horizontal"], "default": "vertical", "reflect": true },
+        "active": { "type": "string", "default": "" },
+        "collapsed": { "type": "boolean", "default": false, "reflect": true },
+        "_label": { "type": "string", "kind": "content", "default": "Main navigation" },
+        "header": { "type": "node" },
+        "footer": { "type": "node" }
+    }
+}

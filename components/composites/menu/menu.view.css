@@ -1,0 +1,36 @@
+:host {
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.trigger {
+    display: inline-flex;
+    anchor-name: --m;
+}
+
+.popup {
+    box-sizing: border-box;
+    margin: 0;
+    margin-block: var(--ui-menu-gap);
+    border: 0;
+    inset: auto;
+    inline-size: max-content;
+    min-inline-size: var(--ui-menu-minwidth);
+    padding: var(--ui-menu-padding);
+    overflow: auto;
+    position-anchor: --m;
+    position-area: block-end span-inline-end;
+    position-try-fallbacks: flip-block, flip-inline;
+    color: var(--ui-color-text-base);
+    background: var(--surface);
+    border-radius: var(--ui-menu-radius);
+    box-shadow: var(--shadow);
+    font-family: var(--ui-text-body-family);
+    font-size: var(--ui-text-body-size);
+    line-height: var(--ui-text-body-leading);
+}
+
+.popup:popover-open {
+    display: flex;
+    flex-direction: column;
+}

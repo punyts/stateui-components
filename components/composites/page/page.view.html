@@ -1,0 +1,18 @@
+<div class="page">
+    <header class="header" if="{{ $.header }}">
+        <sui-node state=".header"></sui-node>
+    </header>
+    <div class="nav" if="{{ $.nav &amp;&amp; ($.navPosition !== 'none') }}">
+        <sui-node state=".nav"></sui-node>
+    </div>
+    <main class="main">
+        <div class="content">
+            <div class="body" layout-host="">
+                <sui-node if="{{ $.children }}" repeat="{{ $k,$i,$v in $.children }}" key="{{ $k }}" state="{{ $v }}"></sui-node>
+            </div>
+        </div>
+    </main>
+    <footer class="footer" if="{{ $.footer }}">
+        <sui-node state=".footer"></sui-node>
+    </footer>
+</div>

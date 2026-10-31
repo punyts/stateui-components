@@ -1,0 +1,16 @@
+{
+    "summary": "The root of an application: header, navigation, main content and footer, with a width limit for the main area",
+    "layout": true,
+    "tokens": {
+        "padding": "{space.inset.md}",
+        "gap": "{space.gap.md}"
+    },
+    "properties": {
+        "navPosition": { "type": "string", "values": ["start", "top", "none"], "default": "start", "reflect": true },
+        "maxWidth": { "type": "string", "values": ["none", "md", "lg", "xl"], "default": "none", "reflect": true },
+        "_title": { "type": "string", "kind": "content", "default": "" },
+        "header": { "type": "node" },
+        "nav": { "type": "node" },
+        "footer": { "type": "node" }
+    }
+}

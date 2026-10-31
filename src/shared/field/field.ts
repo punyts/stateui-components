@@ -18,6 +18,8 @@ export interface FieldConnect {
     readonly error: string;
     /** The current value (`checked` for a field whose value lives there) */
     readonly value: unknown;
+    /** Whether the value differs from the baseline */
+    readonly dirty: boolean;
     /** Runs the rules and sets `error`; returns the failing rule's name or an empty string */
     validate(): string;
     /** Restores the baseline value and clears `error`, `touched` and `dirty` */
@@ -160,9 +162,9 @@ export function createField({ element, store, basePath }: ControllerContext, val
     };
     const reset = (): void => {
         store.set(`${basePath}.touched`, false);
+        store.set(`${basePath}.error`, '');
         store.set(valuePath, baseline);
         store.set(`${basePath}.dirty`, false);
-        store.set(`${basePath}.error`, '');
     };
     const onValue = (): void => {
         const value = store.get<unknown>(valuePath);
@@ -189,6 +191,9 @@ export function createField({ element, store, basePath }: ControllerContext, val
         },
         get value(): unknown {
             return store.get<unknown>(valuePath);
+        },
+        get dirty(): boolean {
+            return read('dirty') === true;
         },
         validate,
         reset,

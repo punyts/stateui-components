@@ -1,0 +1,18 @@
+{
+    "summary": "A popup list of menu items that a trigger opens, closed by Escape, an outside press or a choice",
+    "shared": { "elevation": { "default": "overlay" } },
+    "events": ["select", "close"],
+    "commands": ["open", "close", "toggle"],
+    "tokens": {
+        "radius": "{radius.md}",
+        "padding": "{space.inset.sm}",
+        "gap": "{space.gap.sm}",
+        "minwidth": "calc({size.control.md} * 5)"
+    },
+    "properties": {
+        "open": { "type": "boolean", "default": false, "reflect": true },
+        "anchor": { "type": "string", "values": ["bottomStart", "bottomEnd", "topStart", "topEnd"], "default": "bottomStart", "reflect": true },
+        "_label": { "type": "string", "kind": "content", "default": "Menu" },
+        "trigger": { "type": "node" }
+    }
+}

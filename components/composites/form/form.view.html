@@ -1,0 +1,9 @@
+<div class="form">
+    <div class="summary" role="alert" if="{{ ($.status === 'invalid') &amp;&amp; ($.errorCount > 0) &amp;&amp; ($._errorSummary !== '') }}">{{ $._errorSummary }}</div>
+    <div class="body" layout-host="">
+        <sui-node if="{{ $.children }}" repeat="{{ $k,$i,$v in $.children }}" key="{{ $k }}" state="{{ $v }}"></sui-node>
+    </div>
+    <div class="actions" if="{{ $.actions }}">
+        <sui-node state=".actions"></sui-node>
+    </div>
+</div>

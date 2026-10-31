@@ -3,6 +3,14 @@ export const PLACEMENTS = ['top', 'bottom', 'start', 'end'] as const;
 
 export type Placement = (typeof PLACEMENTS)[number];
 
+/** A side of the anchor plus the edge the popover lines up with: `bottomStart` sits below and starts at the anchor's start edge */
+export const ALIGNED_PLACEMENTS = ['bottomStart', 'bottomEnd', 'topStart', 'topEnd'] as const;
+
+export type AlignedPlacement = (typeof ALIGNED_PLACEMENTS)[number];
+
+/** Every value `createPopover` takes as a placement */
+export type AnyPlacement = Placement | AlignedPlacement;
+
 /** Why a popover closed itself: the Escape key, or a press outside it and its trigger */
 export type PopoverDismissReason = 'escape' | 'outside';
 
@@ -10,7 +18,7 @@ export interface PopoverOptions {
     /** The element to show; it gets `popover="manual"` when it has no `popover` attribute. It must be connected to open */
     readonly element: HTMLElement;
     /** The side of the anchor to sit on; without it the element keeps whatever `position-area` its stylesheet gives */
-    readonly placement?: Placement;
+    readonly placement?: AnyPlacement;
     /** The CSS anchor name (`--name`) the element positions against; the anchor itself declares `anchor-name` in CSS */
     readonly anchor?: string;
     /** Elements whose presses are not outside presses (the trigger), because they toggle the popover themselves */
@@ -26,7 +34,7 @@ export interface PopoverHandle {
     close(): void;
     isOpen(): boolean;
     /** Moves the element to another side of its anchor, while open or not */
-    setPlacement(placement: Placement): void;
+    setPlacement(placement: AnyPlacement): void;
     /** Points the element at another anchor name */
     setAnchor(anchor: string): void;
     /** Closes the popover and removes every listener; the handle does nothing afterwards */
@@ -40,11 +48,26 @@ const POSITION_AREAS: Readonly<Record<Placement, string>> = {
     end: 'inline-end'
 };
 
+const ALIGNED_AREAS: Readonly<Record<AlignedPlacement, string>> = {
+    bottomStart: 'block-end span-inline-end',
+    bottomEnd: 'block-end span-inline-start',
+    topStart: 'block-start span-inline-end',
+    topEnd: 'block-start span-inline-start'
+};
+
 const ANCHOR_NAME = /^--[A-Za-z_][A-Za-z0-9_-]*$/;
 
-/** The CSS `position-area` value of a placement: `top` and `bottom` as they are, `start` and `end` as `inline-start` and `inline-end` */
-export function positionAreaOf(placement: Placement): string {
-    return POSITION_AREAS[placement];
+/**
+ * The CSS `position-area` value of a placement: `top` and `bottom` as they are, `start` and `end` as `inline-start` and
+ * `inline-end`, and an aligned placement as the side plus the span that keeps the popover on the named edge
+ */
+export function positionAreaOf(placement: AnyPlacement): string {
+    return isAlignedPlacement(placement) ? ALIGNED_AREAS[placement] : POSITION_AREAS[placement];
+}
+
+/** True for one of the four aligned placements (`bottomStart`, `bottomEnd`, `topStart`, `topEnd`) */
+export function isAlignedPlacement(value: unknown): value is AlignedPlacement {
+    return typeof value === 'string' && (ALIGNED_PLACEMENTS as readonly string[]).includes(value);
 }
 
 /** True for one of the four placements */
@@ -75,8 +98,8 @@ export function createPopover(options: PopoverOptions): PopoverHandle {
 
     if (!element.hasAttribute('popover')) element.setAttribute('popover', 'manual');
 
-    const setPlacement = (placement: Placement): void => {
-        if (!isPlacement(placement)) throw new TypeError(`Unknown popover placement "${String(placement)}"`);
+    const setPlacement = (placement: AnyPlacement): void => {
+        if (!isPlacement(placement) && !isAlignedPlacement(placement)) throw new TypeError(`Unknown popover placement "${String(placement)}"`);
         element.style.setProperty('position-area', positionAreaOf(placement));
     };
     const setAnchor = (anchor: string): void => {

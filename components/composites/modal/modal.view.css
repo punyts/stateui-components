@@ -1,0 +1,41 @@
+@include "overlay.css";
+
+.dialog {
+    --pad: var(--ui-modal-padding);
+    --gap: var(--ui-modal-gap);
+    --radius: var(--ui-modal-radius);
+    inline-size: min(32rem, calc(100% - 2 * var(--ui-modal-padding)));
+    max-block-size: calc(100% - 2 * var(--ui-modal-padding));
+    opacity: 0;
+    translate: 0 var(--ui-space-gap-md);
+    transition:
+        opacity var(--ui-motion-duration-base) var(--ui-motion-easing-standard),
+        translate var(--ui-motion-duration-base) var(--ui-motion-easing-standard),
+        display var(--ui-motion-duration-base) allow-discrete,
+        overlay var(--ui-motion-duration-base) allow-discrete;
+}
+
+:host([width=sm]) .dialog {
+    inline-size: min(22rem, calc(100% - 2 * var(--ui-modal-padding)));
+}
+
+:host([width=lg]) .dialog {
+    inline-size: min(48rem, calc(100% - 2 * var(--ui-modal-padding)));
+}
+
+:host([width=full]) .dialog {
+    inline-size: calc(100% - 2 * var(--ui-modal-padding));
+    block-size: calc(100% - 2 * var(--ui-modal-padding));
+}
+
+.dialog[open] {
+    opacity: 1;
+    translate: 0 0;
+}
+
+@starting-style {
+    .dialog[open] {
+        opacity: 0;
+        translate: 0 var(--ui-space-gap-md);
+    }
+}

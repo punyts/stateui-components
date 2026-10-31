@@ -1,0 +1,20 @@
+{
+    "summary": "Children shown one at a time under tabs whose label, icon and badge come from each child's placement",
+    "events": ["change"],
+    "commands": ["select"],
+    "tokens": {
+        "gap": "{space.gap.sm}",
+        "padding": "{space.inset.md}"
+    },
+    "placement": {
+        "_tab": { "type": "string", "kind": "content", "default": "" },
+        "icon": { "type": "icon", "default": "" },
+        "badge": { "type": ["string", "number"], "default": "" }
+    },
+    "properties": {
+        "active": { "type": "string", "default": "" },
+        "orientation": { "type": "string", "values": ["horizontal", "vertical"], "default": "horizontal", "reflect": true },
+        "appearance": { "type": "string", "values": ["line", "pill"], "default": "line", "reflect": true },
+        "shown": { "type": "string", "default": "", "runtime": true }
+    }
+}

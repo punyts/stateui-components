@@ -1,0 +1,6 @@
+<div class="trigger" onclick="{{ onTriggerClick }}" onkeydown="{{ onTriggerKeyDown }}">
+    <sui-node state=".trigger" if="{{ $.trigger }}"></sui-node>
+</div>
+<div class="popup" role="menu" aria-label="{{ $._label }}" onkeydown="{{ onKeyDown }}" onpress="{{ onPress }}">
+    <sui-node if="{{ $.children }}" repeat="{{ $k,$i,$v in $.children }}" key="{{ $k }}" state="{{ $v }}"></sui-node>
+</div>

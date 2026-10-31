@@ -1,0 +1,116 @@
+/* The parts of a dialog-based overlay (`modal`, `drawer`). The including view.css sets --pad, --gap and --radius on .dialog and the placement and size of .dialog itself */
+:host {
+    display: contents;
+}
+
+.dialog {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    color: var(--ui-color-text-base);
+    background: var(--surface);
+    border: 0;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    font-family: var(--ui-text-body-family);
+    font-size: var(--ui-text-body-size);
+    line-height: var(--ui-text-body-leading);
+}
+
+.dialog::backdrop {
+    background: color-mix(in srgb, var(--ui-color-text-base) 40%, transparent);
+    opacity: 0;
+    transition:
+        opacity var(--ui-motion-duration-base) var(--ui-motion-easing-standard),
+        display var(--ui-motion-duration-base) allow-discrete,
+        overlay var(--ui-motion-duration-base) allow-discrete;
+}
+
+.dialog[open]::backdrop {
+    opacity: 1;
+}
+
+@starting-style {
+    .dialog[open]::backdrop {
+        opacity: 0;
+    }
+}
+
+.frame {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap);
+    inline-size: 100%;
+    block-size: 100%;
+    padding: var(--pad);
+}
+
+.header {
+    display: flex;
+    flex: none;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--gap);
+}
+
+.heading {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+}
+
+.title {
+    font-family: var(--ui-text-heading-family);
+    font-size: var(--ui-text-heading-size);
+    font-weight: var(--ui-text-heading-weight);
+    line-height: var(--ui-text-heading-leading);
+}
+
+.close {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: var(--ui-radius-sm);
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+}
+
+.close:hover {
+    opacity: 0.7;
+}
+
+.glyph {
+    display: inline-flex;
+    flex: none;
+    inline-size: var(--ui-size-icon-md);
+    block-size: var(--ui-size-icon-md);
+}
+
+.glyph svg {
+    inline-size: 100%;
+    block-size: 100%;
+}
+
+.glyph .outline {
+    stroke-width: var(--ui-icon-stroke);
+}
+
+.body {
+    flex: 1 1 auto;
+    min-block-size: 0;
+    overflow: auto;
+}
+
+.footer {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--ui-space-gap-sm);
+}

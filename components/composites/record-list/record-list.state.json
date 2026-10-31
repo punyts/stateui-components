@@ -1,0 +1,20 @@
+{
+    "summary": "Draws only the visible records of a long list through a small pool of recycled row nodes",
+    "shared": { "density": {} },
+    "tokenGroup": "recordlist",
+    "tokens": {
+        "row": "calc({size.control.md} * {density.factor})"
+    },
+    "properties": {
+        "key": { "type": "string", "validators": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" }, "default": "id" },
+        "rowHeight": { "type": "string", "values": ["sm", "md", "lg"], "default": "md", "reflect": true },
+        "overscan": { "type": "integer", "validators": { "range": { "min": 0, "max": 20 } }, "default": 5 },
+        "records": { "type": ["array", "object"] },
+        "order": { "type": "array" },
+        "total": { "type": "integer", "validators": { "range": { "min": 0 } } },
+        "row": { "type": "node", "row": true },
+        "empty": { "type": "node" },
+        "count": { "type": "integer", "default": 0, "runtime": true },
+        "slots": { "type": "object", "default": {}, "runtime": true }
+    }
+}

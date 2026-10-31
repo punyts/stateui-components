@@ -1,0 +1,31 @@
+:host {
+    display: block;
+}
+
+.form {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: var(--ui-form-gap);
+    color: var(--ui-color-text-base);
+    font-family: var(--ui-text-body-family);
+    font-size: var(--ui-text-body-size);
+    line-height: var(--ui-text-body-leading);
+}
+
+.summary {
+    padding: var(--ui-form-summary-padding);
+    color: var(--ui-form-summary-color);
+    border: var(--ui-border-width-thin) solid var(--ui-form-summary-color);
+    border-radius: var(--ui-form-summary-radius);
+}
+
+.body:not(:has(> sui-node)) {
+    display: none;
+}
+
+.actions {
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space-gap-sm);
+}

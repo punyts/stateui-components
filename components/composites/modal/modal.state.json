@@ -1,0 +1,22 @@
+{
+    "summary": "A modal dialog on a native dialog element, with header, body and footer slots, that keeps its content while closed",
+    "shared": { "elevation": { "default": "overlay" }, "density": {} },
+    "events": ["open", "close"],
+    "commands": ["open", "close", "toggle"],
+    "tokens": {
+        "radius": "{radius.lg}",
+        "padding": "{space.inset.lg}",
+        "gap": "{space.gap.md}"
+    },
+    "properties": {
+        "open": { "type": "boolean", "default": false },
+        "width": { "type": "string", "values": ["md", "sm", "lg", "full"], "default": "md", "reflect": true },
+        "dismissible": { "type": "boolean", "default": true },
+        "_title": { "type": "string", "kind": "content", "default": "" },
+        "_closeLabel": { "type": "string", "kind": "content", "default": "Close" },
+        "header": { "type": "node" },
+        "body": { "type": "node" },
+        "footer": { "type": "node" },
+        "closeGlyph": { "type": "icon", "default": "x", "runtime": true }
+    }
+}
