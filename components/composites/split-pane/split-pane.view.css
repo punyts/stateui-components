@@ -1,0 +1,87 @@
+:host {
+    display: block;
+    container-type: inline-size;
+}
+
+.split {
+    box-sizing: border-box;
+    display: grid;
+    grid-template-columns: minmax(0, calc(var(--sui-split) * 1%)) var(--ui-splitpane-divider-size) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    color: var(--ui-color-text-base);
+    font-family: var(--ui-text-body-family);
+    font-size: var(--ui-text-body-size);
+    line-height: var(--ui-text-body-leading);
+}
+
+:host([orientation=vertical]) .split {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, calc(var(--sui-split) * 1%)) var(--ui-splitpane-divider-size) minmax(0, 1fr);
+    block-size: var(--ui-splitpane-height);
+}
+
+.pane {
+    box-sizing: border-box;
+    min-inline-size: 0;
+    min-block-size: 0;
+    overflow: auto;
+}
+
+:host([collapsed]) .start {
+    visibility: hidden;
+}
+
+.divider {
+    position: relative;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: none;
+    cursor: col-resize;
+    background: transparent;
+}
+
+:host([orientation=vertical]) .divider {
+    cursor: row-resize;
+}
+
+.divider::before {
+    content: "";
+    inline-size: var(--ui-border-width-thin);
+    block-size: 100%;
+    background: var(--ui-color-border-strong);
+    transition: background-color var(--ui-motion-duration-fast) var(--ui-motion-easing-standard);
+}
+
+:host([orientation=vertical]) .divider::before {
+    inline-size: 100%;
+    block-size: var(--ui-border-width-thin);
+}
+
+.divider:hover::before,
+.divider:active::before {
+    background: var(--ui-color-focus);
+}
+
+.divider:focus-visible {
+    outline: 2px solid var(--ui-color-focus);
+    outline-offset: -2px;
+}
+
+@container (max-width: 767.98px) {
+    .split,
+    :host([orientation=vertical]) .split {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: none;
+        block-size: auto;
+    }
+
+    .divider {
+        display: none;
+    }
+
+    :host([collapsed]) .start {
+        display: none;
+    }
+}

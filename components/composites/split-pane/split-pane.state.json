@@ -1,0 +1,21 @@
+{
+    "summary": "Two panes with a draggable, keyboard-operable divider that can fold the start pane away; stacks on narrow screens",
+    "tokenGroup": "splitpane",
+    "events": ["resize"],
+    "tokens": {
+        "divider": { "size": "{space.gap.md}" },
+        "height": "calc({size.control.md} * 10)"
+    },
+    "properties": {
+        "orientation": { "type": "string", "values": ["horizontal", "vertical"], "default": "horizontal", "reflect": true },
+        "split": { "type": "number", "default": 40, "validators": { "range": { "min": 0, "max": 100 } } },
+        "min": { "type": "number", "default": 20, "validators": { "range": { "min": 0, "max": 100 } } },
+        "max": { "type": "number", "default": 80, "validators": { "range": { "min": 0, "max": 100 } } },
+        "collapsible": { "type": "boolean", "default": false },
+        "collapsed": { "type": "boolean", "default": false, "reflect": true, "runtime": true },
+        "shown": { "type": "number", "default": 40, "runtime": true },
+        "start": { "type": "node" },
+        "end": { "type": "node" },
+        "_label": { "type": "string", "kind": "content", "default": "Resize panes" }
+    }
+}

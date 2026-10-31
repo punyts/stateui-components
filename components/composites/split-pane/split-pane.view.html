@@ -1,0 +1,9 @@
+<div class="split" style="--sui-split: {{ $.shown }}">
+    <div class="pane start" id="start">
+        <sui-node state=".start" if="{{ $.start }}"></sui-node>
+    </div>
+    <div class="divider" role="separator" tabindex="0" aria-orientation="{{ $.orientation === 'vertical' ? 'horizontal' : 'vertical' }}" aria-controls="start" aria-label="{{ $._label }}" aria-valuenow="{{ $.shown }}" aria-valuemin="{{ $.collapsed ? 0 : $.min }}" aria-valuemax="{{ $.max }}" onkeydown="{{ onKeyDown }}" onpointerdown="{{ onPointerDown }}" onpointermove="{{ onPointerMove }}" onpointerup="{{ onPointerUp }}" onpointercancel="{{ onPointerCancel }}"></div>
+    <div class="pane end">
+        <sui-node state=".end" if="{{ $.end }}"></sui-node>
+    </div>
+</div>

@@ -20,6 +20,9 @@ Partials a component's `view.css` pulls in with a line `@include "<name>.css";` 
 ## steps/
 `steps.ts`: the pure parts of `stepper`: `planSteps` (number, done, current and disabled for every step, with the `linear` rule), `currentStep` and `keysOf`. `stepper` imports it as `../shared/steps/steps.js`.
 
+## split/
+`split.ts`: the pure parts of `splitPane`: `readBounds` (`min` and `max`, each inside 0 to 100, `max` never below `min`), `clampSplit`, `splitForKey` (5% per arrow key, Home and End, Left and Right swapped in right-to-left text), `splitForDrag` (pixels to percent of the container, clamped), `KEY_STEP` and `DEFAULT_SPLIT`. `splitPane` imports it as `../shared/split/split.js`.
+
 ## tone/
 `toneGlyph.ts`: `toneIcon(tone)` gives the default icon of a tone (`info-circle` for `info`, `neutral` and `accent`, `alert-circle`, `alert-triangle` and `circle-check` for `danger`, `warning` and `success`). `toast` uses it; a controller imports it as `../shared/tone/toneGlyph.js`.
 
