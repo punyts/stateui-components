@@ -62,4 +62,24 @@ describe('table shape', () => {
         // Assert
         expect(codes.length).toBeGreaterThan(0);
     });
+
+    it('should accept selection and sort properties', () => {
+        // Act
+        const codes = check({ selectable: 'multi', sortBy: 'customer.name', sortDir: 'desc', selected: 'o1' });
+
+        // Assert
+        expect(codes).toEqual([]);
+    });
+
+    it.each([
+        ['selectable', 'some'],
+        ['sortDir', 'up'],
+        ['sortBy', 'a b']
+    ])('should report %s %j as SUI-STATE-INVALID', (property, value) => {
+        // Act
+        const codes = check({ [property]: value });
+
+        // Assert
+        expect(codes).toContain('SUI-STATE-INVALID');
+    });
 });

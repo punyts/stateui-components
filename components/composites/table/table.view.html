@@ -1,8 +1,12 @@
-<div class="table">
+<div class="table" onclick="{{ onClick }}" ondblclick="{{ onDoubleClick }}" onkeydown="{{ onKeyDown }}">
     <div class="header" role="rowgroup">
         <div class="head-row" role="row" aria-rowindex="1">
-            <div class="head" role="columnheader" if="{{ $.columns }}" repeat="{{ $k,$i,$v in $.columns }}" key="{{ $k }}" data-key="{{ $k }}" data-align="{{ $v.align || 'start' }}">
-                <span class="title">{{ $v._title }}</span>
+            <div class="head" role="columnheader" if="{{ $.columns }}" repeat="{{ $k,$i,$v in $.columns }}" key="{{ $k }}" data-key="{{ $k }}" data-align="{{ $v.align || 'start' }}" aria-sort="{{ ($v.sortable &amp;&amp; $v.field) ? (($.sortBy === $v.field) ? (($.sortDir === 'desc') ? 'descending' : 'ascending') : 'none') : null }}">
+                <button class="sort" type="button" if="{{ $v.sortable &amp;&amp; $v.field }}" data-key="{{ $k }}" onclick="{{ onSortHeader }}">
+                    <span class="title">{{ $v._title }}</span>
+                    <span class="arrow" aria-hidden="true">{{ ($.sortBy === $v.field) ? (($.sortDir === 'desc') ? '▼' : '▲') : '' }}</span>
+                </button>
+                <span class="title" if="{{ !($v.sortable &amp;&amp; $v.field) }}">{{ $v._title }}</span>
             </div>
         </div>
     </div>

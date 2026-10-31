@@ -17,7 +17,7 @@
 }
 
 .row[data-odd] {
-    background: var(--table-stripe, transparent);
+    background: var(--sui-row-stripe, var(--table-stripe, transparent));
 }
 
 .cell {

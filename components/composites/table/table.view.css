@@ -56,6 +56,37 @@
     text-align: end;
 }
 
+.sort {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ui-space-gap-sm);
+    max-inline-size: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.sort:focus-visible {
+    outline: var(--ui-border-width-thick) solid var(--ui-color-focus);
+    outline-offset: var(--ui-border-width-thick);
+}
+
+.title {
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.arrow {
+    flex: none;
+    font-size: 0.75em;
+}
+
 .body {
     position: relative;
     flex: 1 1 auto;
@@ -79,4 +110,9 @@
 .empty-text {
     margin: 0;
     color: var(--ui-color-text-muted);
+}
+
+:host(:is([selectable=single], [selectable=multi])) {
+    --sui-row-cursor: pointer;
+    --sui-row-selected: var(--ui-color-surface-sunken);
 }

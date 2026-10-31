@@ -1,6 +1,7 @@
 {
-    "summary": "A read-only table over a list of records: a keyed map of columns, a fixed header and a virtualised body",
-    "commands": ["delete"],
+    "summary": "A table over a list of records: keyed columns, a fixed header, a virtual body, sortable columns and row selection",
+    "events": ["sort", "select", "activate"],
+    "commands": ["delete", "clearSelection", "selectAll"],
     "shared": { "density": {} },
     "tokenGroup": "table",
     "tokens": {
@@ -12,6 +13,9 @@
     "properties": {
         "key": { "type": "string", "validators": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" }, "default": "id" },
         "striped": { "type": "boolean", "default": false, "reflect": true },
+        "selectable": { "type": "string", "values": ["none", "single", "multi"], "default": "none", "reflect": true },
+        "sortBy": { "type": "string", "validators": { "pattern": "^$|^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*$" }, "default": "" },
+        "sortDir": { "type": "string", "values": ["asc", "desc"], "default": "asc" },
         "columns": {
             "type": "map",
             "items": {
@@ -27,9 +31,11 @@
             "default": {}
         },
         "items": { "type": ["array", "object"] },
+        "selected": { "type": ["string", "number", "array"] },
         "total": { "type": "integer", "validators": { "range": { "min": 0 } } },
         "empty": { "type": "node" },
         "_empty": { "type": "string", "kind": "content", "default": "No records" },
+        "current": { "type": "object", "default": {}, "runtime": true, "exposed": true },
         "body": {
             "type": "object",
             "default": {
@@ -38,6 +44,7 @@
                 "overscan": 5,
                 "role": "rowgroup",
                 "rowIndexOffset": 1,
+                "selectable": false,
                 "loading": false,
                 "count": 0,
                 "slots": {},

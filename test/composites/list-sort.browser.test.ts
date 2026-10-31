@@ -184,8 +184,10 @@ describe('list sort in Chromium', () => {
         await frame();
 
         // Act: in one frame, callbacks run in the order they were requested: the start mark, the list's recompute, the
-        // end mark. The fastest of three runs is kept, so other test files running in parallel do not skew the timing
-        for (const direction of ['desc', 'asc', 'desc']) {
+        // end mark. The fastest of five runs, each after a short idle gap, is kept, so other test files running in parallel
+        // do not skew the timing
+        for (const direction of ['desc', 'asc', 'desc', 'asc', 'desc']) {
+            await new Promise((resolve) => setTimeout(resolve, 100));
             let started = 0;
             let ended = 0;
             requestAnimationFrame(() => {

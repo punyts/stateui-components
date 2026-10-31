@@ -38,6 +38,7 @@
 }
 
 .slot[data-selected] {
+    --sui-row-stripe: transparent;
     background: var(--sui-row-selected, none);
 }
 
