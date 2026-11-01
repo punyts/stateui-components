@@ -1,0 +1,27 @@
+<div class="calendar">
+    <div class="bar">
+        <button class="nav" type="button" aria-label="{{ $._previous }}" onclick="{{ onPrevious }}">
+            <ui-icon name="chevron-left" size="sm"></ui-icon>
+        </button>
+        <h2 class="heading" id="heading" aria-live="polite" aria-atomic="true">{{ $.heading }}</h2>
+        <button class="nav" type="button" aria-label="{{ $._next }}" onclick="{{ onNext }}">
+            <ui-icon name="chevron-right" size="sm"></ui-icon>
+        </button>
+        <button class="today" type="button" onclick="{{ onToday }}">{{ $._today }}</button>
+    </div>
+    <div class="month" role="grid" aria-labelledby="heading" onclick="{{ onClick }}" onkeydown="{{ onKeyDown }}">
+        <div class="row heads" role="row">
+            <span class="weekday" role="columnheader" repeat="{{ $k,$i,$v in $.weekdays }}" key="{{ $k }}" aria-label="{{ $v.long }}">{{ $v.short }}</span>
+        </div>
+        <div class="row" role="row" repeat="{{ $rk,$ri,$r in $.weeks }}" key="{{ $rk }}">
+            <div class="day" role="gridcell" repeat="{{ $dk,$di,$d in $r.days }}" key="{{ $dk }}" data-date="{{ $d.iso }}" tabindex="{{ $d.tab }}" aria-label="{{ $d.label }}" aria-current="{{ $d.today ? 'date' : null }}" data-outside="{{ $d.outside ? '' : null }}" data-active="{{ $d.active ? '' : null }}" data-today="{{ $d.today ? '' : null }}">
+                <span class="number" aria-hidden="true">{{ $d.number }}</span>
+                <button class="record" type="button" repeat="{{ $ek,$ei,$e in $d.records }}" key="{{ $ek }}" data-record="{{ $e.key }}" tabindex="{{ $d.tab }}" aria-label="{{ $e.label }}">
+                    <span class="time" if="{{ $e.time !== '' }}">{{ $e.time }}</span>
+                    <span class="name">{{ $e.title }}</span>
+                </button>
+                <button class="more" type="button" if="{{ $d.more &gt; 0 }}" data-more="{{ $d.iso }}" tabindex="{{ $d.tab }}" aria-label="{{ $d.moreLabel }}">{{ $d.moreText }}</button>
+            </div>
+        </div>
+    </div>
+</div>

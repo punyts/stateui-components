@@ -1,0 +1,175 @@
+:host {
+    display: block;
+    min-inline-size: 0;
+}
+
+.calendar {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ui-space-gap-md);
+    color: var(--ui-color-text-base);
+    font-family: var(--ui-text-body-family);
+    font-size: var(--ui-text-body-size);
+    line-height: var(--ui-text-body-leading);
+}
+
+.bar {
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space-gap-sm);
+}
+
+.heading {
+    flex: 1 1 auto;
+    margin: 0;
+    font-family: var(--ui-text-heading-family);
+    font-size: var(--ui-text-heading-size);
+    font-weight: var(--ui-text-heading-weight);
+    line-height: var(--ui-text-heading-leading);
+}
+
+.nav,
+.today {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--ui-size-control-md);
+    min-block-size: var(--ui-size-control-md);
+    margin: 0;
+    padding-block: 0;
+    padding-inline: var(--ui-space-inset-sm);
+    font: inherit;
+    color: var(--ui-color-text-base);
+    background: var(--ui-color-surface-base);
+    border: var(--ui-border-width-thin) solid var(--ui-color-border-strong);
+    border-radius: var(--ui-calendar-radius);
+    cursor: pointer;
+}
+
+.nav:hover,
+.today:hover {
+    background: var(--ui-color-surface-sunken);
+}
+
+.nav:focus-visible,
+.today:focus-visible,
+.record:focus-visible,
+.more:focus-visible {
+    outline: 2px solid var(--ui-color-focus);
+    outline-offset: 2px;
+}
+
+.month {
+    display: flex;
+    flex-direction: column;
+    border: var(--ui-border-width-thin) solid var(--ui-color-border-base);
+    border-radius: var(--ui-calendar-radius);
+    overflow: hidden;
+}
+
+.row {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.row + .row {
+    border-block-start: var(--ui-border-width-thin) solid var(--ui-color-border-base);
+}
+
+.weekday {
+    padding: var(--ui-space-inset-sm);
+    color: var(--ui-color-text-muted);
+    font-family: var(--ui-text-label-family);
+    font-size: var(--ui-text-caption-size);
+    font-weight: var(--ui-text-label-weight);
+    text-align: center;
+    background: var(--ui-color-surface-sunken);
+}
+
+.day {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--ui-space-gap-sm);
+    min-block-size: var(--ui-calendar-cell);
+    min-inline-size: 0;
+    padding: var(--ui-space-inset-sm);
+    background: var(--ui-color-surface-base);
+}
+
+.day + .day {
+    border-inline-start: var(--ui-border-width-thin) solid var(--ui-color-border-base);
+}
+
+.day:focus-visible {
+    outline: 2px solid var(--ui-color-focus);
+    outline-offset: -2px;
+}
+
+.day[data-outside] {
+    color: var(--ui-color-text-muted);
+    background: var(--ui-color-surface-sunken);
+}
+
+.number {
+    align-self: flex-start;
+    box-sizing: border-box;
+    min-inline-size: var(--ui-size-icon-lg);
+    padding-inline: var(--ui-space-gap-sm);
+    border-radius: var(--ui-radius-full);
+    font-weight: 600;
+    text-align: center;
+}
+
+.day[data-today] .number {
+    color: var(--ui-calendar-selected-on);
+    background: var(--ui-calendar-selected-fill);
+}
+
+.day[data-active] .number {
+    text-decoration: underline;
+}
+
+.record,
+.more {
+    box-sizing: border-box;
+    display: flex;
+    align-items: baseline;
+    gap: var(--ui-space-gap-sm);
+    inline-size: 100%;
+    min-inline-size: 0;
+    margin: 0;
+    padding-block: 0;
+    padding-inline: var(--ui-space-gap-sm);
+    font: inherit;
+    font-size: var(--ui-text-caption-size);
+    text-align: start;
+    color: var(--ui-color-text-base);
+    background: var(--ui-color-surface-sunken);
+    border: var(--ui-border-width-thin) solid var(--ui-color-border-base);
+    border-radius: var(--ui-radius-sm);
+    cursor: pointer;
+}
+
+.record:hover,
+.more:hover {
+    background: var(--ui-color-border-base);
+}
+
+.time {
+    flex: none;
+    color: var(--ui-color-text-muted);
+}
+
+.name {
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.more {
+    color: var(--ui-color-text-muted);
+}
