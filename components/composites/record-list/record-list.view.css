@@ -4,8 +4,10 @@
     --sui-row-h: var(--ui-recordlist-row);
 }
 
+/* At most the viewport height, so a list that grows to its rows still scrolls and renders only the rows in view */
 .list {
     block-size: 100%;
+    max-block-size: 100dvh;
     overflow-y: auto;
     overflow-x: hidden;
     scrollbar-gutter: stable;

@@ -87,15 +87,13 @@
     font-size: 0.75em;
 }
 
+/* The rows are in flow: the body grows to them where the table has no definite height and fills it where it has one */
 .body {
     position: relative;
     flex: 1 1 auto;
+    display: grid;
+    grid-template-rows: auto;
     min-block-size: calc(var(--ui-recordlist-row) * 3);
-}
-
-.body ui-record-list {
-    position: absolute;
-    inset: 0;
 }
 
 .empty {

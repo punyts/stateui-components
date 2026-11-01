@@ -308,3 +308,63 @@ describe('table columns, cells and rows in Chromium', () => {
         expect(emptyText(mounted)).toBe('Keine Einträge');
     });
 });
+
+describe('table height in Chromium', () => {
+    afterEach(() => mountComponent.unmountAll());
+
+    const rowHeight = (mounted: MountedComponent): number => (rows(mounted)[0] as HTMLElement).getBoundingClientRect().height;
+    const mountAuto = async (count: number): Promise<MountedComponent> => {
+        const mounted = await mountTable({}, { orders: orders(count) });
+        (mounted.element as HTMLElement).style.blockSize = '';
+        await settle();
+        return mounted;
+    };
+
+    it('should grow to its rows where it has no definite height', async () => {
+        // Arrange and Act
+        const mounted = await mountAuto(11);
+
+        // Assert
+        expect(rows(mounted)).toHaveLength(11);
+        expect(scroller(mounted).clientHeight).toBeCloseTo(rowHeight(mounted) * 11, 0);
+        expect(scroller(mounted).scrollHeight).toBe(scroller(mounted).clientHeight);
+    });
+
+    it('should keep the height of three rows with fewer rows and no definite height', async () => {
+        // Arrange and Act
+        const mounted = await mountAuto(1);
+
+        // Assert
+        expect(scroller(mounted).clientHeight).toBeCloseTo(rowHeight(mounted) * 3, 0);
+    });
+
+    it('should fill a definite height and scroll the rows that do not fit', async () => {
+        // Arrange and Act
+        const mounted = await mountTable({}, { orders: orders(1000) }, 300);
+        const header = shadow(mounted).querySelector<HTMLElement>('.header') as HTMLElement;
+
+        // Assert
+        expect(scroller(mounted).getBoundingClientRect().height).toBeCloseTo(300 - header.getBoundingClientRect().height, 0);
+        expect(scroller(mounted).scrollHeight).toBeGreaterThan(scroller(mounted).clientHeight);
+        expect(rows(mounted).length).toBeLessThan(40);
+    });
+
+    it('should fill a definite height that is taller than its rows', async () => {
+        // Arrange and Act
+        const mounted = await mountTable({}, { orders: orders(2) }, 300);
+        const header = shadow(mounted).querySelector<HTMLElement>('.header') as HTMLElement;
+
+        // Assert
+        expect(scroller(mounted).getBoundingClientRect().height).toBeCloseTo(300 - header.getBoundingClientRect().height, 0);
+    });
+
+    it('should stop growing at the viewport height and render only the rows in view', async () => {
+        // Arrange and Act
+        const mounted = await mountAuto(1000);
+
+        // Assert
+        expect(scroller(mounted).getBoundingClientRect().height).toBeLessThanOrEqual(window.innerHeight);
+        expect(scroller(mounted).scrollHeight).toBeGreaterThan(scroller(mounted).clientHeight);
+        expect(rows(mounted).length).toBeLessThan(Math.ceil(window.innerHeight / rowHeight(mounted)) + 20);
+    });
+});
