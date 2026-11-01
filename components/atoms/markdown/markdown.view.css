@@ -1,0 +1,171 @@
+:host {
+    display: block;
+}
+
+:host([profile=inline]) {
+    display: inline;
+}
+
+.markdown {
+    color: var(--ui-color-text-base);
+    font-family: var(--ui-text-body-family);
+    font-size: var(--ui-text-body-size);
+    font-weight: var(--ui-text-body-weight);
+    line-height: var(--ui-text-body-leading);
+    overflow-wrap: anywhere;
+}
+
+:host(:not([profile=inline])) .markdown,
+.markdown blockquote {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ui-markdown-gap);
+}
+
+:host([profile=inline]) .markdown {
+    display: inline;
+}
+
+.markdown p,
+.markdown ul,
+.markdown ol,
+.markdown pre,
+.markdown blockquote,
+.markdown table,
+.markdown hr,
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4,
+.markdown h5,
+.markdown h6 {
+    margin: 0;
+}
+
+.markdown p.raw {
+    white-space: pre-wrap;
+}
+
+.markdown h1 {
+    font-family: var(--ui-text-display-family);
+    font-size: var(--ui-text-display-size);
+    font-weight: var(--ui-text-display-weight);
+    line-height: var(--ui-text-display-leading);
+}
+
+.markdown h2 {
+    font-family: var(--ui-text-title-family);
+    font-size: var(--ui-text-title-size);
+    font-weight: var(--ui-text-title-weight);
+    line-height: var(--ui-text-title-leading);
+}
+
+.markdown h3,
+.markdown h4 {
+    font-family: var(--ui-text-heading-family);
+    font-size: var(--ui-text-heading-size);
+    font-weight: var(--ui-text-heading-weight);
+    line-height: var(--ui-text-heading-leading);
+}
+
+.markdown h5 {
+    font-family: var(--ui-text-label-family);
+    font-size: var(--ui-text-label-size);
+    font-weight: var(--ui-text-label-weight);
+    line-height: var(--ui-text-label-leading);
+}
+
+.markdown h6 {
+    font-family: var(--ui-text-caption-family);
+    font-size: var(--ui-text-caption-size);
+    font-weight: var(--ui-text-caption-weight);
+    line-height: var(--ui-text-caption-leading);
+}
+
+.markdown strong {
+    font-weight: var(--ui-text-heading-weight);
+}
+
+.markdown ul,
+.markdown ol {
+    padding-inline-start: var(--ui-space-inset-lg);
+}
+
+.markdown li > * + * {
+    margin-block-start: var(--ui-space-gap-sm);
+}
+
+.markdown blockquote {
+    padding-inline-start: var(--ui-space-inset-md);
+    color: var(--ui-color-text-muted);
+    border-inline-start: var(--ui-border-width-thick) solid var(--ui-color-border-strong);
+}
+
+.markdown code {
+    font-family: var(--ui-text-code-family);
+    font-size: var(--ui-text-code-size);
+    font-weight: var(--ui-text-code-weight);
+    line-height: var(--ui-text-code-leading);
+}
+
+.markdown code.inline {
+    padding-inline: var(--ui-space-gap-sm);
+    background: var(--ui-markdown-code-background);
+    border-radius: var(--ui-radius-sm);
+}
+
+.markdown pre {
+    padding: var(--ui-space-inset-sm);
+    overflow-x: auto;
+    background: var(--ui-markdown-code-background);
+    border-radius: var(--ui-radius-sm);
+}
+
+.markdown pre code {
+    white-space: pre;
+}
+
+.markdown hr {
+    border: 0;
+    border-block-start: var(--ui-border-width-thin) solid var(--ui-color-border-base);
+}
+
+.markdown table {
+    border-collapse: collapse;
+    inline-size: max-content;
+    max-inline-size: 100%;
+}
+
+.markdown th,
+.markdown td {
+    padding: var(--ui-space-inset-sm);
+    text-align: start;
+    border: var(--ui-border-width-thin) solid var(--ui-color-border-base);
+}
+
+.markdown th {
+    font-family: var(--ui-text-label-family);
+    font-size: var(--ui-text-label-size);
+    font-weight: var(--ui-text-label-weight);
+    line-height: var(--ui-text-label-leading);
+    background: var(--ui-color-surface-sunken);
+}
+
+.markdown [data-align=center] {
+    text-align: center;
+}
+
+.markdown [data-align=right] {
+    text-align: end;
+}
+
+.markdown .link {
+    color: var(--ui-color-focus);
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+    cursor: pointer;
+}
+
+.markdown .link:hover {
+    text-decoration-thickness: var(--ui-border-width-thick);
+}

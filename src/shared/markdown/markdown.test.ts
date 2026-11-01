@@ -276,12 +276,11 @@ describe('the length cut', () => {
         expect(show(result.children)).toBe('p("aaa") p("bbb")');
     });
 
-    it('should never cut inside a block that fits whole', () => {
-        // Act
-        const result = parseMarkdown(source, { maxLength: 13 });
-
+    it('should keep a block that fits whole and drop the next one that does not', () => {
         // Assert
-        expect(show(result.children)).toBe('p("aaa") p("bbb")');
+        expect(show(parseMarkdown(source, { maxLength: 13 }).children)).toBe('p("aaa") p("bbb") p("ccc")');
+        expect(show(parseMarkdown(source, { maxLength: 12 }).children)).toBe('p("aaa") p("bbb")');
+        expect(show(parseMarkdown(source, { maxLength: 8 }).children)).toBe('p("aaa") p("bbb")');
     });
 
     it('should not cut at a blank line inside a code fence', () => {
@@ -293,7 +292,7 @@ describe('the length cut', () => {
 
         // Assert
         expect(show(result.children)).toBe('p("intro")');
-        expect(cutPoint(fenced, 18)).toBe(6);
+        expect(cutPoint(fenced, 18)).toBe(5);
     });
 
     it('should cut a single long paragraph at the last whole line, else at the limit', () => {

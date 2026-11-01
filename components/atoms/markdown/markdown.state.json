@@ -1,0 +1,14 @@
+{
+    "summary": "Formatted text from Markdown source, rendered safely with the theme typography: no HTML, and links that only raise press",
+    "events": ["press"],
+    "tokens": {
+        "gap": "{space.gap.md}",
+        "code": { "background": "{color.surface.sunken}" }
+    },
+    "properties": {
+        "profile": { "type": "string", "values": ["basic", "inline"], "default": "basic", "reflect": true },
+        "headingOffset": { "type": "integer", "default": 1, "validators": { "range": { "min": 0, "max": 5 } } },
+        "maxLength": { "type": "integer", "default": 20000, "validators": { "range": { "min": 0, "max": 100000 } } },
+        "_text": { "type": "string", "kind": "content", "default": "Sample text in **Markdown**" }
+    }
+}

@@ -32,7 +32,7 @@ const isBlankLine = (source: string, from: number, to: number): boolean => {
 };
 
 /**
- * Where to cut a source of more than `max` characters: at the start of the last blank line that fits (a blank line inside
+ * Where to cut a source of more than `max` characters: at the end of the last block that fits whole (just before a blank line) (a blank line inside
  * an open code fence is not a boundary), else at the end of the last whole line that fits, else at `max`
  */
 export function cutPoint(source: string, max: number): number {
@@ -44,7 +44,8 @@ export function cutPoint(source: string, max: number): number {
     while (from <= source.length) {
         let to = from;
         while (to < source.length && source.charCodeAt(to) !== 10) to++;
-        if (to > max) break;
+        const blank = isBlankLine(source, from, to);
+        if (to > max && !(blank && from - 1 <= max)) break;
         let indent = from;
         while (indent < to && indent - from < 4 && source.charCodeAt(indent) === 32) indent++;
         const code = source.charCodeAt(indent);
@@ -58,8 +59,8 @@ export function cutPoint(source: string, max: number): number {
                 } else if (code === fence && run - indent >= fenceLength && isBlankLine(source, run, to)) fence = 0;
             }
         }
-        if (fence === 0 && from > 0 && isBlankLine(source, from, to)) boundary = from;
-        lineEnd = to;
+        if (fence === 0 && from > 0 && blank) boundary = from - 1;
+        if (to <= max) lineEnd = to;
         from = to + 1;
     }
     if (boundary !== -1) return boundary;
