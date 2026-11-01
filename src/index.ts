@@ -20,3 +20,9 @@ export { ALIGNED_PLACEMENTS, PLACEMENTS, createPopover, isAlignedPlacement, isAn
 export type { AlignedPlacement, AnyPlacement, Placement, PopoverDismissReason, PopoverHandle, PopoverOptions } from './shared/popover/popover.js';
 export { createBandScale, createLinearScale, extentOf, niceTicks, stack, stackExtent } from './shared/chart/scale.js';
 export type { BandOptions, BandScale, Extent, LinearScale, NiceTicks, StackedValue, TickFormatter } from './shared/chart/scale.js';
+export { MINUTES_PER_DAY, addDays, addMonths, dayNumber, daysInMonth, fromDayNumber, isIsoDate, isoOfDay, monthGrid, parseIsoDate, parseMoment, todayIso, toIso, weekdayOfDay } from './shared/dates/isoDate.js';
+export type { DateParts, GridDay, Moment } from './shared/dates/isoDate.js';
+export { dateOrder, formatDate, formatDateRange, formatDayNumber, formatHour, formatLongDate, formatMonthYear, formatTime, monthNames, parseDate, weekdayNames } from './shared/dates/localeDates.js';
+export type { NameWidth } from './shared/dates/localeDates.js';
+export { FIRST_DAY_BY_REGION, firstDayFromIntl, firstDayFromTable, firstDayOf } from './shared/dates/weekStart.js';
+export type { FirstDay } from './shared/dates/weekStart.js';
