@@ -47,3 +47,5 @@ Partials a component's `view.css` pulls in with a line `@include "<name>.css";` 
 
 ## chart/
 `scale.ts`: the pure parts of every chart type: `createLinearScale`, `createBandScale` (both with `invert`), `niceTicks` (round tick values, labels from a formatter the caller gives), `stack` (positive values up and negative values down from 0), `extentOf` and `stackExtent`. No DOM and no locale code. `chart` imports it as `../shared/chart/scale.js`.
+
+`geometry.ts`: `buildScene(input)`, the pure drawing of a bar, line or area chart as a flat list of SVG primitives (`id`, `layer`, `tag`, `className`, `attrs`, `text`) with stable ids, plus `seriesClass` (`s1` to `s8`, the categorical data colours in series order) and `SERIES_COLORS`. The margins are estimated from the label text, so nothing reads layout. `svgScene.ts`: `createSvgScene(svg)` draws a scene with `createElementNS` into one `g` per layer and remembers what it wrote, so a redraw writes only the attributes and text that changed, and `clear` removes everything. `data.ts`: `readRows` (an array or a keyed map of records), `readSeries`, `readCategories` and `readValues`.

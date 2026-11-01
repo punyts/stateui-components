@@ -1,0 +1,7 @@
+<div class="chart">
+    <span class="title" id="title">{{ $._title }}</span>
+    <span class="description" id="description">{{ $._description }}</span>
+    <div class="plot">
+        <svg class="svg" role="group" aria-labelledby="title" aria-describedby="{{ $._description !== '' ? 'description' : null }}"></svg>
+    </div>
+</div>

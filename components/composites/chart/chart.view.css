@@ -1,0 +1,105 @@
+:host {
+    display: block;
+    min-inline-size: 0;
+    --sui-series: var(--ui-color-data-categorical-1);
+}
+
+.chart {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ui-space-gap-sm);
+    color: var(--ui-color-text-base);
+    font-family: var(--ui-text-body-family);
+    font-size: var(--ui-text-body-size);
+    line-height: var(--ui-text-body-leading);
+}
+
+.title {
+    font-family: var(--ui-text-heading-family);
+    font-size: var(--ui-text-heading-size);
+    font-weight: var(--ui-text-heading-weight);
+    line-height: var(--ui-text-heading-leading);
+}
+
+.description {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.plot {
+    box-sizing: border-box;
+    inline-size: 100%;
+    block-size: var(--ui-chart-height);
+    min-inline-size: 0;
+}
+
+.svg {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    overflow: visible;
+}
+
+.gridline {
+    stroke: var(--ui-color-border-base);
+    stroke-width: var(--ui-border-width-thin);
+}
+
+.baseline {
+    stroke: var(--ui-color-border-strong);
+    stroke-width: var(--ui-border-width-thin);
+}
+
+.tick {
+    fill: var(--ui-color-text-muted);
+    font-family: var(--ui-text-caption-family);
+    font-size: var(--ui-text-caption-size);
+    font-weight: var(--ui-text-caption-weight);
+}
+
+.tick.y {
+    text-anchor: end;
+}
+
+.tick.x {
+    text-anchor: middle;
+}
+
+.s1 { --sui-series: var(--ui-color-data-categorical-1); }
+.s2 { --sui-series: var(--ui-color-data-categorical-2); }
+.s3 { --sui-series: var(--ui-color-data-categorical-3); }
+.s4 { --sui-series: var(--ui-color-data-categorical-4); }
+.s5 { --sui-series: var(--ui-color-data-categorical-5); }
+.s6 { --sui-series: var(--ui-color-data-categorical-6); }
+.s7 { --sui-series: var(--ui-color-data-categorical-7); }
+.s8 { --sui-series: var(--ui-color-data-categorical-8); }
+
+.bar {
+    fill: var(--sui-series);
+}
+
+.line {
+    fill: none;
+    stroke: var(--sui-series);
+    stroke-width: var(--ui-border-width-thick);
+    stroke-linejoin: round;
+    stroke-linecap: round;
+}
+
+.area {
+    fill: var(--sui-series);
+    fill-opacity: 0.2;
+    stroke: none;
+}
+
+.dot {
+    fill: var(--sui-series);
+    stroke: var(--ui-color-surface-base);
+    stroke-width: var(--ui-border-width-thin);
+}

@@ -1,0 +1,29 @@
+{
+    "summary": "An SVG bar, line or area chart over linked records, with ticks for the locale and the theme data colours",
+    "tokenGroup": "chart",
+    "tokens": {
+        "height": "calc({size.control.md} * 6)"
+    },
+    "properties": {
+        "type": { "type": "string", "values": ["bar", "line", "area"], "default": "bar", "reflect": true },
+        "x": { "type": "string", "validators": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" }, "default": "x" },
+        "series": {
+            "type": "map",
+            "default": {},
+            "items": {
+                "field": { "type": "string", "validators": { "pattern": "^$|^[A-Za-z_][A-Za-z0-9_]*$" }, "default": "" },
+                "_label": { "type": "string", "kind": "content", "default": "" }
+            }
+        },
+        "stacked": { "type": "boolean", "default": false },
+        "format": { "type": "string", "values": ["number", "percent", "currency", "duration"], "default": "number" },
+        "currency": {
+            "type": "string",
+            "validators": { "pattern": "^[A-Z]{3}$" },
+            "requiredWhen": { "property": "format", "equals": "currency" }
+        },
+        "records": { "type": ["array", "object"] },
+        "_title": { "type": "string", "kind": "content", "default": "Chart" },
+        "_description": { "type": "string", "kind": "content", "default": "" }
+    }
+}
