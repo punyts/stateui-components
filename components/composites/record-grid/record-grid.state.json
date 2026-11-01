@@ -1,0 +1,19 @@
+{
+    "summary": "Draws only the visible records as a grid of cards through a small pool of recycled item nodes",
+    "tokenGroup": "recordgrid",
+    "tokens": {
+        "itemmin": "calc({size.control.md} * 6)",
+        "itemheight": "calc({size.control.md} * 4)"
+    },
+    "properties": {
+        "key": { "type": "string", "validators": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" }, "default": "id" },
+        "overscan": { "type": "integer", "validators": { "range": { "min": 0, "max": 20 } }, "default": 2 },
+        "records": { "type": ["array", "object"] },
+        "order": { "type": "array" },
+        "row": { "type": "node", "row": true },
+        "count": { "type": "integer", "default": 0, "runtime": true },
+        "colCount": { "type": "integer", "default": 1, "runtime": true },
+        "rowCount": { "type": "integer", "default": 0, "runtime": true },
+        "slots": { "type": "object", "default": {}, "runtime": true }
+    }
+}

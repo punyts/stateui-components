@@ -1,0 +1,8 @@
+<div class="grid">
+    <div class="rows" style="--sui-cols: {{ $.colCount }}; --sui-rows: {{ $.rowCount }}">
+        <div class="probe" aria-hidden="true"></div>
+        <div class="slot" if="{{ $.slots }}" repeat="{{ $k,$i,$v in $.slots }}" key="{{ $k }}" data-slot="{{ $k }}" tabindex="{{ $v.slotIndex &gt;= 0 &amp;&amp; $v.slotTab ? 0 : -1 }}" hidden="{{ $v.slotIndex &lt; 0 }}" style="--sui-col: {{ $v.slotIndex % $.colCount }}; --sui-row: {{ ($v.slotIndex - $v.slotIndex % $.colCount) / $.colCount }}">
+            <sui-node state="{{ $v }}"></sui-node>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,48 @@
+:host {
+    display: block;
+    min-block-size: 0;
+    --sui-item-min: var(--ui-recordgrid-itemmin);
+    --sui-item-h: var(--ui-recordgrid-itemheight);
+}
+
+.grid {
+    block-size: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-gutter: stable;
+}
+
+.rows {
+    position: relative;
+    block-size: calc(var(--sui-rows, 0) * var(--sui-item-h));
+}
+
+.probe {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    inline-size: var(--sui-item-min);
+    block-size: var(--sui-item-h);
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.slot {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: calc(var(--sui-col, 0) * 100% / var(--sui-cols, 1));
+    inline-size: calc(100% / var(--sui-cols, 1));
+    block-size: var(--sui-item-h);
+    box-sizing: border-box;
+    overflow: hidden;
+    transform: translateY(calc(var(--sui-row, 0) * var(--sui-item-h)));
+}
+
+.slot[hidden] {
+    display: none;
+}
+
+.slot:focus-visible {
+    outline: var(--ui-border-width-thick) solid var(--ui-color-focus);
+    outline-offset: calc(var(--ui-border-width-thick) * -1);
+}

@@ -4,6 +4,8 @@ export { createSlotPool } from './slotPool.js';
 export type { SlotPool, SlotPoolOptions } from './slotPool.js';
 export { createViewportObserver, offsetFor, windowFor } from './viewport.js';
 export type { ViewportObserver, ViewportOptions } from './viewport.js';
+export { bandOffset, columnsFor, createGridViewport, gridWindow, rowsFor } from './gridViewport.js';
+export type { GridMeasure, GridViewport, GridViewportOptions } from './gridViewport.js';
 export { MAX_SLOTS, poolSize, poolStart, readWindow, sameWindow } from './window.js';
 export type { RecordWindow } from './window.js';
 export type { RecordViewElement, SlotMeta } from './recordView.js';
