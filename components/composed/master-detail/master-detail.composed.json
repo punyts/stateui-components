@@ -1,17 +1,17 @@
 {
     "component": "panel",
-    "layout": { "type": "region" },
+    "layout": { "type": "grid", "cols": 3, "collapseBelow": "md" },
     "children": {
         "list": {
             "component": "list",
-            "placement": { "region": "w" },
+            "placement": { "span": 1 },
             "selectable": "single",
             "divided": true,
             "row": { "component": "text", "<-_text": "$row.name" }
         },
         "detail": {
             "component": "panel",
-            "placement": { "region": "center" },
+            "placement": { "span": 2 },
             "_title": "Details",
             "actions": {
                 "component": "button",

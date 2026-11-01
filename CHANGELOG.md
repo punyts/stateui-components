@@ -1,6 +1,7 @@
 # Changelog
 
 ## 0.1.0
+- `masterDetail`: the master list was about 15 px wide because the `region` layout sizes the `w` column to its content and a pooled list has almost no intrinsic width. It is now a three-column `grid` (list one column, detail two) that stacks below `md`. `test/composed/master-detail.browser.test.ts` checks the master is at least 200 px in a 1000 px container and full width below the breakpoint.
 - `icon` honours a static `name` (and `filled`) attribute when it shares its parent's scope: `<ui-icon name="chevron-left" size="sm">` in a component view drew nothing because the icon read `<host basePath>.name`. An icon with a `state` attribute still reads its own state. `test/icons/icon-glyphs.browser.test.ts` mounts every catalog example and asserts no `ui-icon` in any shadow root has an empty glyph.
 - `messageList` default row (AMM-1808): a stacked `panel` instead of the one-line `toolbar` workaround: an `avatar`, then a `content` `panel` holding the `markdown` body and the time. A test checks that a pool that shrinks logs no `SUI-NODE-MISSING` (`<sui-node>` no longer reports a deleted node).
 - Regression tests (AMM-1808): `list` and `recordGrid` with a `panel` row template switch to German and back with no `SUI-NODE-MISSING`, for slots that exist at the switch, slots created after it and recycled slots (`test/composites/record-view-locale.browser.test.ts`). The fix is in `@punyts/stateui-app`.
