@@ -9,7 +9,7 @@ Partials a component's `view.css` pulls in with a line `@include "<name>.css";` 
 - `overlay.css`: the dialog, backdrop, frame, header, close button, body and footer of `modal` and `drawer`; the including view sets `--pad`, `--gap` and `--radius` on `.dialog`.
 
 ## field/
-`field.ts`: `createField(context, valueName)`, the base controller of every field (glyph, message, baseline, `validate` and `reset` commands, `change`, `invalid` and `valid` events, `focus` and `clear` commands, the `ui-field-connect` event with `FieldConnect`, `touched` and `dirty`; the options `entryRule`, `exclusive` and `empty` for a field with a value of its own kind, such as `dateRangeField`) and the layout helpers; `rules.ts`: `failingRule`, `patternOf`, `NAMED_PATTERNS` and `FIELD_RULES`, the pure validation rules.
+`field.ts`: `createField(context, valueName, options)` (options `entryRule`, `exclusive`, `empty`, `onReset`), the base controller of every field (glyph, message, baseline, `validate` and `reset` commands, `change`, `invalid` and `valid` events, `focus` and `clear` commands, the `ui-field-connect` event with `FieldConnect`, `touched` and `dirty`; the options `entryRule`, `exclusive` and `empty` for a field with a value of its own kind, such as `dateRangeField`) and the layout helpers; `rules.ts`: `failingRule`, `patternOf`, `NAMED_PATTERNS` and `FIELD_RULES`, the pure validation rules.
 `files.ts`: the pure parts of `fileField`: `ALLOWED_FILE_TYPES` (the ADR-0017 list), `MAX_FILE_SIZE` (10 MiB), `effectiveAccept` (`accept` narrowed to the list), `effectiveMaxSize`, `effectiveMaxFiles`, `mediaTypeOf` and `typeFromName` (the type of a file the browser gave none), `acceptAttribute`, `isFileRef`, `formatBytes`, `percentOf` and `transferCode`.
 
 

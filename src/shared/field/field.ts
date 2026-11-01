@@ -71,6 +71,8 @@ export interface FieldOptions {
     readonly exclusive?: boolean;
     /** Makes the value the `clear` command writes, a new one each time; without it `clear` writes `false`, an empty list or an empty string by the kind of the first value */
     readonly empty?: () => unknown;
+    /** Runs first in every reset (the `reset` command and a form's reset of the field), before the baseline is restored; a field that holds work under way (a file transfer) stops it here */
+    readonly onReset?: () => void;
 }
 
 /** The element of a field as the command dispatcher sees it */
@@ -193,6 +195,7 @@ export function createField({ element, store, basePath }: ControllerContext, val
         store.set(`${basePath}.dirty`, false);
     };
     const reset = (): void => {
+        options.onReset?.();
         store.set(`${basePath}.touched`, false);
         store.set(`${basePath}.error`, '');
         store.set(valuePath, snapshot(baseline) as never);

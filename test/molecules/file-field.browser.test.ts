@@ -1,5 +1,6 @@
 import { FileTransferError, snapshotState } from '@punyts/stateui-app';
 import type { FileReference, TransferFile, TransferFileOptions } from '@punyts/stateui-app';
+import { report } from '@punyts/core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mountComponent } from '../harness/mountComponent.js';
 
@@ -496,6 +497,95 @@ describe('fileField in Chromium', () => {
         expect(errorText(mounted.element)).toBe('Dieser Dateityp wird nicht akzeptiert');
         expect(part(mounted.element, '.remove').getAttribute('aria-label')).toBe('a.txt entfernen');
         expect(details(mounted.element)).toEqual(['1,5 KB']);
+    });
+
+    it('should report an accept entry outside the allowed list once as a SUI-STATE warning and keep ignoring it', async () => {
+        // Arrange
+        const warn = vi.spyOn(report, 'warning').mockImplementation(() => undefined);
+        const stateWarnings = (): unknown[][] => warn.mock.calls.filter((call) => (call[1] as { code?: string } | undefined)?.code === 'SUI-STATE');
+        const hook = fakeHook();
+        const mounted = mountFiles(hook, { accept: ['image/png', 'text/html', 'text/html', 'image/svg+xml'] });
+
+        // Assert
+        expect(stateWarnings()).toHaveLength(2);
+        expect(String(stateWarnings()[0]?.[0])).toContain('"text/html"');
+        expect(String(stateWarnings()[1]?.[0])).toContain('"image/svg+xml"');
+        expect(stateWarnings()[0]?.[1]).toMatchObject({ code: 'SUI-STATE', path: '$.app' });
+
+        // Act
+        await pick(mounted.element, file('<b/>', 'a.html', 'text/html'));
+        mounted.store.set('$.app.accept', ['image/png', 'text/html', 'application/zip'] as never);
+        await flush();
+        mounted.store.set('$.app.accept', ['image/png'] as never);
+        mounted.store.set('$.app.accept', ['image/png', 'application/zip'] as never);
+        await flush();
+
+        // Assert
+        expect(hook.calls).toHaveLength(0);
+        expect(get(mounted, 'error')).toBe('accept');
+        expect(stateWarnings().map((call) => String(call[0]).match(/"([^"]+)"/)?.[1])).toEqual(['text/html', 'image/svg+xml', 'application/zip', 'application/zip']);
+        warn.mockRestore();
+    });
+
+    it('should not warn for an accept list of allowed types', () => {
+        // Arrange
+        const warn = vi.spyOn(report, 'warning').mockImplementation(() => undefined);
+
+        // Act
+        mountFiles(fakeHook(), { accept: ['image/png', 'application/pdf'] });
+
+        // Assert
+        expect(warn.mock.calls.filter((call) => (call[1] as { code?: string } | undefined)?.code === 'SUI-STATE')).toHaveLength(0);
+        warn.mockRestore();
+    });
+
+    it('should abort the transfers under way on the reset command so a late result cannot append a file', async () => {
+        // Arrange
+        const hook = fakeHook();
+        const mounted = mountFiles(hook, { maxFiles: 3 }, [reference('old.txt')]);
+        await pick(mounted.element, file('x', 'one.txt'));
+        const signal = hook.calls[0]?.options.signal as AbortSignal;
+
+        // Act
+        commands(mounted.element).reset();
+        hook.calls[0]?.resolve(reference('one.txt'));
+        await flush();
+
+        // Assert
+        expect(signal.aborted).toBe(true);
+        expect(mounted.store.get('$.data.files')).toEqual([reference('old.txt')]);
+        expect(all(mounted.element, '.file')).toHaveLength(1);
+        expect(get(mounted, 'error')).toBe('');
+    });
+
+    it('should abort the transfers under way when a form resets the field', async () => {
+        // Arrange
+        const hook = fakeHook();
+        const mounted = mountComponent(
+            'form',
+            { children: { files: { component: 'fileField', '<-value': '$.data.files' } } },
+            { data: { files: [] }, hooks: { transferFile: hook.transferFile } }
+        );
+        const field = (function find(root: ParentNode): Element | undefined {
+            for (const child of Array.from(root.children)) {
+                if (child.localName === 'ui-file-field') return child;
+                const inner = (child.shadowRoot ? find(child.shadowRoot) : undefined) ?? find(child);
+                if (inner) return inner;
+            }
+            return undefined;
+        })(mounted.element.shadowRoot as ShadowRoot) as Element;
+        await pick(field, file('x', 'one.txt'));
+        const signal = hook.calls[0]?.options.signal as AbortSignal;
+
+        // Act
+        (mounted.element as CommandElement).commands.reset();
+        hook.calls[0]?.resolve(reference('one.txt'));
+        await flush();
+
+        // Assert
+        expect(signal.aborted).toBe(true);
+        expect(mounted.store.get('$.data.files')).toEqual([]);
+        expect(all(field, '.file')).toHaveLength(0);
     });
 
     it('should ignore a late result for a transfer that was removed', async () => {

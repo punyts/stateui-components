@@ -1,7 +1,10 @@
+import { report } from '@punyts/core';
 import type { ControllerContext } from '@punyts/stateui';
 import { createField } from '../shared/field/field.js';
 import {
+    ALLOWED_FILE_TYPES,
     acceptAttribute,
+    bareType,
     effectiveAccept,
     effectiveMaxFiles,
     effectiveMaxSize,
@@ -87,7 +90,29 @@ export default function controller(context: ControllerContext) {
         }
         return '';
     };
-    const field = createField(context, 'value', { entryRule: () => (failure !== '' ? failure : listRule()), empty: () => [] });
+    const field = createField(context, 'value', {
+        entryRule: () => (failure !== '' ? failure : listRule()),
+        empty: () => [],
+        //a reset (the command, or a form's) stops the transfers, so a late result cannot append a file to the restored list
+        onReset: () => {
+            for (const upload of uploads.values()) upload.abort.abort();
+            uploads.clear();
+            failure = '';
+            draw();
+        }
+    });
+    const reported = new Set<string>();
+    /** Reports each `accept` entry outside the allowed list once, as a `SUI-STATE` warning; the entry is ignored */
+    const reportAccept = (): void => {
+        const entries = Array.isArray(read('accept')) ? (read('accept') as unknown[]).map((entry) => (typeof entry === 'string' ? entry : JSON.stringify(entry))) : [];
+        const outside = new Set(entries.filter((entry) => !ALLOWED_FILE_TYPES.includes(bareType(entry))));
+        for (const entry of [...reported]) if (!outside.has(entry)) reported.delete(entry);
+        for (const entry of outside) {
+            if (reported.has(entry)) continue;
+            reported.add(entry);
+            report.warning(`fileField: the accept entry "${entry}" is not an allowed file type, so it is ignored`, { code: 'SUI-STATE', path: basePath });
+        }
+    };
 
     const draw = (): void => {
         const template = typeof read('_remove') === 'string' ? (read('_remove') as string) : '{name}';
@@ -103,6 +128,7 @@ export default function controller(context: ControllerContext) {
         store.set(`${basePath}.rows`, rows);
         store.set(`${basePath}.count`, Object.keys(rows).length);
         store.set(`${basePath}.types`, acceptAttribute(accepted()));
+        reportAccept();
     };
 
     const fail = (code: string): void => {
