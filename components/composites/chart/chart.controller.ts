@@ -11,6 +11,7 @@ import type { DataTable } from '../shared/chart/table.js';
 import { createPopover } from '../shared/popover/popover.js';
 import type { PopoverHandle } from '../shared/popover/popover.js';
 import { formatValue } from '../shared/format/format.js';
+import { isUnrendered } from '../shared/records/viewport.js';
 
 const text = (value: unknown, fallback = ''): string => (typeof value === 'string' && value !== '' ? value : fallback);
 const TIP_ANCHOR = '--chart-point';
@@ -216,7 +217,10 @@ export default function controller({ element, store, basePath }: ControllerConte
         dataTable = createDataTable(data);
         popover = createPopover({ element: tip, placement: 'top', anchor: TIP_ANCHOR, onDismiss: () => (tipFor = undefined) });
         observer = new ResizeObserver((entries) => {
-            for (const entry of entries) {
+            //a hidden chart (a section or tab not shown) keeps its last drawing instead of redrawing at no size and again when shown
+            const shown = entries.filter((entry) => !isUnrendered(entry));
+            if (shown.length === 0) return;
+            for (const entry of shown) {
                 width = entry.contentRect.width;
                 height = entry.contentRect.height;
             }

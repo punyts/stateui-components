@@ -6,7 +6,7 @@ export { createSlotMeasure } from './slotMeasure.js';
 export type { SlotMeasure, SlotMeasureOptions } from './slotMeasure.js';
 export { createSlotPool } from './slotPool.js';
 export type { SlotPool, SlotPoolOptions } from './slotPool.js';
-export { createViewportObserver, offsetFor, windowFor } from './viewport.js';
+export { createViewportObserver, isUnrendered, offsetFor, windowFor } from './viewport.js';
 export type { ViewportObserver, ViewportOptions } from './viewport.js';
 export { bandOffset, columnsFor, createGridViewport, gridWindow, rowsFor } from './gridViewport.js';
 export type { GridMeasure, GridViewport, GridViewportOptions } from './gridViewport.js';

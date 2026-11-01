@@ -79,6 +79,27 @@ describe('recordList positioning and observer in Chromium', () => {
         expect(slots(mounted).length).toBeLessThanOrEqual(200);
     });
 
+    it('should keep its window and its slots while it is hidden and shown again', async () => {
+        // Arrange
+        const mounted = await mountList(1_000, 240);
+        const before = windowOf(mounted);
+        const texts = shownSlots(mounted).map(textOf);
+        const element = mounted.element as HTMLElement;
+
+        // Act
+        element.style.display = 'none';
+        await settle();
+        const hidden = windowOf(mounted);
+        element.style.display = '';
+        await settle();
+
+        // Assert
+        expect(before.count).toBeGreaterThan(0);
+        expect(hidden).toEqual(before);
+        expect(windowOf(mounted)).toEqual(before);
+        expect(shownSlots(mounted).map(textOf)).toEqual(texts);
+    });
+
     it('should size the scroll content from the count and the row height by CSS alone', async () => {
         // Arrange
         const mounted = await mountList(1000, 240);

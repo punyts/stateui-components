@@ -1,8 +1,10 @@
+import { isUnrendered } from './viewport.js';
+
 /** What a slot observer reports and where */
 export interface SlotMeasureOptions {
     /**
      * Called with the entries of one `ResizeObserver` delivery that came from slots still in the document: the slot's index (its
-     * `data-slot`) and its border-box height. A slot that is hidden reports 0
+     * `data-slot`) and its border-box height. A slot that is not rendered (it or its view is hidden) is not reported, so hiding a grid keeps the measured heights
      */
     onMeasure: (measures: { slot: number; height: number }[]) => void;
 }
@@ -33,6 +35,7 @@ export function createSlotMeasure(options: SlotMeasureOptions): SlotMeasure {
                 observer.unobserve(target);
                 continue;
             }
+            if (isUnrendered(entry)) continue;
             const slot = Number(target.dataset['slot']);
             if (!Number.isInteger(slot)) continue;
             const box = entry.borderBoxSize[0];
