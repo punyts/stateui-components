@@ -1,6 +1,7 @@
 {
-    "summary": "A kanban board: a column per value of a record field, each a recordList of cards that are the records",
+    "summary": "A kanban board: a column per value of a record field, each a recordList of cards that move by pointer and keyboard",
     "tokenGroup": "board",
+    "events": ["move"],
     "tokens": {
         "card": "calc({size.control.md} * 2)",
         "column": "calc({size.control.md} * 8)",
@@ -10,6 +11,7 @@
         "key": { "type": "string", "validators": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" }, "default": "id" },
         "columnField": { "type": "string", "validators": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" }, "default": "column" },
         "orderField": { "type": "string", "validators": { "pattern": "^$|^[A-Za-z_][A-Za-z0-9_]*$" }, "default": "" },
+        "labelField": { "type": "string", "validators": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" }, "default": "title" },
         "columns": {
             "type": "map",
             "default": {},
@@ -22,6 +24,18 @@
         "records": { "type": ["array", "object"] },
         "card": { "type": "node", "row": true },
         "_limitExceeded": { "type": "string", "kind": "content", "default": "Limit exceeded" },
+        "_moveAnnouncements": {
+            "type": "map",
+            "items": "string",
+            "kind": "content",
+            "default": {
+                "pickedUp": "{name} picked up, position {position} of {count} in {column}. Use the arrow keys to move it, Space to drop it and Escape to cancel.",
+                "moved": "{name} moved to position {position} of {count} in {column}.",
+                "dropped": "{name} dropped at position {position} of {count} in {column}.",
+                "cancelled": "Move of {name} cancelled."
+            }
+        },
+        "announcement": { "type": "string", "default": "", "runtime": true },
         "cols": { "type": "object", "default": {}, "runtime": true },
         "orders": { "type": "object", "default": {}, "runtime": true }
     }

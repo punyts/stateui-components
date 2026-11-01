@@ -69,7 +69,21 @@
     white-space: nowrap;
 }
 
+.probe {
+    position: absolute;
+    inline-size: 0;
+    block-size: var(--sui-card-h);
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.board[data-dragging] {
+    cursor: grabbing;
+    user-select: none;
+}
+
 .body {
+    position: relative;
     --ui-recordlist-row: var(--sui-card-h);
     block-size: var(--ui-board-height);
     min-block-size: 0;
@@ -77,4 +91,18 @@
 
 .body > sui-node > ui-record-list {
     block-size: 100%;
+}
+
+.drop {
+    box-sizing: border-box;
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline: 0;
+    block-size: var(--sui-card-h);
+    transform: translateY(calc(var(--sui-drop-index) * var(--sui-card-h) - var(--sui-drop-scroll)));
+    border: var(--ui-border-width-thick) dashed var(--ui-color-focus);
+    border-radius: var(--ui-radius-sm);
+    background: var(--ui-color-surface-base);
+    opacity: 0.6;
+    pointer-events: none;
 }

@@ -1,4 +1,5 @@
 <div class="board">
+    <span class="probe" aria-hidden="true"></span>
     <section class="column" role="group" repeat="{{ $k,$i,$v in $.cols }}" key="{{ $k }}" data-key="{{ $v.key }}" data-gone="{{ $v.gone ? '' : null }}" style="order: {{ $v.position }}" aria-label="{{ $v.title }}">
         <header class="head" data-tone="{{ $v.over ? 'warning' : null }}">
             <h3 class="title">{{ $v.title }}</h3>
@@ -9,6 +10,8 @@
         </header>
         <div class="body">
             <sui-node if="{{ $v.ready }}" repeat="{{ $bk,$bi,$bv in $v.body }}" key="{{ $bk }}" state="{{ $bv }}"></sui-node>
+            <div class="drop" aria-hidden="true" if="{{ $v.drop &gt;= 0 }}" style="--sui-drop-index: {{ $v.drop }}; --sui-drop-scroll: {{ $v.dropScroll }}px"></div>
         </div>
     </section>
+    <div class="live hidden" role="status" aria-live="polite" aria-atomic="true">{{ $.announcement }}</div>
 </div>

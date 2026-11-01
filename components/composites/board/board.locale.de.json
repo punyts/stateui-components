@@ -1,3 +1,9 @@
 {
-    "_limitExceeded": "Limit überschritten"
+    "_limitExceeded": "Limit überschritten",
+    "_moveAnnouncements": {
+        "pickedUp": "{name} aufgenommen, Position {position} von {count} in {column}. Mit den Pfeiltasten verschieben, mit der Leertaste ablegen, mit Escape abbrechen.",
+        "moved": "{name} verschoben auf Position {position} von {count} in {column}.",
+        "dropped": "{name} abgelegt auf Position {position} von {count} in {column}.",
+        "cancelled": "Verschieben von {name} abgebrochen."
+    }
 }

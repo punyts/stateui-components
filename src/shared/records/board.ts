@@ -73,3 +73,79 @@ export function buildBoard(records: unknown, options: BoardOptions): BoardModel 
     }
     return { orders, unmatched };
 }
+
+/** One write of a move: the record (by key), which of its two fields and the value */
+export interface MoveWrite {
+    readonly key: string;
+    readonly field: 'column' | 'order';
+    readonly value: string | number;
+}
+
+export interface MovePlan {
+    /** The writes that make the move, in the order to apply them; empty when nothing has to change */
+    readonly writes: readonly MoveWrite[];
+    /** The index the card has in the target column after the writes */
+    readonly index: number;
+}
+
+export interface MoveInput {
+    /** The key of the record that moves */
+    readonly key: string;
+    /** The column key it is dragged from and to */
+    readonly from: string;
+    readonly to: string;
+    /** The index it should have in the target column, from 0 */
+    readonly index: number;
+    /** The record keys of the target column in display order now (the moved record included when `from` is `to`) */
+    readonly targetKeys: readonly string[];
+    /** The value of `orderField` of a record, or `undefined` when it has no number; always `undefined` without an `orderField` */
+    readonly orderOf: (key: string) => number | undefined;
+    /** Whether the board has an `orderField`: without one a card cannot be put at a place inside a column */
+    readonly ordered: boolean;
+    /** The place of a record among all the records, for the index a move into a column without an `orderField` ends at */
+    readonly positionOf: (key: string) => number;
+}
+
+const PRECISION = 1e6;
+
+/**
+ * The writes that move a card, and the index it ends at. The column field is written when the column changes; the order
+ * field, when the board has one, gets a number between its new neighbours (their average, or one past the end of the list).
+ * When the neighbours do not allow that (a record with no number, equal numbers, no room left), the whole column is
+ * numbered from 1 in the new order instead. Without an `orderField` a move inside a column writes nothing, and a move into
+ * another column ends where the record order puts the card
+ */
+export function planMove(input: MoveInput): MovePlan {
+    const { key, from, to, targetKeys, orderOf } = input;
+    const others = targetKeys.filter((candidate) => candidate !== key);
+    const writes: MoveWrite[] = [];
+    if (from !== to) writes.push({ key, field: 'column', value: to });
+    if (!input.ordered) {
+        const own = from === to;
+        const index = own ? Math.max(0, targetKeys.indexOf(key)) : others.filter((candidate) => input.positionOf(candidate) < input.positionOf(key)).length;
+        return { writes, index };
+    }
+    const index = Math.min(Math.max(0, Math.floor(input.index)), others.length);
+    if (from === to && targetKeys.indexOf(key) === index) return { writes: [], index };
+    const numbers = others.map((candidate) => orderOf(candidate));
+    const before = index > 0 ? numbers[index - 1] : undefined;
+    const after = index < others.length ? numbers[index] : undefined;
+    const known = numbers.every((value) => value !== undefined);
+    let value: number | undefined;
+    if (known) {
+        if (before !== undefined && after !== undefined) value = before < after ? Math.round(((before + after) / 2) * PRECISION) / PRECISION : undefined;
+        else if (before !== undefined) value = before + 1;
+        else if (after !== undefined) value = after - 1;
+        else value = 1;
+        if (value !== undefined && ((before !== undefined && value <= before) || (after !== undefined && value >= after))) value = undefined;
+    }
+    if (value !== undefined) {
+        writes.push({ key, field: 'order', value });
+        return { writes, index };
+    }
+    const next = [...others.slice(0, index), key, ...others.slice(index)];
+    next.forEach((candidate, at) => {
+        if (orderOf(candidate) !== at + 1) writes.push({ key: candidate, field: 'order', value: at + 1 });
+    });
+    return { writes, index };
+}
