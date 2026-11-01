@@ -144,3 +144,27 @@ describe.each<Kind>(['list', 'recordGrid'])('%s with a panel row template and a 
         expect(missing(error)).toEqual([]);
     });
 });
+
+describe.each<Kind>(['list', 'recordGrid'])('%s when the pool shrinks', (kind) => {
+    afterEach(() => {
+        vi.restoreAllMocks();
+        mountComponent.unmountAll();
+    });
+
+    it('should log no SUI-NODE-MISSING when the viewport gets smaller and surplus slots are removed', async () => {
+        // Arrange
+        const error = vi.spyOn(report, 'error');
+        const mounted = await mountView(kind, 300);
+        resize(mounted, '640px');
+        await settle();
+        const slotsBefore = slotCount(mounted, kind);
+
+        // Act
+        resize(mounted, '160px');
+        await settle();
+
+        // Assert
+        expect(slotCount(mounted, kind)).toBeLessThan(slotsBefore);
+        expect(missing(error)).toEqual([]);
+    });
+});

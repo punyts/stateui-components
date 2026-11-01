@@ -28,21 +28,34 @@
             "type": "node",
             "row": true,
             "default": {
-                "component": "toolbar",
+                "component": "panel",
+                "layout": {
+                    "type": "column",
+                    "gap": "sm"
+                },
                 "children": {
                     "avatar": {
                         "component": "avatar",
                         "size": "sm",
                         "<-_name": "$row.author"
                     },
-                    "body": {
-                        "component": "markdown",
-                        "<-_text": "$row.text"
-                    },
-                    "time": {
-                        "component": "text",
-                        "textRole": "caption",
-                        "<-_text": "$row.time"
+                    "content": {
+                        "component": "panel",
+                        "layout": {
+                            "type": "column",
+                            "gap": "sm"
+                        },
+                        "children": {
+                            "body": {
+                                "component": "markdown",
+                                "<-_text": "$row.text"
+                            },
+                            "time": {
+                                "component": "text",
+                                "textRole": "caption",
+                                "<-_text": "$row.time"
+                            }
+                        }
                     }
                 }
             }
