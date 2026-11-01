@@ -219,23 +219,25 @@ describe('recordGrid measured row heights in Chromium', () => {
         // Arrange
         const records = cards(60);
         const mounted = await mountGrid(records, 300, 400);
-        const tallBefore = records.findIndex((record) => record.lines === 12);
-        scroller(mounted).scrollTop = 0;
+        //only the records that were shown are measured, so the reorder keeps to them: the rest still count as the estimate
+        const measured = shownSlots(mounted).length;
+        expect(measured).toBeGreaterThan(3);
+        const before = new Map(shownSlots(mounted).map((slot) => [positionOf(mounted, slot), slot.getBoundingClientRect().height]));
 
         // Act
-        mounted.store.set('$.data.records', [...records].reverse());
+        mounted.store.set('$.data.records', [...records.slice(0, measured).reverse(), ...records.slice(measured)]);
         await flush();
 
         // Assert
+        //before any new measurement, each of those records sits where the heights measured before put it
         const visible = shownSlots(mounted).sort((a, b) => positionOf(mounted, a) - positionOf(mounted, b));
-        expect(visible.length).toBeGreaterThan(3);
-        for (let i = 1; i < visible.length; i++) {
-            const previous = visible[i - 1] as HTMLElement;
-            const next = visible[i] as HTMLElement;
-            expect(screenTop(mounted, next) - screenTop(mounted, previous)).toBeCloseTo(previous.getBoundingClientRect().height, 0);
+        let top = 0;
+        for (let position = 0; position < measured; position++) {
+            const slot = visible.find((candidate) => positionOf(mounted, candidate) === position) as HTMLElement;
+            expect(screenTop(mounted, slot), `position ${position}`).toBeCloseTo(top, 0);
+            top += before.get(measured - 1 - position) as number;
         }
         await settle();
-        expect(tallBefore).toBeGreaterThanOrEqual(0);
         const after = shownSlots(mounted).sort((a, b) => positionOf(mounted, a) - positionOf(mounted, b));
         for (let i = 1; i < after.length; i++) {
             expect(screenTop(mounted, after[i] as HTMLElement) - screenTop(mounted, after[i - 1] as HTMLElement)).toBeCloseTo((after[i - 1] as HTMLElement).getBoundingClientRect().height, 0);
