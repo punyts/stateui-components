@@ -1,14 +1,16 @@
 {
-    "summary": "A calendar of records: a month grid with arrow-key navigation, a range event for data providers and +n overflow",
+    "summary": "A calendar of records: month, week and day views, arrow-key navigation and a range event for data providers",
     "tokenGroup": "calendar",
     "events": ["select", "open", "range"],
     "tokens": {
         "selected": { "fill": "{color.accent.base}", "on": "{color.accent.on}" },
         "cell": "calc({size.control.md} * 3)",
+        "hour": "calc({size.control.md} * 1.5)",
+        "gutter": "calc({size.control.md} * 2)",
         "radius": "{radius.md}"
     },
     "properties": {
-        "view": { "type": "string", "values": ["month"], "default": "month", "reflect": true },
+        "view": { "type": "string", "values": ["month", "week", "day"], "default": "month", "reflect": true },
         "date": { "type": "string", "validators": { "pattern": "^$|^[0-9]{4}-[0-9]{2}-[0-9]{2}$" }, "default": "" },
         "key": { "type": "string", "validators": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" }, "default": "id" },
         "startField": { "type": "string", "validators": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" }, "default": "start" },
@@ -19,6 +21,9 @@
         "weekdays": { "type": "object", "default": {}, "runtime": true },
         "weeks": { "type": "object", "default": {}, "runtime": true },
         "visible": { "type": "object", "default": {}, "runtime": true },
+        "days": { "type": "object", "default": {}, "runtime": true },
+        "hours": { "type": "object", "default": {}, "runtime": true },
+        "dayCount": { "type": "integer", "default": 7, "runtime": true },
         "_previous": { "type": "string", "kind": "content", "default": "Previous" },
         "_next": { "type": "string", "kind": "content", "default": "Next" },
         "_today": { "type": "string", "kind": "content", "default": "Today" },

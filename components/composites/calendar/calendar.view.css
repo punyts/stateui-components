@@ -173,3 +173,103 @@
 .more {
     color: var(--ui-color-text-muted);
 }
+
+.schedule {
+    --sui-gutter: var(--ui-calendar-gutter);
+    display: flex;
+    flex-direction: column;
+    border: var(--ui-border-width-thin) solid var(--ui-color-border-base);
+    border-radius: var(--ui-calendar-radius);
+    overflow: hidden;
+}
+
+.heads,
+.body {
+    display: grid;
+    grid-template-columns: var(--sui-gutter) repeat(var(--sui-days, 7), minmax(0, 1fr));
+}
+
+.heads {
+    border-block-end: var(--ui-border-width-thin) solid var(--ui-color-border-base);
+    background: var(--ui-color-surface-sunken);
+}
+
+.dayhead {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--ui-space-gap-sm);
+    min-inline-size: 0;
+    padding: var(--ui-space-inset-sm);
+    border-inline-start: var(--ui-border-width-thin) solid var(--ui-color-border-base);
+}
+
+.dayhead .weekday {
+    padding: 0;
+    background: transparent;
+}
+
+.dayhead .number {
+    align-self: center;
+}
+
+.dayhead[data-today] .number {
+    color: var(--ui-calendar-selected-on);
+    background: var(--ui-calendar-selected-fill);
+}
+
+.gutter {
+    display: flex;
+    flex-direction: column;
+}
+
+.hour {
+    box-sizing: border-box;
+    flex: none;
+    block-size: var(--ui-calendar-hour);
+    padding-inline: var(--ui-space-gap-sm);
+    color: var(--ui-color-text-muted);
+    font-size: var(--ui-text-caption-size);
+    text-align: end;
+}
+
+.column {
+    position: relative;
+    min-inline-size: 0;
+    block-size: calc(var(--ui-calendar-hour) * 24);
+    border-inline-start: var(--ui-border-width-thin) solid var(--ui-color-border-base);
+    background-color: var(--ui-color-surface-base);
+    background-image: linear-gradient(var(--ui-color-border-base) var(--ui-border-width-thin), transparent var(--ui-border-width-thin));
+    background-size: 100% var(--ui-calendar-hour);
+}
+
+.column:focus-visible {
+    outline: 2px solid var(--ui-color-focus);
+    outline-offset: -2px;
+}
+
+.column[data-active] {
+    background-color: var(--ui-color-surface-sunken);
+}
+
+.record.timed {
+    position: absolute;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    inset-block-start: calc(var(--sui-start) / 60 * var(--ui-calendar-hour));
+    block-size: calc(max(var(--sui-span), 15) / 60 * var(--ui-calendar-hour));
+    inset-inline-start: calc(var(--sui-column) / var(--sui-columns) * 100%);
+    inline-size: calc(100% / var(--sui-columns));
+    overflow: hidden;
+    background: var(--ui-color-surface-base);
+    border-color: var(--ui-color-border-strong);
+}
+
+.record.timed:hover {
+    background: var(--ui-color-surface-sunken);
+}
+
+.record.allday {
+    padding-block: 0;
+}

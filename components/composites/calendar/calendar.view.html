@@ -9,7 +9,7 @@
         </button>
         <button class="today" type="button" onclick="{{ onToday }}">{{ $._today }}</button>
     </div>
-    <div class="month" role="grid" aria-labelledby="heading" onclick="{{ onClick }}" onkeydown="{{ onKeyDown }}">
+    <div class="month" if="{{ $.view === 'month' }}" role="grid" aria-labelledby="heading" onclick="{{ onClick }}" onkeydown="{{ onKeyDown }}">
         <div class="row heads" role="row">
             <span class="weekday" role="columnheader" repeat="{{ $k,$i,$v in $.weekdays }}" key="{{ $k }}" aria-label="{{ $v.long }}">{{ $v.short }}</span>
         </div>
@@ -21,6 +21,29 @@
                     <span class="name">{{ $e.title }}</span>
                 </button>
                 <button class="more" type="button" if="{{ $d.more &gt; 0 }}" data-more="{{ $d.iso }}" tabindex="{{ $d.tab }}" aria-label="{{ $d.moreLabel }}">{{ $d.moreText }}</button>
+            </div>
+        </div>
+    </div>
+    <div class="schedule" if="{{ $.view !== 'month' }}" role="grid" aria-labelledby="heading" style="--sui-days: {{ $.dayCount }}" onclick="{{ onClick }}" onkeydown="{{ onKeyDown }}">
+        <div class="heads" role="row">
+            <span class="corner"></span>
+            <div class="dayhead" role="columnheader" repeat="{{ $dk,$di,$d in $.days }}" key="{{ $dk }}" aria-label="{{ $d.label }}" data-today="{{ $d.today ? '' : null }}">
+                <span class="weekday" aria-hidden="true">{{ $d.weekday }}</span>
+                <span class="number" aria-hidden="true">{{ $d.number }}</span>
+                <button class="record allday" type="button" repeat="{{ $ek,$ei,$e in $d.allDay }}" key="{{ $ek }}" data-record="{{ $e.key }}" tabindex="{{ $d.tab }}" aria-label="{{ $e.title }}">
+                    <span class="name">{{ $e.title }}</span>
+                </button>
+            </div>
+        </div>
+        <div class="body" role="row">
+            <div class="gutter" aria-hidden="true">
+                <span class="hour" repeat="{{ $hk,$hi,$h in $.hours }}" key="{{ $hk }}">{{ $h.label }}</span>
+            </div>
+            <div class="column" role="gridcell" repeat="{{ $ck,$ci,$c in $.days }}" key="{{ $ck }}" data-date="{{ $c.iso }}" tabindex="{{ $c.tab }}" aria-label="{{ $c.label }}" aria-current="{{ $c.today ? 'date' : null }}" data-active="{{ $c.active ? '' : null }}" data-today="{{ $c.today ? '' : null }}">
+                <button class="record timed" type="button" repeat="{{ $rk,$ri,$r in $c.records }}" key="{{ $rk }}" data-record="{{ $r.key }}" tabindex="{{ $c.tab }}" aria-label="{{ $r.label }}" style="--sui-start: {{ $r.start }}; --sui-span: {{ $r.span }}; --sui-column: {{ $r.column }}; --sui-columns: {{ $r.columns }}">
+                    <span class="name">{{ $r.title }}</span>
+                    <span class="time" if="{{ $r.time !== '' }}">{{ $r.time }}</span>
+                </button>
             </div>
         </div>
     </div>

@@ -1,10 +1,10 @@
-import { eventsOnDay } from './events.js';
-import type { CalendarEvent } from './events.js';
-import { addDays, addMonths, dayOf, isoOfDay, monthGrid, parseIsoDate, startOfWeekDay } from './isoDate.js';
-import { formatDayNumber, formatLongDate, formatMonthYear, formatTime, weekdayNames } from './localeDates.js';
+import { eventsOnDay, layoutOverlaps, segmentOn } from './events.js';
+import type { CalendarEvent, Segment } from './events.js';
+import { MINUTES_PER_DAY, addDays, addMonths, dayOf, isoOfDay, monthGrid, parseIsoDate, startOfWeekDay, weekdayOfDay } from './isoDate.js';
+import { formatDateRange, formatDayNumber, formatHour, formatLongDate, formatMonthYear, formatTime, weekdayNames } from './localeDates.js';
 
 /** The views of a calendar */
-export const CALENDAR_VIEWS = ['month'] as const;
+export const CALENDAR_VIEWS = ['month', 'week', 'day'] as const;
 
 export type CalendarView = (typeof CALENDAR_VIEWS)[number];
 
@@ -105,28 +105,40 @@ export function buildMonth(input: MonthInput): MonthModel {
     };
 }
 
-/** The visible range of a view around a focused date, without building the cells */
+/** The visible range of a view around a focused date, without building the cells: the grid of the month, the week, or the day */
 export function visibleRange(view: CalendarView, focus: string, firstDay: number): VisibleRange {
+    const days = dayOf(focus);
+    const parts = parseIsoDate(focus);
+    if (days === undefined || parts === undefined) return { start: focus, end: focus };
     switch (view) {
         case 'month': {
-            const parts = parseIsoDate(focus);
-            if (parts === undefined) return { start: focus, end: focus };
             const grid = monthGrid(parts.year, parts.month, firstDay);
             return { start: grid[0]?.iso ?? focus, end: grid[grid.length - 1]?.iso ?? focus };
         }
+        case 'week': {
+            const start = startOfWeekDay(days, firstDay);
+            return { start: isoOfDay(start), end: isoOfDay(start + COLUMNS - 1) };
+        }
+        case 'day':
+            return { start: focus, end: focus };
     }
 }
 
-/** The date one page before (`-1`) or after (`1`) the focused date: a month in the month view */
+/** The date one page before (`-1`) or after (`1`) the focused date: a month in the month view, a week in the week view, a day in the day view */
 export function stepDate(view: CalendarView, focus: string, direction: 1 | -1): string {
     switch (view) {
         case 'month':
             return addMonths(focus, direction);
+        case 'week':
+            return addDays(focus, direction * COLUMNS);
+        case 'day':
+            return addDays(focus, direction);
     }
 }
 
 /** What a key does in the grid */
 export interface KeyOptions {
+    readonly view: CalendarView;
     readonly firstDay: number;
     /** True in right-to-left text, where Left and Right swap */
     readonly rtl: boolean;
@@ -134,33 +146,148 @@ export interface KeyOptions {
 }
 
 /**
- * The date a navigation key moves the focus to, or `undefined` for a key the grid does not use. Left and Right move a
- * day (swapped in right-to-left text), Up and Down a week, Home and End to the first and last day of the week, Page Up
- * and Page Down a month, and with Shift a year. The day of the month is kept as far as the new month reaches
+ * The date a navigation key moves the focus to, or `undefined` for a key the view does not use. Left and Right move a day
+ * in every view (swapped in right-to-left text). In the month view Up and Down move a week, Home and End go to the first
+ * and last day of the week, and Page Up and Page Down move a month, with Shift a year; the day of the month is kept as far as
+ * the new month reaches. In the week view Home and End do the same, Page Up and Page Down move a week, and Up and Down are
+ * left to the page. In the day view Page Up and Page Down move a day and the other keys are left to the page
  */
 export function dateForKey(key: string, focus: string, options: KeyOptions): string | undefined {
     const days = dayOf(focus);
     if (days === undefined) return undefined;
     const sideways = options.rtl ? -1 : 1;
-    switch (key) {
-        case 'ArrowLeft':
-            return addDays(focus, -sideways);
-        case 'ArrowRight':
-            return addDays(focus, sideways);
-        case 'ArrowUp':
-            return addDays(focus, -COLUMNS);
-        case 'ArrowDown':
-            return addDays(focus, COLUMNS);
-        case 'Home':
-            return isoOfDay(startOfWeekDay(days, options.firstDay));
-        case 'End':
-            return isoOfDay(startOfWeekDay(days, options.firstDay) + COLUMNS - 1);
-        case 'PageUp':
-            return addMonths(focus, options.shift ? -12 : -1);
-        case 'PageDown':
-            return addMonths(focus, options.shift ? 12 : 1);
-        default:
-            return undefined;
+    if (key === 'ArrowLeft') return addDays(focus, -sideways);
+    if (key === 'ArrowRight') return addDays(focus, sideways);
+    switch (options.view) {
+        case 'month':
+            switch (key) {
+                case 'ArrowUp':
+                    return addDays(focus, -COLUMNS);
+                case 'ArrowDown':
+                    return addDays(focus, COLUMNS);
+                case 'Home':
+                    return isoOfDay(startOfWeekDay(days, options.firstDay));
+                case 'End':
+                    return isoOfDay(startOfWeekDay(days, options.firstDay) + COLUMNS - 1);
+                case 'PageUp':
+                    return addMonths(focus, options.shift ? -12 : -1);
+                case 'PageDown':
+                    return addMonths(focus, options.shift ? 12 : 1);
+                default:
+                    return undefined;
+            }
+        case 'week':
+            switch (key) {
+                case 'Home':
+                    return isoOfDay(startOfWeekDay(days, options.firstDay));
+                case 'End':
+                    return isoOfDay(startOfWeekDay(days, options.firstDay) + COLUMNS - 1);
+                case 'PageUp':
+                    return addDays(focus, -COLUMNS);
+                case 'PageDown':
+                    return addDays(focus, COLUMNS);
+                default:
+                    return undefined;
+            }
+        case 'day':
+            return key === 'PageUp' ? addDays(focus, -1) : key === 'PageDown' ? addDays(focus, 1) : undefined;
     }
 }
 
+/** A record drawn in a day column of the week and day views */
+export interface TimeRecord {
+    readonly key: string;
+    readonly title: string;
+    /** The start time as the locale writes it, empty for a record that began on an earlier day */
+    readonly time: string;
+    /** The name of the record for a screen reader: the title and its times */
+    readonly label: string;
+    /** Minutes from the start of the day to the start of the record, `--sui-start` */
+    readonly start: number;
+    /** The length in minutes of the part on this day, `--sui-span` (the view draws at least a quarter of an hour) */
+    readonly span: number;
+    /** The column among records that overlap, from 0, and how many columns the group has: `--sui-column` and `--sui-columns` */
+    readonly column: number;
+    readonly columns: number;
+}
+
+/** A day column of the week and day views */
+export interface TimeDay {
+    readonly iso: string;
+    readonly number: string;
+    /** The short weekday name */
+    readonly weekday: string;
+    readonly label: string;
+    readonly today: boolean;
+    readonly active: boolean;
+    /** The all-day records on this day, shown with the day's heading */
+    readonly allDay: readonly MonthRecord[];
+    /** The timed records on this day, clipped to it, with their place */
+    readonly records: readonly TimeRecord[];
+}
+
+export interface TimeModel {
+    readonly heading: string;
+    readonly days: readonly TimeDay[];
+    /** The label of each of the 24 hour rows */
+    readonly hours: readonly string[];
+    readonly range: VisibleRange;
+}
+
+export interface TimeInput extends MonthInput {
+    readonly view: 'week' | 'day';
+}
+
+/** The times of a record as a screen reader gets them: `9:30 AM – 10:00 AM`, or just the start for a record with no length */
+function timesOf(event: CalendarEvent, locale: string): string {
+    const start = formatTime(event.startMinute % MINUTES_PER_DAY, locale);
+    if (event.endMinute <= event.startMinute) return start;
+    return `${start} – ${formatTime(event.endMinute % MINUTES_PER_DAY, locale)}`;
+}
+
+const clippedSegment = (segment: Segment, event: CalendarEvent, day: number): boolean => event.firstDay < day && segment.start === 0;
+
+/**
+ * The columns of the week view (the 7 days of the week that holds the focused date) or the day view (the focused date):
+ * for each day the all-day records, and the timed records clipped to the day with their start and length in minutes and
+ * the column they take beside records that overlap (`layoutOverlaps`). A record that crosses midnight is in both days'
+ * columns. The heading is the range of the week or the whole date of the day
+ */
+export function buildTimeView(input: TimeInput): TimeModel {
+    const range = visibleRange(input.view, input.focus, input.firstDay);
+    const first = dayOf(range.start) as number;
+    const last = dayOf(range.end) as number;
+    const heads = weekdayNames(input.locale, 0, 'short');
+    const days: TimeDay[] = [];
+    for (let day = first; day <= last; day++) {
+        const iso = isoOfDay(day);
+        const found = eventsOnDay(input.events, day);
+        const segments = found.map((event) => segmentOn(event, day)).filter((segment): segment is Segment => segment !== undefined);
+        const records: TimeRecord[] = layoutOverlaps(segments).map((placed) => ({
+            key: placed.event.key,
+            title: placed.event.title,
+            time: clippedSegment(placed, placed.event, day) ? '' : formatTime(placed.event.startMinute % MINUTES_PER_DAY, input.locale),
+            label: `${placed.event.title}, ${timesOf(placed.event, input.locale)}`,
+            start: placed.start,
+            span: placed.span,
+            column: placed.column,
+            columns: placed.columns
+        }));
+        days.push({
+            iso,
+            number: formatDayNumber(Number(iso.slice(8)), input.locale),
+            weekday: heads[weekdayOfDay(day)] ?? '',
+            label: formatLongDate(iso, input.locale),
+            today: iso === input.today,
+            active: iso === input.focus,
+            allDay: found.filter((event) => event.allDay).map((event) => ({ key: event.key, title: event.title, time: '' })),
+            records
+        });
+    }
+    return {
+        heading: input.view === 'day' ? formatLongDate(input.focus, input.locale) : formatDateRange(range.start, range.end, input.locale),
+        days,
+        hours: Array.from({ length: 24 }, (_, hour) => formatHour(hour, input.locale)),
+        range
+    };
+}
