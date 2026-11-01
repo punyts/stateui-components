@@ -1,0 +1,57 @@
+{
+    "summary": "A labelled field for a start and end date: typed dates read with the locale, and a two-month calendar to pick a range",
+    "events": ["change", "invalid", "valid"],
+    "commands": ["validate", "reset", "focus", "clear"],
+    "tokenGroup": "field",
+    "tokens": {
+        "selected": { "fill": "{color.accent.base}", "on": "{color.accent.on}" },
+        "error": { "color": "{color.danger.base}" },
+        "label": { "gap": "{space.gap.sm}", "width": "calc({size.control.lg} * 3)" },
+        "help": { "size": "{text.caption.size}" }
+    },
+    "shared": { "size": { "default": "md" }, "density": {} },
+    "properties": {
+        "value": { "type": "object", "default": { "start": "", "end": "" } },
+        "min": { "type": "string", "validators": { "pattern": "^$|^[0-9]{4}-[0-9]{2}-[0-9]{2}$" }, "default": "" },
+        "max": { "type": "string", "validators": { "pattern": "^$|^[0-9]{4}-[0-9]{2}-[0-9]{2}$" }, "default": "" },
+        "minDays": { "type": "integer", "default": 0, "validators": { "range": { "min": 0 } } },
+        "maxDays": { "type": "integer", "default": 0, "validators": { "range": { "min": 0 } } },
+        "disabled": { "type": "boolean", "default": false },
+        "readonly": { "type": "boolean", "default": false },
+        "titlePosition": { "type": "string", "values": ["top", "left", "inner", "hidden"], "default": "top", "reflect": true },
+        "width": { "type": ["string", "integer"], "default": "fill" },
+        "required": { "type": "boolean", "default": false },
+        "error": { "type": "string", "default": "", "runtime": true },
+        "touched": { "type": "boolean", "default": false, "runtime": true },
+        "dirty": { "type": "boolean", "default": false, "runtime": true },
+        "locked": { "type": "boolean", "default": false, "runtime": true },
+        "message": { "type": "string", "default": "", "runtime": true },
+        "startText": { "type": "string", "default": "", "runtime": true },
+        "endText": { "type": "string", "default": "", "runtime": true },
+        "open": { "type": "boolean", "default": false, "runtime": true },
+        "picking": { "type": "boolean", "default": false, "runtime": true },
+        "months": { "type": "object", "default": {}, "runtime": true },
+        "_label": { "type": "string", "kind": "content", "default": "Dates" },
+        "_help": { "type": "string", "kind": "content", "default": "" },
+        "_start": { "type": "string", "kind": "content", "default": "Start date" },
+        "_end": { "type": "string", "kind": "content", "default": "End date" },
+        "_open": { "type": "string", "kind": "content", "default": "Choose dates" },
+        "_previous": { "type": "string", "kind": "content", "default": "Previous month" },
+        "_next": { "type": "string", "kind": "content", "default": "Next month" },
+        "_pickStart": { "type": "string", "kind": "content", "default": "Pick the start date" },
+        "_pickEnd": { "type": "string", "kind": "content", "default": "Pick the end date" },
+        "_errors": {
+            "type": "map",
+            "items": "string",
+            "kind": "content",
+            "default": {
+                "required": "Enter a start and an end date",
+                "format": "Enter a valid date",
+                "min": "Too early",
+                "max": "Too late",
+                "minDays": "The range is too short",
+                "maxDays": "The range is too long"
+            }
+        }
+    }
+}

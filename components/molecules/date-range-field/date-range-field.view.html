@@ -1,0 +1,41 @@
+<div class="field" style="--field-width: {{ widthOf($.width) }}">
+    <label class="label" id="label" for="control">{{ $._label }}</label>
+    <div class="box" role="group" aria-labelledby="label">
+        <input id="control" class="control" type="text" inputmode="numeric" autocomplete="off" aria-label="{{ $._start }}" disabled="{{ $.disabled || $.locked }}" readonly="{{ $.readonly }}" aria-describedby="{{ describedBy($._help, $.message) }}" aria-invalid="{{ $.error !== '' ? 'true' : null }}" value="{{ $.startText }}" data-side="start" oninput="{{ onInput }}" onchange="{{ onCommit }}" onkeydown="{{ onInputKey }}" onblur="{{ onFocusOut }}" />
+        <span class="dash" aria-hidden="true">&#8211;</span>
+        <input id="end" class="control" type="text" inputmode="numeric" autocomplete="off" aria-label="{{ $._end }}" disabled="{{ $.disabled || $.locked }}" readonly="{{ $.readonly }}" aria-describedby="{{ describedBy($._help, $.message) }}" aria-invalid="{{ $.error !== '' ? 'true' : null }}" value="{{ $.endText }}" data-side="end" oninput="{{ onInput }}" onchange="{{ onCommit }}" onkeydown="{{ onInputKey }}" onblur="{{ onFocusOut }}" />
+        <button class="open" id="open" type="button" aria-label="{{ $._open }}" aria-haspopup="dialog" aria-expanded="{{ $.open ? 'true' : 'false' }}" disabled="{{ $.disabled || $.locked || $.readonly }}" onclick="{{ onToggle }}" onblur="{{ onFocusOut }}">
+            <ui-icon name="calendar" size="sm"></ui-icon>
+        </button>
+    </div>
+    <div class="messages">
+        <p class="help" id="help" if="{{ $._help !== '' }}">{{ $._help }}</p>
+        <div class="alert" role="status" aria-live="polite">
+            <p class="error" id="error" if="{{ $.message !== '' }}">{{ $.message }}</p>
+        </div>
+    </div>
+</div>
+<div class="popup" id="popup" popover="manual" role="dialog" aria-label="{{ $._label }}" onpointerdown="{{ onPopupDown }}" onclick="{{ onPopupClick }}" onkeydown="{{ onPopupKey }}" onfocusout="{{ onPopupFocusOut }}">
+    <p class="status" role="status" aria-live="polite">{{ $.picking ? $._pickEnd : $._pickStart }}</p>
+    <div class="months">
+        <section class="month" repeat="{{ $mk,$mi,$m in $.months }}" key="{{ $mk }}">
+            <header class="bar">
+                <button class="nav" type="button" data-nav="previous" aria-label="{{ $._previous }}" hidden="{{ $m.hidePrevious }}">
+                    <ui-icon name="chevron-left" size="sm"></ui-icon>
+                </button>
+                <h3 class="heading">{{ $m.heading }}</h3>
+                <button class="nav" type="button" data-nav="next" aria-label="{{ $._next }}" hidden="{{ $m.hideNext }}">
+                    <ui-icon name="chevron-right" size="sm"></ui-icon>
+                </button>
+            </header>
+            <div class="grid" role="grid" aria-label="{{ $m.heading }}">
+                <div class="row" role="row">
+                    <span class="weekday" role="columnheader" repeat="{{ $wk,$wi,$w in $m.weekdays }}" key="{{ $wk }}" aria-label="{{ $w.long }}">{{ $w.short }}</span>
+                </div>
+                <div class="row" role="row" repeat="{{ $rk,$ri,$r in $m.weeks }}" key="{{ $rk }}">
+                    <button class="cell" type="button" role="gridcell" repeat="{{ $dk,$di,$d in $r.days }}" key="{{ $dk }}" data-date="{{ $d.iso }}" tabindex="{{ $d.tab }}" aria-label="{{ $d.label }}" aria-selected="{{ $d.inRange ? 'true' : 'false' }}" aria-disabled="{{ $d.pickable ? null : 'true' }}" aria-hidden="{{ $d.blank ? 'true' : null }}" aria-current="{{ $d.today ? 'date' : null }}" data-blank="{{ $d.blank ? '' : null }}" data-in-range="{{ $d.inRange ? '' : null }}" data-edge="{{ $d.edge !== '' ? $d.edge : null }}" data-pending="{{ $d.pending ? '' : null }}">{{ $d.number }}</button>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>

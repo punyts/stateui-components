@@ -1,0 +1,185 @@
+@include "control.css";
+@include "field.css";
+
+.box {
+    anchor-name: --c;
+    gap: var(--ui-space-gap-sm);
+}
+
+.box .control {
+    min-inline-size: 0;
+}
+
+.control[aria-invalid="true"] {
+    border-color: var(--ui-field-error-color);
+}
+
+.dash {
+    flex: none;
+    color: var(--ui-color-text-muted);
+}
+
+.open,
+.nav {
+    box-sizing: border-box;
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--ui-size-control-md);
+    min-block-size: var(--ui-size-control-md);
+    margin: 0;
+    padding: 0;
+    font: inherit;
+    color: var(--ui-color-text-base);
+    background: var(--ui-color-surface-base);
+    border: var(--ui-control-border) solid var(--ui-color-border-strong);
+    border-radius: var(--ui-control-radius);
+    cursor: pointer;
+}
+
+.open:hover:not(:disabled),
+.nav:hover {
+    background: var(--ui-color-surface-sunken);
+}
+
+.open:focus-visible,
+.nav:focus-visible,
+.cell:focus-visible {
+    outline: 2px solid var(--ui-color-focus);
+    outline-offset: 2px;
+}
+
+.open:disabled {
+    color: var(--ui-color-text-disabled);
+    background: var(--ui-color-surface-sunken);
+    border-color: var(--ui-color-border-base);
+    cursor: not-allowed;
+}
+
+.popup {
+    box-sizing: border-box;
+    margin: 0;
+    margin-block: var(--ui-space-gap-sm);
+    border: 0;
+    inset: auto;
+    max-inline-size: calc(100vw - var(--ui-space-inset-md) * 2);
+    padding: var(--ui-space-inset-md);
+    position-anchor: --c;
+    position-area: block-end span-inline-end;
+    position-try-fallbacks: flip-block;
+    color: var(--ui-color-text-base);
+    background: var(--ui-color-surface-base);
+    border-radius: var(--ui-radius-md);
+    box-shadow: var(--ui-elevation-overlay-shadow);
+    font-family: var(--ui-text-body-family);
+    font-size: var(--ui-text-body-size);
+    line-height: var(--ui-text-body-leading);
+}
+
+.status {
+    margin: 0 0 var(--ui-space-gap-md);
+    color: var(--ui-color-text-muted);
+    font-size: var(--ui-text-caption-size);
+}
+
+.months {
+    display: flex;
+    gap: var(--ui-space-inset-md);
+}
+
+.month {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ui-space-gap-sm);
+}
+
+.bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--ui-space-gap-sm);
+    min-block-size: var(--ui-size-control-md);
+}
+
+.heading {
+    flex: 1 1 auto;
+    margin: 0;
+    font-family: var(--ui-text-label-family);
+    font-size: var(--ui-text-label-size);
+    font-weight: var(--ui-text-label-weight);
+    text-align: center;
+}
+
+.nav[hidden] {
+    display: inline-flex;
+    visibility: hidden;
+}
+
+.row {
+    display: grid;
+    grid-template-columns: repeat(7, var(--ui-size-control-md));
+}
+
+.weekday {
+    padding-block: var(--ui-space-gap-sm);
+    color: var(--ui-color-text-muted);
+    font-size: var(--ui-text-caption-size);
+    text-align: center;
+}
+
+.cell {
+    box-sizing: border-box;
+    inline-size: var(--ui-size-control-md);
+    block-size: var(--ui-size-control-md);
+    margin: 0;
+    padding: 0;
+    font: inherit;
+    color: var(--ui-color-text-base);
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    cursor: pointer;
+}
+
+.cell:hover:not([data-in-range]) {
+    background: var(--ui-color-surface-sunken);
+}
+
+.cell[data-blank] {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.cell[aria-disabled="true"] {
+    color: var(--ui-color-text-disabled);
+    cursor: not-allowed;
+}
+
+.cell[aria-current="date"] {
+    font-weight: 700;
+    text-decoration: underline;
+}
+
+.cell[data-in-range] {
+    background: color-mix(in srgb, var(--ui-field-selected-fill) 20%, transparent);
+}
+
+.cell[data-edge] {
+    color: var(--ui-field-selected-on);
+    background: var(--ui-field-selected-fill);
+}
+
+.cell[data-edge="start"] {
+    border-start-start-radius: var(--ui-radius-md);
+    border-end-start-radius: var(--ui-radius-md);
+}
+
+.cell[data-edge="end"] {
+    border-start-end-radius: var(--ui-radius-md);
+    border-end-end-radius: var(--ui-radius-md);
+}
+
+.cell[data-edge="both"] {
+    border-radius: var(--ui-radius-md);
+}

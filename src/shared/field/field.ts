@@ -64,6 +64,13 @@ export interface FieldOptions {
      * field uses it for text that is not a number, which is not in `value`, so the other rules cannot see it
      */
     readonly entryRule?: () => string;
+    /**
+     * Makes `entryRule` the only rule: when it finds nothing wrong the value is valid, and the shared rules (`required`, `min`,
+     * `max`, ...) are not run. A field whose value is not a string, number or list (a date range) judges it all itself
+     */
+    readonly exclusive?: boolean;
+    /** Makes the value the `clear` command writes, a new one each time; without it `clear` writes `false`, an empty list or an empty string by the kind of the first value */
+    readonly empty?: () => unknown;
 }
 
 /** The element of a field as the command dispatcher sees it */
@@ -93,6 +100,8 @@ function emptyLike(value: unknown): unknown {
     if (typeof value === 'boolean') return false;
     return Array.isArray(value) ? [] : '';
 }
+
+const isPlain = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const isShown = (text: unknown): boolean => typeof text === 'string' && text !== '';
 
@@ -133,7 +142,9 @@ export function createField({ element, store, basePath }: ControllerContext, val
     const valuePath = `${basePath}.${valueName}`;
     const read = (name: string): unknown => store.get<unknown>(`${basePath}.${name}`);
     const same = (a: unknown, b: unknown): boolean => a === b || JSON.stringify(a) === JSON.stringify(b);
-    let baseline = store.get<unknown>(valuePath);
+    //a copy: the store may change an object value in place, and the baseline must stay what the field started with
+    const snapshot = (value: unknown): unknown => (typeof value === 'object' && value !== null ? JSON.parse(JSON.stringify(value)) : value);
+    let baseline = snapshot(store.get<unknown>(valuePath));
     let announced = JSON.stringify(baseline);
     const settings = (): FieldSettings => ({
         required: read('required') === true,
@@ -153,7 +164,7 @@ export function createField({ element, store, basePath }: ControllerContext, val
         const before = read('error');
         const value = store.get<unknown>(valuePath);
         const entry = options.entryRule?.() ?? '';
-        const rule = entry !== '' ? entry : failingRule(value, settings());
+        const rule = entry !== '' ? entry : options.exclusive === true ? '' : failingRule(value, settings());
         store.set(`${basePath}.error`, rule);
         if (rule !== '') raise('invalid', { rule });
         else if (typeof before === 'string' && before !== '') raise('valid', { value });
@@ -173,18 +184,18 @@ export function createField({ element, store, basePath }: ControllerContext, val
         else (control.querySelector<HTMLElement>('input:checked:not(:disabled)') ?? control.querySelector<HTMLElement>('input:not(:disabled)'))?.focus();
     };
     const clear = (): void => {
-        const empty: unknown = emptyLike(baseline);
+        const empty: unknown = options.empty ? options.empty() : emptyLike(baseline);
         store.set(valuePath, empty as never);
         store.set(`${basePath}.error`, '');
     };
     const rebase = (): void => {
-        baseline = store.get<unknown>(valuePath);
+        baseline = snapshot(store.get<unknown>(valuePath));
         store.set(`${basePath}.dirty`, false);
     };
     const reset = (): void => {
         store.set(`${basePath}.touched`, false);
         store.set(`${basePath}.error`, '');
-        store.set(valuePath, baseline);
+        store.set(valuePath, snapshot(baseline) as never);
         store.set(`${basePath}.dirty`, false);
     };
     const onValue = (): void => {
@@ -194,7 +205,7 @@ export function createField({ element, store, basePath }: ControllerContext, val
         announced = snapshot;
         store.set(`${basePath}.dirty`, !same(value, baseline));
         if (read('touched') === true && managed === 'none') validate();
-        raise('change', { value: Array.isArray(value) ? [...(value as unknown[])] : value });
+        raise('change', { value: Array.isArray(value) ? [...(value as unknown[])] : isPlain(value) ? { ...value } : value });
     };
     const onBlur = (): void => {
         store.set(`${basePath}.touched`, true);
