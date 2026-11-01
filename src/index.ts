@@ -26,3 +26,10 @@ export { dateOrder, formatDate, formatDateRange, formatDayNumber, formatHour, fo
 export type { NameWidth } from './shared/dates/localeDates.js';
 export { FIRST_DAY_BY_REGION, firstDayFromIntl, firstDayFromTable, firstDayOf } from './shared/dates/weekStart.js';
 export type { FirstDay } from './shared/dates/weekStart.js';
+export { MAX_BLOCK_DEPTH, parseBlocks } from './shared/markdown/blocks.js';
+export type { BlockNode, BlockType } from './shared/markdown/blocks.js';
+export { MAX_INLINE_DEPTH, parseInline } from './shared/markdown/inlines.js';
+export { safeHref } from './shared/markdown/links.js';
+export { DEFAULT_MAX_LENGTH, parseMarkdown } from './shared/markdown/markdown.js';
+export type { MarkdownOptions, MarkdownProfile, ParsedMarkdown } from './shared/markdown/markdown.js';
+export type { MarkdownAlign, MarkdownNode, MarkdownType } from './shared/markdown/nodes.js';
