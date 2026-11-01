@@ -224,6 +224,46 @@ describe('every catalog example', () => {
     });
 });
 
+describe('the recordGrid catalog entry', () => {
+    const entry = roots.find((candidate) => candidate.name === 'recordGrid') as RootCatalogEntry;
+
+    it('should have a shape with the slot row, the records and the recordgrid tokens, and a German overlay', () => {
+        // Assert
+        expect(entry).toBeDefined();
+        expect(entry.tag).toBe('ui-record-grid');
+        expect(entry.size).toBe('composite');
+        expect(entry.slots).toEqual([{ name: 'row', row: true }]);
+        expect(Object.keys(entry.shape.properties)).toEqual(expect.arrayContaining(['records', 'order', 'key', 'overscan', 'row']));
+        const tokens = (entry.shape.tokens ?? []).map((token) => [token.path, token.group, token.default]);
+        expect(tokens).toEqual([
+            ['recordgrid.itemmin', 'recordgrid', 'calc({size.control.md} * 6)'],
+            ['recordgrid.itemheight', 'recordgrid', 'calc({size.control.md} * 4)']
+        ]);
+        expect(entry.locales).toContain('de');
+    });
+
+    it('should have an example node that validates and a document with records and a row template that validates', () => {
+        // Arrange
+        const filled = { component: 'recordGrid', '<-records': '$.data.cards', row: { component: 'text', '<-_text': '$row.name' } };
+
+        // Act
+        const minimal = validateDocument(documentOf(entry.example), catalog, { isIconName });
+        const full = validateDocument({ locale: 'en', data: { cards: [{ id: 'a', name: 'A' }] }, app: filled }, catalog, { isIconName });
+
+        // Assert
+        expect(entry.example.component).toBe('recordGrid');
+        expect(minimal.errors.map(formatError)).toEqual([]);
+        expect(full.errors.map(formatError)).toEqual([]);
+    });
+
+    it('should not use a shared articulation name for any own property', () => {
+        // Assert
+        for (const name of ['tone', 'variant', 'size', 'density', 'elevation', 'textRole']) {
+            expect(entry.own).not.toContain(name);
+        }
+    });
+});
+
 describe('content in en and de', () => {
     const overlays = new Map<string, Record<string, JsonValue>>();
 

@@ -1,7 +1,7 @@
 import type { ControllerContext } from '@punyts/stateui';
 import { runtimePath } from '@punyts/stateui-app/core';
 import { createRecordIndex } from '../shared/records/recordIndex.js';
-import { columnsFor, createGridViewport } from '../shared/records/gridViewport.js';
+import { bandOffset, columnsFor, createGridViewport } from '../shared/records/gridViewport.js';
 import type { GridViewport } from '../shared/records/gridViewport.js';
 import { createRowLayout, layoutWindow } from '../shared/records/rowLayout.js';
 import { createSlotMeasure } from '../shared/records/slotMeasure.js';
@@ -9,6 +9,8 @@ import type { SlotMeasure } from '../shared/records/slotMeasure.js';
 import { createSlotPool } from '../shared/records/slotPool.js';
 import type { SlotPool } from '../shared/records/slotPool.js';
 import { readWindow, sameWindow } from '../shared/records/window.js';
+
+const TEXT_ENTRY = new Set(['input', 'textarea', 'select']);
 
 /**
  * Builds the slot pool of the record grid (see `src/shared/records/`), the same pool, link recycling, key index and window state
@@ -25,6 +27,13 @@ import { readWindow, sameWindow } from '../shared/records/window.js';
  * as tall as its tallest item, the offsets are the sums of the rows above and each slot shows its own as `--sui-offset`; the sum of
  * every row is the height of the scroll content (`contentHeight`). When a measured height above the first visible row changes,
  * `scrollTop` is written by the difference, so the visible records do not move.
+ *
+ * The host is `role="grid"` with `aria-rowcount` and `aria-colcount`, and each slot is a `gridcell` with `aria-rowindex` and
+ * `aria-colindex`. One slot is the tab stop (the record that last had focus, otherwise the first one shown). The arrow keys move
+ * by position, one item across (swapped in right-to-left text) or one row down; Home and End go to the ends of the row, Ctrl+Home
+ * and Ctrl+End to the first and the last item. The target is scrolled into the window and its slot is then focused. The slot that
+ * holds focus is pinned while its record is out of the window, so focus is not lost when it scrolls out, and the pin follows the
+ * record when the column count changes. When a record is deleted focus moves to the record that took its place.
  */
 export default function controller({ element, store, basePath }: ControllerContext) {
     const keyPath = `${basePath}.key`;
@@ -34,6 +43,9 @@ export default function controller({ element, store, basePath }: ControllerConte
     const rowCountPath = `${basePath}.rowCount`;
     const contentPath = `${basePath}.contentHeight`;
     const windowPath = `${runtimePath(basePath)}.window`;
+    let revealKey: string | undefined;
+    let shownRows = -1;
+    let shownColumns = -1;
     let pool: SlotPool | undefined;
     let viewport: GridViewport | undefined;
     let measurer: SlotMeasure | undefined;
@@ -78,6 +90,19 @@ export default function controller({ element, store, basePath }: ControllerConte
         if (store.get<unknown>(contentPath) !== height) store.set(contentPath, height);
     };
 
+    /** Puts the size of the grid on the host as `aria-rowcount` and `aria-colcount` */
+    function syncGrid(): void {
+        const rows = layout.rows();
+        if (rows !== shownRows) {
+            shownRows = rows;
+            element.setAttribute('aria-rowcount', String(rows));
+        }
+        if (columns !== shownColumns) {
+            shownColumns = columns;
+            element.setAttribute('aria-colcount', String(columns));
+        }
+    }
+
     /** Writes the columns, the rows, the height and the window from the last measurement; the pool follows the window */
     function recompute(): void {
         if (disposed || viewport === undefined) return;
@@ -92,6 +117,7 @@ export default function controller({ element, store, basePath }: ControllerConte
         }
         if (store.get<unknown>(colCountPath) !== columns) store.set(colCountPath, columns);
         writeShape();
+        syncGrid();
         const win = layoutWindow(layout, measure.scrollTop, measure.height, columns);
         if (!sameWindow(win, readWindow(store.get<unknown>(windowPath)))) store.set(windowPath, win);
         shown = win;
@@ -115,14 +141,60 @@ export default function controller({ element, store, basePath }: ControllerConte
             if (key === undefined || pool.positionOfSlot(slot) === undefined) continue;
             if (layout.measure(key, height)) changed = true;
         }
-        if (!changed) return;
+        if (!changed) {
+            revealKey = undefined;
+            return;
+        }
         const delta = layout.offsetOfRow(anchorRow) - before;
         if (delta !== 0 && scrollTop > 0) {
             writeShape();
             viewport.scrollTo(scrollTop + delta);
         }
         recompute();
+        const target = revealKey === undefined ? undefined : index.positionOf(revealKey);
+        if (target !== undefined) reveal(target);
     };
+
+    const part = (selector: string): HTMLElement | null => element.shadowRoot?.querySelector<HTMLElement>(selector) ?? null;
+    const slotOf = (event: Event): HTMLElement | undefined => {
+        for (const node of event.composedPath()) {
+            if (node instanceof HTMLElement && node.classList.contains('slot') && node.dataset['slot'] !== undefined) return node;
+        }
+        return undefined;
+    };
+    const activeSlot = (): HTMLElement | undefined => element.shadowRoot?.activeElement?.closest<HTMLElement>('.slot') ?? undefined;
+    const focusSlot = (i: number, attempts = 2): void => {
+        const slot = part(`.slot[data-slot="${i}"]`);
+        if (!slot || disposed) return;
+        slot.focus({ preventScroll: true });
+        if (activeSlot() !== slot && attempts > 0) queueMicrotask(() => focusSlot(i, attempts - 1));
+    };
+    const focusPosition = (position: number): void => {
+        const i = pool?.slotAt(position);
+        if (i !== undefined) focusSlot(i);
+    };
+
+    /** Scrolls the row of a position into the viewport, as little as possible; the scroll reports the window at once */
+    function reveal(position: number): void {
+        if (viewport === undefined) return;
+        const measure = viewport.current();
+        if (!(measure.height > 0)) return;
+        const row = layout.rowOf(position);
+        const next = bandOffset(layout.offsetOfRow(row), layout.heightOfRow(row), measure.scrollTop, measure.height, layout.height(), 'nearest');
+        if (next !== measure.scrollTop) viewport.scrollTo(next);
+    }
+
+    function moveTo(position: number): void {
+        const total = index.size();
+        if (total === 0 || pool === undefined) return;
+        const target = Math.min(Math.max(0, position), total - 1);
+        const key = index.keyAt(target);
+        pool.pin(key);
+        revealKey = key;
+        reveal(target);
+        pool.refresh();
+        focusPosition(target);
+    }
 
     pool = createSlotPool({
         store,
@@ -133,7 +205,15 @@ export default function controller({ element, store, basePath }: ControllerConte
         index,
         overscan: () => overscanRows() * columns,
         offset: (position) => layout.offsetOf(position),
-        onSettled: () => queueMicrotask(syncMeasured)
+        onPinLost: (position) => moveTo(Math.min(position, index.size() - 1)),
+        onSettled: () => {
+            queueMicrotask(syncMeasured);
+            const key = pool?.pinned();
+            if (key === undefined) return;
+            const i = pool?.slotOfKey(key);
+            const active = activeSlot();
+            if (i !== undefined && active !== undefined && active.dataset['slot'] !== String(i)) focusSlot(i);
+        }
     });
 
     /** Observes each slot element once, and again when it shows another record, so a record whose height equals the last one's is measured too */
@@ -182,9 +262,54 @@ export default function controller({ element, store, basePath }: ControllerConte
         viewport = createGridViewport({ scroller, probe, onChange: recompute });
         syncMeasured();
     };
+    element.setAttribute('role', 'grid');
     queueMicrotask(() => start(8));
 
+    /** The position a key moves the focus to from a position, or `undefined` for a key that does nothing here */
+    const targetOf = (event: KeyboardEvent, current: number): number | undefined => {
+        const total = index.size();
+        const last = total - 1;
+        const rowStart = current - (current % columns);
+        const rtl = element.matches(':dir(rtl)');
+        const forward = rtl ? 'ArrowLeft' : 'ArrowRight';
+        const backward = rtl ? 'ArrowRight' : 'ArrowLeft';
+        if (event.key === 'Home') return event.ctrlKey ? 0 : rowStart;
+        if (event.key === 'End') return event.ctrlKey ? last : Math.min(rowStart + columns - 1, last);
+        if (event.ctrlKey) return undefined;
+        if (event.key === forward) return current % columns < columns - 1 ? Math.min(current + 1, last) : current;
+        if (event.key === backward) return current % columns > 0 ? current - 1 : current;
+        if (event.key === 'ArrowUp') return current < columns ? current : current - columns;
+        if (event.key === 'ArrowDown') {
+            if (current + columns <= last) return current + columns;
+            return Math.floor(last / columns) > Math.floor(current / columns) ? last : current;
+        }
+        return undefined;
+    };
+
     return {
+        onKeyDown: (event: KeyboardEvent) => {
+            if (event.altKey || event.metaKey || pool === undefined) return;
+            const origin = event.composedPath()[0];
+            if (origin instanceof HTMLElement && (TEXT_ENTRY.has(origin.localName) || origin.isContentEditable)) return;
+            const slot = slotOf(event);
+            const current = slot === undefined ? undefined : pool.positionOfSlot(Number(slot.dataset['slot']));
+            if (current === undefined) return;
+            const target = targetOf(event, current);
+            if (target === undefined) return;
+            event.preventDefault();
+            moveTo(target);
+        },
+        onFocusIn: (event: FocusEvent) => {
+            const slot = slotOf(event);
+            if (slot === undefined) return;
+            pool?.pin(pool.keyOfSlot(Number(slot.dataset['slot'])));
+        },
+        onFocusOut: (event: FocusEvent) => {
+            const next = event.relatedTarget;
+            const grid = part('.grid');
+            if (next instanceof Node && grid?.contains(next)) return;
+            pool?.pin(undefined);
+        },
         dispose: () => {
             disposed = true;
             store.off([keyPath], onKey);
@@ -199,6 +324,9 @@ export default function controller({ element, store, basePath }: ControllerConte
             index.dispose();
             pool?.dispose();
             pool = undefined;
+            element.removeAttribute('role');
+            element.removeAttribute('aria-rowcount');
+            element.removeAttribute('aria-colcount');
         }
     };
 }
