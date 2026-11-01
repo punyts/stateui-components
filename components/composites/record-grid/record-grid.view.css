@@ -9,12 +9,13 @@
     block-size: 100%;
     overflow-y: auto;
     overflow-x: hidden;
+    overflow-anchor: none;
     scrollbar-gutter: stable;
 }
 
 .rows {
     position: relative;
-    block-size: calc(var(--sui-rows, 0) * var(--sui-item-h));
+    block-size: var(--sui-total, 0px);
 }
 
 .probe {
@@ -32,10 +33,9 @@
     inset-block-start: 0;
     inset-inline-start: calc(var(--sui-col, 0) * 100% / var(--sui-cols, 1));
     inline-size: calc(100% / var(--sui-cols, 1));
-    block-size: var(--sui-item-h);
+    min-block-size: var(--sui-item-h);
     box-sizing: border-box;
-    overflow: hidden;
-    transform: translateY(calc(var(--sui-row, 0) * var(--sui-item-h)));
+    transform: translateY(var(--sui-offset, 0px));
 }
 
 .slot[hidden] {

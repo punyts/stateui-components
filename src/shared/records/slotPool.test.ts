@@ -6,7 +6,7 @@ import { createSlotPool } from './slotPool.js';
 const flush = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
 const RUNTIME = '$.runtime.nodes.app';
 
-const setup = (count: number) => {
+const setup = (count: number, offset?: (position: number) => number) => {
     const records = Array.from({ length: count }, (_v, i) => ({ id: `r${i}`, name: `Name ${i}` }));
     const store = createStore<Record<string, unknown>>({
         data: { records },
@@ -26,7 +26,7 @@ const setup = (count: number) => {
         key: 'id',
         onChange: (again) => reload?.(again)
     });
-    const pool = createSlotPool({ store, nodePath: '$.app', rowPath: '$.app.row', viewPath: '$.app.slots', countPath: '$.app.count', index, overscan: () => 1 });
+    const pool = createSlotPool({ store, nodePath: '$.app', rowPath: '$.app.row', viewPath: '$.app.slots', countPath: '$.app.count', index, overscan: () => 1, ...(offset === undefined ? {} : { offset }) });
     reload = (again) => pool.invalidate(again);
     return { store, index, pool, on, off };
 };
@@ -78,6 +78,24 @@ describe('createSlotPool', () => {
         // Assert
         expect(store.get(`${RUNTIME}.slots.3.slotIndex`)).toBe(-1);
         expect(rowName(store, 3)).toBeUndefined();
+    });
+
+    it('should write the offset of each position it shows and write it again on syncOffsets', async () => {
+        // Arrange
+        let unit = 10;
+        const { store, pool } = setup(100, (position) => position * unit);
+        store.set(`${RUNTIME}.window`, { first: 10, count: 4 });
+        await flush();
+        const slot = 12 % 6;
+        expect(store.get(`${RUNTIME}.slots.${slot}.slotOffset`)).toBe(120);
+
+        // Act
+        unit = 20;
+        pool.syncOffsets();
+
+        // Assert
+        expect(store.get(`${RUNTIME}.slots.${slot}.slotOffset`)).toBe(240);
+        expect(store.get(`${RUNTIME}.slots.${9 % 6}.slotOffset`)).toBe(180);
     });
 
     it('should remove the listeners and the slots on dispose', async () => {

@@ -34,6 +34,11 @@ export interface SlotPoolOptions {
      * `undefined`, shows 0, -1, 0, 0 and the empty string
      */
     meta?: (key: string, position: number) => SlotMeta | undefined;
+    /**
+     * The vertical offset in pixels of the item at a position, for a view whose items differ in height (`recordGrid`); a slot
+     * shows it as `slotOffset`, written on every refresh and by `syncOffsets`. Without it `slotOffset` stays 0
+     */
+    offset?: (position: number) => number;
     /** Called once after a refresh that found the pinned record gone, with the position it had */
     onPinLost?: (position: number) => void;
     /** Called at the end of every refresh, when the slots show their positions */
@@ -67,6 +72,8 @@ export interface SlotPool {
     setTab(key: string | undefined): void;
     /** Writes `slotSelected` of every slot again, for a change of the selection */
     syncSelection(): void;
+    /** Writes `slotOffset` of every slot that shows a position again, for a change of the offsets the `offset` option answers */
+    syncOffsets(): void;
     /** The index of the slot that shows a position, or `undefined` */
     slotAt(position: number): number | undefined;
     /** The index of the slot that shows the record with that key, or `undefined` */
@@ -93,6 +100,8 @@ interface Slot {
     tab: boolean;
     /** Whether the slot shows a position that has no record yet (paged data) */
     pending: boolean;
+    /** What was written to `slotOffset` */
+    offset: number;
     /** What was written to `slotLevel`, `slotExpanded`, `slotSetsize`, `slotPosinset` and `slotLabel` */
     shown: ShownMeta;
 }
@@ -159,7 +168,7 @@ function removeLinked(tree: Entry, nodePath: string, links: readonly Link[]): vo
  * microtask
  */
 export function createSlotPool(options: SlotPoolOptions): SlotPool {
-    const { store, nodePath, rowPath, viewPath, countPath, index, overscan, isSelected, paged, meta, onPinLost, onSettled } = options;
+    const { store, nodePath, rowPath, viewPath, countPath, index, overscan, isSelected, paged, meta, offset, onPinLost, onSettled } = options;
     const runtime = runtimePath(nodePath);
     const slotsPath = `${runtime}.slots`;
     const windowPath = `${runtime}.window`;
@@ -201,6 +210,7 @@ export function createSlotPool(options: SlotPoolOptions): SlotPool {
         tree['slotSelected'] = false;
         tree['slotTab'] = false;
         tree['slotPending'] = false;
+        tree['slotOffset'] = 0;
         tree['slotLevel'] = NO_META.level;
         tree['slotExpanded'] = NO_META.expanded;
         tree['slotSetsize'] = NO_META.setsize;
@@ -211,7 +221,7 @@ export function createSlotPool(options: SlotPoolOptions): SlotPool {
         for (const error of applyLinks(store, links)) {
             report.error(error.message, { code: error.code, path });
         }
-        return { path, links, position: -1, key: undefined, target: RUNTIME_PATHS.empty, selected: false, tab: false, pending: false, shown: NO_META };
+        return { path, links, position: -1, key: undefined, target: RUNTIME_PATHS.empty, selected: false, tab: false, pending: false, offset: 0, shown: NO_META };
     };
 
     const destroySlot = (slot: Slot): void => {
@@ -252,6 +262,14 @@ export function createSlotPool(options: SlotPoolOptions): SlotPool {
         if (slot.pending === pending) return;
         slot.pending = pending;
         store.set(`${slot.path}.slotPending`, pending);
+    };
+
+    const markOffset = (slot: Slot): void => {
+        if (offset === undefined || slot.position < 0) return;
+        const next = offset(slot.position);
+        if (slot.offset === next) return;
+        slot.offset = next;
+        store.set(`${slot.path}.slotOffset`, next);
     };
 
     const markMeta = (slot: Slot): void => {
@@ -383,6 +401,7 @@ export function createSlotPool(options: SlotPoolOptions): SlotPool {
             mark(slot);
             markMeta(slot);
         }
+        for (const slot of slots) markOffset(slot);
         markTab(win.first);
         dirty = false;
         reload = false;
@@ -445,6 +464,9 @@ export function createSlotPool(options: SlotPoolOptions): SlotPool {
         },
         syncSelection() {
             for (const slot of slots) mark(slot);
+        },
+        syncOffsets() {
+            for (const slot of slots) markOffset(slot);
         },
         slotAt(position) {
             const at = slots.findIndex((slot) => slot.position === position);

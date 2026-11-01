@@ -1,5 +1,9 @@
 export { createRecordIndex, readTotal } from './recordIndex.js';
 export type { RecordIndex, RecordIndexOptions, RecordStore } from './recordIndex.js';
+export { createRowLayout, layoutWindow } from './rowLayout.js';
+export type { RowLayout, RowLayoutSource } from './rowLayout.js';
+export { createSlotMeasure } from './slotMeasure.js';
+export type { SlotMeasure, SlotMeasureOptions } from './slotMeasure.js';
 export { createSlotPool } from './slotPool.js';
 export type { SlotPool, SlotPoolOptions } from './slotPool.js';
 export { createViewportObserver, offsetFor, windowFor } from './viewport.js';

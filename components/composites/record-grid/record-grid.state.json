@@ -14,6 +14,7 @@
         "count": { "type": "integer", "default": 0, "runtime": true },
         "colCount": { "type": "integer", "default": 1, "runtime": true },
         "rowCount": { "type": "integer", "default": 0, "runtime": true },
+        "contentHeight": { "type": "number", "default": 0, "runtime": true },
         "slots": { "type": "object", "default": {}, "runtime": true }
     }
 }
