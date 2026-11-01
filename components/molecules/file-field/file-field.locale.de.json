@@ -1,0 +1,21 @@
+{
+    "_label": "Dateien",
+    "_help": "",
+    "_choose": "Dateien wählen",
+    "_drop": "Dateien hier ablegen oder",
+    "_remove": "{name} entfernen",
+    "_errors": {
+        "required": "Eine Datei hinzufügen",
+        "accept": "Dieser Dateityp wird nicht akzeptiert",
+        "maxSize": "Die Datei ist zu groß",
+        "maxFiles": "Zu viele Dateien",
+        "too_large": "Die Datei ist zu groß",
+        "unsupported_type": "Dieser Dateityp wird nicht unterstützt",
+        "quota": "Das Speicherlimit dieser App ist erreicht",
+        "not_found": "Die App wurde nicht gefunden",
+        "unauthorized": "Sie dürfen keine Dateien hochladen",
+        "offline": "Die Datei konnte nicht gesendet werden",
+        "cancelled": "Der Upload wurde abgebrochen",
+        "internal": "Der Upload ist fehlgeschlagen"
+    }
+}

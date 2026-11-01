@@ -1,0 +1,57 @@
+{
+    "summary": "A labelled field that takes files by picker or drop and keeps their references, with progress, remove and cancel",
+    "events": ["change", "invalid", "valid"],
+    "commands": ["validate", "reset", "focus", "clear"],
+    "tokenGroup": "field",
+    "tokens": {
+        "selected": { "fill": "{color.accent.base}", "on": "{color.accent.on}" },
+        "error": { "color": "{color.danger.base}" },
+        "label": { "gap": "{space.gap.sm}", "width": "calc({size.control.lg} * 3)" },
+        "help": { "size": "{text.caption.size}" }
+    },
+    "shared": { "size": { "default": "md" }, "density": {} },
+    "properties": {
+        "value": { "type": "array", "default": [] },
+        "accept": { "type": "array", "default": [] },
+        "maxSize": { "type": "integer", "default": 10485760, "validators": { "range": { "min": 1, "max": 10485760 } } },
+        "maxFiles": { "type": "integer", "default": 1, "validators": { "range": { "min": 1 } } },
+        "disabled": { "type": "boolean", "default": false },
+        "readonly": { "type": "boolean", "default": false },
+        "titlePosition": { "type": "string", "values": ["top", "left", "inner", "hidden"], "default": "top", "reflect": true },
+        "width": { "type": ["string", "integer"], "default": "fill" },
+        "required": { "type": "boolean", "default": false },
+        "error": { "type": "string", "default": "", "runtime": true },
+        "touched": { "type": "boolean", "default": false, "runtime": true },
+        "dirty": { "type": "boolean", "default": false, "runtime": true },
+        "locked": { "type": "boolean", "default": false, "runtime": true },
+        "message": { "type": "string", "default": "", "runtime": true },
+        "dragging": { "type": "boolean", "default": false, "runtime": true },
+        "count": { "type": "integer", "default": 0, "runtime": true },
+        "types": { "type": "string", "default": "", "runtime": true },
+        "rows": { "type": "object", "default": {}, "runtime": true },
+        "_label": { "type": "string", "kind": "content", "default": "Files" },
+        "_help": { "type": "string", "kind": "content", "default": "" },
+        "_choose": { "type": "string", "kind": "content", "default": "Choose files" },
+        "_drop": { "type": "string", "kind": "content", "default": "Drop files here or" },
+        "_remove": { "type": "string", "kind": "content", "default": "Remove {name}" },
+        "_errors": {
+            "type": "map",
+            "items": "string",
+            "kind": "content",
+            "default": {
+                "required": "Add a file",
+                "accept": "This type of file is not accepted",
+                "maxSize": "The file is too large",
+                "maxFiles": "Too many files",
+                "too_large": "The file is too large",
+                "unsupported_type": "This type of file is not supported",
+                "quota": "The storage limit of this app is reached",
+                "not_found": "The app could not be found",
+                "unauthorized": "You are not allowed to upload files",
+                "offline": "The file could not be sent",
+                "cancelled": "The upload was cancelled",
+                "internal": "The upload failed"
+            }
+        }
+    }
+}

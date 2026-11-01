@@ -10,6 +10,8 @@ Partials a component's `view.css` pulls in with a line `@include "<name>.css";` 
 
 ## field/
 `field.ts`: `createField(context, valueName)`, the base controller of every field (glyph, message, baseline, `validate` and `reset` commands, `change`, `invalid` and `valid` events, `focus` and `clear` commands, the `ui-field-connect` event with `FieldConnect`, `touched` and `dirty`; the options `entryRule`, `exclusive` and `empty` for a field with a value of its own kind, such as `dateRangeField`) and the layout helpers; `rules.ts`: `failingRule`, `patternOf`, `NAMED_PATTERNS` and `FIELD_RULES`, the pure validation rules.
+`files.ts`: the pure parts of `fileField`: `ALLOWED_FILE_TYPES` (the ADR-0017 list), `MAX_FILE_SIZE` (10 MiB), `effectiveAccept` (`accept` narrowed to the list), `effectiveMaxSize`, `effectiveMaxFiles`, `mediaTypeOf` and `typeFromName` (the type of a file the browser gave none), `acceptAttribute`, `isFileRef`, `formatBytes`, `percentOf` and `transferCode`.
+
 
 ## format/
 `format.ts`: `formatValue(value, { format, locale, currency, signed })` formats a number with `Intl` for a language (`number`; `percent` from 0 to 1, up to one decimal; `currency` with an ISO 4217 code; `duration` from seconds as `m:ss`, or `h:mm:ss` from one hour) and returns an empty string for a value that is not a number. An unusable locale falls back to `en`, a currency code `Intl` refuses to a plain number. `stat` uses it; the `table` and `descriptionList` columns will. Controllers import it as `../shared/format/format.js`.

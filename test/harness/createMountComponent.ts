@@ -2,7 +2,7 @@ import type { Store } from '@punyts/state';
 import { libraryFromCatalog, mountApp, registerLocaleStep } from '@punyts/stateui-app';
 import type { AppDocument, AppState, ComponentLibrary, ComponentOverlays } from '@punyts/stateui-app';
 import type { Catalog } from '@punyts/stateui-app/build';
-import type { BuildError } from '@punyts/stateui-app';
+import type { BuildError, TransferFile } from '@punyts/stateui-app';
 
 /** One line per error: the build's own formatter reads files, so the browser harness cannot import it */
 const formatError = (error: BuildError): string => `${error.code} ${error.message}${error.statePath ? ` (${error.statePath})` : ''}`;
@@ -24,8 +24,8 @@ export interface MountOptions {
     data?: Readonly<Record<string, unknown>>;
     /** The document's `locales`: the overlay per language the application itself brings (relative to the node), on top of the component overlays */
     locales?: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
-    /** The host's hooks: `onEmit` receives the name and payload of an `emit` command (none by default) */
-    hooks?: { onEmit?(name: string, payload: unknown): void };
+    /** The host's hooks: `onEmit` receives the name and payload of an `emit` command, `transferFile` takes the files of a `fileField` (none by default) */
+    hooks?: { onEmit?(name: string, payload: unknown): void; transferFile?: TransferFile };
 }
 
 /** What `mountComponent` gives back */

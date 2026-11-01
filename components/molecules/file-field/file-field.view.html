@@ -1,0 +1,26 @@
+<div class="field" style="--field-width: {{ widthOf($.width) }}">
+    <label class="label" for="control">{{ $._label }}</label>
+    <div class="box drop" data-dragging="{{ $.dragging ? '' : null }}" ondragenter="{{ onDragOver }}" ondragover="{{ onDragOver }}" ondragleave="{{ onDragLeave }}" ondrop="{{ onDrop }}">
+        <div class="prompt">
+            <span class="drop-hint">{{ $._drop }}</span>
+            <button id="control" class="choose" type="button" disabled="{{ $.disabled || $.locked || $.readonly }}" aria-describedby="{{ describedBy($._help, $.message) }}" aria-invalid="{{ $.error !== '' ? 'true' : null }}" onclick="{{ onChoose }}" onblur="{{ onBlur }}">{{ $._choose }}</button>
+        </div>
+        <input class="picker" type="file" tabindex="-1" aria-hidden="true" multiple="{{ $.maxFiles > 1 }}" accept="{{ $.types }}" disabled="{{ $.disabled || $.locked || $.readonly }}" onchange="{{ onPicked }}" />
+        <ul class="files" if="{{ $.count > 0 }}">
+            <li class="file" repeat="{{ $k,$i,$v in $.rows }}" key="{{ $k }}" data-state="{{ $v.state }}">
+                <span class="name">{{ $v.name }}</span>
+                <span class="detail">{{ $v.detail }}</span>
+                <button class="remove" type="button" data-key="{{ $k }}" aria-label="{{ $v.removeLabel }}" disabled="{{ $.disabled || $.locked || $.readonly }}" onclick="{{ onRemove }}">
+                    <ui-icon name="x" size="sm"></ui-icon>
+                </button>
+                <progress class="bar" if="{{ $v.state === 'uploading' }}" max="100" value="{{ $v.percent }}" aria-label="{{ $v.name }}"></progress>
+            </li>
+        </ul>
+    </div>
+    <div class="messages">
+        <p class="help" id="help" if="{{ $._help !== '' }}">{{ $._help }}</p>
+        <div class="alert" role="status" aria-live="polite">
+            <p class="error" id="error" if="{{ $.message !== '' }}">{{ $.message }}</p>
+        </div>
+    </div>
+</div>
