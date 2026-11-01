@@ -18,3 +18,5 @@ export { NUMBER_INPUT_FORMATS, formatNumberInput, parseNumberInput } from './sha
 export type { NumberInputFormat, NumberInputOptions } from './shared/format/numberInput.js';
 export { ALIGNED_PLACEMENTS, PLACEMENTS, createPopover, isAlignedPlacement, isAnchorName, isPlacement, positionAreaOf } from './shared/popover/popover.js';
 export type { AlignedPlacement, AnyPlacement, Placement, PopoverDismissReason, PopoverHandle, PopoverOptions } from './shared/popover/popover.js';
+export { createBandScale, createLinearScale, extentOf, niceTicks, stack, stackExtent } from './shared/chart/scale.js';
+export type { BandOptions, BandScale, Extent, LinearScale, NiceTicks, StackedValue, TickFormatter } from './shared/chart/scale.js';

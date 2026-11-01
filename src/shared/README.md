@@ -44,3 +44,6 @@ Partials a component's `view.css` pulls in with a line `@include "<name>.css";` 
 
 ## order/
 `sortOrder.ts`: `createSortOrder({ store, recordsPath, orderPath, key, sortBy, direction, schedule })` writes the sorted key array `order` (with `replace`, one event) from the records path and one `<records>.$every.<sortBy>` wildcard, once per `schedule` call; `refresh` after the sort field or direction changed. Pure helpers: `sortedKeys` (stable; empty values last in both directions), `compareSortValues`, `readSortEntries`, `fieldValue`, `readSortDirection`. `list` uses it as `../shared/order/sortOrder.js`; `table` uses it too.
+
+## chart/
+`scale.ts`: the pure parts of every chart type: `createLinearScale`, `createBandScale` (both with `invert`), `niceTicks` (round tick values, labels from a formatter the caller gives), `stack` (positive values up and negative values down from 0), `extentOf` and `stackExtent`. No DOM and no locale code. `chart` imports it as `../shared/chart/scale.js`.
