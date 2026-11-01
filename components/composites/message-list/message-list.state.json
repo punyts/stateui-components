@@ -1,0 +1,81 @@
+{
+    "summary": "A conversation: messages of measured heights in one column that stays at the newest message, with a button back to it",
+    "commands": [
+        "scrollToEnd"
+    ],
+    "tokenGroup": "messagelist",
+    "tokens": {
+        "new": {
+            "fill": "{color.accent.base}",
+            "on": "{color.accent.on}"
+        }
+    },
+    "properties": {
+        "key": {
+            "type": "string",
+            "validators": {
+                "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+            },
+            "default": "id"
+        },
+        "records": {
+            "type": [
+                "array",
+                "object"
+            ]
+        },
+        "row": {
+            "type": "node",
+            "row": true,
+            "default": {
+                "component": "toolbar",
+                "children": {
+                    "avatar": {
+                        "component": "avatar",
+                        "size": "sm",
+                        "<-_name": "$row.author"
+                    },
+                    "body": {
+                        "component": "markdown",
+                        "<-_text": "$row.text"
+                    },
+                    "time": {
+                        "component": "text",
+                        "textRole": "caption",
+                        "<-_text": "$row.time"
+                    }
+                }
+            }
+        },
+        "pinned": {
+            "type": "boolean",
+            "default": true,
+            "runtime": true
+        },
+        "unread": {
+            "type": "boolean",
+            "default": false,
+            "runtime": true
+        },
+        "_newMessages": {
+            "type": "string",
+            "kind": "content",
+            "default": "New messages"
+        },
+        "body": {
+            "type": "object",
+            "default": {
+                "component": "recordGrid",
+                "follow": true,
+                "overscan": 4,
+                "count": 0,
+                "atEnd": true,
+                "colCount": 1,
+                "rowCount": 0,
+                "contentHeight": 0,
+                "slots": {}
+            },
+            "runtime": true
+        }
+    }
+}

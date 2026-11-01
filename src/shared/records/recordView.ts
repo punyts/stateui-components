@@ -23,7 +23,7 @@ export interface RecordViewElement extends Element {
     locate?: (key: string) => string;
     keyAt?: (position: number) => string | undefined;
     recordKeys?: () => string[];
-    commands?: { scrollTo?: (value: unknown) => void };
+    commands?: { scrollTo?: (value: unknown) => void; scrollToEnd?: (value?: unknown) => void };
     slotMeta?: (key: string, position: number) => SlotMeta | undefined;
     invalidate?: () => void;
     focusKey?: (key: string) => void;

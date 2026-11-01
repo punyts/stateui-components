@@ -1,0 +1,46 @@
+:host {
+    display: block;
+    min-block-size: 0;
+    --ui-recordgrid-itemmin: 100000px;
+    --ui-recordgrid-itemheight: calc(var(--ui-size-control-md) * 2);
+}
+
+.messages {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    block-size: 100%;
+    min-block-size: 0;
+}
+
+.messages > sui-node > ui-record-grid {
+    flex: 1 1 auto;
+    min-block-size: 0;
+}
+
+.new {
+    position: absolute;
+    inset-block-end: var(--ui-space-inset-md);
+    inset-inline: 0;
+    box-sizing: border-box;
+    inline-size: max-content;
+    min-block-size: var(--ui-size-control-md);
+    margin: 0;
+    margin-inline: auto;
+    padding-block: 0;
+    padding-inline: var(--ui-space-inset-md);
+    font-family: var(--ui-text-label-family);
+    font-size: var(--ui-text-label-size);
+    line-height: var(--ui-text-label-leading);
+    color: var(--ui-messagelist-new-on);
+    background: var(--ui-messagelist-new-fill);
+    border: 0;
+    border-radius: var(--ui-radius-md);
+    box-shadow: var(--ui-elevation-overlay-shadow);
+    cursor: pointer;
+}
+
+.new:focus-visible {
+    outline: var(--ui-border-width-thick) solid var(--ui-color-focus);
+    outline-offset: 2px;
+}

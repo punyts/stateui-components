@@ -8,9 +8,16 @@ import { createSlotMeasure } from '../shared/records/slotMeasure.js';
 import type { SlotMeasure } from '../shared/records/slotMeasure.js';
 import { createSlotPool } from '../shared/records/slotPool.js';
 import type { SlotPool } from '../shared/records/slotPool.js';
+import type { RecordViewElement } from '../shared/records/recordView.js';
 import { readWindow, sameWindow } from '../shared/records/window.js';
 
 const TEXT_ENTRY = new Set(['input', 'textarea', 'select']);
+
+/** How far from the end the view may be and still count as at the end, in pixels (sub-pixel scroll offsets and rounding) */
+const END_TOLERANCE = 2;
+
+/** How many animation frames the grid tries again to reach the end while the content is not yet as tall as the layout says */
+const END_RETRIES = 4;
 
 /**
  * Builds the slot pool of the record grid (see `src/shared/records/`), the same pool, link recycling, key index and window state
@@ -34,14 +41,25 @@ const TEXT_ENTRY = new Set(['input', 'textarea', 'select']);
  * and Ctrl+End to the first and the last item. The target is scrolled into the window and its slot is then focused. The slot that
  * holds focus is pinned while its record is out of the window, so focus is not lost when it scrolls out, and the pin follows the
  * record when the column count changes. When a record is deleted focus moves to the record that took its place.
+ *
+ * Scrolling by command: `scrollTo` takes a record key and puts its row at the top (a key no record has is an error, as in
+ * `recordList`), and `scrollToEnd` puts the end of the content at the bottom of the viewport. The end is worked out from the
+ * layout, whose heights are estimates until the rows are measured, so after `scrollToEnd` the grid keeps the end in view while
+ * the heights settle and the content grows, until the user scrolls away. With `follow` the grid does so from the start: it
+ * stays at the end while records are added, a measured height changes or the viewport is resized, unless the user has scrolled
+ * up. The runtime property `atEnd` says whether the view is at the end. It follows the scroll position and changes only when
+ * the position does, so content that grows while the user is away neither moves the view nor changes `atEnd`.
  */
 export default function controller({ element, store, basePath }: ControllerContext) {
+    const host = element as Element & RecordViewElement;
     const keyPath = `${basePath}.key`;
     const overscanPath = `${basePath}.overscan`;
     const countPath = `${basePath}.count`;
     const colCountPath = `${basePath}.colCount`;
     const rowCountPath = `${basePath}.rowCount`;
     const contentPath = `${basePath}.contentHeight`;
+    const followPath = `${basePath}.follow`;
+    const atEndPath = `${basePath}.atEnd`;
     const windowPath = `${runtimePath(basePath)}.window`;
     let revealKey: string | undefined;
     let shownRows = -1;
@@ -51,6 +69,15 @@ export default function controller({ element, store, basePath }: ControllerConte
     let measurer: SlotMeasure | undefined;
     let mutations: MutationObserver | undefined;
     let disposed = false;
+    /** Whether the view is at the end, as of the last change of the scroll position */
+    let following = true;
+    /** Whether `scrollToEnd` asked to stay at the end, until the user scrolls away */
+    let commanded = false;
+    /** Set while the grid scrolls itself, so that its own scroll is not read as the user leaving the end */
+    let scrolling = false;
+    let seenTop = 0;
+    let endFrame = 0;
+    let endPending = false;
     let columns = 1;
     let shown = { first: 0, count: 0 };
     /** The slot elements being measured, with the record each showed when it was last asked to report */
@@ -124,8 +151,69 @@ export default function controller({ element, store, basePath }: ControllerConte
         pool?.syncOffsets();
         if (anchor !== undefined && anchor !== measure.scrollTop) {
             const top = anchor;
-            queueMicrotask(() => viewport?.scrollTo(top));
+            queueMicrotask(() => correct(top));
         }
+        trackEnd(measure);
+    }
+
+    /** Moves the scroll position because the layout changed, not because the user did: whether the view is at the end is left as it was */
+    function correct(offset: number): void {
+        if (viewport === undefined) return;
+        scrolling = true;
+        try {
+            viewport.scrollTo(offset);
+        } finally {
+            scrolling = false;
+        }
+    }
+
+    /** Whether a viewport at an offset shows the end of the content */
+    const nearEnd = (measure: { scrollTop: number; height: number }): boolean => measure.scrollTop + measure.height >= layout.height() - END_TOLERANCE;
+
+    const sticks = (): boolean => following && (commanded || store.get<unknown>(followPath) === true);
+
+    /**
+     * Follows the end. A change of the scroll position (not one the grid made itself) says whether the user is at the end or
+     * has left it, and leaving ends a `scrollToEnd`; a change of the content alone changes nothing about that. While the grid
+     * sticks to the end and the end is out of view, it scrolls there once this pass is over
+     */
+    function trackEnd(measure: { scrollTop: number; height: number }): void {
+        if (!scrolling && measure.scrollTop !== seenTop) {
+            following = nearEnd(measure);
+            if (!following) commanded = false;
+        }
+        seenTop = measure.scrollTop;
+        if (store.get<unknown>(atEndPath) !== following) store.set(atEndPath, following);
+        if (!scrolling && sticks() && measure.height > 0 && !nearEnd(measure)) aimAtEnd(END_RETRIES);
+    }
+
+    /** The offset that puts the end of the content at the bottom of the viewport */
+    const endOffset = (): number => Math.max(0, layout.height() - (viewport?.current().height ?? 0));
+
+    /**
+     * Scrolls to the end of the layout. The content element may not be as tall as the layout yet (it follows the store a
+     * moment later), in which case the browser stops short; the grid tries again in the next frames while it still sticks
+     */
+    function aimAtEnd(attempts: number): void {
+        if (endFrame !== 0 || endPending || disposed) return;
+        endPending = true;
+        queueMicrotask(() => {
+            endPending = false;
+            if (disposed || viewport === undefined || !sticks()) return;
+            scrolling = true;
+            try {
+                viewport.scrollTo(endOffset());
+            } finally {
+                scrolling = false;
+            }
+            const measure = viewport.current();
+            seenTop = measure.scrollTop;
+            if (nearEnd(measure) || attempts <= 0 || measure.height <= 0) return;
+            endFrame = requestAnimationFrame(() => {
+                endFrame = 0;
+                if (!disposed && sticks() && viewport !== undefined && !nearEnd(viewport.current())) aimAtEnd(attempts - 1);
+            });
+        });
     }
 
     /** Takes the heights the slots reported; a change above the first visible row moves `scrollTop` so the visible records stay */
@@ -148,7 +236,7 @@ export default function controller({ element, store, basePath }: ControllerConte
         const delta = layout.offsetOfRow(anchorRow) - before;
         if (delta !== 0 && scrollTop > 0) {
             writeShape();
-            viewport.scrollTo(scrollTop + delta);
+            correct(scrollTop + delta);
         }
         recompute();
         const target = revealKey === undefined ? undefined : index.positionOf(revealKey);
@@ -265,6 +353,25 @@ export default function controller({ element, store, basePath }: ControllerConte
     element.setAttribute('role', 'grid');
     queueMicrotask(() => start(8));
 
+    host.commands = {
+        scrollTo: (value) => {
+            const key = typeof value === 'string' || typeof value === 'number' ? String(value) : '';
+            const position = key === '' ? undefined : index.positionOf(key);
+            if (position === undefined || viewport === undefined) throw new Error(`recordGrid: no record has the key "${key}"`);
+            const measure = viewport.current();
+            const row = layout.rowOf(position);
+            commanded = false;
+            viewport.scrollTo(bandOffset(layout.offsetOfRow(row), layout.heightOfRow(row), measure.scrollTop, measure.height, layout.height(), 'start'));
+        },
+        scrollToEnd: () => {
+            following = true;
+            commanded = true;
+            aimAtEnd(END_RETRIES);
+        }
+    };
+    const onFollow = (): void => recompute();
+    store.on([followPath], onFollow);
+
     /** The position a key moves the focus to from a position, or `undefined` for a key that does nothing here */
     const targetOf = (event: KeyboardEvent, current: number): number | undefined => {
         const total = index.size();
@@ -314,6 +421,10 @@ export default function controller({ element, store, basePath }: ControllerConte
             disposed = true;
             store.off([keyPath], onKey);
             store.off([overscanPath], onOverscan);
+            store.off([followPath], onFollow);
+            if (endFrame !== 0) cancelAnimationFrame(endFrame);
+            endFrame = 0;
+            delete host.commands;
             mutations?.disconnect();
             mutations = undefined;
             measurer?.dispose();
