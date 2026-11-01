@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { mountComponent } from '../harness/mountComponent.js';
 
 interface CommandElement extends Element {
-    commands: { validate(): void; reset(): void; clear(): void };
+    commands: { validate(): void; reset(): void; clear(): void; send(): void };
 }
 
 const part = <T extends Element>(element: Element, selector: string): T => element.shadowRoot?.querySelector(selector) as T;
@@ -182,5 +182,56 @@ describe('textareaField in Chromium', () => {
         // Assert
         expect(part(mounted.element, 'label').textContent).toBe('Beschriftung');
         expect(part(mounted.element, '.error')?.textContent).toBe('Zu lang');
+    });
+    it('should raise send with the trimmed text on the send command and never clear the field itself', async () => {
+        // Arrange
+        const mounted = mountComponent('textareaField', { value: '  hello \n' });
+        const seen: unknown[] = [];
+        mounted.element.addEventListener('send', (event) => seen.push((event as CustomEvent).detail));
+
+        // Act
+        commands(mounted.element).send();
+
+        // Assert
+        expect(seen).toEqual(['hello']);
+        expect(mounted.store.get('$.app.value')).toBe('  hello \n');
+    });
+
+    it('should not raise send for an empty value, a disabled field or a read-only field', () => {
+        // Arrange
+        const seen: unknown[] = [];
+        const trial = (state: Record<string, unknown>): void => {
+            const mounted = mountComponent('textareaField', state);
+            mounted.element.addEventListener('send', (event) => seen.push((event as CustomEvent).detail));
+            commands(mounted.element).send();
+        };
+
+        // Act
+        trial({ value: '   ' });
+        trial({ value: 'x', disabled: true });
+        trial({ value: 'x', readonly: true });
+
+        // Assert
+        expect(seen).toEqual([]);
+    });
+
+    it('should raise send on Enter with sendOnEnter, add a line on Shift+Enter and keep a plain Enter a new line without it', async () => {
+        // Arrange
+        const on = mountComponent('textareaField', { sendOnEnter: true });
+        const off = mountComponent('textareaField', {});
+        const seen: unknown[] = [];
+        on.element.addEventListener('send', (event) => seen.push((event as CustomEvent).detail));
+        off.element.addEventListener('send', (event) => seen.push(['off', (event as CustomEvent).detail]));
+
+        // Act
+        await userEvent.type(control(on.element), 'a');
+        await userEvent.keyboard('{Shift>}{Enter}{/Shift}b');
+        await userEvent.keyboard('{Enter}');
+        await userEvent.type(control(off.element), 'c{Enter}d');
+        await settle();
+
+        // Assert
+        expect(seen).toEqual(['a\nb']);
+        expect(control(off.element).value).toBe('c\nd');
     });
 });

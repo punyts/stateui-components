@@ -53,7 +53,7 @@ const difference = (found: readonly string[], spec: readonly string[]): { missin
 const LATER_ATOMS: readonly string[] = ['segmented', 'markdown'];
 const LATER_MOLECULES: readonly string[] = ['numberField', 'comboboxField', 'multiSelectField', 'breadcrumb', 'pagination', 'sliderField', 'disclosure', 'stepper', 'dateRangeField'];
 const LATER_COMPOSITES: readonly string[] = ['popover', 'accordion', 'splitPane', 'tree', 'chart', 'board', 'calendar', 'recordGrid', 'messageList'];
-const LATER_COMPOSED: readonly string[] = ['wizard'];
+const LATER_COMPOSED: readonly string[] = ['wizard', 'chatView'];
 
 const FIELDS = ['textField', 'textareaField', 'selectField', 'checkField', 'switchField', 'radioField', 'dateField', 'numberField', 'comboboxField', 'multiSelectField', 'sliderField', 'dateRangeField'] as const;
 

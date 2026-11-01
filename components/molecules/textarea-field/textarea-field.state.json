@@ -1,7 +1,7 @@
 {
     "summary": "A labelled multi-line text field that can grow with its text, with help and error text",
-    "events": ["change", "invalid", "valid"],
-    "commands": ["validate", "reset", "focus", "clear"],
+    "events": ["change", "invalid", "valid", "send"],
+    "commands": ["validate", "reset", "focus", "clear", "send"],
     "tokenGroup": "field",
     "tokens": {
         "selected": { "fill": "{color.accent.base}", "on": "{color.accent.on}" },
@@ -36,6 +36,10 @@
             }
         },
         "autoGrow": {
+            "type": "boolean",
+            "default": false
+        },
+        "sendOnEnter": {
             "type": "boolean",
             "default": false
         },

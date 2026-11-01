@@ -1,0 +1,41 @@
+{
+    "component": "panel",
+    "layout": { "type": "column", "gap": "sm" },
+    "children": {
+        "messages": {
+            "component": "messageList",
+            "placement": { "grow": 1 }
+        },
+        "composer": {
+            "component": "toolbar",
+            "children": {
+                "input": {
+                    "component": "textareaField",
+                    "_label": "Message",
+                    "_placeholder": "Type a message",
+                    "titlePosition": "hidden",
+                    "autoGrow": true,
+                    "rows": 1,
+                    "sendOnEnter": true,
+                    "on": {
+                        "send": [
+                            { "command": "emit", "target": "chat.send" },
+                            { "command": "clear" }
+                        ]
+                    }
+                },
+                "send": {
+                    "component": "button",
+                    "_title": "Send",
+                    "on": { "press": { "command": "send", "target": "^chatView.children.composer.children.input" } }
+                }
+            }
+        }
+    },
+    "exposes": {
+        "children.messages.records": "The messages shown: link it with <-records to an array in $.data of records { id, author, text, time }; a reply that streams in is one record whose text is rewritten per chunk",
+        "children.composer.children.input._placeholder": "The hint in the empty composer",
+        "children.composer.children.input.on.send": "What sending does: a list that replaces the default whole. The first command emits the event named by its target (chat.send, with the typed text as payload; rename the target to change the event name) and the second clears the composer, so keep both in that order and add your own commands after them",
+        "children.composer.children.send._title": "Send button text"
+    }
+}

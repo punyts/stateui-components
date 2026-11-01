@@ -1,7 +1,7 @@
 <div class="field" style="--field-width: {{ widthOf($.width) }}">
     <label class="label" for="control">{{ $._label }}</label>
     <div class="box">
-        <textarea id="control" class="control{{ $.autoGrow ? ' grow' : '' }}" placeholder="{{ $._placeholder }}" rows="{{ $.rows }}" disabled="{{ $.disabled || $.locked }}" readonly="{{ $.readonly }}" aria-describedby="{{ describedBy($._help, $.message) }}" aria-invalid="{{ $.error !== '' ? 'true' : null }}" value="{{ $.value }}" bind="value" oninput="{{ onInput }}" onblur="{{ onBlur }}"></textarea>
+        <textarea id="control" class="control{{ $.autoGrow ? ' grow' : '' }}" placeholder="{{ $._placeholder }}" rows="{{ $.rows }}" disabled="{{ $.disabled || $.locked }}" readonly="{{ $.readonly }}" aria-describedby="{{ describedBy($._help, $.message) }}" aria-invalid="{{ $.error !== '' ? 'true' : null }}" value="{{ $.value }}" bind="value" oninput="{{ onInput }}" onkeydown="{{ onKeyDown }}" onblur="{{ onBlur }}"></textarea>
     </div>
     <div class="messages">
         <p class="help" id="help" if="{{ $._help !== '' }}">{{ $._help }}</p>
