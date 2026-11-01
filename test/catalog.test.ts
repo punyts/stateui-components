@@ -49,11 +49,19 @@ const difference = (found: readonly string[], spec: readonly string[]): { missin
     extra: found.filter((name) => !spec.includes(name))
 });
 
-/** Components of Epic 8 that joined the library after the first set; the Epic 4 and 5 counts below stay as the spec fixed them */
+/** Components that joined the library after the first set (Epic 8, plus popover, numberField and segmented); the Epic 4 and 5 counts below stay as the spec fixed them */
 const LATER_ATOMS: readonly string[] = ['segmented', 'markdown'];
 const LATER_MOLECULES: readonly string[] = ['numberField', 'comboboxField', 'multiSelectField', 'breadcrumb', 'pagination', 'sliderField', 'disclosure', 'stepper', 'dateRangeField', 'fileField'];
 const LATER_COMPOSITES: readonly string[] = ['popover', 'accordion', 'splitPane', 'tree', 'chart', 'board', 'calendar', 'recordGrid', 'messageList'];
 const LATER_COMPOSED: readonly string[] = ['wizard', 'chatView'];
+
+/** Every component Epic 8 adds; all are built, so none is skipped */
+const EPIC_8_COMPONENTS = [
+    'comboboxField', 'multiSelectField', 'sliderField', 'dateRangeField', 'fileField',
+    'breadcrumb', 'pagination', 'disclosure', 'stepper', 'accordion', 'splitPane',
+    'tree', 'chart', 'board', 'calendar', 'recordGrid', 'messageList',
+    'markdown', 'wizard', 'chatView'
+] as const;
 
 const FIELDS = ['textField', 'textareaField', 'selectField', 'checkField', 'switchField', 'radioField', 'dateField', 'numberField', 'comboboxField', 'multiSelectField', 'sliderField', 'dateRangeField', 'fileField'] as const;
 
@@ -177,6 +185,30 @@ describe('the component catalog holds the whole Epic 5 set', () => {
 
         // Assert
         expect(without).toEqual([]);
+    });
+});
+
+describe('the components of Epic 8', () => {
+    it.each(EPIC_8_COMPONENTS.map((name) => [name] as const))('should be in the catalog with a German overlay and an example that validates: %s', (name) => {
+        // Arrange
+        const entry = catalog.components.find((candidate) => candidate.name === name);
+
+        // Act
+        const result = entry === undefined ? undefined : validateDocument(documentOf(entry.example), catalog, { isIconName });
+
+        // Assert
+        expect(entry, name).toBeDefined();
+        expect(entry?.locales).toContain('de');
+        expect(result?.errors.map(formatError)).toEqual([]);
+        expect(result?.valid).toBe(true);
+    });
+
+    it('should all be in the later sets', () => {
+        // Arrange
+        const later: readonly string[] = [...LATER_ATOMS, ...LATER_MOLECULES, ...LATER_COMPOSITES, ...LATER_COMPOSED];
+
+        // Assert
+        expect(EPIC_8_COMPONENTS.filter((name) => !later.includes(name))).toEqual([]);
     });
 });
 
