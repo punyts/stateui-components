@@ -1,11 +1,11 @@
 {
-    "summary": "An SVG bar, line or area chart over linked records, with ticks for the locale and the theme data colours",
+    "summary": "An SVG bar, line, area or donut chart over linked records, with a legend, a tooltip and a hidden data table",
     "tokenGroup": "chart",
     "tokens": {
         "height": "calc({size.control.md} * 6)"
     },
     "properties": {
-        "type": { "type": "string", "values": ["bar", "line", "area"], "default": "bar", "reflect": true },
+        "type": { "type": "string", "values": ["bar", "line", "area", "donut"], "default": "bar", "reflect": true },
         "x": { "type": "string", "validators": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" }, "default": "x" },
         "series": {
             "type": "map",
@@ -16,6 +16,8 @@
             }
         },
         "stacked": { "type": "boolean", "default": false },
+        "legend": { "type": "string", "values": ["bottom", "end", "none"], "default": "bottom", "reflect": true },
+        "hiddenSeries": { "type": "array", "default": [] },
         "format": { "type": "string", "values": ["number", "percent", "currency", "duration"], "default": "number" },
         "currency": {
             "type": "string",
@@ -23,7 +25,13 @@
             "requiredWhen": { "property": "format", "equals": "currency" }
         },
         "records": { "type": ["array", "object"] },
+        "legendItems": { "type": "object", "default": {}, "runtime": true },
         "_title": { "type": "string", "kind": "content", "default": "Chart" },
-        "_description": { "type": "string", "kind": "content", "default": "" }
+        "_description": { "type": "string", "kind": "content", "default": "" },
+        "_legend": { "type": "string", "kind": "content", "default": "Legend" },
+        "_total": { "type": "string", "kind": "content", "default": "Total" },
+        "_category": { "type": "string", "kind": "content", "default": "Category" },
+        "_value": { "type": "string", "kind": "content", "default": "Value" },
+        "_share": { "type": "string", "kind": "content", "default": "Share" }
     }
 }

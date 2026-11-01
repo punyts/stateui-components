@@ -1,33 +1,36 @@
 import { describe, expect, it } from 'vitest';
-import { buildScene, seriesClass } from './geometry.js';
-import type { ChartInput, Primitive } from './geometry.js';
+import { buildCartesian, seriesClass } from './geometry.js';
+import type { ChartInput, Primitive } from './scene.js';
 
 const base: ChartInput = {
     type: 'bar',
     categories: ['Jan', 'Feb', 'Mar'],
     series: [
-        { key: 'a', values: [10, 20, 30] },
-        { key: 'b', values: [5, 15, 25] }
+        { key: 'a', label: 'A', values: [10, 20, 30] },
+        { key: 'b', label: 'B', values: [5, 15, 25] }
     ],
     stacked: false,
     width: 400,
     height: 200,
-    format: String
+    format: String,
+    percent: String,
+    hidden: new Set(),
+    texts: { total: 'Total', category: 'Category', value: 'Value', share: 'Share' }
 };
 
 const marks = (primitives: readonly Primitive[], prefix: string): Primitive[] => primitives.filter((primitive) => primitive.id.startsWith(prefix));
 const number = (primitive: Primitive, name: string): number => Number(primitive.attrs[name]);
 
-describe('buildScene', () => {
+describe('buildCartesian', () => {
     it('should give nothing to draw for a chart without a size', () => {
         // Assert
-        expect(buildScene({ ...base, width: 0 }).primitives).toEqual([]);
-        expect(buildScene({ ...base, height: 10 }).primitives).toEqual([]);
+        expect(buildCartesian({ ...base, width: 0 }).primitives).toEqual([]);
+        expect(buildCartesian({ ...base, height: 10 }).primitives).toEqual([]);
     });
 
     it('should draw one bar per series and category, in key order and with the series colour', () => {
         // Act
-        const bars = marks(buildScene(base).primitives, 'bar:');
+        const bars = marks(buildCartesian(base).primitives, 'bar:');
 
         // Assert
         expect(bars).toHaveLength(6);
@@ -37,7 +40,7 @@ describe('buildScene', () => {
 
     it('should draw taller bars for larger values on a shared baseline', () => {
         // Act
-        const bars = marks(buildScene(base).primitives, 'bar:a:');
+        const bars = marks(buildCartesian(base).primitives, 'bar:a:');
         const bottoms = bars.map((bar) => number(bar, 'y') + number(bar, 'height'));
 
         // Assert
@@ -47,8 +50,8 @@ describe('buildScene', () => {
 
     it('should put the bars of a category side by side, and stack them on one another when stacked', () => {
         // Act
-        const side = marks(buildScene(base).primitives, 'bar:');
-        const stacked = marks(buildScene({ ...base, stacked: true }).primitives, 'bar:');
+        const side = marks(buildCartesian(base).primitives, 'bar:');
+        const stacked = marks(buildCartesian({ ...base, stacked: true }).primitives, 'bar:');
         const at = (list: Primitive[], key: string): Primitive => list.find((bar) => bar.id === `bar:${key}:0`) as Primitive;
 
         // Assert
@@ -59,7 +62,7 @@ describe('buildScene', () => {
 
     it('should draw a negative stacked bar below the baseline', () => {
         // Act
-        const scene = buildScene({ ...base, stacked: true, series: [{ key: 'a', values: [10, -10, 5] }] });
+        const scene = buildCartesian({ ...base, stacked: true, series: [{ key: 'a', label: 'A', values: [10, -10, 5] }] });
         const baseline = number(scene.primitives.find((primitive) => primitive.id === 'baseline') as Primitive, 'y1');
         const bars = marks(scene.primitives, 'bar:a:');
 
@@ -70,7 +73,7 @@ describe('buildScene', () => {
 
     it('should draw a line and a point per value for a line chart, and no area', () => {
         // Act
-        const { primitives } = buildScene({ ...base, type: 'line' });
+        const { primitives } = buildCartesian({ ...base, type: 'line' });
 
         // Assert
         expect(marks(primitives, 'line:')).toHaveLength(2);
@@ -82,8 +85,8 @@ describe('buildScene', () => {
 
     it('should close the area down to the baseline, or to the series below when stacked', () => {
         // Act
-        const plain = marks(buildScene({ ...base, type: 'area' }).primitives, 'area:');
-        const stacked = marks(buildScene({ ...base, type: 'area', stacked: true }).primitives, 'area:');
+        const plain = marks(buildCartesian({ ...base, type: 'area' }).primitives, 'area:');
+        const stacked = marks(buildCartesian({ ...base, type: 'area', stacked: true }).primitives, 'area:');
 
         // Assert
         expect(plain).toHaveLength(2);
@@ -93,7 +96,7 @@ describe('buildScene', () => {
 
     it('should label the value axis with the formatter and the categories with their text', () => {
         // Act
-        const { primitives } = buildScene({ ...base, format: (value) => `${value}!` });
+        const { primitives } = buildCartesian({ ...base, format: (value) => `${value}!` });
 
         // Assert
         expect(marks(primitives, 'ytick:').every((tick) => tick.text?.endsWith('!'))).toBe(true);
@@ -103,7 +106,7 @@ describe('buildScene', () => {
     it('should skip category labels that would overlap', () => {
         // Act
         const categories = Array.from({ length: 40 }, (_value, at) => `Category ${at}`);
-        const { primitives } = buildScene({ ...base, categories, series: [{ key: 'a', values: categories.map((_c, at) => at) }] });
+        const { primitives } = buildCartesian({ ...base, categories, series: [{ key: 'a', label: 'A', values: categories.map((_c, at) => at) }] });
 
         // Assert
         expect(marks(primitives, 'xtick:').length).toBeLessThan(20);
@@ -112,18 +115,18 @@ describe('buildScene', () => {
 
     it('should be the same scene for the same input and change only the primitive of a changed value', () => {
         // Act
-        const first = buildScene(base).primitives;
-        const second = buildScene({ ...base, series: [{ key: 'a', values: [10, 21, 30] }, { key: 'b', values: [5, 15, 25] }] }).primitives;
+        const first = buildCartesian(base).primitives;
+        const second = buildCartesian({ ...base, series: [{ key: 'a', label: 'A', values: [10, 21, 30] }, { key: 'b', label: 'B', values: [5, 15, 25] }] }).primitives;
         const changed = second.filter((primitive, at) => JSON.stringify(primitive) !== JSON.stringify(first[at])).map((primitive) => primitive.id);
 
         // Assert
-        expect(buildScene(base).primitives).toEqual(first);
+        expect(buildCartesian(base).primitives).toEqual(first);
         expect(changed).toEqual(['bar:a:1']);
     });
 
     it('should draw a chart without series or records as axes only', () => {
         // Act
-        const { primitives } = buildScene({ ...base, categories: [], series: [] });
+        const { primitives } = buildCartesian({ ...base, categories: [], series: [] });
 
         // Assert
         expect(marks(primitives, 'bar:')).toEqual([]);

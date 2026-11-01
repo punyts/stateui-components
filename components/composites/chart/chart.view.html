@@ -1,7 +1,19 @@
 <div class="chart">
     <span class="title" id="title">{{ $._title }}</span>
     <span class="description" id="description">{{ $._description }}</span>
-    <div class="plot">
-        <svg class="svg" role="group" aria-labelledby="title" aria-describedby="{{ $._description !== '' ? 'description' : null }}"></svg>
+    <div class="body">
+        <div class="plot">
+            <div class="anchor" aria-hidden="true"></div>
+            <div class="tip" aria-hidden="true"></div>
+        </div>
+        <ul class="legend" if="{{ $.legend !== 'none' }}" aria-label="{{ $._legend }}">
+            <li class="item" repeat="{{ $k,$i,$v in $.legendItems }}" key="{{ $k }}">
+                <button class="entry" type="button" data-key="{{ $v.key }}" aria-pressed="{{ $v.hidden ? 'false' : 'true' }}" onclick="{{ onLegend }}">
+                    <span class="swatch" data-color="{{ $v.color }}" aria-hidden="true"></span>
+                    <span class="label">{{ $v.label }}</span>
+                </button>
+            </li>
+        </ul>
     </div>
+    <div class="data"></div>
 </div>

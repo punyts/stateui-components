@@ -1,4 +1,4 @@
-import type { Primitive, Scene } from './geometry.js';
+import type { Primitive, Scene } from './scene.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const LAYERS = ['grid', 'axes', 'marks'] as const;

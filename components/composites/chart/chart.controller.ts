@@ -1,59 +1,174 @@
 import type { ControllerContext } from '@punyts/stateui';
-import { CARTESIAN_TYPES, buildScene } from '../shared/chart/geometry.js';
-import type { CartesianType } from '../shared/chart/geometry.js';
+import { buildScene } from '../shared/chart/chart.js';
 import { readCategories, readRows, readSeries, readValues } from '../shared/chart/data.js';
+import { POINT_KEYS, pointAfter, tabStop } from '../shared/chart/navigate.js';
+import { CHART_TYPES, px, seriesClass } from '../shared/chart/scene.js';
+import type { ChartInput, ChartType, Point } from '../shared/chart/scene.js';
 import { createSvgScene } from '../shared/chart/svgScene.js';
 import type { SvgScene } from '../shared/chart/svgScene.js';
+import { createDataTable, tableModel } from '../shared/chart/table.js';
+import type { DataTable } from '../shared/chart/table.js';
+import { createPopover } from '../shared/popover/popover.js';
+import type { PopoverHandle } from '../shared/popover/popover.js';
 import { formatValue } from '../shared/format/format.js';
 
 const text = (value: unknown, fallback = ''): string => (typeof value === 'string' && value !== '' ? value : fallback);
+const TIP_ANCHOR = '--chart-point';
+
+interface LegendItem {
+    key: string;
+    label: string;
+    color: string;
+    hidden: boolean;
+}
 
 /**
- * Draws the records as SVG (`createElementNS`) in the view's `svg`, which has `role="group"`, is labelled by `_title` and
+ * Draws the records as SVG (`createElementNS`) in an `svg` the controller adds to the plot (the template parser makes
+ * every element HTML, so an `svg` in the view would not draw), which has `role="group"`, is labelled by `_title` and
  * described by `_description`. The size comes from a `ResizeObserver` on the plot; scales, ticks and marks come from
- * `src/shared/chart/` (`scale.ts`, `geometry.ts`), and tick labels from the shared formatter for `$.locale`. Series
- * colours are `color.data.categorical.1` to `8` in key order (the classes `s1` to `s8`).
+ * `src/shared/chart/` (`scale.ts`, `geometry.ts`, `donut.ts`), and labels from the shared formatter for `$.locale`.
+ * Series colours are `color.data.categorical.1` to `8` in key order (the classes `s1` to `s8`); a donut colours its slices.
  *
- * A drawing is a list of primitives with stable ids, so a data change recomputes the scene and writes only the
- * attributes that differ: one changed value touches its mark (and a line's path), not the others. A change of the series
- * (a key added, removed or pointed at another field), of `type` or of `stacked` clears the SVG and draws it again. Nothing
- * reads layout: the size is the observer's, and the margins are estimated from the label text
+ * A drawing is a list of primitives with stable ids, so a data change recomputes the scene and writes only the attributes
+ * that differ: one changed value touches its own mark. A change of the series, of `type` or of `stacked` clears the SVG and
+ * draws it again. Nothing reads layout: the size is the observer's, and the margins are estimated from the label text.
+ *
+ * `type: "donut"` draws the first series as arcs with the total in the centre. The legend (`legend`: `bottom`, `end`,
+ * `none`) lists the series (the slices of a donut); pressing an entry writes its key (a donut: the slice label) to or
+ * from `hiddenSeries`, and the chart draws without it. Every bar, point and slice is a mark with `role="img"` and a name:
+ * one is the tab stop, the arrow keys move between marks (Left and Right between categories, Up and Down between series,
+ * Home and End to the ends), and hovering or focusing a mark shows its values in a tooltip drawn with the shared popover
+ * code, anchored by custom properties on an element in the plot (an SVG mark cannot be a CSS anchor). A visually hidden
+ * `table` with all the values follows the data
  */
 export default function controller({ element, store, basePath }: ControllerContext) {
     const read = (name: string): unknown => store.get<unknown>(`${basePath}.${name}`);
     const recordsPath = `${basePath}.records`;
+    const hiddenPath = `${basePath}.hiddenSeries`;
+    const itemsPath = `${basePath}.legendItems`;
     let disposed = false;
     let scheduled = false;
     let width = 0;
     let height = 0;
     let svgScene: SvgScene | undefined;
+    let svgElement: SVGSVGElement | undefined;
+    let dataTable: DataTable | undefined;
+    let popover: PopoverHandle | undefined;
     let observer: ResizeObserver | undefined;
     let structure = '';
+    let points = new Map<string, Point>();
+    let ordered: Point[] = [];
+    let active: string | undefined;
+    let stop: { id: string; element: SVGElement } | undefined;
+    let tipFor: string | undefined;
+    let legendJson = '';
+
+    const part = (selector: string): HTMLElement | null => element.shadowRoot?.querySelector<HTMLElement>(selector) ?? null;
+    const rtl = (): boolean => getComputedStyle(element).direction === 'rtl';
+    const readHidden = (): Set<string> => new Set((Array.isArray(read('hiddenSeries')) ? (read('hiddenSeries') as unknown[]) : []).filter((item): item is string => typeof item === 'string'));
+
+    /** Moves the single tab stop to the point `id` (or the first point when it is gone); only the two marks involved are written */
+    const syncStop = (): void => {
+        if (svgScene === undefined) return;
+        const id = tabStop(ordered, active);
+        const target = id === undefined ? undefined : svgScene.elementOf(id);
+        if (stop === undefined ? target === undefined : stop.id === id && stop.element === target) return;
+        if (stop !== undefined && stop.element.isConnected) stop.element.setAttribute('tabindex', '-1');
+        stop = id === undefined || target === undefined ? undefined : { id, element: target };
+        stop?.element.setAttribute('tabindex', '0');
+    };
+
+    const fillTip = (point: Point): void => {
+        const tip = part('.tip');
+        if (!tip) return;
+        const document = tip.ownerDocument;
+        const title = document.createElement('div');
+        title.className = 'tip-title';
+        title.textContent = point.title;
+        const rows = point.rows.map((row) => {
+            const line = document.createElement('div');
+            line.className = row.current ? 'tip-row current' : 'tip-row';
+            if (row.colour !== '') {
+                const swatch = document.createElement('span');
+                swatch.className = `tip-swatch ${row.colour}`;
+                line.append(swatch);
+            }
+            const label = document.createElement('span');
+            label.textContent = row.label;
+            const value = document.createElement('span');
+            value.className = 'tip-value';
+            value.textContent = row.value;
+            line.append(label, value);
+            return line;
+        });
+        tip.replaceChildren(title, ...rows);
+    };
+    const showTip = (id: string): void => {
+        const point = points.get(id);
+        const anchor = part('.anchor');
+        if (point === undefined || anchor === null || popover === undefined) return;
+        anchor.style.setProperty('--sui-ax', `${px(point.x)}px`);
+        anchor.style.setProperty('--sui-ay', `${px(point.y)}px`);
+        fillTip(point);
+        tipFor = id;
+        popover.open();
+    };
+    const hideTip = (): void => {
+        tipFor = undefined;
+        popover?.close();
+    };
+
+    const legendOf = (input: ChartInput, hidden: ReadonlySet<string>): LegendItem[] =>
+        input.type === 'donut'
+            ? input.categories.map((label, at) => ({ key: label, label, color: seriesClass(at), hidden: hidden.has(label) }))
+            : input.series.map((entry, at) => ({ key: entry.key, label: entry.label, color: seriesClass(at), hidden: hidden.has(entry.key) }));
 
     const draw = (): void => {
         scheduled = false;
         if (disposed || svgScene === undefined) return;
         const rows = readRows(read('records'));
         const specs = readSeries(read('series'));
-        const type: CartesianType = CARTESIAN_TYPES.find((candidate) => candidate === read('type')) ?? 'bar';
+        const type: ChartType = CHART_TYPES.find((candidate) => candidate === read('type')) ?? 'bar';
         const stacked = read('stacked') === true;
         const next = `${type}|${stacked}|${specs.map((spec) => `${spec.key}:${spec.field}`).join(',')}`;
         if (next !== structure) {
             structure = next;
             svgScene.clear();
+            stop = undefined;
         }
         const options = { format: text(read('format'), 'number'), currency: text(read('currency')), locale: text(store.get<unknown>('$.locale')) };
-        svgScene.draw(
-            buildScene({
-                type,
-                categories: readCategories(rows, text(read('x'), 'x')),
-                series: specs.map((spec) => ({ key: spec.key, values: readValues(rows, spec.field) })),
-                stacked,
-                width,
-                height,
-                format: (value) => formatValue(value, options)
-            })
-        );
+        const hidden = readHidden();
+        const input: ChartInput = {
+            type,
+            categories: readCategories(rows, text(read('x'), 'x')),
+            series: specs.map((spec) => ({ key: spec.key, label: spec.label, values: readValues(rows, spec.field) })),
+            stacked,
+            width,
+            height,
+            format: (value) => formatValue(value, options),
+            percent: (share) => formatValue(share, { ...options, format: 'percent' }),
+            hidden,
+            texts: { total: text(read('_total')), category: text(read('_category')), value: text(read('_value')), share: text(read('_share')) }
+        };
+        const description = text(read('_description'));
+        if (description === '') svgElement?.removeAttribute('aria-describedby');
+        else svgElement?.setAttribute('aria-describedby', 'description');
+        const scene = buildScene(input);
+        svgScene.draw(scene);
+        ordered = [...scene.points];
+        points = new Map(scene.points.map((point) => [point.id, point]));
+        syncStop();
+        if (tipFor !== undefined) {
+            if (points.has(tipFor)) showTip(tipFor);
+            else hideTip();
+        }
+        dataTable?.draw(text(read('_title')), tableModel(input));
+        const items = legendOf(input, hidden);
+        const json = JSON.stringify(items);
+        if (json !== legendJson) {
+            legendJson = json;
+            store.set(itemsPath, Object.fromEntries(items.map((item, at) => [String(at), item])));
+        }
     };
     const schedule = (): void => {
         if (scheduled || disposed) return;
@@ -66,7 +181,9 @@ export default function controller({ element, store, basePath }: ControllerConte
         `${recordsPath}.$every`,
         ...[text(read('x'), 'x'), ...readSeries(read('series')).map((spec) => spec.field)].map((field) => `${recordsPath}.$every.${field}`)
     ];
-    const propertyPaths = ['type', 'x', 'series', 'series.$all', 'stacked', 'format', 'currency'].map((name) => `${basePath}.${name}`).concat('$.locale');
+    const propertyPaths = ['type', 'x', 'series', 'series.$all', 'stacked', 'format', 'currency', 'hiddenSeries', 'hiddenSeries.$all', '_title', '_description', '_total', '_category', '_value', '_share']
+        .map((name) => `${basePath}.${name}`)
+        .concat('$.locale');
     let watchedRecords = recordPaths();
     const onShape = (): void => {
         store.off(watchedRecords, schedule);
@@ -80,32 +197,90 @@ export default function controller({ element, store, basePath }: ControllerConte
     //the view is drawn once the controller has returned, so the SVG and the observer start in the next microtask
     const start = (attempts: number): void => {
         if (disposed) return;
-        const root = element.shadowRoot;
-        const svg = root?.querySelector('svg');
-        const plot = root?.querySelector('.plot');
-        if (!svg || !plot) {
+        const plot = part('.plot');
+        const tip = part('.tip');
+        const data = part('.data');
+        if (!plot || !tip || !data) {
             if (attempts > 0) queueMicrotask(() => start(attempts - 1));
             return;
         }
+        //the template parser makes every element HTML, so the SVG is made here, in its own namespace
+        const svg = plot.ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('class', 'svg');
+        svg.setAttribute('role', 'group');
+        svg.setAttribute('aria-labelledby', 'title');
+        for (const [type, handler] of Object.entries(handlers)) svg.addEventListener(type, handler as EventListener);
+        plot.prepend(svg);
+        svgElement = svg;
         svgScene = createSvgScene(svg);
+        dataTable = createDataTable(data);
+        popover = createPopover({ element: tip, placement: 'top', anchor: TIP_ANCHOR, onDismiss: () => (tipFor = undefined) });
         observer = new ResizeObserver((entries) => {
             for (const entry of entries) {
                 width = entry.contentRect.width;
                 height = entry.contentRect.height;
             }
-            schedule();
+            //the redraw can change the layout (the legend), so it waits for the next frame instead of looping inside the observer
+            requestAnimationFrame(schedule);
         });
         observer.observe(plot);
         schedule();
     };
     queueMicrotask(() => start(8));
 
+    const pointOf = (target: EventTarget | null): string | undefined => {
+        const mark = target instanceof Element ? target.closest('[data-point]') : null;
+        return mark?.getAttribute('data-point') ?? undefined;
+    };
+
+    const handlers = {
+        pointerover: (event: PointerEvent) => {
+            const id = pointOf(event.target);
+            if (id !== undefined) showTip(id);
+        },
+        pointerout: (event: PointerEvent) => {
+            if (pointOf(event.relatedTarget) !== undefined) return;
+            const focused = element.shadowRoot?.activeElement;
+            if (focused instanceof Element && focused.hasAttribute('data-point')) showTip(focused.getAttribute('data-point') as string);
+            else hideTip();
+        },
+        focusin: (event: FocusEvent) => {
+            const id = pointOf(event.target);
+            if (id === undefined) return;
+            active = id;
+            syncStop();
+            showTip(id);
+        },
+        focusout: (event: FocusEvent) => {
+            if (pointOf(event.relatedTarget) === undefined) hideTip();
+        },
+        keydown: (event: KeyboardEvent) => {
+            if (event.altKey || event.ctrlKey || event.metaKey || !(POINT_KEYS as readonly string[]).includes(event.key)) return;
+            const from = pointOf(event.target);
+            if (from === undefined) return;
+            event.preventDefault();
+            const next = pointAfter(ordered, from, event.key, { rtl: rtl(), ring: read('type') === 'donut' });
+            if (next !== undefined) svgScene?.elementOf(next)?.focus();
+        }
+    };
+
     return {
+        onLegend: (event: MouseEvent) => {
+            const key = (event.currentTarget as HTMLElement | null)?.dataset['key'];
+            if (key === undefined) return;
+            const hidden = readHidden();
+            if (!hidden.delete(key)) hidden.add(key);
+            store.set(hiddenPath, [...hidden]);
+        },
         dispose: () => {
             disposed = true;
             observer?.disconnect();
             store.off(watchedRecords, schedule);
             store.off(propertyPaths, onShape);
+            if (svgElement) for (const [type, handler] of Object.entries(handlers)) svgElement.removeEventListener(type, handler as EventListener);
+            svgElement?.remove();
+            popover?.dispose();
+            dataTable?.clear();
             svgScene?.clear();
         }
     };
