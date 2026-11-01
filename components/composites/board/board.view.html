@@ -1,0 +1,14 @@
+<div class="board">
+    <section class="column" role="group" repeat="{{ $k,$i,$v in $.cols }}" key="{{ $k }}" data-key="{{ $v.key }}" data-gone="{{ $v.gone ? '' : null }}" style="order: {{ $v.position }}" aria-label="{{ $v.title }}">
+        <header class="head" data-tone="{{ $v.over ? 'warning' : null }}">
+            <h3 class="title">{{ $v.title }}</h3>
+            <span class="count">
+                <sui-node repeat="{{ $ck,$ci,$cv in $v.badge }}" key="{{ $ck }}" state="{{ $cv }}"></sui-node>
+            </span>
+            <span class="hidden" if="{{ $v.over }}">{{ $._limitExceeded }}</span>
+        </header>
+        <div class="body">
+            <sui-node if="{{ $v.ready }}" repeat="{{ $bk,$bi,$bv in $v.body }}" key="{{ $bk }}" state="{{ $bv }}"></sui-node>
+        </div>
+    </section>
+</div>

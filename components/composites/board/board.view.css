@@ -1,0 +1,80 @@
+:host {
+    display: block;
+    min-inline-size: 0;
+    --sui-card-h: var(--ui-board-card);
+}
+
+:host([card-height=sm]) {
+    --sui-card-h: calc(var(--ui-board-card) * 0.75);
+}
+
+:host([card-height=lg]) {
+    --sui-card-h: calc(var(--ui-board-card) * 1.5);
+}
+
+.board {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--ui-space-gap-md);
+    overflow-x: auto;
+    color: var(--ui-color-text-base);
+    font-family: var(--ui-text-body-family);
+    font-size: var(--ui-text-body-size);
+    line-height: var(--ui-text-body-leading);
+}
+
+.column {
+    box-sizing: border-box;
+    display: flex;
+    flex: 0 0 var(--ui-board-column);
+    flex-direction: column;
+    gap: var(--ui-space-gap-sm);
+    min-inline-size: 0;
+    padding: var(--ui-space-inset-sm);
+    border-radius: var(--ui-radius-md);
+    background: var(--ui-color-surface-sunken);
+}
+
+.column[data-gone] {
+    position: absolute;
+    visibility: hidden;
+    pointer-events: none;
+    inline-size: var(--ui-board-column);
+}
+
+.head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--ui-space-gap-sm);
+    padding-inline: var(--ui-space-inset-sm);
+}
+
+.title {
+    margin: 0;
+    font-family: var(--ui-text-label-family);
+    font-size: var(--ui-text-label-size);
+    font-weight: var(--ui-text-label-weight);
+    line-height: var(--ui-text-label-leading);
+}
+
+.hidden {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.body {
+    --ui-recordlist-row: var(--sui-card-h);
+    block-size: var(--ui-board-height);
+    min-block-size: 0;
+}
+
+.body > sui-node > ui-record-list {
+    block-size: 100%;
+}
