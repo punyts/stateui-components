@@ -89,9 +89,36 @@
 }
 
 .slot[data-pending] > .pending {
-    padding-inline-start: calc(var(--sui-level, 0) * var(--sui-indent, 0px) + var(--ui-space-inset-md));
+    padding-inline-start: calc(var(--sui-level, 0) * var(--sui-indent, 0px) + var(--sui-twisty, 0px) + var(--ui-space-inset-md));
 }
 
 .pending ui-skeleton {
     inline-size: 100%;
+}
+
+/* A tree row indents by its level and leaves room for the expand glyph, so a leaf lines up with its siblings that have one */
+.slot[role="treeitem"] {
+    --sui-twisty: 1.5rem;
+    padding-inline-start: calc(var(--sui-level, 0) * var(--sui-indent, 0px) + var(--sui-twisty));
+    box-sizing: border-box;
+}
+
+.twisty {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: calc(var(--sui-level, 0) * var(--sui-indent, 0px));
+    inline-size: var(--sui-twisty);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ui-color-text-muted);
+    cursor: pointer;
+}
+
+.list:dir(rtl) .slot[aria-expanded="false"] .twisty ui-icon {
+    transform: scaleX(-1);
+}
+
+.twisty ui-icon {
+    display: flex;
 }
