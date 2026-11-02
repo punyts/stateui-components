@@ -4,6 +4,15 @@
     --sui-row-h: var(--ui-recordlist-row);
 }
 
+/* `rowHeight` md keeps the token; sm and lg follow the small and large control heights at the same density */
+:host([row-height=sm]) {
+    --sui-row-h: calc(var(--ui-size-control-sm) * var(--ui-density-factor));
+}
+
+:host([row-height=lg]) {
+    --sui-row-h: calc(var(--ui-size-control-lg) * var(--ui-density-factor));
+}
+
 /* At most the viewport height, so a list that grows to its rows still scrolls and renders only the rows in view */
 .list {
     block-size: 100%;

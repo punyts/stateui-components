@@ -29,3 +29,9 @@
     align-items: center;
     gap: var(--ui-space-gap-sm);
 }
+
+/* A toolbar or panel in the actions fills the row, so its own alignment (a toolbar's align: end) places the buttons */
+.actions > sui-node > :is(ui-toolbar, ui-panel) {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+}

@@ -5,6 +5,7 @@
     "shared": { "density": {} },
     "properties": {
         "key": { "type": "string", "validators": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" }, "default": "id" },
+        "rowHeight": { "type": "string", "values": ["sm", "md", "lg"], "default": "md" },
         "divided": { "type": "boolean", "default": false, "reflect": true },
         "selectable": { "type": "string", "values": ["none", "single", "multi"], "default": "none", "reflect": true },
         "sortBy": { "type": "string", "validators": { "pattern": "^$|^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*$" }, "default": "" },
@@ -20,7 +21,6 @@
             "type": "object",
             "default": {
                 "component": "recordList",
-                "rowHeight": "md",
                 "overscan": 5,
                 "role": "list",
                 "multiselectable": false,

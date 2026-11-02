@@ -366,6 +366,23 @@ describe('modal widths in Chromium', () => {
         expect(md).toBeLessThan(lg);
         expect(full).toBeGreaterThan(lg);
     });
+
+    it('should centre the open modal in the viewport', async () => {
+        // Arrange
+        await page.viewport(1200, 800);
+        const mounted = mountComponent('modal', { open: true, _title: 'Centred', body: text('Body') });
+        await frame();
+        await settle();
+
+        // Act
+        const rect = dialogOf(mounted.element).getBoundingClientRect();
+
+        // Assert: equal space on both sides, horizontally and vertically, and not stretched to the full height
+        expect(rect.left).toBeGreaterThan(100);
+        expect(Math.abs(rect.left - (1200 - rect.right))).toBeLessThanOrEqual(1);
+        expect(Math.abs(rect.top - (800 - rect.bottom))).toBeLessThanOrEqual(1);
+        expect(rect.height).toBeLessThan(400);
+    });
 });
 
 describe('drawer sides in Chromium', () => {

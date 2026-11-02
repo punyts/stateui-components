@@ -12,6 +12,7 @@ const PASSED: Readonly<Record<string, string>> = {
     records: 'records',
     row: 'row',
     key: 'key',
+    rowHeight: 'rowHeight',
     selected: 'selected'
 };
 
@@ -25,7 +26,7 @@ interface CommandHost {
 
 /**
  * The body of the tree is a `recordList` node held in the runtime property `body` and drawn with `<sui-node>`, like the
- * list. Its `records`, `row`, `key` and `selected` are store aliases of the tree's own, so the slot pool, the `$row` links and
+ * list. Its `records`, `row`, `key`, `rowHeight` and `selected` are store aliases of the tree's own, so the slot pool, the `$row` links and
  * the recycling are the record view's. The tree turns the records into the rows to show (`flattenTree`, in
  * `src/shared/records/tree.ts`): `expanded` lists the keys whose children are shown, and the result is written as the
  * body's `order` (a runtime property aliased as `order`), so opening or closing a record changes the order and nothing else:

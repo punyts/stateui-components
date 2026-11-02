@@ -10,6 +10,7 @@ const PASSED: Readonly<Record<string, string>> = {
     records: 'items',
     row: 'row',
     key: 'key',
+    rowHeight: 'rowHeight',
     total: 'total',
     selected: 'selected'
 };
@@ -23,7 +24,7 @@ interface CommandHost {
 
 /**
  * The body of the list is a `recordList` node held in the runtime property `body` and drawn with `<sui-node>`. Its
- * `records`, `row`, `key`, `total` and `selected` are store aliases of the list's `items`, `row`, `key`, `total` and
+ * `records`, `row`, `key`, `rowHeight`, `total` and `selected` are store aliases of the list's `items`, `row`, `key`, `rowHeight`, `total` and
  * `selected`, so the record view reads the list's data and template directly: the slot pool, the `$row` links (rewritten
  * per slot by `resolveRowLinks`), recycling, the key index, the shown selection and the focus movement are the record
  * view's own. The body's runtime branch is `$.runtime.nodes.<path>.body`, beside the list's own runtime state. The links

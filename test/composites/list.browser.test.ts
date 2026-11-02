@@ -211,4 +211,22 @@ describe('list in Chromium', () => {
         const unlinked = unlink.mock.calls.map(([path]) => String(path));
         expect(unlinked).toEqual(expect.arrayContaining(['$.app.body.records', '$.app.body.row', '$.app.body.key', '$.app.body.total']));
     });
+
+    it('should size its rows from rowHeight: md by default, sm shorter and lg taller', async () => {
+        // Arrange
+        const height = async (rowHeight?: string): Promise<number> => {
+            const mounted = await mountList(lines(2), rowHeight === undefined ? {} : { rowHeight });
+            await frames(2);
+            const slot = slotElements(mounted).find((candidate) => !candidate.hidden) as HTMLElement;
+            return slot.getBoundingClientRect().height;
+        };
+
+        // Act
+        const [md, sm, lg] = [await height(), await height('sm'), await height('lg')];
+
+        // Assert
+        expect(recordList(await mountList(lines(1), { rowHeight: 'lg' }))?.getAttribute('row-height')).toBe('lg');
+        expect(sm).toBeLessThan(md);
+        expect(lg).toBeGreaterThan(md);
+    });
 });

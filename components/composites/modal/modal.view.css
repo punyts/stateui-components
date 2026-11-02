@@ -4,6 +4,8 @@
     --pad: var(--ui-modal-padding);
     --gap: var(--ui-modal-gap);
     --radius: var(--ui-modal-radius);
+    /* overlay.css zeroes the margin; the user agent centres a modal dialog in the viewport with auto margins */
+    margin: auto;
     inline-size: min(32rem, calc(100% - 2 * var(--ui-modal-padding)));
     max-block-size: calc(100% - 2 * var(--ui-modal-padding));
     opacity: 0;
