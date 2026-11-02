@@ -287,6 +287,21 @@ describe.each(['modal', 'drawer'])('%s in Chromium', (name) => {
         expect(mounted.store.get('$.app.body.value')).toBe('changed');
     });
 
+    it('should let a panel in the footer fill the footer instead of collapsing to nothing', async () => {
+        // Arrange
+        const mounted = mountComponent(name, { _title: 'Cart', footer: { component: 'panel', children: { total: text('Subtotal (2 items): $40.00') } } });
+
+        // Act
+        command(mounted.element, 'open');
+        await frame();
+
+        // Assert
+        const footer = part(mounted.element, '.footer');
+        const panel = findByTag(footer, 'ui-panel') as HTMLElement;
+        expect(panel.getBoundingClientRect().width).toBeCloseTo(footer.getBoundingClientRect().width, 0);
+        expect(findByTag(panel.shadowRoot ?? panel, 'ui-text')!.getBoundingClientRect().height).toBeLessThan(40);
+    });
+
     it('should render a header slot in place of the title', () => {
         // Arrange
         const mounted = mountComponent(name, { _title: 'Plain', header: text('Custom'), body: text('Body') });

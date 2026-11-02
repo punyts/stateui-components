@@ -114,3 +114,9 @@
     justify-content: flex-end;
     gap: var(--ui-space-gap-sm);
 }
+
+/* A layout component (panel, card, form, …) is an inline-size container, so it has no width of its own: in the footer it fills the row instead of shrinking to nothing at the end, while buttons and toolbars keep their size */
+.footer > sui-node > :is(ui-panel, ui-card, ui-form, ui-disclosure, ui-message-list, ui-page) {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+}
