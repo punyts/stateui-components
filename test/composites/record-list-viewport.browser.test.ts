@@ -224,6 +224,20 @@ describe('recordList positioning and observer in Chromium', () => {
         expect(ranges.length).toBeLessThanOrEqual(2);
     });
 
+    it('should copy the window to the articulation property window, where logic can watch it', async () => {
+        // Arrange
+        const mounted = await mountList(1000, 200);
+        const height = rowHeight(mounted);
+
+        // Act
+        scroller(mounted).scrollTop = height * 40;
+        await settle();
+
+        // Assert
+        const runtime = mounted.store.get<{ first: number; count: number }>(`${RUNTIME}.window`);
+        expect(mounted.store.get<unknown>('$.app.window')).toEqual({ first: 40, count: runtime?.count });
+    });
+
     it('should keep a stable scrollbar gutter on the scrolling body', async () => {
         // Arrange
         const mounted = await mountList(10, 200);

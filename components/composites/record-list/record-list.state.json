@@ -20,6 +20,7 @@
         "selectable": { "type": "boolean", "default": false },
         "loading": { "type": "boolean", "default": false, "reflect": true },
         "total": { "type": "integer", "validators": { "range": { "min": 0 } } },
+        "window": { "type": "object" },
         "row": { "type": "node", "row": true },
         "empty": { "type": "node" },
         "ariaRowcount": { "type": "integer", "reflect": true },

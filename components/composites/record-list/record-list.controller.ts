@@ -16,7 +16,9 @@ const TEXT_ENTRY = new Set(['input', 'textarea', 'select']);
  * `$.runtime.nodes.<path>.slots.<i>`, are aliased at `slots` for the view to repeat over, and show the records of the
  * window at `$.runtime.nodes.<path>.window` (`{ first, count }`). The viewport observer writes that window from the
  * scroll offset, the viewport height and the row height, and `range` is raised once for each change of it
- * (`{ first, count, total }`). For the role `table` the reflected `ariaRowcount` follows the count.
+ * (`{ first, count, total }`) and the window is copied to the articulation property `window`, where logic can watch
+ * it (a `query` rule fills `records` and `total` from it; writing `window` does not scroll). For the role `table`
+ * the reflected `ariaRowcount` follows the count.
  *
  * Identity belongs to the record: `selected` (a key or a list of keys) is shown on the slot of each selected record
  * (`slotSelected`; `aria-multiselectable` on a `listbox` host follows `multiselectable`), one slot is the tab stop
@@ -45,6 +47,7 @@ export default function controller({ element, store, basePath }: ControllerConte
     const loadingFirstPath = `${basePath}.loadingFirst`;
     const windowPath = `${runtimePath(basePath)}.window`;
     const windowPaths = [windowPath, `${windowPath}.$all`];
+    const shownPath = `${basePath}.window`;
     const selectedPaths = [selectedPath, `${selectedPath}.$all`];
     let pool: SlotPool | undefined;
     let observer: ViewportObserver | undefined;
@@ -154,6 +157,7 @@ export default function controller({ element, store, basePath }: ControllerConte
     };
     const onRange = (): void => {
         const next = readWindow(store.get<unknown>(windowPath));
+        if (!sameWindow(next, readWindow(store.get<unknown>(shownPath)))) store.set(shownPath, { first: next.first, count: next.count });
         if (sameWindow(next, raised)) return;
         raised = next;
         element.dispatchEvent(new CustomEvent('range', { detail: { ...next, total: index.size() }, bubbles: true, composed: true }));

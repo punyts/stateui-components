@@ -12,7 +12,8 @@ const PASSED: Readonly<Record<string, string>> = {
     key: 'key',
     rowHeight: 'rowHeight',
     total: 'total',
-    selected: 'selected'
+    selected: 'selected',
+    window: 'window'
 };
 
 /** Elements in a row that act on a press themselves, so a press on them does not select the row */
@@ -24,8 +25,8 @@ interface CommandHost {
 
 /**
  * The body of the list is a `recordList` node held in the runtime property `body` and drawn with `<sui-node>`. Its
- * `records`, `row`, `key`, `rowHeight`, `total` and `selected` are store aliases of the list's `items`, `row`, `key`, `rowHeight`, `total` and
- * `selected`, so the record view reads the list's data and template directly: the slot pool, the `$row` links (rewritten
+ * `records`, `row`, `key`, `rowHeight`, `total`, `selected` and `window` are store aliases of the list's `items`, `row`, `key`, `rowHeight`, `total` and
+ * `selected` (and `window`, which the record view writes, so logic sees it on the list), so the record view reads the list's data and template directly: the slot pool, the `$row` links (rewritten
  * per slot by `resolveRowLinks`), recycling, the key index, the shown selection and the focus movement are the record
  * view's own. The body's runtime branch is `$.runtime.nodes.<path>.body`, beside the list's own runtime state. The links
  * are made before the view draws the body, so the record view's controller finds them; `allowMissing` lets a list with

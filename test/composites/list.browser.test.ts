@@ -64,6 +64,29 @@ describe('list in Chromium', () => {
         expect(emptyText(mounted)).toBeUndefined();
     });
 
+    it('should show the window of its record view as its own window property', async () => {
+        const mounted = await mountList(lines(40));
+
+        expect(mounted.store.get<unknown>('$.app.window')).toEqual({ first: 0, count: 10 });
+    });
+
+    it('should show paged items that are written after it mounted, as logic writes them', async () => {
+        // Arrange
+        const mounted = mountComponent('list', { row: rowTemplate }, { data: {} });
+        await flush();
+        await frames(3);
+
+        // Act
+        mounted.store.set('$.app.items', { 0: { id: 'l0', description: 'Line 0' }, 1: { id: 'l1', description: 'Line 1' } });
+        mounted.store.set('$.app.total', 2);
+        await flush();
+        await frames(3);
+
+        // Assert
+        expect(mounted.store.get<number>('$.app.body.count')).toBe(2);
+        expect(shown(mounted, 2)).toEqual(texts(0, 2));
+    });
+
     it('should draw a line under each row only when divided', async () => {
         // Arrange
         const plain = await mountList(lines(2));

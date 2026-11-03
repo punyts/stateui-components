@@ -21,7 +21,8 @@ const PASSED: Readonly<Record<string, string>> = {
     records: 'items',
     key: 'key',
     total: 'total',
-    selected: 'selected'
+    selected: 'selected',
+    window: 'window'
 };
 
 /** Elements in a row that act on a press themselves, so a press on them does not select the row */
@@ -67,8 +68,8 @@ function rowTemplate(columns: unknown): Entry {
 
 /**
  * The table's body is a `recordList` node held in the runtime property `body` (its default is the node, with the role
- * `rowgroup` and the row index offset 1, so slots are rows with `aria-rowindex` counted after the header row) and drawn with `<sui-node>`, as `list` does. Its `records`, `key` and
- * `total` are store aliases of the table's `items`, `key` and `total`, made before the view draws the body, so the
+ * `rowgroup` and the row index offset 1, so slots are rows with `aria-rowindex` counted after the header row) and drawn with `<sui-node>`, as `list` does. Its `records`, `key`,
+ * `total`, `selected` and `window` are store aliases of the same table properties (`records` of `items`), made before the view draws the body, so the
  * record view's controller finds them. Its `row` is the template built from `columns`, written before the body draws
  * and replaced whenever a column changes: the pool rebuilds the slots for a new structure and only writes the content
  * for a language switch.

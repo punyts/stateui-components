@@ -33,6 +33,7 @@
         "items": { "type": ["array", "object"] },
         "selected": { "type": ["string", "number", "array"] },
         "total": { "type": "integer", "validators": { "range": { "min": 0 } } },
+        "window": { "type": "object" },
         "empty": { "type": "node" },
         "_empty": { "type": "string", "kind": "content", "default": "No records" },
         "current": { "type": "object", "default": {}, "runtime": true, "exposed": true },

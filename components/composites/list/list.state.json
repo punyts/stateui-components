@@ -13,6 +13,7 @@
         "items": { "type": ["array", "object"] },
         "selected": { "type": ["string", "number", "array"] },
         "total": { "type": "integer", "validators": { "range": { "min": 0 } } },
+        "window": { "type": "object" },
         "row": { "type": "node", "row": true },
         "empty": { "type": "node" },
         "_empty": { "type": "string", "kind": "content", "default": "No items" },

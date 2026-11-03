@@ -1,6 +1,7 @@
 # Changelog
 
 ## 0.1.0
+- `recordList` copies its window to the articulation property `window` (`{ first, count }`), and `list` and `table` pass it up to their own `window`, so app logic can watch it and fill the window with `query` (`items` and `total`). Writing `window` does not scroll.
 - `modal` is centred in the viewport: the shared `overlay.css` sets `margin: 0` on the dialog, which cancelled the user agent's auto margins of a modal dialog, so every modal opened in the top-left corner. The modal sets `margin: auto` again; the drawer keeps its own inset placement.
 - `recordList` `rowHeight` sizes the rows: `sm` and `lg` set `--sui-row-h` to the small and large control heights times the density factor (`md` keeps the `recordlist.row` token). The property was declared and reflected but had no style. `list` and `tree` take `rowHeight` (`sm`, `md` default, `lg`) and pass it to their body, so a row template taller than a control fits.
 - A `toolbar` or `panel` in a `form`'s `actions` slot fills the row, so its own alignment applies: the wizard's `align: end` toolbars put Next and Finish at the end instead of the start.
