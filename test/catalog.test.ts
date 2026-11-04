@@ -571,3 +571,39 @@ describe('the search keys of the atoms', () => {
         expect(onlyNameWords('pick a date range', 'dateRangeField')).toBe(false);
     });
 });
+
+describe('the search keys of the molecules', () => {
+    const molecules = catalog.components.filter((entry) => entry.size === 'molecule');
+
+    it('should give every molecule a category from the list and three to eight purposes', () => {
+        const bad = molecules
+            .filter((entry) => !(COMPONENT_CATEGORIES as readonly string[]).includes(entry.category ?? '') || (entry.purposes?.length ?? 0) < 3 || (entry.purposes?.length ?? 0) > 8)
+            .map((entry) => entry.name);
+
+        expect(molecules.length).toBe(SPEC_MOLECULES.length + LATER_MOLECULES.length);
+        expect(bad).toEqual([]);
+    });
+
+    it('should give no molecule a purpose made only of the words of its own name', () => {
+        const bad = molecules.flatMap((entry) => (entry.purposes ?? []).filter((phrase) => onlyNameWords(phrase, entry.name)).map((phrase) => `${entry.name}: ${phrase}`));
+
+        expect(bad).toEqual([]);
+    });
+
+    it('should put every field in forms and the named molecules in their design categories', () => {
+        const categoryOf = (name: string): string | undefined => molecules.find((entry) => entry.name === name)?.category;
+
+        expect(FIELDS.filter((name) => categoryOf(name) !== 'forms')).toEqual([]);
+        expect(['breadcrumb', 'pagination', 'stepper', 'menuItem'].map(categoryOf)).toEqual(['navigation', 'navigation', 'navigation', 'navigation']);
+        expect(['stat', 'descriptionList'].map(categoryOf)).toEqual(['data', 'data']);
+        expect(['alert', 'toast', 'emptyState'].map(categoryOf)).toEqual(['feedback', 'feedback', 'feedback']);
+        expect(['card', 'avatar'].map(categoryOf)).toEqual(['content', 'content']);
+    });
+
+    it('should keep the phrases the search tests depend on', () => {
+        const purposesOf = (name: string): readonly string[] => molecules.find((entry) => entry.name === name)?.purposes ?? [];
+
+        expect(purposesOf('dateRangeField')).toEqual(expect.arrayContaining(['pick a date range', 'choose start and end dates', 'filter by period']));
+        expect(purposesOf('stepper')).toEqual(expect.arrayContaining(['step through a process', 'show progress through steps']));
+    });
+});

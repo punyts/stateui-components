@@ -1,5 +1,7 @@
 {
     "summary": "A labelled date field that writes an ISO date (YYYY-MM-DD), with optional earliest and latest dates",
+    "category": "forms",
+    "purposes": ["enter a single date", "pick a birthday or due date", "set a deadline with earliest and latest dates"],
     "events": ["change", "invalid", "valid"],
     "commands": ["validate", "reset", "focus", "clear"],
     "tokenGroup": "field",

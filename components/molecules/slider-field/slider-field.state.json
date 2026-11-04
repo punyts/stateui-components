@@ -1,5 +1,7 @@
 {
     "summary": "A labelled slider for a number or, with range, a low and high pair, with step, marks and a formatted value",
+    "category": "forms",
+    "purposes": ["set a price band between a low and high price", "choose a range between two numbers", "adjust a value by dragging", "set a volume or percentage"],
     "events": ["change", "invalid", "valid"],
     "commands": ["validate", "reset", "focus", "clear"],
     "tokenGroup": "field",

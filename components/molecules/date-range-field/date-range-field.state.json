@@ -1,5 +1,7 @@
 {
     "summary": "A labelled field for a start and end date: typed dates read with the locale, and a two-month calendar to pick a range",
+    "category": "forms",
+    "purposes": ["pick a date range", "choose start and end dates", "filter by period", "pick check-in and check-out dates"],
     "events": ["change", "invalid", "valid"],
     "commands": ["validate", "reset", "focus", "clear"],
     "tokenGroup": "field",

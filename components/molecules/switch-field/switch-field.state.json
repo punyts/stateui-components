@@ -1,5 +1,7 @@
 {
     "summary": "A labelled on and off switch that validates and resets like every other field",
+    "category": "forms",
+    "purposes": ["turn a labelled setting on or off", "enable notifications in a settings form", "choose between on and off with help text"],
     "events": ["change", "invalid", "valid"],
     "commands": ["validate", "reset", "focus", "clear"],
     "tokenGroup": "field",

@@ -1,5 +1,7 @@
 {
     "summary": "A labelled checkbox that validates and resets like every other field",
+    "category": "forms",
+    "purposes": ["accept terms before going on", "opt in to a newsletter", "confirm a statement with a ticked box"],
     "events": ["change", "invalid", "valid"],
     "commands": ["validate", "reset", "focus", "clear"],
     "tokenGroup": "field",

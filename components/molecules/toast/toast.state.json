@@ -1,5 +1,7 @@
 {
     "summary": "A transient message with a tone, an icon, a title, a text and an optional action, which the user can dismiss",
+    "category": "feedback",
+    "purposes": ["confirm briefly that an action went through", "show a message that goes away by itself", "tell the user something was saved", "offer undo after an action"],
     "events": ["close"],
     "shared": { "tone": { "default": "neutral" } },
     "properties": {

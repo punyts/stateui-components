@@ -1,5 +1,7 @@
 {
     "summary": "A labelled multi-line text field that can grow with its text, with help and error text",
+    "category": "forms",
+    "purposes": ["write a comment or description in a form", "type a chat message to send", "collect feedback on several lines"],
     "events": ["change", "invalid", "valid", "send"],
     "commands": ["validate", "reset", "focus", "clear", "send"],
     "tokenGroup": "field",

@@ -1,5 +1,7 @@
 {
     "summary": "A labelled radio group of options from data or a translated static map, vertical or horizontal, with help and error text",
+    "category": "forms",
+    "purposes": ["choose exactly one of a few visible options", "pick a plan or delivery method", "answer a single-choice question"],
     "events": ["change", "invalid", "valid"],
     "commands": ["validate", "reset", "focus", "clear"],
     "tokenGroup": "field",

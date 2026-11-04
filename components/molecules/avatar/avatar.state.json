@@ -1,5 +1,7 @@
 {
     "summary": "A person marker: a picture when there is one, otherwise the initials of the name",
+    "category": "content",
+    "purposes": ["show who a person is with a photo", "show initials when there is no picture", "mark the author of a message or comment", "show the signed-in user"],
     "shared": { "size": { "default": "md" } },
     "properties": {
         "shape": { "type": "string", "values": ["circle", "square"], "default": "circle", "reflect": true },

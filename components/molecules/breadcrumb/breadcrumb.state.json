@@ -1,5 +1,7 @@
 {
     "summary": "A breadcrumb trail of where the user is: links to the levels above, the current page, the middle collapsed into a menu",
+    "category": "navigation",
+    "purposes": ["show where the user is in a hierarchy", "go back up to a parent level", "trail the folders above the current page"],
     "events": ["select"],
     "tokens": {
         "gap": "{space.gap.sm}"

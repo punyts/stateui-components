@@ -1,5 +1,7 @@
 {
     "summary": "What a list, table or page shows when it has no content: an icon, a title, a text and actions",
+    "category": "feedback",
+    "purposes": ["say that a list or cart is empty", "offer a way back when there is nothing to show", "invite the user to add a first item", "explain why a search found no results"],
     "shared": {},
     "properties": {
         "icon": { "type": "icon", "default": "" },

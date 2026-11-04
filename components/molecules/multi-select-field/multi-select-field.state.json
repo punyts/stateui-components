@@ -1,5 +1,7 @@
 {
     "summary": "A labelled field whose value is a list: chosen options show as removable chips, a combobox adds more, optional tag mode",
+    "category": "forms",
+    "purposes": ["choose several options as chips", "tag a record with many labels", "pick a few people or categories", "enter free tags as removable chips"],
     "events": ["change", "invalid", "valid", "query"],
     "commands": ["validate", "reset", "focus", "clear"],
     "tokenGroup": "field",

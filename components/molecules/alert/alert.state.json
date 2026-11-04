@@ -1,5 +1,7 @@
 {
     "summary": "An inline message with a tone, an icon, an optional title and actions, which the user can dismiss",
+    "category": "feedback",
+    "purposes": ["warn inside the page that a limit is exceeded", "show an inline warning or error message", "explain a problem above a form", "announce a notice the user can dismiss"],
     "events": ["close"],
     "commands": ["open", "close"],
     "shared": { "tone": { "default": "info" }, "variant": { "default": "soft" } },

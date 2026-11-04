@@ -1,5 +1,7 @@
 {
     "summary": "Page buttons for server-paged data: first, last, pages around the current one, previous, next, page size",
+    "category": "navigation",
+    "purposes": ["page through server results", "go to the next or previous page", "choose how many rows per page"],
     "events": ["change"],
     "tokens": {
         "selected": { "fill": "{color.accent.base}", "on": "{color.accent.on}" },

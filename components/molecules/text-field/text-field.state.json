@@ -1,5 +1,7 @@
 {
     "summary": "A labelled single-line text field with optional icon, help and error text",
+    "category": "forms",
+    "purposes": ["enter a name or email", "type a single line of text in a form", "collect an address or phone number", "enter a password or code"],
     "events": ["change", "invalid", "valid"],
     "commands": ["validate", "reset", "focus", "clear"],
     "tokenGroup": "field",

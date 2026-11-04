@@ -1,5 +1,7 @@
 {
     "summary": "A labelled number field that reads and shows its value in the locale, with min, max, step and plus and minus buttons",
+    "category": "forms",
+    "purposes": ["raise or lower a quantity", "choose how many of something", "enter an amount, count or price", "set a number with plus and minus buttons"],
     "events": ["change", "invalid", "valid"],
     "commands": ["validate", "reset", "focus", "clear"],
     "tokenGroup": "field",

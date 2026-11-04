@@ -1,5 +1,7 @@
 {
     "summary": "A labelled searchable select: type to filter or search options, pick one, or keep typed text as the value",
+    "category": "forms",
+    "purposes": ["search a long list of options while typing", "pick a country or city by typing its name", "suggest matches from the server as you type", "pick an option or keep typed text"],
     "events": ["change", "invalid", "valid", "query"],
     "commands": ["validate", "reset", "focus", "clear"],
     "tokenGroup": "field",

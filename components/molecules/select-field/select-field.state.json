@@ -1,5 +1,7 @@
 {
     "summary": "A labelled dropdown of options from data or a translated static map, single or multiple, with help and error text",
+    "category": "forms",
+    "purposes": ["narrow a list to one category", "choose one option from a labelled dropdown", "pick a status or type in a form", "select several values from a dropdown"],
     "events": ["change", "invalid", "valid"],
     "commands": ["validate", "reset", "focus", "clear"],
     "tokenGroup": "field",

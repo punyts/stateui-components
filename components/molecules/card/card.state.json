@@ -1,5 +1,7 @@
 {
     "summary": "A surface with media, header, body and footer slots; interactive raises press; loading shows skeletons",
+    "category": "content",
+    "purposes": ["show one item as a box with a picture", "present a product with its name and price", "group a title, body and actions on a surface", "make a clickable tile for a record"],
     "shared": { "elevation": { "default": "raised" }, "density": {} },
     "layout": true,
     "events": ["press"],
