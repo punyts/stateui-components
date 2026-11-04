@@ -13,6 +13,11 @@
     --sui-row-h: calc(var(--ui-size-control-lg) * var(--ui-density-factor));
 }
 
+/* xl fits a two-line row: one and a half large control heights */
+:host([row-height=xl]) {
+    --sui-row-h: calc(var(--ui-size-control-lg) * 1.5 * var(--ui-density-factor));
+}
+
 /* At most the viewport height, so a list that grows to its rows still scrolls and renders only the rows in view */
 .list {
     block-size: 100%;

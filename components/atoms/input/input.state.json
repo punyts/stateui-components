@@ -20,7 +20,7 @@
         "max": { "type": ["string", "number"] },
         "step": { "type": ["string", "number"] },
         "maxLength": { "type": "integer", "validators": { "range": { "min": 0 } } },
-        "_placeholder": { "type": "string", "kind": "content", "default": "Type here" },
+        "_placeholder": { "type": "string", "kind": "content", "default": "" },
         "_label": { "type": "string", "kind": "content", "default": "Input" }
     }
 }

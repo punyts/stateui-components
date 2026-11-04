@@ -79,3 +79,94 @@
 .toasts {
     display: contents;
 }
+
+/* Below navBreakpoint (the runtime property compact) a start nav leaves its column: a bar with a menu button on top and
+   the nav as a panel under the bar, shown while navOpen. The main area takes the full width. */
+.bar,
+.scrim {
+    display: none;
+}
+
+:host([compact][nav-position=start]) .page {
+    position: relative;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+        "header"
+        "bar"
+        "main"
+        "footer";
+}
+
+:host([compact][nav-position=start]) .bar {
+    position: relative;
+    z-index: 12;
+    grid-area: bar;
+    display: flex;
+    align-items: center;
+    gap: var(--ui-page-gap);
+    padding: 0 var(--ui-page-padding);
+}
+
+.toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ui-space-gap-sm);
+    min-block-size: var(--ui-size-control-md);
+    margin: 0;
+    padding: 0 var(--ui-space-inset-sm);
+    color: inherit;
+    background: transparent;
+    border: var(--ui-border-width-thin) solid var(--ui-color-border-base);
+    border-radius: var(--ui-radius-md);
+    cursor: pointer;
+    font: inherit;
+}
+
+.toggle:hover {
+    background: var(--ui-color-surface-sunken);
+}
+
+.toggle:focus-visible {
+    outline: 2px solid var(--ui-color-focus);
+    outline-offset: 2px;
+}
+
+.bar-title {
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+}
+
+:host([compact][nav-position=start]) .scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    background: transparent;
+}
+
+:host([compact][nav-position=start]) .nav {
+    display: none;
+    grid-area: bar;
+    position: absolute;
+    inset-block-start: 100%;
+    inset-inline-start: 0;
+    z-index: 11;
+    box-sizing: border-box;
+    inline-size: min(20rem, 100%);
+    max-block-size: 70dvb;
+    overflow: auto;
+    background: var(--ui-color-surface-base);
+    border: var(--ui-border-width-thin) solid var(--ui-color-border-base);
+    box-shadow: var(--ui-elevation-overlay-shadow);
+}
+
+:host([compact][nav-position=start][nav-open]) .nav {
+    display: block;
+}
+
+:host([compact][nav-position=start]) .nav > sui-node {
+    display: block;
+}

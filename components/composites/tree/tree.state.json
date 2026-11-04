@@ -12,7 +12,7 @@
         "expanded": { "type": "array", "default": [] },
         "selectable": { "type": "string", "values": ["none", "single", "multi"], "default": "none", "reflect": true },
         "selected": { "type": ["string", "number", "array"] },
-        "rowHeight": { "type": "string", "values": ["sm", "md", "lg"], "default": "md" },
+        "rowHeight": { "type": "string", "values": ["sm", "md", "lg", "xl"], "default": "md" },
         "indent": { "type": "string", "values": ["sm", "md", "lg"], "default": "md", "reflect": true },
         "records": { "type": ["array", "object"] },
         "row": { "type": "node", "row": true },

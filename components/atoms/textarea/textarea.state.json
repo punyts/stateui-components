@@ -18,7 +18,7 @@
         "readonly": { "type": "boolean", "default": false },
         "required": { "type": "boolean", "default": false },
         "maxLength": { "type": "integer", "validators": { "range": { "min": 0 } } },
-        "_placeholder": { "type": "string", "kind": "content", "default": "Type here" },
+        "_placeholder": { "type": "string", "kind": "content", "default": "" },
         "_label": { "type": "string", "kind": "content", "default": "Text area" }
     }
 }

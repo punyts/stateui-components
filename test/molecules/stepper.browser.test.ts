@@ -63,6 +63,17 @@ describe('stepper in Chromium', () => {
         expect(all(named.element, 'li[aria-current]')).toHaveLength(1);
     });
 
+    it('should mark no step current when active names no step, and keep completed steps done', async () => {
+        // Arrange
+        const mounted = mountComponent('stepper', { steps, active: 'Cancelled', completed: ['details'] });
+        await flush();
+
+        // Assert
+        expect(all(mounted.element, 'li[aria-current]')).toHaveLength(0);
+        expect(all(mounted.element, 'li[data-current]')).toHaveLength(0);
+        expect(all(mounted.element, 'li[data-done]')).toHaveLength(1);
+    });
+
     it('should block every step after the first incomplete one while linear', async () => {
         // Arrange
         const mounted = mountComponent('stepper', { steps });

@@ -1,8 +1,16 @@
-<div class="page">
+<div class="page" onkeydown="{{ onKeyDown }}">
     <header class="header" if="{{ $.header }}">
         <sui-node state=".header"></sui-node>
     </header>
-    <div class="nav" if="{{ $.nav &amp;&amp; ($.navPosition !== 'none') }}">
+    <div class="bar" if="{{ $.compact }}">
+        <button class="toggle" type="button" aria-expanded="{{ $.navOpen ? 'true' : 'false' }}" aria-controls="nav" onclick="{{ onToggleNav }}">
+            <ui-icon class="glyph" name="{{ $.navOpen ? 'x' : 'menu-2' }}" size="sm"></ui-icon>
+            <span class="toggle-label">{{ $._navLabel }}</span>
+        </button>
+        <span class="bar-title" if="{{ $._title !== '' }}">{{ $._title }}</span>
+    </div>
+    <div class="scrim" if="{{ $.compact &amp;&amp; $.navOpen }}" onclick="{{ onCloseNav }}"></div>
+    <div class="nav" id="nav" if="{{ $.nav &amp;&amp; ($.navPosition !== 'none') }}" onselect="{{ onNavChosen }}" onpress="{{ onNavChosen }}">
         <sui-node state=".nav"></sui-node>
     </div>
     <main class="main">

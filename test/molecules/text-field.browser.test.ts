@@ -11,6 +11,16 @@ describe('textField in Chromium', () => {
         mountComponent.unmountAll();
     });
 
+    it('should show no placeholder by default', () => {
+        // Arrange
+        const mounted = mountComponent('textField');
+
+        // Assert
+        expect(control(mounted.element).placeholder).toBe('');
+        expect(control(mounted.element).getAttribute('placeholder') ?? '').toBe('');
+        expect(mounted.store.get('$.app._placeholder')).toBe('');
+    });
+
     it('should render the properties and follow a state write', () => {
         // Arrange
         const mounted = mountComponent('textField', { _label: 'Customer', value: 'Jo', inputType: 'email', _placeholder: 'Name' });
@@ -273,7 +283,7 @@ describe('textField in Chromium', () => {
 
         // Assert
         expect(part(mounted.element, 'label').textContent).toBe('Beschriftung');
-        expect(control(mounted.element).placeholder).toBe('Hier eingeben');
+        expect(control(mounted.element).placeholder).toBe('');
         expect(part(mounted.element, '.error')?.textContent).toBe('Dieses Feld ist erforderlich');
     });
 

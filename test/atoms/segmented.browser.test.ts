@@ -209,6 +209,19 @@ describe('segmented in Chromium', () => {
         expect(focusedKey(mounted.element)).toBe('grid');
     });
 
+    it('should accept an icon on a segment option and draw it beside the label when iconOnly is off', async () => {
+        // Arrange
+        const mounted = mountComponent('segmented', { options: { a: { _label: 'Alpha', icon: 'list' }, b: { _label: 'Beta' } }, value: 'a' });
+        await flush();
+
+        // Assert
+        const [first, second] = segments(mounted.element);
+        expect(first?.querySelector('ui-icon')).not.toBeNull();
+        expect(first?.querySelector('.label')?.textContent).toBe('Alpha');
+        expect(second?.querySelector('ui-icon')).toBeNull();
+        expect(second?.querySelector('.label')?.textContent).toBe('Beta');
+    });
+
     it('should name an icon-only segment by its label, draw no label text and show the label as a tip', async () => {
         // Arrange
         const mounted = mountComponent('segmented', { options, iconOnly: true, value: 'list' });

@@ -31,7 +31,7 @@
         "message": { "type": "string", "default": "", "runtime": true },
         "glyph": { "type": "object", "default": { "name": "", "decorative": true }, "runtime": true },
         "_label": { "type": "string", "kind": "content", "default": "Label" },
-        "_placeholder": { "type": "string", "kind": "content", "default": "Type here" },
+        "_placeholder": { "type": "string", "kind": "content", "default": "" },
         "_help": { "type": "string", "kind": "content", "default": "" },
         "_errors": {
             "type": "map",

@@ -25,7 +25,7 @@ const text = (value: unknown): string => (typeof value === 'string' ? value : ''
  * completed, whether it is the active one and whether the user can select it (with `linear`, not after the first step
  * that is not completed). A press on a step writes `active` and raises `select` with the step's key. The command
  * `complete` (`value`: a step key) adds the key to `completed`; a key that is already there stays once. `active` is the
- * author's choice: while it is empty or names no step, the first step is the active one and nothing is written.
+ * author's choice: while it is empty the first step is the active one, and while it is a value that names no step no step is current (completed steps still show as done). Nothing is written.
  * `complete` stands in for an `append` system command: the `on` commands are `set`, `toggle` and `emit`, so there is no
  * way to add one key to a list from an `on` entry
  */

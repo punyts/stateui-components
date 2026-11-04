@@ -174,6 +174,152 @@ describe('page in Chromium', () => {
     });
 });
 
+describe('page responsive nav in Chromium', () => {
+    afterEach(() => {
+        mountComponent.unmountAll();
+    });
+
+    const frames = async (count: number): Promise<void> => {
+        for (let n = 0; n < count; n++) await new Promise((resolve) => requestAnimationFrame(resolve));
+    };
+    const nav = { component: 'nav', children: { home: item('Home'), orders: item('Orders') } };
+    const mountAt = async (width: number, extra: Record<string, unknown> = {}) => {
+        const mounted = mountComponent('page', { nav, children: { a: text('Main') }, _title: 'Shop', ...extra });
+        mounted.host.style.inlineSize = `${width}px`;
+        await frames(3);
+        return mounted;
+    };
+    const toggle = (element: Element): HTMLButtonElement => part(element, '.toggle') as HTMLButtonElement;
+    const navBox = (element: Element): DOMRect => box(part(element, '.nav') as HTMLElement);
+
+    it('should collapse a start nav into a bar with a closed menu button below 768 px and give the main area the full width', async () => {
+        // Arrange and Act
+        const mounted = await mountAt(390);
+
+        // Assert
+        expect(mounted.store.get('$.app.compact')).toBe(true);
+        expect(mounted.element.hasAttribute('compact')).toBe(true);
+        expect(toggle(mounted.element).getAttribute('aria-expanded')).toBe('false');
+        expect(toggle(mounted.element).getAttribute('aria-controls')).toBe('nav');
+        expect(toggle(mounted.element).textContent).toContain('Menu');
+        expect(getComputedStyle(part(mounted.element, '.nav') as HTMLElement).display).toBe('none');
+        const main = box(part(mounted.element, '.main') as HTMLElement);
+        expect(main.width).toBeGreaterThan(350);
+    });
+
+    it('should keep the nav column and draw no bar at 1000 px', async () => {
+        // Arrange and Act
+        const mounted = await mountAt(1000);
+
+        // Assert
+        expect(mounted.store.get('$.app.compact')).toBe(false);
+        expect(part(mounted.element, '.bar')).toBeNull();
+        expect(box(part(mounted.element, '.nav') as HTMLElement).right).toBeLessThanOrEqual(box(part(mounted.element, '.main') as HTMLElement).left + 1);
+    });
+
+    it('should open the nav over the content on the button, and close it on the button again', async () => {
+        // Arrange
+        const mounted = await mountAt(390);
+
+        // Act
+        await userEvent.click(toggle(mounted.element));
+        await frames(1);
+        const opened = navBox(mounted.element);
+        const expanded = toggle(mounted.element).getAttribute('aria-expanded');
+        await userEvent.click(toggle(mounted.element));
+        await frames(1);
+
+        // Assert
+        expect(mounted.store.get('$.app.navOpen')).toBe(false);
+        expect(expanded).toBe('true');
+        expect(opened.width).toBeGreaterThan(100);
+        expect(opened.top).toBeGreaterThanOrEqual(box(part(mounted.element, '.bar') as HTMLElement).bottom - 1);
+        expect(getComputedStyle(part(mounted.element, '.nav') as HTMLElement).display).toBe('none');
+    });
+
+    it('should close the nav when a nav item is chosen', async () => {
+        // Arrange
+        const mounted = await mountAt(390);
+        mounted.store.set('$.app.navOpen', true);
+        await frames(2);
+
+        // Act
+        await userEvent.click(itemButton(part(mounted.element, '.nav > sui-node')?.firstElementChild as Element, 'orders'));
+        await frames(1);
+
+        // Assert
+        expect(mounted.store.get('$.app.navOpen')).toBe(false);
+    });
+
+    it('should close the nav on Escape and return focus to the button', async () => {
+        // Arrange
+        const mounted = await mountAt(390);
+        toggle(mounted.element).focus();
+        await userEvent.keyboard('{Enter}');
+        await frames(1);
+
+        // Act
+        await userEvent.keyboard('{Escape}');
+        await frames(1);
+
+        // Assert
+        expect(mounted.store.get('$.app.navOpen')).toBe(false);
+        expect(root(mounted.element).activeElement).toBe(toggle(mounted.element));
+    });
+
+    it('should follow navOpen written from outside', async () => {
+        // Arrange
+        const mounted = await mountAt(390);
+
+        // Act
+        mounted.store.set('$.app.navOpen', true);
+        await frames(1);
+
+        // Assert
+        expect(mounted.element.hasAttribute('nav-open')).toBe(true);
+        expect(toggle(mounted.element).getAttribute('aria-expanded')).toBe('true');
+        expect(getComputedStyle(part(mounted.element, '.nav') as HTMLElement).display).not.toBe('none');
+    });
+
+    it('should use navBreakpoint, and never collapse with 0 or a top nav', async () => {
+        // Arrange
+        const high = await mountAt(900, { navBreakpoint: 1000 });
+        const off = await mountAt(300, { navBreakpoint: 0 });
+        const top = await mountAt(300, { navPosition: 'top' });
+
+        // Assert
+        expect(high.store.get('$.app.compact')).toBe(true);
+        expect(off.store.get('$.app.compact')).toBe(false);
+        expect(top.store.get('$.app.compact')).toBe(false);
+    });
+
+    it('should leave compact and close the nav when the page grows past the breakpoint', async () => {
+        // Arrange
+        const mounted = await mountAt(390);
+        mounted.store.set('$.app.navOpen', true);
+
+        // Act
+        mounted.host.style.inlineSize = '1000px';
+        await frames(3);
+
+        // Assert
+        expect(mounted.store.get('$.app.compact')).toBe(false);
+        expect(mounted.store.get('$.app.navOpen')).toBe(false);
+    });
+
+    it('should show the German menu label', async () => {
+        // Arrange
+        const mounted = await mountAt(390);
+
+        // Act
+        mounted.setLocale('de');
+        await frames(1);
+
+        // Assert
+        expect(toggle(mounted.element).textContent).toContain('Menü');
+    });
+});
+
 describe('nav in Chromium', () => {
     afterEach(() => {
         mountComponent.unmountAll();

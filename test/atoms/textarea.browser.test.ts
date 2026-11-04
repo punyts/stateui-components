@@ -13,6 +13,16 @@ describe('textarea in Chromium', () => {
         mountComponent.unmountAll();
     });
 
+    it('should show no placeholder by default', () => {
+        // Arrange
+        const mounted = mountComponent('textarea');
+
+        // Assert
+        expect(control(mounted.element).placeholder).toBe('');
+        expect(control(mounted.element).getAttribute('placeholder') ?? '').toBe('');
+        expect(mounted.store.get('$.app._placeholder')).toBe('');
+    });
+
     it('should render the properties and follow a state write', () => {
         // Arrange
         const mounted = mountComponent('textarea', { value: 'one', rows: 5, required: true, maxLength: 80 });
@@ -149,7 +159,7 @@ describe('textarea in Chromium', () => {
         expect(getComputedStyle(control(mounted.element)).backgroundColor).not.toBe(light);
     });
 
-    it('should show the German placeholder and label after switching language', () => {
+    it('should show the German label and no placeholder after switching language', () => {
         // Arrange
         const mounted = mountComponent('textarea');
 
@@ -157,7 +167,7 @@ describe('textarea in Chromium', () => {
         mounted.setLocale('de');
 
         // Assert
-        expect(control(mounted.element).placeholder).toBe('Hier eingeben');
+        expect(control(mounted.element).placeholder).toBe('');
         expect(control(mounted.element).getAttribute('aria-label')).toBe('Textbereich');
     });
 });

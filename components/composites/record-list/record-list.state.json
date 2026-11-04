@@ -9,7 +9,7 @@
     },
     "properties": {
         "key": { "type": "string", "validators": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" }, "default": "id" },
-        "rowHeight": { "type": "string", "values": ["sm", "md", "lg"], "default": "md", "reflect": true },
+        "rowHeight": { "type": "string", "values": ["sm", "md", "lg", "xl"], "default": "md", "reflect": true },
         "overscan": { "type": "integer", "validators": { "range": { "min": 0, "max": 20 } }, "default": 5 },
         "records": { "type": ["array", "object"] },
         "order": { "type": "array" },

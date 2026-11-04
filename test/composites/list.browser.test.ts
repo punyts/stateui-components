@@ -252,4 +252,33 @@ describe('list in Chromium', () => {
         expect(sm).toBeLessThan(md);
         expect(lg).toBeGreaterThan(md);
     });
+
+    it('should make xl rows taller than lg, so a two-line row fits', async () => {
+        // Arrange
+        const height = async (rowHeight: string): Promise<number> => {
+            const mounted = await mountList(lines(2), { rowHeight });
+            await frames(2);
+            const slot = slotElements(mounted).find((candidate) => !candidate.hidden) as HTMLElement;
+            return slot.getBoundingClientRect().height;
+        };
+
+        // Act
+        const [lg, xl] = [await height('lg'), await height('xl')];
+
+        // Assert
+        expect(xl).toBeGreaterThan(lg);
+        expect(xl).toBeGreaterThanOrEqual(lg * 1.4);
+    });
+
+    it('should take the row height of a recordlist.row theme override written on the list node', async () => {
+        // Arrange
+        const mounted = await mountList(lines(2), { theme: { recordlist: { row: '80px' } } });
+        await frames(2);
+
+        // Act
+        const slot = slotElements(mounted).find((candidate) => !candidate.hidden) as HTMLElement;
+
+        // Assert
+        expect(slot.getBoundingClientRect().height).toBe(80);
+    });
 });

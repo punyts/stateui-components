@@ -4,11 +4,13 @@ import { currentStep, keysOf, planSteps } from './steps.js';
 const keys = ['details', 'options', 'review'];
 
 describe('currentStep', () => {
-    it('should name the active step, and the first one when active is empty or unknown', () => {
+    it('should name the active step, the first one when active is empty, and none when active names no step', () => {
         // Assert
         expect(currentStep(keys, 'options')).toBe('options');
         expect(currentStep(keys, '')).toBe('details');
-        expect(currentStep(keys, 'missing')).toBe('details');
+        expect(currentStep(keys, undefined)).toBe('details');
+        expect(currentStep(keys, 'missing')).toBe('');
+        expect(planSteps(keys, 'Cancelled', ['details'], true).map((step) => step.current)).toEqual([false, false, false]);
         expect(currentStep([], 'a')).toBe('');
     });
 });

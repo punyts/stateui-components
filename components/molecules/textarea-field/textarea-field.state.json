@@ -131,7 +131,7 @@
         "_placeholder": {
             "type": "string",
             "kind": "content",
-            "default": "Type here"
+            "default": ""
         },
         "_help": {
             "type": "string",

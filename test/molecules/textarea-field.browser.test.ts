@@ -17,6 +17,16 @@ describe('textareaField in Chromium', () => {
         mountComponent.unmountAll();
     });
 
+    it('should show no placeholder by default', () => {
+        // Arrange
+        const mounted = mountComponent('textareaField');
+
+        // Assert
+        expect(control(mounted.element).placeholder).toBe('');
+        expect(control(mounted.element).getAttribute('placeholder') ?? '').toBe('');
+        expect(mounted.store.get('$.app._placeholder')).toBe('');
+    });
+
     it('should write a multi-line value to $.data through a <-value link', async () => {
         // Arrange
         const mounted = mountComponent('textareaField', { '<-value': '$.data.note' }, { data: { note: '' } });
