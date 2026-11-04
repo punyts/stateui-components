@@ -607,3 +607,31 @@ describe('the search keys of the molecules', () => {
         expect(purposesOf('stepper')).toEqual(expect.arrayContaining(['step through a process', 'show progress through steps']));
     });
 });
+
+describe('the search keys of the whole catalog', () => {
+    it('should give every entry, composed included, a category from the list and three to eight purposes', () => {
+        const bad = catalog.components
+            .filter((entry) => !(COMPONENT_CATEGORIES as readonly string[]).includes(entry.category ?? '') || (entry.purposes?.length ?? 0) < 3 || (entry.purposes?.length ?? 0) > 8)
+            .map((entry) => entry.name);
+
+        expect(bad).toEqual([]);
+    });
+
+    it('should give every composed entry a summary', () => {
+        expect(composedEntries.filter((entry) => (entry.summary ?? '').trim() === '').map((entry) => entry.name)).toEqual([]);
+    });
+
+    it('should give no composite or composed component a purpose made only of the words of its own name', () => {
+        const bad = catalog.components
+            .filter((entry) => entry.size === 'composite')
+            .flatMap((entry) => (entry.purposes ?? []).filter((phrase) => onlyNameWords(phrase, entry.name)).map((phrase) => `${entry.name}: ${phrase}`));
+
+        expect(bad).toEqual([]);
+    });
+
+    it('should put the composed components the design names in their categories', () => {
+        const categoryOf = (name: string): string | undefined => catalog.components.find((entry) => entry.name === name)?.category;
+
+        expect([categoryOf('dashboardGrid'), categoryOf('confirmDialog'), categoryOf('chatView'), categoryOf('tableRow')]).toEqual(['layout', 'overlays', 'conversation', 'data']);
+    });
+});

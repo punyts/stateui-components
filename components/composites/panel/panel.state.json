@@ -1,5 +1,7 @@
 {
     "summary": "Flat box; bordered or elevation raised makes a card; padding none for a layout-only box; header, actions, collapse",
+    "category": "layout",
+    "purposes": ["group content in a box with a header", "lay out children in a row, column or grid", "make a bordered or raised section"],
     "shared": { "elevation": { "default": "flat" }, "density": {} },
     "layout": true,
     "events": ["toggle"],

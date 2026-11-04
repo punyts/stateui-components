@@ -1,5 +1,8 @@
 {
     "component": "panel",
+    "summary": "A list of records beside the details of the one that is picked; stacks on a phone",
+    "category": "data",
+    "purposes": ["pick a record and see its details beside the list", "browse an inbox with a reading pane", "show a list and the selected item side by side"],
     "layout": { "type": "grid", "cols": 3, "collapseBelow": "md" },
     "children": {
         "list": {

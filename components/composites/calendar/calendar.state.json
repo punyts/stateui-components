@@ -1,5 +1,7 @@
 {
     "summary": "A calendar of records: month, week and day views, arrow-key navigation and a range event for data providers",
+    "category": "data",
+    "purposes": ["show bookings on each day of the month", "plan events by week or day", "see appointments on a schedule"],
     "tokenGroup": "calendar",
     "events": ["select", "open", "range"],
     "tokens": {

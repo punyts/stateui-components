@@ -1,5 +1,7 @@
 {
     "summary": "A popup list of menu items that a trigger opens, closed by Escape, an outside press or a choice",
+    "category": "navigation",
+    "purposes": ["open a list of actions from a button", "show more actions behind an overflow button", "offer a context menu of commands"],
     "shared": { "elevation": { "default": "overlay" } },
     "events": ["select", "close"],
     "commands": ["open", "close", "toggle"],

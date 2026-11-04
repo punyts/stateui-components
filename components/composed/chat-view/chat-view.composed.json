@@ -1,5 +1,8 @@
 {
     "component": "panel",
+    "summary": "A chat screen: the conversation above and a composer to write and send the next message",
+    "category": "conversation",
+    "purposes": ["chat with an assistant", "write and send messages in a conversation", "build a support chat screen"],
     "layout": { "type": "column", "gap": "sm" },
     "children": {
         "messages": {

@@ -1,5 +1,7 @@
 {
     "summary": "A table over a list of records: keyed columns, a fixed header, a virtual body, sortable columns and row selection",
+    "category": "data",
+    "purposes": ["list transactions in sortable columns", "show records in rows and columns", "select rows of a large data set"],
     "events": ["sort", "select", "activate"],
     "commands": ["delete", "clearSelection", "selectAll"],
     "shared": { "density": {} },

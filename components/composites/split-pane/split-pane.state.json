@@ -1,5 +1,7 @@
 {
     "summary": "Two panes with a draggable, keyboard-operable divider that can fold the start pane away; stacks on narrow screens",
+    "category": "layout",
+    "purposes": ["place two panes side by side", "resize a sidebar by dragging a divider", "fold a side pane away"],
     "tokenGroup": "splitpane",
     "events": ["resize"],
     "tokens": {

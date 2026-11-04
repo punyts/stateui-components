@@ -1,5 +1,7 @@
 {
     "summary": "Hierarchical records drawn through recordList: keyed by parent or children, expandable, indented by level",
+    "category": "data",
+    "purposes": ["browse folders and nested items", "expand and collapse a hierarchy", "show an outline indented by level"],
     "events": ["select", "activate", "expand"],
     "commands": ["expand", "collapse", "expandAll", "collapseAll"],
     "shared": { "density": {} },

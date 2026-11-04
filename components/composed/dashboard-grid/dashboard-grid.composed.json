@@ -1,5 +1,8 @@
 {
     "component": "page",
+    "summary": "A grid of headline figures and charts that stacks into one column on a phone",
+    "category": "layout",
+    "purposes": ["lay out headline figures and charts in a grid", "build an overview dashboard", "arrange cards in columns that stack on a phone"],
     "layout": { "type": "grid", "cols": 3, "collapseBelow": "md" },
     "children": {
         "revenue": {

@@ -1,5 +1,7 @@
 {
     "summary": "A general anchored panel with a trigger and a body: filters, quick edits and info cards",
+    "category": "overlays",
+    "purposes": ["open a small panel next to a button", "show quick filters anchored to a control", "edit a value in a floating box"],
     "shared": { "elevation": { "default": "overlay" }, "density": {} },
     "events": ["open", "close"],
     "commands": ["open", "close", "toggle"],

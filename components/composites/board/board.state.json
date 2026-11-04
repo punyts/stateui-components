@@ -1,5 +1,7 @@
 {
     "summary": "A kanban board: a column per value of a record field, each a recordList of cards that move by pointer and keyboard",
+    "category": "data",
+    "purposes": ["track tasks in columns by status", "move cards between stages by dragging", "run a kanban workflow"],
     "tokenGroup": "board",
     "events": ["move"],
     "tokens": {

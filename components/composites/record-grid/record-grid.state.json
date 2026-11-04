@@ -1,5 +1,7 @@
 {
     "summary": "Draws only the visible records as a grid of cards through a small pool of recycled item nodes",
+    "category": "data",
+    "purposes": ["show products for sale as a grid of cards", "browse a gallery of items with pictures", "scroll a large catalogue of tiles"],
     "commands": ["scrollTo", "scrollToEnd"],
     "tokenGroup": "recordgrid",
     "tokens": {

@@ -1,5 +1,7 @@
 {
     "summary": "One row of a table: the cells the table builds from its columns for each visible record",
+    "category": "data",
+    "purposes": ["draw the cells of one table record", "hold the cells a table builds per row", "render a single line of tabular data"],
     "properties": {
         "cells": {
             "type": "map",

@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
+import { cp, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -65,6 +65,35 @@ describe('buildComponents', () => {
         // Assert
         expect(result.errors).toEqual([]);
         expect(result.catalog.components.every((component) => component.name !== '')).toBe(true);
+    });
+
+    describe('with the search keys required', () => {
+        /** A temporary copy of the fixture components, with one key taken out of one file */
+        async function fixturesWithout(file: string, key: string): Promise<string> {
+            const folder = await mkdtemp(join(tmpdir(), 'stateui-components-src-'));
+            folders.push(folder);
+            const source = join(folder, 'components');
+            await cp(fixtures, source, { recursive: true });
+            const path = join(source, file);
+            const { [key]: _removed, ...rest } = JSON.parse(await readFile(path, 'utf8')) as Record<string, unknown>;
+            await writeFile(path, JSON.stringify(rest, null, 4));
+            return source;
+        }
+
+        it.each([
+            ['category', 'atoms/probe/probe.state.json', 'SUI-BUILD-CATEGORY'],
+            ['purposes', 'atoms/probe/probe.state.json', 'SUI-BUILD-PURPOSES'],
+            ['summary', 'composed/order-editor/order-editor.composed.json', 'SUI-BUILD-SUMMARY']
+        ])('should report a component without its %s', async (key, file, code) => {
+            // Arrange
+            const source = await fixturesWithout(file, key);
+
+            // Act
+            const result = await buildComponents(source, await outFolder());
+
+            // Assert
+            expect(result.errors.map((error) => [error.code, error.file])).toEqual([[code, file]]);
+        });
     });
 
     it('should name the four grouping folders', () => {

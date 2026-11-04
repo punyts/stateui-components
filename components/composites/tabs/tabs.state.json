@@ -1,5 +1,7 @@
 {
     "summary": "Children shown one at a time under tabs whose label, icon and badge come from each child's placement",
+    "category": "navigation",
+    "purposes": ["switch between views under tabs", "split a page into tabbed sections", "show one of several panels at a time"],
     "events": ["change"],
     "commands": ["select"],
     "tokens": {

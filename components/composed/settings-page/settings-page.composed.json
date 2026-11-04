@@ -1,5 +1,8 @@
 {
     "component": "page",
+    "summary": "A settings screen: a side menu of sections and a form for the chosen section",
+    "category": "layout",
+    "purposes": ["build a settings screen with sections", "change account preferences", "group options under a side menu"],
     "navPosition": "start",
     "_title": "Settings",
     "nav": {

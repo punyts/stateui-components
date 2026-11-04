@@ -67,7 +67,7 @@ export declare function register(window: { readonly customElements: CustomElemen
  * @returns {Promise<import('@punyts/stateui-app/build').BuildResult>}
  */
 export async function buildComponents(sourceDir, outDir) {
-    const result = await buildLibrary(resolve(sourceDir), resolve(outDir), { cssTransforms: [], cssChecks: [], sharedCssDir: SHARED_CSS_DIR });
+    const result = await buildLibrary(resolve(sourceDir), resolve(outDir), { cssTransforms: [], cssChecks: [], sharedCssDir: SHARED_CSS_DIR, requireSearchKeys: true });
     const registerDir = dirname(resolve(outDir));
     await mkdir(registerDir, { recursive: true });
     await writeFile(join(registerDir, 'register.js'), REGISTER_JS);

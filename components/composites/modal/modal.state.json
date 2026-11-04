@@ -1,5 +1,7 @@
 {
     "summary": "A modal dialog on a native dialog element, with header, body and footer slots, that keeps its content while closed",
+    "category": "overlays",
+    "purposes": ["ask for input in a dialog over the page", "block the page until the user answers", "show a focused task in a window"],
     "shared": { "elevation": { "default": "overlay" }, "density": {} },
     "events": ["open", "close"],
     "commands": ["open", "close", "toggle"],

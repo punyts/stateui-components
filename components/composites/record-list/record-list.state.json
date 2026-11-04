@@ -1,5 +1,7 @@
 {
     "summary": "Draws only the visible records of a long list through a small pool of recycled row nodes",
+    "category": "data",
+    "purposes": ["scroll a very long list of rows smoothly", "draw thousands of records in a column", "page rows in from a server as you scroll"],
     "events": ["range"],
     "commands": ["scrollTo"],
     "shared": { "density": {} },

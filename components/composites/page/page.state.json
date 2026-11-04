@@ -1,5 +1,7 @@
 {
     "summary": "The root of an application: header, navigation, main content and footer; the nav collapses on narrow pages",
+    "category": "layout",
+    "purposes": ["frame an app with header, menu and content", "hold the main screen of an application", "collapse the side menu on a phone"],
     "layout": true,
     "tokens": {
         "padding": "{space.inset.md}",

@@ -1,5 +1,8 @@
 {
     "component": "panel",
+    "summary": "A table of records with search, add, edit and delete around it",
+    "category": "data",
+    "purposes": ["edit records in a table", "manage a list of records", "add, edit and remove rows with a search"],
     "actions": {
         "component": "toolbar",
         "children": {

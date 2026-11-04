@@ -1,5 +1,7 @@
 {
     "summary": "A list of records drawn through recordList, with an empty state, selection, a current record and sorting",
+    "category": "data",
+    "purposes": ["show records one per row", "pick one record from a list", "sort a simple list of items"],
     "events": ["select", "activate", "sort"],
     "commands": ["clearSelection", "selectAll"],
     "shared": { "density": {} },

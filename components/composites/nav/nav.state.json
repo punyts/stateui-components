@@ -1,5 +1,7 @@
 {
     "summary": "The application navigation: menu items with an active one, header and footer slots; overflow scroll keeps one row",
+    "category": "navigation",
+    "purposes": ["move between the screens of an app", "show the main menu with the active screen", "switch between sections from a sidebar"],
     "events": ["select"],
     "tokens": {
         "width": "calc({size.control.md} * 6)",

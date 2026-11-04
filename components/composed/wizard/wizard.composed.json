@@ -1,5 +1,8 @@
 {
     "component": "panel",
+    "summary": "A step-by-step flow: a stepper above one screen of questions at a time, with back and next",
+    "category": "forms",
+    "purposes": ["walk a person through questions one screen at a time", "collect a booking or sign-up in steps", "go back and next through a long form"],
     "children": {
         "stepper": {
             "component": "stepper",

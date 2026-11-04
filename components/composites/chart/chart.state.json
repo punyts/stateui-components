@@ -1,5 +1,7 @@
 {
     "summary": "SVG bar, line, area or donut chart over records; fractionDigits fixes decimals (0 drops currency cents)",
+    "category": "data",
+    "purposes": ["draw how a total splits across categories", "plot a trend over time", "compare values as bars or a donut"],
     "tokenGroup": "chart",
     "tokens": {
         "height": "calc({size.control.md} * 6)"
