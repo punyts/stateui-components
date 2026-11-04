@@ -26,6 +26,7 @@
                 "sortable": { "type": "boolean", "default": false },
                 "format": { "type": "string", "values": ["number", "percent", "currency", "duration"] },
                 "currency": { "type": "string", "validators": { "pattern": "^[A-Z]{3}$" } },
+                "fractionDigits": { "type": "integer", "validators": { "range": { "min": 0, "max": 20 } } },
                 "cell": { "type": "node", "row": true }
             },
             "default": {}

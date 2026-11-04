@@ -121,6 +121,36 @@ describe('list in Chromium', () => {
         expect(reported).toEqual([]);
     });
 
+    it('should warn once with SUI-RUN-CLIPPED when a row is taller than the row height', async () => {
+        // Arrange
+        const warn = vi.spyOn(report, 'warning').mockImplementation(() => undefined);
+        const tall = {
+            component: 'panel',
+            children: { a: rowTemplate, b: rowTemplate, c: rowTemplate, d: rowTemplate }
+        };
+
+        // Act
+        await mountList(lines(3), { row: tall, rowHeight: 'sm' });
+        await frames(3);
+
+        // Assert
+        const clipped = warn.mock.calls.filter((call) => (call[1] as { code?: string } | undefined)?.code === 'SUI-RUN-CLIPPED');
+        expect(clipped).toHaveLength(1);
+        expect(String(clipped[0]?.[0])).toContain('rowHeight');
+    });
+
+    it('should not warn about clipping when the rows fit', async () => {
+        // Arrange
+        const warn = vi.spyOn(report, 'warning').mockImplementation(() => undefined);
+
+        // Act
+        await mountList(lines(3));
+        await frames(3);
+
+        // Assert
+        expect(warn.mock.calls.filter((call) => (call[1] as { code?: string } | undefined)?.code === 'SUI-RUN-CLIPPED')).toEqual([]);
+    });
+
     it('should update only the slot of the record whose linked field changed', async () => {
         // Arrange
         const mounted = await mountList(lines(5));

@@ -1,4 +1,6 @@
+import { report } from '@punyts/core';
 import type { ControllerContext } from '@punyts/stateui';
+import { buildError } from '@punyts/stateui-app';
 import { runtimePath } from '@punyts/stateui-app/core';
 import { createRecordIndex } from '../shared/records/recordIndex.js';
 import type { RecordViewElement } from '../shared/records/recordView.js';
@@ -26,6 +28,9 @@ const TEXT_ENTRY = new Set(['input', 'textarea', 'select']);
  * the window and then its slot is focused. The slot that holds focus is pinned while its record is out of the window;
  * when its record is deleted focus moves to the neighbouring row. `locate(key)`, `keyAt(position)` and `recordKeys()` are
  * on the element, `scrollTo` is a command, and `loading` shows skeleton rows over the visible rows.
+ *
+ * Rows have one fixed height (`rowHeight`, or the `recordlist.row` token), so a row whose content is taller is cut off.
+ * When the first drawn row needs more height than it has, `SUI-RUN-CLIPPED` is reported once as a warning.
  *
  * Paged data: with `total` set (a non-negative integer) the count, `aria-rowcount` / `aria-setsize` and the `range` event's
  * `total` come from it, the records are read by position (an array, or a map keyed by position) and `order` is ignored. A
@@ -155,7 +160,25 @@ export default function controller({ element, store, basePath }: ControllerConte
         selection = readSelection();
         pool?.syncSelection();
     };
+    let clipReported = false;
+    const checkClipping = (): void => {
+        if (disposed || clipReported) return;
+        const slot = element.shadowRoot?.querySelector<HTMLElement>('.slot:not([hidden]):not([data-pending])');
+        if (!slot) return;
+        // The slot hides what overflows it, so its scroll height is the height its content needs
+        const limit = slot.clientHeight;
+        const actual = slot.scrollHeight;
+        if (limit === 0 || actual <= limit + 1) return;
+        clipReported = true;
+        const error = buildError('SUI-RUN-CLIPPED', { component: 'recordList', path: basePath, statePath: basePath, limit, actual });
+        report.warning(error.message, { code: 'SUI-RUN-CLIPPED', path: basePath });
+    };
+    const scheduleClipCheck = (): void => {
+        if (clipReported || typeof requestAnimationFrame !== 'function') return;
+        requestAnimationFrame(() => requestAnimationFrame(checkClipping));
+    };
     const onRange = (): void => {
+        scheduleClipCheck();
         const next = readWindow(store.get<unknown>(windowPath));
         if (!sameWindow(next, readWindow(store.get<unknown>(shownPath)))) store.set(shownPath, { first: next.first, count: next.count });
         if (sameWindow(next, raised)) return;
@@ -195,6 +218,7 @@ export default function controller({ element, store, basePath }: ControllerConte
     store.on([overscanPath], onOverscan);
     store.on(windowPaths, onRange);
     store.on(watched, syncRowcount);
+    store.on([countPath], scheduleClipCheck);
     store.on(multiWatched, syncMultiselectable);
     store.on(selectedPaths, onSelected);
     store.on(loadingWatched, syncLoading);
@@ -277,6 +301,7 @@ export default function controller({ element, store, basePath }: ControllerConte
             store.off([overscanPath], onOverscan);
             store.off(windowPaths, onRange);
             store.off(watched, syncRowcount);
+            store.off([countPath], scheduleClipCheck);
             store.off(multiWatched, syncMultiselectable);
             store.off(selectedPaths, onSelected);
             store.off(loadingWatched, syncLoading);

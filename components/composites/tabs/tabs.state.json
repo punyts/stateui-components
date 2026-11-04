@@ -4,7 +4,7 @@
     "commands": ["select"],
     "tokens": {
         "gap": "{space.gap.sm}",
-        "padding": "{space.inset.md}"
+        "padding": "{space.inset.md} {space.inset.md}"
     },
     "placement": {
         "_tab": { "type": "string", "kind": "content", "default": "" },

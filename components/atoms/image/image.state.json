@@ -1,5 +1,6 @@
 {
-    "summary": "A picture shown from inline data, with a fit, an aspect ratio and a corner radius",
+    "summary": "A picture shown from inline data, with a fit, an aspect ratio and a corner radius, on the image.fill backdrop",
+    "tokens": { "fill": "{color.surface.sunken}" },
     "properties": {
         "src": { "type": "url", "default": "", "validators": { "pattern": "^(?:data:|$)" } },
         "_alt": { "type": "string", "kind": "content", "requiredWhen": { "property": "decorative", "equals": false } },

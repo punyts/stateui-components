@@ -172,6 +172,17 @@ describe('table columns, cells and rows in Chromium', () => {
         ]);
     });
 
+    it('should drop the cents of a currency column with fractionDigits 0', async () => {
+        // Arrange
+        const columns = { price: { _title: 'Price', field: 'price', format: 'currency', currency: 'USD', fractionDigits: 0 } };
+
+        // Act
+        const mounted = await mountTable({ columns }, { orders: [{ id: 'a', price: 1299 }] });
+
+        // Assert
+        expect(cells(rows(mounted)[0] as HTMLElement).map(cellText)).toEqual(['$1,299']);
+    });
+
     it('should stripe the odd rows only when striped', async () => {
         // Arrange
         const plain = await mountTable();

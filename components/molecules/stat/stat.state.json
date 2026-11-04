@@ -8,6 +8,7 @@
             "validators": { "pattern": "^[A-Z]{3}$" },
             "requiredWhen": { "property": "format", "equals": "currency" }
         },
+        "fractionDigits": { "type": "integer", "validators": { "range": { "min": 0, "max": 20 } } },
         "loading": { "type": "boolean", "default": false, "reflect": true },
         "trend": { "type": "string", "values": ["up", "down", "flat"] },
         "_label": { "type": "string", "kind": "content", "default": "Label" },

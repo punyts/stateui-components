@@ -1,18 +1,19 @@
 {
-    "summary": "Flat, borderless box by default; bordered: true and/or elevation: raised make it a card. Header, actions, collapse",
+    "summary": "Flat box; bordered or elevation raised makes a card; padding none for a layout-only box; header, actions, collapse",
     "shared": { "elevation": { "default": "flat" }, "density": {} },
     "layout": true,
     "events": ["toggle"],
     "commands": ["expand", "collapse", "toggle"],
     "tokens": {
         "radius": "{radius.md}",
-        "padding": "{space.inset.md}",
+        "padding": "{space.inset.md} {space.inset.md}",
         "gap": "{space.gap.md}"
     },
     "properties": {
         "collapsible": { "type": "boolean", "default": false, "reflect": true },
         "collapsed": { "type": "boolean", "default": false, "reflect": true },
         "bordered": { "type": "boolean", "default": false, "reflect": true },
+        "padding": { "type": "string", "values": ["md", "none", "sm", "lg"], "default": "md", "reflect": true },
         "_title": { "type": "string", "kind": "content", "default": "" },
         "_description": { "type": "string", "kind": "content", "default": "" },
         "_toggleLabel": { "type": "string", "kind": "content", "default": "Toggle section" },

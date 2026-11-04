@@ -81,6 +81,17 @@ describe('panel in Chromium', () => {
         expect(padding('compact')).toBeLessThan(padding('spacious'));
     });
 
+    it('should drop the padding with padding none and step it with sm and lg', () => {
+        // Arrange
+        const padding = (value: string): number =>
+            parseFloat(getComputedStyle(part(mountComponent('panel', { padding: value }).element, '.panel') as HTMLElement).paddingTop);
+
+        // Assert
+        expect(padding('none')).toBe(0);
+        expect(padding('sm')).toBeLessThan(padding('md'));
+        expect(padding('lg')).toBeGreaterThan(padding('md'));
+    });
+
     it('should lay the children out as a column, a row, a grid, a region and ad hoc through layout and placement', () => {
         // Arrange
         const place = (layout: Record<string, unknown>, placed: Record<string, Record<string, unknown>>): DOMRect[] => {

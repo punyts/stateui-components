@@ -429,6 +429,22 @@ describe('nav in Chromium', () => {
         expect(Math.abs((tops(horizontal.element)[1] as number) - (tops(horizontal.element)[0] as number))).toBeLessThan(2);
     });
 
+    it('should wrap a narrow horizontal nav by default and keep one scrolling row with overflow scroll', () => {
+        // Arrange
+        const many = Object.fromEntries(['a', 'b', 'c', 'd', 'e', 'f'].map((key) => [key, item(`Section ${key}`)]));
+        const wrapped = mountComponent('nav', { orientation: 'horizontal', children: many });
+        const scrolled = mountComponent('nav', { orientation: 'horizontal', overflow: 'scroll', children: many });
+        for (const mounted of [wrapped, scrolled]) mounted.host.style.inlineSize = '320px';
+        const spread = (element: Element): number => box(itemButton(element, 'f')).top - box(itemButton(element, 'a')).top;
+        const items = part(scrolled.element, '.items') as HTMLElement;
+
+        // Assert
+        expect(spread(wrapped.element)).toBeGreaterThan(2);
+        expect(Math.abs(spread(scrolled.element))).toBeLessThan(2);
+        expect(items.scrollWidth).toBeGreaterThan(items.clientWidth);
+        expect(box(scrolled.element).width).toBeLessThanOrEqual(320);
+    });
+
     it('should hide the labels of a collapsed nav but keep the accessible name', () => {
         // Arrange
         const open = mountComponent('nav', { children });

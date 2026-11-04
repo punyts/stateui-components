@@ -18,6 +18,20 @@
     line-height: var(--ui-text-body-leading);
 }
 
+/* md keeps the panel.padding token (one to four lengths); none, sm and lg are fixed steps, so a layout-only panel
+   drops its padding without a theme override that would reach the panels inside it */
+:host([padding=none]) .panel {
+    padding: 0px;
+}
+
+:host([padding=sm]) .panel {
+    padding: var(--ui-space-inset-sm);
+}
+
+:host([padding=lg]) .panel {
+    padding: var(--ui-space-inset-lg);
+}
+
 :host([bordered]) .panel {
     border-color: var(--ui-color-border-base);
 }

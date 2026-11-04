@@ -11,7 +11,8 @@ function shownText(value: unknown, cell: Entry, locale: string): string {
     if (value === undefined || value === null || typeof value === 'object') return '';
     const format = text(cell['format']);
     if (format === '') return String(value);
-    return formatValue(value, { format, currency: text(cell['currency']), locale });
+    const digits = cell['fractionDigits'];
+    return formatValue(value, { format, currency: text(cell['currency']), locale, ...(typeof digits === 'number' ? { fractionDigits: digits } : {}) });
 }
 
 /**

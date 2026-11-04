@@ -39,6 +39,19 @@
     flex-wrap: wrap;
 }
 
+/* overflow: scroll keeps a horizontal nav on one row that scrolls sideways on a narrow screen instead of wrapping */
+:host([orientation=horizontal][overflow=scroll]) .items {
+    flex-wrap: nowrap;
+    min-inline-size: 0;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+}
+
+:host([orientation=horizontal][overflow=scroll]) .items > * {
+    flex: none;
+}
+
 :host([collapsed]) .nav {
     inline-size: fit-content;
     --item-gap: 0;

@@ -41,7 +41,7 @@ function trackOf(width: unknown): string {
 
 /**
  * The row template the body's slot pool copies per slot: a `tableRow` whose `cells` hold one entry per column in key
- * order. A `field` column links the cell's `value` to `$row.<field>` and carries its `format` and `currency`; a `cell`
+ * order. A `field` column links the cell's `value` to `$row.<field>` and carries its `format`, `currency` and `fractionDigits`; a `cell`
  * column carries a copy of its node, whose `$row` links and `on` targets the pool resolves like any row template
  */
 function rowTemplate(columns: unknown): Entry {
@@ -57,6 +57,8 @@ function rowTemplate(columns: unknown): Entry {
             if (FORMATS.has(format)) cell['format'] = format;
             const currency = text(column['currency']);
             if (currency !== '') cell['currency'] = currency;
+            const digits = column['fractionDigits'];
+            if (typeof digits === 'number') cell['fractionDigits'] = digits;
             cell['text'] = '';
             const field = text(column['field']);
             if (FIELD.test(field)) cell['<-value'] = `$row.${field}`;

@@ -1,5 +1,5 @@
 {
-    "summary": "The application navigation: a list of menu items with an active one, and header and footer slots",
+    "summary": "The application navigation: menu items with an active one, header and footer slots; overflow scroll keeps one row",
     "events": ["select"],
     "tokens": {
         "width": "calc({size.control.md} * 6)",
@@ -9,6 +9,7 @@
     "properties": {
         "orientation": { "type": "string", "values": ["vertical", "horizontal"], "default": "vertical", "reflect": true },
         "active": { "type": "string", "default": "" },
+        "overflow": { "type": "string", "values": ["wrap", "scroll"], "default": "wrap", "reflect": true },
         "collapsed": { "type": "boolean", "default": false, "reflect": true },
         "_label": { "type": "string", "kind": "content", "default": "Main navigation" },
         "header": { "type": "node" },

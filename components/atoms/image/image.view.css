@@ -1,4 +1,4 @@
-:host { display: block; overflow: hidden; background: var(--ui-color-surface-sunken); border-radius: var(--ui-radius-none); aspect-ratio: 16 / 9; }
+:host { display: block; overflow: hidden; background: var(--ui-image-fill); border-radius: var(--ui-radius-none); aspect-ratio: 16 / 9; }
 :host([ratio="1:1"]) { aspect-ratio: 1 / 1; }
 :host([ratio="4:3"]) { aspect-ratio: 4 / 3; }
 :host([ratio="16:9"]) { aspect-ratio: 16 / 9; }
