@@ -112,3 +112,43 @@ describe('toNumber', () => {
         expect(toNumber(true)).toBeUndefined();
     });
 });
+
+describe('formatValue fractionDigits', () => {
+    it('should drop the cents of a currency with zero digits', () => {
+        // Act
+        const en = formatValue(12345.67, { format: 'currency', currency: 'USD', locale: 'en', fractionDigits: 0 });
+        const de = formatValue(12345.67, { format: 'currency', currency: 'EUR', locale: 'de', fractionDigits: 0 });
+
+        // Assert
+        expect(en).toBe('$12,346');
+        expect(de).toBe(`12.346${NBSP}€`);
+    });
+
+    it('should keep the currency cents when no digits are given', () => {
+        // Act
+        const text = formatValue(12345.67, { format: 'currency', currency: 'USD', locale: 'en' });
+
+        // Assert
+        expect(text).toBe('$12,345.67');
+    });
+
+    it('should fix the digits of a number and a percent', () => {
+        // Act
+        const number = formatValue(1234.5, { format: 'number', locale: 'en', fractionDigits: 2 });
+        const percent = formatValue(0.256, { format: 'percent', locale: 'en', fractionDigits: 0 });
+
+        // Assert
+        expect(number).toBe('1,234.50');
+        expect(percent).toBe('26%');
+    });
+
+    it('should ignore the digits of a duration and an invalid count', () => {
+        // Act
+        const duration = formatValue(75, { format: 'duration', locale: 'en', fractionDigits: 2 });
+        const invalid = formatValue(1234.5, { format: 'number', locale: 'en', fractionDigits: -1 });
+
+        // Assert
+        expect(duration).toBe('1:15');
+        expect(invalid).toBe('1,234.5');
+    });
+});

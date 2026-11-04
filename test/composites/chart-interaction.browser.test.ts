@@ -165,6 +165,20 @@ describe('chart legend in Chromium', () => {
 describe('chart tooltip and keyboard in Chromium', () => {
     afterEach(() => mountComponent.unmountAll());
 
+    it('should show tooltip values and the donut total without cents with fractionDigits 0', async () => {
+        // Arrange
+        const bars = await mountBars({ format: 'currency', currency: 'USD', fractionDigits: 0 });
+        const donut = await mountDonut({ format: 'currency', currency: 'USD', fractionDigits: 0 });
+
+        // Act
+        await userEvent.hover(mark(bars, 'bar:revenue:1'));
+        await flush();
+
+        // Assert
+        expect(Array.from(tip(bars).querySelectorAll('.tip-row')).map((row) => row.textContent)).toEqual(['Revenue$2,000', 'Cost$900']);
+        expect(one(donut, 'text.total').textContent).toBe('$100');
+    });
+
     it('should show the values of a point in a popover while the pointer is on it', async () => {
         // Arrange
         const mounted = await mountBars();

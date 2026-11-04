@@ -250,6 +250,34 @@ describe('chart in Chromium', () => {
         expect(title).toBe('Sales');
     });
 
+    it('should drop the cents from axis ticks, tooltip and data table with fractionDigits 0', async () => {
+        // Arrange
+        const ticks = (mounted: MountedComponent): string[] => marks(mounted, 'text.tick.y').map((tick) => tick.textContent ?? '');
+        const cells = (mounted: MountedComponent): string[] => Array.from(mounted.element.shadowRoot?.querySelectorAll('.data td') ?? []).map((cell) => cell.textContent ?? '');
+        const withCents = await mountChart({ format: 'currency', currency: 'USD' });
+        const whole = await mountChart({ format: 'currency', currency: 'USD', fractionDigits: 0 });
+
+        // Assert
+        expect(ticks(withCents).some((label) => label.includes('.00'))).toBe(true);
+        expect(ticks(whole).length).toBeGreaterThan(0);
+        expect(ticks(whole).every((label) => !label.includes('.'))).toBe(true);
+        expect(cells(whole)).toContain('$4,000');
+        expect(cells(withCents)).toContain('$4,000.00');
+    });
+
+    it('should redraw with the new digits when fractionDigits is written', async () => {
+        // Arrange
+        const mounted = await mountChart({ format: 'currency', currency: 'USD' });
+
+        // Act
+        mounted.store.set('$.app.fractionDigits', 0 as never);
+        await flush();
+        await frames(2);
+
+        // Assert
+        expect(marks(mounted, 'text.tick.y').every((tick) => !(tick.textContent ?? '').includes('.'))).toBe(true);
+    });
+
     it('should show the German default title when no title is set', async () => {
         // Arrange
         const mounted = mountComponent('chart', { x: 'month', series: SERIES, '<-records': '$.data.sales' }, { data: { sales: SALES }, locale: 'de' });

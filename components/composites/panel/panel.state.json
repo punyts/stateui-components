@@ -1,5 +1,5 @@
 {
-    "summary": "A titled region that groups children, with a header action slot and an optional collapse control",
+    "summary": "Flat, borderless box by default; bordered: true and/or elevation: raised make it a card. Header, actions, collapse",
     "shared": { "elevation": { "default": "flat" }, "density": {} },
     "layout": true,
     "events": ["toggle"],

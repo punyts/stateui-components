@@ -1,5 +1,5 @@
 {
-    "summary": "An SVG bar, line, area or donut chart over linked records, with a legend, a tooltip and a hidden data table",
+    "summary": "SVG bar, line, area or donut chart over records; fractionDigits fixes decimals (0 drops currency cents)",
     "tokenGroup": "chart",
     "tokens": {
         "height": "calc({size.control.md} * 6)"
@@ -24,6 +24,7 @@
             "validators": { "pattern": "^[A-Z]{3}$" },
             "requiredWhen": { "property": "format", "equals": "currency" }
         },
+        "fractionDigits": { "type": "integer", "validators": { "range": { "min": 0, "max": 10 } } },
         "records": { "type": ["array", "object"] },
         "legendItems": { "type": "object", "default": {}, "runtime": true },
         "_title": { "type": "string", "kind": "content", "default": "Chart" },

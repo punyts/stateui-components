@@ -137,7 +137,9 @@ export default function controller({ element, store, basePath }: ControllerConte
             svgScene.clear();
             stop = undefined;
         }
-        const options = { format: text(read('format'), 'number'), currency: text(read('currency')), locale: text(store.get<unknown>('$.locale')) };
+        const digits = read('fractionDigits');
+        const shareOptions = { format: text(read('format'), 'number'), currency: text(read('currency')), locale: text(store.get<unknown>('$.locale')) };
+        const options = typeof digits === 'number' ? { ...shareOptions, fractionDigits: digits } : shareOptions;
         const hidden = readHidden();
         const input: ChartInput = {
             type,
@@ -147,7 +149,7 @@ export default function controller({ element, store, basePath }: ControllerConte
             width,
             height,
             format: (value) => formatValue(value, options),
-            percent: (share) => formatValue(share, { ...options, format: 'percent' }),
+            percent: (share) => formatValue(share, { ...shareOptions, format: 'percent' }),
             hidden,
             texts: { total: text(read('_total')), category: text(read('_category')), value: text(read('_value')), share: text(read('_share')) }
         };
@@ -182,7 +184,7 @@ export default function controller({ element, store, basePath }: ControllerConte
         `${recordsPath}.$every`,
         ...[text(read('x'), 'x'), ...readSeries(read('series')).map((spec) => spec.field)].map((field) => `${recordsPath}.$every.${field}`)
     ];
-    const propertyPaths = ['type', 'x', 'series', 'series.$all', 'stacked', 'format', 'currency', 'hiddenSeries', 'hiddenSeries.$all', '_title', '_description', '_total', '_category', '_value', '_share']
+    const propertyPaths = ['type', 'x', 'series', 'series.$all', 'stacked', 'format', 'currency', 'fractionDigits', 'hiddenSeries', 'hiddenSeries.$all', '_title', '_description', '_total', '_category', '_value', '_share']
         .map((name) => `${basePath}.${name}`)
         .concat('$.locale');
     let watchedRecords = recordPaths();
