@@ -1,5 +1,7 @@
 {
     "summary": "A bare checkbox with no visible label",
+    "category": "forms",
+    "purposes": ["tick a box in a table row", "select rows for a bulk action", "mark a task as complete", "toggle a yes or no choice without a label"],
     "tokenGroup": "control",
     "tokens": {
         "selected": { "fill": "{color.accent.base}", "on": "{color.accent.on}" },

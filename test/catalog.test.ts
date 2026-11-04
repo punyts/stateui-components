@@ -2,7 +2,7 @@ import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { DEFAULT_LEAVES, KIND_GROUPS, OVERLAY_KINDS, SHIPPED_OVERLAYS, exposedPathResolves, libraryFromCatalog, resolveNode, validateDocument } from '@punyts/stateui-app/core';
+import { COMPONENT_CATEGORIES, DEFAULT_LEAVES, KIND_GROUPS, OVERLAY_KINDS, SHIPPED_OVERLAYS, exposedPathResolves, libraryFromCatalog, resolveNode, validateDocument } from '@punyts/stateui-app/core';
 import type { JsonValue, PropertyShape } from '@punyts/stateui-app/core';
 import { formatError } from '@punyts/stateui-app/build';
 import type { Catalog, ComposedCatalogEntry, RootCatalogEntry } from '@punyts/stateui-app/build';
@@ -398,7 +398,7 @@ describe('the library build and its styles', () => {
 });
 
 describe('component tokens and icon defaults', () => {
-    it('should default every component token to references or a calc() of references, never a literal', () => {
+    it('should default every component token to references, a calc() of references or an inset of references, never a literal', () => {
         // Arrange
         const offenders: string[] = [];
 
@@ -410,7 +410,9 @@ describe('component tokens and icon defaults', () => {
                 const rest = value.replace(/\{[a-z0-9.]+\}/g, '');
                 const reference = /^\{[a-z0-9.]+\}$/.test(value);
                 const calc = /^calc\(.*\)$/.test(value) && references.length > 0 && /^[\s()+\-*/\d.]*$/.test(rest.replace(/^calc/, ''));
-                if (!reference && !calc) offenders.push(`${entry.name} ${token.path} = ${value}`);
+                // An inset token: two to four space-separated references (`{space.inset.md} {space.inset.lg}`)
+                const inset = /^\{[a-z0-9.]+\}( \{[a-z0-9.]+\}){1,3}$/.test(value);
+                if (!reference && !calc && !inset) offenders.push(`${entry.name} ${token.path} = ${value}`);
             }
         }
 
@@ -534,5 +536,38 @@ describe('the theme section of the catalog', () => {
 
         expect(componentGroups.length).toBeGreaterThan(0);
         for (const group of componentGroups) expect(groups.has(group), group).toBe(false);
+    });
+});
+
+/** The lowercased words of a camelCase component name: `dateRangeField` is date, range, field */
+const nameWords = (name: string): string[] => name.split(/(?=[A-Z])/).map((word) => word.toLowerCase());
+
+/** True when every word of a phrase is a word of the component's own name, so the phrase says nothing the name does not */
+const onlyNameWords = (phrase: string, name: string): boolean => {
+    const words = nameWords(name);
+    return phrase.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean).every((word) => words.includes(word));
+};
+
+describe('the search keys of the atoms', () => {
+    const atoms = catalog.components.filter((entry) => entry.size === 'atom');
+
+    it('should give every atom a category from the list and three to eight purposes', () => {
+        const bad = atoms
+            .filter((entry) => !(COMPONENT_CATEGORIES as readonly string[]).includes(entry.category ?? '') || (entry.purposes?.length ?? 0) < 3 || (entry.purposes?.length ?? 0) > 8)
+            .map((entry) => entry.name);
+
+        expect(atoms.length).toBe(SPEC_ATOMS.length + LATER_ATOMS.length);
+        expect(bad).toEqual([]);
+    });
+
+    it('should give no atom a purpose made only of the words of its own name', () => {
+        const bad = atoms.flatMap((entry) => (entry.purposes ?? []).filter((phrase) => onlyNameWords(phrase, entry.name)).map((phrase) => `${entry.name}: ${phrase}`));
+
+        expect(bad).toEqual([]);
+    });
+
+    it('should flag a phrase that only repeats the name', () => {
+        expect(onlyNameWords('Date range', 'dateRangeField')).toBe(true);
+        expect(onlyNameWords('pick a date range', 'dateRangeField')).toBe(false);
     });
 });

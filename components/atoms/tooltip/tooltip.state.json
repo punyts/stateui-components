@@ -1,5 +1,7 @@
 {
     "summary": "A short text label shown next to another node on hover and keyboard focus",
+    "category": "overlays",
+    "purposes": ["explain an icon button on hover", "show a short hint on keyboard focus", "name an action that has no label"],
     "tokens": {
         "padding": "{space.inset.sm}",
         "radius": "{radius.sm}",

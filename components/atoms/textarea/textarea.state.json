@@ -1,5 +1,7 @@
 {
     "summary": "A bare multi-line text area with no visible label, optionally growing with its text",
+    "category": "forms",
+    "purposes": ["write a longer note or comment", "type a message on several lines", "edit a description in place"],
     "tokenGroup": "control",
     "tokens": {
         "selected": { "fill": "{color.accent.base}", "on": "{color.accent.on}" },

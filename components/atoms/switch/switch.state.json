@@ -1,5 +1,7 @@
 {
     "summary": "A bare on and off switch with no visible label",
+    "category": "forms",
+    "purposes": ["turn a setting on or off in a row", "enable or disable a feature inline", "flip a toggle without a label"],
     "tokenGroup": "control",
     "tokens": {
         "selected": { "fill": "{color.accent.base}", "on": "{color.accent.on}" },

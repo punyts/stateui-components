@@ -1,5 +1,7 @@
 {
     "summary": "A bar that shows how far a task has got, or that it is running with no known end",
+    "category": "feedback",
+    "purposes": ["show how far a task has got", "show how much of a budget is used as a bar", "track an upload or download", "show a quota or limit filling up", "show work running with no known end"],
     "shared": { "tone": { "default": "accent" }, "size": { "default": "md" } },
     "properties": {
         "_label": { "type": "string", "kind": "content", "default": "Progress" },

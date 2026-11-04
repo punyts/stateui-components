@@ -1,5 +1,7 @@
 {
     "summary": "A turning ring that shows work in progress; it stops under reduced motion",
+    "category": "feedback",
+    "purposes": ["show that work is in progress", "show a loading indicator", "wait for a server reply"],
     "shared": { "tone": {}, "size": { "default": "md" } },
     "properties": {
         "_label": { "type": "string", "kind": "content", "default": "Loading" }

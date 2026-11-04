@@ -1,5 +1,7 @@
 {
     "summary": "A bare dropdown of options from data or a translated static map, single or multiple, with no visible label",
+    "category": "forms",
+    "purposes": ["pick one value from a dropdown in a cell", "choose from a short list in a toolbar", "filter a table from a compact dropdown"],
     "tokenGroup": "control",
     "tokens": {
         "selected": { "fill": "{color.accent.base}", "on": "{color.accent.on}" },

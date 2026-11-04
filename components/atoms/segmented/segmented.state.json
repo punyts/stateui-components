@@ -1,5 +1,7 @@
 {
     "summary": "A row of exclusive (radio group) or toggled (toggle buttons) options with optional icons and an icon-only mode",
+    "category": "forms",
+    "purposes": ["switch between a few views", "choose one of a few exclusive options", "toggle text styles in a toolbar", "pick a mode with icon buttons"],
     "shared": { "size": { "default": "md" } },
     "events": ["change"],
     "commands": ["focus"],

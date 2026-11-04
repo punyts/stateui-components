@@ -1,5 +1,7 @@
 {
     "summary": "A bare single-line input with no visible label, for toolbars and table cells",
+    "category": "forms",
+    "purposes": ["type a value inside a table cell", "enter text in a toolbar", "edit a number in place", "type into a compact unlabelled box"],
     "tokenGroup": "control",
     "tokens": {
         "selected": { "fill": "{color.accent.base}", "on": "{color.accent.on}" },

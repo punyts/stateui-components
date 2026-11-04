@@ -1,5 +1,7 @@
 {
     "summary": "Text in a typographic role, as a span, a paragraph or a heading",
+    "category": "content",
+    "purposes": ["show a heading or title", "write a paragraph of text", "show a caption or hint", "cut long text with an ellipsis"],
     "shared": { "tone": {}, "textRole": { "default": "body" } },
     "properties": {
         "_text": { "type": "string", "kind": "content", "default": "Sample text" },

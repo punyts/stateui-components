@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- **Search keys for the atoms**: all 18 atoms have a `category` and three to eight `purposes` (what a person uses the component for), which the catalog carries for search. Categories from the design table: `badge`, `progress`, `spinner` and `skeleton` are `feedback`; `button` is `forms`; `tooltip` is `overlays`; `text`, `markdown`, `image`, `icon` and `divider` are `content`. Assigned here because the table does not name them: `input`, `textarea`, `checkbox`, `select`, `switch` and `segmented` are `forms` (they take a value from a person), and `link` is `navigation` (it moves between screens). `test/catalog.test.ts` checks every atom has both keys and no phrase made only of the words of its own name.
+- **Test fixes**: the component token test accepts an `inset` default of two to four references (`panel.padding`, `tabs.padding`), and `test/image.test.ts` passes `parseShape` a library-relative path, so it no longer fails on Windows.
 - `panel` takes `padding` (`md` default, `none`, `sm`, `lg`): `none` makes a layout-only box without touching the `panel.padding` token, which a node theme passes on to every nested panel. The `panel.padding` and `tabs.padding` tokens are insets (`{space.inset.md} {space.inset.md}`), so a theme may give two values.
 - `image` paints its backdrop with the new token `image.fill` (default `{color.surface.sunken}`), which `ui_component_get` lists, instead of a fixed colour; set it to `transparent` in a node theme for a cut-out picture.
 - `recordList` (and so `list`, `table`, `tree`) reports `SUI-RUN-CLIPPED` once when the first row's content is taller than the row, naming the row height and the height it needs, instead of cutting it off silently.

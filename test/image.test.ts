@@ -4,7 +4,8 @@ import { describe, expect, it } from 'vitest';
 import { parseShape, validateNode } from '@punyts/stateui-app/core';
 
 const file = resolve(import.meta.dirname, '../components/atoms/image/image.state.json');
-const parsed = parseShape(readFileSync(file, 'utf8'), file);
+// The build passes library-relative paths with forward slashes; an absolute Windows path would not name the component
+const parsed = parseShape(readFileSync(file, 'utf8'), 'components/atoms/image/image.state.json');
 const shape = parsed.shape;
 if (!shape) throw new Error(`image shape did not parse: ${JSON.stringify(parsed.errors)}`);
 
