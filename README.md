@@ -11,6 +11,9 @@ The StateUI component library: atoms, molecules, composites and composed compone
 ## Build
 `npm run build` compiles `src/` with `tsc`, then runs `buildLibrary` over `components/` into `dist/components/` (modules, `catalog.json`, locale overlays, `index.js`) and writes `dist/register.js`. It then runs `scripts/build-icons.ts`, which writes `dist/icons.json` (Tabler icon names, categories, tags, outline and filled path data, and the alias table from `src/icons/aliases.ts`) from the pinned `@tabler/icons` devDependency; `brand-*` icons are left out. Tabler's licence is in `LICENSE-tabler-icons`.
 
+## Search keys
+Every component carries the two keys the server's `ui_components_search` reads: `category` (one of `layout`, `navigation`, `forms`, `data`, `feedback`, `overlays`, `content`, `conversation`, `graphics`) and `purposes` (three to eight short phrases of what a person uses the component for, not the words of its name). A composed file also declares a one-line `summary`. `scripts/buildComponents.mjs` builds with `requireSearchKeys: true`, so a missing key fails the build: `SUI-BUILD-CATEGORY`, `SUI-BUILD-PURPOSES` or `SUI-BUILD-SUMMARY`. A purpose phrase that repeats another component's is `SUI-BUILD-PURPOSE-DUPLICATE`. The rules live in `@punyts/stateui-app` (its README, under Building a component library); `test/catalog.test.ts` checks every entry has both keys.
+
 ## Package exports
 - `.`: `COMPONENT_GROUPS`, and the server-side icon helpers: `isIconName` (the `isIconName` option of `validateNode`; reads `dist/icons.json`, names and aliases), `createIconNames` and `loadIconsFile` (the same lookups over any `icons.json`), `validateIconNode` (the `SUI-STATE-FILLED` warning), `CORE_ICON_NAMES` and `ICON_ALIASES`.
 - `./components`: `components`, `componentTokens` and `registerAll()`.

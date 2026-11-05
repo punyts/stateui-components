@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- **Docs** (S1.9): the README's Search keys section names `category`, `purposes` and the composed `summary`, the build's `requireSearchKeys`, and the errors a missing or repeated key raises (`SUI-BUILD-CATEGORY`, `SUI-BUILD-PURPOSES`, `SUI-BUILD-SUMMARY`, `SUI-BUILD-PURPOSE-DUPLICATE`).
 - **Docs** (O1.11): the `outlet` section points to how apps with screens are assembled and mounted (`assembleApp`, `navigate`, `$.route`, `MountOptions.route`, `MountOptions.instance`).
 - **Screens from links and the nav** (O1.8): `link` and `menuItem` take `screen` (string) and `params` (object); with a `screen` a click raises `sui-navigate` before `press`, and `link` points at `#/{screen}`. `nav` sets `active` to the item whose `screen` is `$.route.screen` and leaves `active` to the route on a press of such an item. The test harness mounts with `MountOptions.route: false`, so tests leave the page's URL alone. Tests in `test/atoms/link.browser.test.ts` and `test/composites/page-nav.browser.test.ts`.
 - **`outlet`** (O1.7): the composite the shell shows its screens in. A `section` with a `slot` for the screen containers `mountApp` appends; content `_label` (German overlay); on a change of `$.route.screen` focus moves to it. Category `navigation` with three purposes. The test harness's `mountComponent` takes `screens` and `start` (the component is then the shell) and returns `navigate(screen, params?)`. `test/catalog.test.ts` counts it among the later composites.
