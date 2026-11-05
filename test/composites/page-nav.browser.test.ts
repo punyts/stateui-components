@@ -399,6 +399,71 @@ describe('nav in Chromium', () => {
         expect(mounted.store.get('$.app.active')).toBe('home');
     });
 
+    /** Three screens; `orders` needs a `status` */
+    const SCREENS = Object.freeze({
+        home: { root: text('Home screen') },
+        users: { root: text('Users screen') },
+        orders: { params: { status: { type: 'string', required: true } }, root: text('Orders screen') }
+    });
+    const screenItems = Object.freeze({
+        home: { ...item('Home'), screen: 'home' },
+        users: { ...item('Users'), screen: 'users' },
+        orders: { ...item('Orders'), screen: 'orders' },
+        open: { ...item('Open orders'), screen: 'orders', params: { status: 'open' } }
+    });
+    /** A page shell with the nav on top (it never collapses) and an outlet; `element` is the nav */
+    const mountWithScreens = () => {
+        const mounted = mountComponent(
+            'page',
+            { navPosition: 'top', nav: { component: 'nav', orientation: 'horizontal', children: JSON.parse(JSON.stringify(screenItems)) }, children: { main: { component: 'outlet' } } },
+            { screens: JSON.parse(JSON.stringify(SCREENS)), start: 'home' }
+        );
+        return { ...mounted, element: root(mounted.element).querySelector('ui-nav') as Element };
+    };
+
+    it('should mark the item of the start screen active and navigate when an item with a screen is pressed', async () => {
+        // Arrange
+        const mounted = mountWithScreens();
+        const seen = selects(mounted.element);
+        const atStart = mounted.store.get('$.app.nav.active');
+
+        // Act
+        await userEvent.click(itemButton(mounted.element, 'users'));
+
+        // Assert
+        expect(atStart).toBe('home');
+        expect(mounted.store.get('$.route.screen' as never)).toBe('users');
+        expect(mounted.store.get('$.app.nav.active')).toBe('users');
+        expect(mounted.store.get('$.app.nav.children.users.selected')).toBe(true);
+        expect(seen).toEqual(['users']);
+    });
+
+    it('should pass the params of the item and follow a navigation from elsewhere', async () => {
+        // Arrange
+        const mounted = mountWithScreens();
+
+        // Act
+        await userEvent.click(itemButton(mounted.element, 'open'));
+        const pressed = { screen: mounted.store.get('$.route.screen' as never), status: mounted.store.get('$.route.params.status' as never) };
+        mounted.navigate('users');
+
+        // Assert
+        expect(pressed).toEqual({ screen: 'orders', status: 'open' });
+        expect(mounted.store.get('$.app.nav.active')).toBe('users');
+    });
+
+    it('should keep the current item when the navigation of a pressed item is refused', async () => {
+        // Arrange
+        const mounted = mountWithScreens();
+
+        // Act
+        await userEvent.click(itemButton(mounted.element, 'orders'));
+
+        // Assert
+        expect(mounted.store.get('$.route.screen' as never)).toBe('home');
+        expect(mounted.store.get('$.app.nav.active')).toBe('home');
+    });
+
     it('should give the items the link role inside the nav and label the landmark', () => {
         // Arrange
         const mounted = mountComponent('nav', { children });

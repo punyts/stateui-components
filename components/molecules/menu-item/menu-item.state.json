@@ -8,6 +8,8 @@
         "disabled": { "type": "boolean", "default": false },
         "selected": { "type": "boolean", "default": false, "reflect": true },
         "shortcut": { "type": "string", "default": "" },
+        "screen": { "type": "string", "default": "" },
+        "params": { "type": "object", "default": {} },
         "_label": { "type": "string", "kind": "content", "default": "Menu item" },
         "_description": { "type": "string", "kind": "content", "default": "" }
     }

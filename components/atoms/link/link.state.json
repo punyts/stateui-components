@@ -1,11 +1,13 @@
 {
-    "summary": "A text-styled link for in-application navigation; it raises press and never navigates by itself",
+    "summary": "A text-styled link for in-application navigation; it raises press, and shows its screen when it names one",
     "category": "navigation",
     "purposes": ["go to another screen from text", "open a record from its name", "jump to a page inside a sentence", "show a clickable text reference"],
     "events": ["press"],
     "shared": { "tone": { "default": "accent" } },
     "properties": {
         "_text": { "type": "string", "kind": "content", "default": "Link text" },
-        "href": { "type": "url", "default": "#", "validators": { "pattern": "^(?!data:)" } }
+        "href": { "type": "url", "default": "#", "validators": { "pattern": "^(?!data:)" } },
+        "screen": { "type": "string", "default": "" },
+        "params": { "type": "object", "default": {} }
     }
 }

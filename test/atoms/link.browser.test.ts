@@ -104,6 +104,27 @@ describe('link in Chromium', () => {
         expect(anchor(mounted.element).getAttribute('href')).toBe(href);
     });
 
+    it('should point at its screen and show it on a click, with its params', async () => {
+        // Arrange
+        const shell = mountComponent(
+            'page',
+            { children: { link: { component: 'link', _text: 'Order 12', screen: 'order', params: { id: 'o12' } }, main: { component: 'outlet' } } },
+            { screens: { home: { root: { component: 'text', _text: 'Home' } }, order: { params: { id: { type: 'string', required: true } }, root: { component: 'text', _text: 'Order' } } }, start: 'home' }
+        );
+        const mounted = { ...shell, element: shell.element.shadowRoot?.querySelector('ui-link') as Element };
+        const presses: unknown[] = [];
+        mounted.element.addEventListener('press', (event) => presses.push((event as CustomEvent).detail));
+
+        // Act
+        await userEvent.click(anchor(mounted.element));
+
+        // Assert
+        expect(anchor(mounted.element).getAttribute('href')).toBe('#/order');
+        expect(mounted.store.get('$.route.screen' as never)).toBe('order');
+        expect(mounted.store.get('$.route.params.id' as never)).toBe('o12');
+        expect(presses).toHaveLength(1);
+    });
+
     it('should show the German text after the locale switches', () => {
         // Arrange
         const mounted = mountComponent('link');

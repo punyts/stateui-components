@@ -128,7 +128,7 @@ export function createMountComponent(build: ComponentBuild): MountComponent {
         } as unknown as AppDocument;
         const host = globalThis.document.body.appendChild(globalThis.document.createElement('div'));
         const locale = registerLocaleStep(overlays);
-        const app = mountApp(host, document, library, options.hooks);
+        const app = mountApp(host, document, library, options.hooks, { route: false });
         if (!app.store) {
             locale.unregister();
             host.remove();
