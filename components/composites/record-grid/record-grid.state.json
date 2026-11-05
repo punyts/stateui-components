@@ -6,7 +6,8 @@
     "tokenGroup": "recordgrid",
     "tokens": {
         "itemmin": "calc({size.control.md} * 6)",
-        "itemheight": "calc({size.control.md} * 4)"
+        "itemheight": "calc({size.control.md} * 4)",
+        "gap": "{space.gap.md}"
     },
     "properties": {
         "key": { "type": "string", "validators": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" }, "default": "id" },

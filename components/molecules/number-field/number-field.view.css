@@ -11,6 +11,12 @@
     border-radius: 0;
 }
 
+/* The buttons take the input's height: the input only has a least height, and its text can make it taller (a larger
+   font, a browser zoom), which left the buttons shorter than the box between them */
+:host([stepper]) .box {
+    align-items: stretch;
+}
+
 .step {
     box-sizing: border-box;
     display: inline-flex;
@@ -18,7 +24,7 @@
     align-items: center;
     justify-content: center;
     inline-size: var(--control-height, var(--ui-size-control-md));
-    block-size: var(--control-height, var(--ui-size-control-md));
+    min-block-size: var(--control-height, var(--ui-size-control-md));
     margin: 0;
     padding: 0;
     color: var(--ui-color-text-base);

@@ -12,6 +12,11 @@
     padding: var(--ui-toolbar-padding);
 }
 
+/* Fields titled on top differ in height (help text, errors): line them up at their titles, not their centers */
+.row:has(> sui-node > [title-position="top"]) {
+    align-items: flex-start;
+}
+
 :host([wrap]) .row {
     flex-wrap: wrap;
 }

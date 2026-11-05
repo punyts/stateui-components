@@ -269,7 +269,8 @@ describe('the recordGrid catalog entry', () => {
         const tokens = (entry.shape.tokens ?? []).map((token) => [token.path, token.group, token.default]);
         expect(tokens).toEqual([
             ['recordgrid.itemmin', 'recordgrid', 'calc({size.control.md} * 6)'],
-            ['recordgrid.itemheight', 'recordgrid', 'calc({size.control.md} * 4)']
+            ['recordgrid.itemheight', 'recordgrid', 'calc({size.control.md} * 4)'],
+            ['recordgrid.gap', 'recordgrid', '{space.gap.md}']
         ]);
         expect(entry.locales).toContain('de');
     });

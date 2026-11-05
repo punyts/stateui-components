@@ -28,12 +28,16 @@
     pointer-events: none;
 }
 
+/* The columns share the width less the gaps between them; the gap below each item is part of its slot, so the measured
+   row height includes it */
 .slot {
+    --gap: var(--ui-recordgrid-gap);
     position: absolute;
     inset-block-start: 0;
-    inset-inline-start: calc(var(--sui-col, 0) * 100% / var(--sui-cols, 1));
-    inline-size: calc(100% / var(--sui-cols, 1));
+    inset-inline-start: calc(var(--sui-col, 0) * (100% + var(--gap)) / var(--sui-cols, 1));
+    inline-size: calc((100% - (var(--sui-cols, 1) - 1) * var(--gap)) / var(--sui-cols, 1));
     min-block-size: var(--sui-item-h);
+    padding-block-end: var(--gap);
     box-sizing: border-box;
     transform: translateY(var(--sui-offset, 0px));
 }
