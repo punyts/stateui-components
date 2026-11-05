@@ -24,6 +24,12 @@ export interface MountOptions {
     data?: Readonly<Record<string, unknown>>;
     /** The document's `locales`: the overlay per language the application itself brings (relative to the node), on top of the component overlays */
     locales?: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
+    /**
+     * The document's `screens` and `start`: with them the mounted component is the shell, and each screen shows in its
+     * `outlet` node (none by default)
+     */
+    screens?: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
+    start?: string;
     /** The host's hooks: `onEmit` receives the name and payload of an `emit` command, `transferFile` takes the files of a `fileField` (none by default) */
     hooks?: { onEmit?(name: string, payload: unknown): void; transferFile?: TransferFile };
 }
@@ -40,6 +46,8 @@ export interface MountedComponent {
     setTheme(kind: ThemeKind, name: string): void;
     /** Switches the application to the language `code`; throws when the library has no overlay for it */
     setLocale(code: string): void;
+    /** `MountedApp.navigate`: shows another screen of a shell mounted with `screens`; returns why it cannot, undefined when it moved */
+    navigate(screen: string, params?: Readonly<Record<string, unknown>>): string | undefined;
     /** Unmounts the application and removes the host; safe to call twice */
     dispose(): void;
 }
@@ -115,6 +123,7 @@ export function createMountComponent(build: ComponentBuild): MountComponent {
             theme: { active },
             ...(options.data === undefined ? {} : { data: options.data }),
             ...(options.locales === undefined ? {} : { locales: options.locales }),
+            ...(options.screens === undefined ? {} : { screens: options.screens, start: options.start }),
             app: { component: name, ...nodeState }
         } as unknown as AppDocument;
         const host = globalThis.document.body.appendChild(globalThis.document.createElement('div'));
@@ -145,6 +154,9 @@ export function createMountComponent(build: ComponentBuild): MountComponent {
             setLocale(code) {
                 const errors = locale.switchTo(code);
                 if (errors.length > 0) throw new Error(`mountComponent: ${errors.map(formatError).join('\n')}`);
+            },
+            navigate(screen, params) {
+                return app.navigate(screen, params as never);
             },
             dispose() {
                 if (disposed) return;

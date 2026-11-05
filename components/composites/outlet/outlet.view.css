@@ -1,0 +1,10 @@
+:host {
+    display: block;
+    min-inline-size: 0;
+}
+
+.outlet {
+    box-sizing: border-box;
+    display: block;
+    min-inline-size: 0;
+}
