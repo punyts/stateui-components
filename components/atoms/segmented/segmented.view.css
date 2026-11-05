@@ -1,11 +1,15 @@
 :host {
     display: inline-block;
+    max-inline-size: 100%;
     vertical-align: middle;
 }
 
 .group {
     box-sizing: border-box;
     display: inline-flex;
+    /* Never wider than the space it has: on a narrow screen the segments go on to a second line, not past the edge */
+    flex-wrap: wrap;
+    max-inline-size: 100%;
     align-items: stretch;
     gap: calc(var(--ui-border-width-thin) * 2);
     padding: calc(var(--ui-border-width-thin) * 2);

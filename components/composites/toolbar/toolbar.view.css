@@ -32,3 +32,15 @@
 :host([align=between]) .row {
     justify-content: space-between;
 }
+
+/* A phone has no room for a toolbar on one line: when the layout it sits in is below the sm breakpoint it wraps, and
+   no item is wider than the bar. The host is no container itself, so a toolbar in a row keeps its content width */
+@container (width < 480px) {
+    .row {
+        flex-wrap: wrap;
+    }
+
+    .row > sui-node > * {
+        max-inline-size: 100%;
+    }
+}
