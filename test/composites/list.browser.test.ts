@@ -47,6 +47,31 @@ const mountList = async (
     return mounted;
 };
 
+/**
+ * Fixes the list's viewport at `rows` rows, so the window the viewport observer measures is `{ first: 0, count: rows }`
+ * whatever the number of items (a list otherwise grows to its rows, and adding or removing an item resizes the window and
+ * the pool). Resolves once a ResizeObserver has seen the new height: observers are called in the order they were created,
+ * so by then the record view's own observer has measured it too
+ */
+const pinViewport = async (mounted: MountedComponent, rows: number): Promise<void> => {
+    const root = recordList(mounted)?.shadowRoot;
+    const scroller = root?.querySelector('.list');
+    const probe = root?.querySelector('.probe');
+    if (!scroller || !probe) throw new Error('pinViewport: the recordList has no .list or .probe');
+    const height = rows * probe.getBoundingClientRect().height;
+    await new Promise<void>((resolve) => {
+        const observer = new ResizeObserver((entries) => {
+            if (entries.some((entry) => Math.abs(entry.contentRect.height - height) < 1)) {
+                observer.disconnect();
+                resolve();
+            }
+        });
+        observer.observe(scroller);
+        (mounted.element as HTMLElement).style.blockSize = `${height}px`;
+    });
+    await flush();
+};
+
 describe('list in Chromium', () => {
     afterEach(() => {
         vi.restoreAllMocks();
@@ -184,6 +209,7 @@ describe('list in Chromium', () => {
     it('should re-point the slots when items are added, removed and reordered, with no node per item', async () => {
         // Arrange
         const mounted = await mountList(lines(3));
+        await pinViewport(mounted, 10);
         const slots = slotElements(mounted);
         const array = (): Line[] => mounted.store.get<Line[]>('$.data.order.lines');
 
