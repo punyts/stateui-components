@@ -1,33 +1,94 @@
 {
-    "summary": "The name, price and description of one product, with a button to add it to the bag",
-    "purposes": ["show the details of one product", "open a product page", "product page of an online store", "add one item to the shopping bag"],
+    "summary": "The picture, name, price and description of one product, with a button to add it to the bag",
+    "purposes": [
+        "show the details of one product",
+        "open a product page",
+        "product page of an online store",
+        "add one item to the shopping bag"
+    ],
     "tree": {
         "component": "panel",
         "_title": "Product",
-        "actions": { "component": "button", "_title": "Add to bag" },
+        "layout": {
+            "type": "grid",
+            "cols": 2,
+            "collapseBelow": "md"
+        },
+        "actions": {
+            "component": "button",
+            "_title": "Add to bag"
+        },
         "children": {
+            "picture": {
+                "component": "image",
+                "<-src": "$.data.products.0.image",
+                "<-_alt": "$.data.products.0.title",
+                "ratio": "4:3"
+            },
             "detail": {
                 "component": "descriptionList",
                 "<-record": "$.data.products.0",
                 "items": {
-                    "title": { "_term": "Name", "field": "title" },
-                    "price": { "_term": "Price", "field": "price", "format": "currency", "currency": "USD" },
-                    "description": { "_term": "Description", "field": "description" }
+                    "title": {
+                        "_term": "Name",
+                        "field": "title"
+                    },
+                    "price": {
+                        "_term": "Price",
+                        "field": "price",
+                        "format": "currency",
+                        "currency": "USD"
+                    },
+                    "description": {
+                        "_term": "Description",
+                        "field": "description"
+                    }
                 }
             }
         }
     },
     "slots": {
-        "detail": { "path": "children", "description": "More views of the product beside its details, such as a picture or reviews" },
-        "actions": { "path": "actions", "description": "The add to bag button: give it an on press that writes the product to the bag" }
+        "detail": {
+            "path": "children",
+            "description": "More views of the product beside its picture and details, such as reviews"
+        },
+        "actions": {
+            "path": "actions",
+            "description": "The add to bag button: give it an on press that writes the product to the bag"
+        }
     },
     "params": {
-        "title": { "type": "string", "default": "Product", "paths": ["_title"], "description": "The heading of the page" },
+        "title": {
+            "type": "string",
+            "default": "Product",
+            "paths": [
+                "_title"
+            ],
+            "description": "The heading of the page"
+        },
         "product": {
             "type": "path",
             "default": "$.data.products.0",
-            "paths": ["children.detail.<-record"],
-            "description": "The product record shown: a path to one record with title, price and description"
+            "paths": [
+                "children.detail.<-record"
+            ],
+            "description": "The product record shown: a path to one record with title, price and description (point picture and pictureText at the same record)"
+        },
+        "picture": {
+            "type": "path",
+            "default": "$.data.products.0.image",
+            "paths": [
+                "children.picture.<-src"
+            ],
+            "description": "The product picture: a path to an https: or data: URL, usually the image field of the product record"
+        },
+        "pictureText": {
+            "type": "path",
+            "default": "$.data.products.0.title",
+            "paths": [
+                "children.picture.<-_alt"
+            ],
+            "description": "What the picture shows, for screen readers: a path to text, usually the title field of the product record"
         }
     }
 }

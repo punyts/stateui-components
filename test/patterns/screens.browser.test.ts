@@ -18,6 +18,10 @@ const AVAILABILITY = Object.freeze([
     Object.freeze({ id: 'w1', start: '2026-11-09', end: '2026-11-13', title: '3 rooms free' }),
     Object.freeze({ id: 'w2', start: '2026-11-16', end: '2026-11-20', title: '1 room free' })
 ]);
+const ROOMS = Object.freeze([
+    Object.freeze({ id: 'r1', title: 'Garden room', price: 90, description: 'Looks over the garden', image: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=' }),
+    Object.freeze({ id: 'r2', title: 'Sea room', price: 120, description: 'Looks over the sea', image: '' })
+]);
 const BOOKINGS = Object.freeze([Object.freeze({ id: 'b1', title: 'Ada, 2 guests' })]);
 const ITEMS = Object.freeze([
     Object.freeze({ id: 'a', title: 'Alder', description: 'A tree by the river' }),
@@ -79,7 +83,7 @@ async function mountPattern(name: string): Promise<Mounted> {
     expect(applied.errors).toEqual([]);
     const document = {
         locale: 'en',
-        data: { sales: structuredClone(SALES), items: structuredClone(ITEMS), availability: structuredClone(AVAILABILITY), bookings: structuredClone(BOOKINGS), booking: { dates: { start: '2026-11-10', end: '2026-11-12' }, guests: 2 } },
+        data: { sales: structuredClone(SALES), items: structuredClone(ITEMS), availability: structuredClone(AVAILABILITY), rooms: structuredClone(ROOMS), bookings: structuredClone(BOOKINGS), booking: { dates: { start: '2026-11-10', end: '2026-11-12' }, guests: 2 } },
         app: applied.tree
     } as unknown as AppDocument;
     expect(validateDocument(document, catalog).errors.filter((error) => error.severity !== 'warning')).toEqual([]);
@@ -149,12 +153,16 @@ describe('first screen patterns', () => {
         expect(deep(host, 'ui-date-range-field')).toHaveLength(1);
         expect(deep(host, 'ui-calendar')).toHaveLength(1);
         expect(deep(host, 'ui-form')).toHaveLength(1);
+        expect(deep(host, 'ui-stepper')).toHaveLength(1);
+        expect(deep(host, 'ui-image').filter((image) => image.checkVisibility())).toHaveLength(2);
+        expect(deep(host, 'ui-text-field').length).toBeGreaterThanOrEqual(3);
         const buttons = deep(host, 'ui-button').filter((button) => visibleText(button).includes('Book'));
         expect(buttons).toHaveLength(1);
         const summary = visibleText(host);
         expect(summary).toContain('Your booking');
         expect(summary).toContain('Check in');
         expect(summary).toContain('Ada, 2 guests');
+        expect(summary).toContain('Garden room');
         const guests = deep(host, 'ui-stat').find((stat) => visibleText(stat).includes('Guests')) as HTMLElement;
         expect(visibleText(guests)).toContain('3');
     });

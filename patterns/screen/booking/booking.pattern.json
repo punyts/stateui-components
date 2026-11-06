@@ -1,47 +1,189 @@
 {
-    "summary": "Book a stay: a calendar of availability, a guest form with dates and guests, and a summary with the total",
-    "purposes": ["book a room for chosen dates", "reserve a stay for a number of guests", "hotel or holiday rental booking", "check availability and make a reservation"],
+    "summary": "Book a stay: steps, room cards with pictures, availability, a guest form and a summary with the total",
+    "purposes": [
+        "book a room for chosen dates",
+        "reserve a stay for a number of guests",
+        "hotel or holiday rental booking",
+        "check availability and make a reservation",
+        "choose a room with pictures and book it"
+    ],
     "tree": {
         "component": "panel",
         "_title": "Book a stay",
-        "layout": { "type": "grid", "cols": 3, "collapseBelow": "md" },
+        "layout": {
+            "type": "grid",
+            "cols": 3,
+            "collapseBelow": "md"
+        },
         "children": {
+            "steps": {
+                "component": "stepper",
+                "placement": {
+                    "span": 3
+                },
+                "steps": {
+                    "dates": {
+                        "_label": "Dates"
+                    },
+                    "room": {
+                        "_label": "Room"
+                    },
+                    "details": {
+                        "_label": "Details"
+                    },
+                    "confirm": {
+                        "_label": "Confirm"
+                    }
+                },
+                "active": "dates"
+            },
+            "rooms": {
+                "component": "panel",
+                "placement": {
+                    "span": 3
+                },
+                "_title": "Rooms",
+                "children": {
+                    "grid": {
+                        "component": "recordGrid",
+                        "<-records": "$.data.rooms",
+                        "row": {
+                            "component": "card",
+                            "<-_title": "$row.title",
+                            "media": {
+                                "component": "image",
+                                "<-src": "$row.image",
+                                "<-_alt": "$row.title",
+                                "ratio": "4:3"
+                            },
+                            "children": {
+                                "price": {
+                                    "component": "descriptionList",
+                                    "<-record": "$row",
+                                    "items": {
+                                        "price": {
+                                            "_term": "Per night",
+                                            "field": "price",
+                                            "format": "currency",
+                                            "currency": "USD"
+                                        }
+                                    }
+                                },
+                                "description": {
+                                    "component": "text",
+                                    "<-_text": "$row.description"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
             "availability": {
                 "component": "card",
-                "placement": { "span": 2 },
+                "placement": {
+                    "span": 2
+                },
                 "_title": "Availability",
-                "children": { "calendar": { "component": "calendar", "<-records": "$.data.availability" } }
+                "children": {
+                    "calendar": {
+                        "component": "calendar",
+                        "<-records": "$.data.availability"
+                    }
+                }
             },
             "details": {
                 "component": "form",
                 "children": {
-                    "dates": { "component": "dateRangeField", "_label": "Dates", "required": true, "<-value": "$.data.booking.dates" },
-                    "name": { "component": "textField", "_label": "Full name", "required": true },
-                    "email": { "component": "textField", "_label": "Email address", "inputType": "email", "pattern": "email", "required": true },
-                    "guests": { "component": "numberField", "_label": "Guests", "min": 1, "required": true, "<-value": "$.data.booking.guests" }
+                    "dates": {
+                        "component": "dateRangeField",
+                        "_label": "Dates",
+                        "required": true,
+                        "<-value": "$.data.booking.dates"
+                    },
+                    "name": {
+                        "component": "textField",
+                        "_label": "Full name",
+                        "required": true
+                    },
+                    "email": {
+                        "component": "textField",
+                        "_label": "Email address",
+                        "inputType": "email",
+                        "pattern": "email",
+                        "required": true
+                    },
+                    "phone": {
+                        "component": "textField",
+                        "_label": "Phone number",
+                        "inputType": "tel",
+                        "pattern": "tel",
+                        "required": true
+                    },
+                    "guests": {
+                        "component": "numberField",
+                        "_label": "Guests",
+                        "min": 1,
+                        "required": true,
+                        "<-value": "$.data.booking.guests"
+                    }
                 },
-                "actions": { "component": "button", "_title": "Book", "on": { "press": { "command": "submit", "target": "$parent" } } }
+                "actions": {
+                    "component": "button",
+                    "_title": "Book",
+                    "on": {
+                        "press": {
+                            "command": "submit",
+                            "target": "$parent"
+                        }
+                    }
+                }
             },
             "summary": {
                 "component": "card",
-                "placement": { "span": 3 },
+                "placement": {
+                    "span": 3
+                },
                 "_title": "Your booking",
                 "children": {
                     "stay": {
                         "component": "descriptionList",
                         "<-record": "$.data.booking.dates",
                         "items": {
-                            "start": { "_term": "Check in", "field": "start" },
-                            "end": { "_term": "Check out", "field": "end" }
+                            "start": {
+                                "_term": "Check in",
+                                "field": "start"
+                            },
+                            "end": {
+                                "_term": "Check out",
+                                "field": "end"
+                            }
                         }
                     },
-                    "guestCount": { "component": "stat", "_label": "Guests", "format": "number", "<-value": "$.data.booking.guests" },
-                    "total": { "component": "stat", "_label": "Total", "format": "currency", "currency": "USD", "value": 0 },
+                    "guestCount": {
+                        "component": "stat",
+                        "_label": "Guests",
+                        "format": "number",
+                        "<-value": "$.data.booking.guests"
+                    },
+                    "total": {
+                        "component": "stat",
+                        "_label": "Total",
+                        "format": "currency",
+                        "currency": "USD",
+                        "value": 0
+                    },
                     "booked": {
                         "component": "panel",
                         "_title": "Booked stays",
                         "children": {
-                            "list": { "component": "recordList", "<-records": "$.data.bookings", "row": { "component": "text", "<-_text": "$row.title" } }
+                            "list": {
+                                "component": "recordList",
+                                "<-records": "$.data.bookings",
+                                "row": {
+                                    "component": "text",
+                                    "<-_text": "$row.title"
+                                }
+                            }
                         }
                     }
                 }
@@ -49,33 +191,68 @@
         }
     },
     "slots": {
-        "details": { "path": "children.details.children", "description": "More fields of the guest form, such as a room type or a note; act on the form's submitted event to write the booking" },
-        "summary": { "path": "children.summary.children", "description": "The summary of the choice: link the total with <-value to a value logic works out from the dates and guests" }
+        "room": {
+            "path": "children.rooms.children.grid.row.children",
+            "description": "More content on each room card, such as a Choose button that writes the room to the booking"
+        },
+        "details": {
+            "path": "children.details.children",
+            "description": "More fields of the guest form, such as a room type or a note; act on the form's submitted event to write the booking"
+        },
+        "summary": {
+            "path": "children.summary.children",
+            "description": "The summary of the choice: link the total with <-value to a value logic works out from the dates and guests; a booking that is cancelled should be removed from the bookings dataset (or marked), after a confirmDialog"
+        }
     },
     "params": {
-        "title": { "type": "string", "default": "Book a stay", "paths": ["_title"], "description": "The heading of the screen" },
+        "title": {
+            "type": "string",
+            "default": "Book a stay",
+            "paths": [
+                "_title"
+            ],
+            "description": "The heading of the screen"
+        },
+        "rooms": {
+            "type": "path",
+            "default": "$.data.rooms",
+            "paths": [
+                "children.rooms.children.grid.<-records"
+            ],
+            "description": "The dataset of rooms: records with id, title, price per night, description and image (an https: or data: picture URL)"
+        },
         "availability": {
             "type": "path",
             "default": "$.data.availability",
-            "paths": ["children.availability.children.calendar.<-records"],
+            "paths": [
+                "children.availability.children.calendar.<-records"
+            ],
             "description": "The dataset the calendar shows: records with id, start and end dates and a title, such as 3 rooms free"
         },
         "dates": {
             "type": "path",
             "default": "$.data.booking.dates",
-            "paths": ["children.details.children.dates.<-value", "children.summary.children.stay.<-record"],
+            "paths": [
+                "children.details.children.dates.<-value",
+                "children.summary.children.stay.<-record"
+            ],
             "description": "Where the chosen dates are read from and written to: an object with start and end, shown in the summary"
         },
         "guests": {
             "type": "path",
             "default": "$.data.booking.guests",
-            "paths": ["children.details.children.guests.<-value", "children.summary.children.guestCount.<-value"],
+            "paths": [
+                "children.details.children.guests.<-value",
+                "children.summary.children.guestCount.<-value"
+            ],
             "description": "Where the number of guests is read from and written to, shown in the summary"
         },
         "bookings": {
             "type": "path",
             "default": "$.data.bookings",
-            "paths": ["children.summary.children.booked.children.list.<-records"],
+            "paths": [
+                "children.summary.children.booked.children.list.<-records"
+            ],
             "description": "The dataset of bookings listed under the summary: records with id and title"
         }
     }

@@ -1,6 +1,10 @@
 {
-    "summary": "A grid of product cards with the title, price and description of each product in a dataset",
-    "purposes": ["show products for sale in a grid", "browse a shop catalog", "list the items a store sells"],
+    "summary": "A grid of product cards with the picture, title, price and description of each product in a dataset",
+    "purposes": [
+        "show products for sale in a grid",
+        "browse a shop catalog",
+        "list the items a store sells"
+    ],
     "tree": {
         "component": "panel",
         "_title": "Products",
@@ -11,29 +15,60 @@
                 "row": {
                     "component": "card",
                     "<-_title": "$row.title",
+                    "media": {
+                        "component": "image",
+                        "<-src": "$row.image",
+                        "<-_alt": "$row.title",
+                        "ratio": "4:3"
+                    },
                     "children": {
                         "price": {
                             "component": "descriptionList",
                             "<-record": "$row",
-                            "items": { "price": { "_term": "Price", "field": "price", "format": "currency", "currency": "USD" } }
+                            "items": {
+                                "price": {
+                                    "_term": "Price",
+                                    "field": "price",
+                                    "format": "currency",
+                                    "currency": "USD"
+                                }
+                            }
                         },
-                        "description": { "component": "text", "<-_text": "$row.description" }
+                        "description": {
+                            "component": "text",
+                            "<-_text": "$row.description"
+                        }
                     }
                 }
             }
         }
     },
     "slots": {
-        "actions": { "path": "actions", "description": "Controls beside the title, such as a search box or a sort" },
-        "card": { "path": "children.grid.row.children", "description": "More content on each product card, linked to $row fields" }
+        "actions": {
+            "path": "actions",
+            "description": "Controls beside the title, such as a search box or a sort"
+        },
+        "card": {
+            "path": "children.grid.row.children",
+            "description": "More content on each product card, linked to $row fields"
+        }
     },
     "params": {
-        "title": { "type": "string", "default": "Products", "paths": ["_title"], "description": "The heading over the grid" },
+        "title": {
+            "type": "string",
+            "default": "Products",
+            "paths": [
+                "_title"
+            ],
+            "description": "The heading over the grid"
+        },
         "products": {
             "type": "path",
             "default": "$.data.products",
-            "paths": ["children.grid.<-records"],
-            "description": "The dataset of products: records with id, title, price and description"
+            "paths": [
+                "children.grid.<-records"
+            ],
+            "description": "The dataset of products: records with id, title, price, description and image (an https: or data: picture URL; empty shows no picture)"
         }
     }
 }

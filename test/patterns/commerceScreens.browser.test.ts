@@ -9,10 +9,12 @@ import { registerAll } from '../../.test-build/real/components/index.js';
 const catalog = catalogJson as unknown as Catalog;
 const library = libraryFromCatalog(catalog);
 
+/** A one-pixel PNG, so the tests load no network picture */
+const PIXEL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 const PRODUCTS = Object.freeze([
-    Object.freeze({ id: 'p1', title: 'Fern', price: 12, description: 'A green fern' }),
-    Object.freeze({ id: 'p2', title: 'Cactus', price: 8, description: 'A small cactus' }),
-    Object.freeze({ id: 'p3', title: 'Orchid', price: 30, description: 'A white orchid' })
+    Object.freeze({ id: 'p1', title: 'Fern', price: 12, description: 'A green fern', image: PIXEL }),
+    Object.freeze({ id: 'p2', title: 'Cactus', price: 8, description: 'A small cactus', image: PIXEL }),
+    Object.freeze({ id: 'p3', title: 'Orchid', price: 30, description: 'A white orchid', image: '' })
 ]);
 const BAG = Object.freeze([Object.freeze({ id: 'p2', title: 'Cactus' })]);
 
@@ -92,13 +94,14 @@ afterEach(() => {
 });
 
 describe('commerce screen patterns', () => {
-    it('should show the three product titles in product-grid', async () => {
+    it('should show the three product titles and a picture on each card in product-grid', async () => {
         // Arrange and Act
         const { host } = await mountPattern('product-grid');
 
         // Assert
         const text = visibleText(host);
         for (const product of PRODUCTS) expect(text).toContain(product.title);
+        expect(deep(host, 'ui-image').filter((image) => image.checkVisibility())).toHaveLength(3);
     });
 
     it('should show the first product title in product-detail', async () => {
@@ -109,6 +112,7 @@ describe('commerce screen patterns', () => {
         const text = visibleText(host);
         expect(text).toContain('Fern');
         expect(text).not.toContain('Cactus');
+        expect(deep(host, 'ui-image').filter((image) => image.checkVisibility())).toHaveLength(1);
     });
 
     it('should show bag-and-checkout at its first step', async () => {
