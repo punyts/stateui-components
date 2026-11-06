@@ -1,7 +1,7 @@
 import { report } from '@punyts/core';
 import type { ControllerContext } from '@punyts/stateui';
 import { resolveColor } from '../shared/drawing/paint.js';
-import { createField } from '../shared/field/field.js';
+import { createField, createWaiters } from '../shared/field/field.js';
 import { isFileRef, MAX_FILE_SIZE, transferCode } from '../shared/field/files.js';
 import type { FileRef } from '../shared/field/files.js';
 import { createPainter } from '../shared/paint/draw.js';
@@ -100,7 +100,11 @@ const fill = (template: unknown, value: string): string => (typeof template === 
  * changes. `clear` empties `value` and gives back the file it held; a reset aborts the save, restores the baseline
  * value and gives back every file the field saved that the restored value does not reference; dispose aborts the save,
  * and no late result reaches the store. Only files this field saved are given back: a file the value held when the
- * field mounted (the document's) may come back with a reset, so it is left to the host's sweep
+ * field mounted (the document's) may come back with a reset, so it is left to the host's sweep.
+ *
+ * In a form (G2.9): the field's `settle` (the form's submit asks it) saves a dirty painting at once instead of after the
+ * pause, and returns a promise that resolves when the save (or a stroke under way) ends; the form then validates, so a
+ * failed save is the field's error and refuses the submit, and a finished one submits the new reference
  */
 export default function controller(context: ControllerContext) {
     const { element, store, basePath } = context;
@@ -199,6 +203,8 @@ export default function controller(context: ControllerContext) {
     let failure = '';
     /** The ids of the files this field saved and has not given back */
     const owned = new Set<string>();
+    /** The promises of `settle` (a form's submit): woken whenever a save or a stroke ends, so the form asks again */
+    const waiters = createWaiters();
 
     /** Whether the painting changed since it was last saved: with no file in `value`, whether it is not blank */
     const isDirty = (): boolean => {
@@ -217,6 +223,7 @@ export default function controller(context: ControllerContext) {
         timer = undefined;
         saving?.abort();
         saving = undefined;
+        waiters.wake();
     };
 
     /**
@@ -253,6 +260,13 @@ export default function controller(context: ControllerContext) {
         },
         exclusive: true,
         empty: () => ({}),
+        //a form's submit: save a dirty painting now, and wait while a save or a stroke is under way. A failed save stays
+        //failed (its code is the error the form's validation finds) until the painting changes
+        settle: () => {
+            if (disposed) return undefined;
+            save();
+            return saving !== undefined || gesture !== undefined ? waiters.wait() : undefined;
+        },
         //a reset (the command, or a form's) aborts the save and starts a new painting: the strokes and their undo go. Once
         //the baseline value is back, the files the field saved that it does not hold are given back
         onReset: () => {
@@ -382,6 +396,7 @@ export default function controller(context: ControllerContext) {
                     }
                     if (!isFileRef(result)) {
                         fail('internal');
+                        waiters.wake();
                         return;
                     }
                     const previous = heldId();
@@ -393,11 +408,13 @@ export default function controller(context: ControllerContext) {
                     syncDirty();
                     if (read('error') !== '') field.validate();
                     if (previous !== undefined && previous !== reference.id && owned.has(previous)) release(previous);
+                    waiters.wake();
                 },
                 (error: unknown) => {
                     if (saving === abort) saving = undefined;
                     if (abort.signal.aborted || disposed) return;
                     fail(transferCode(error));
+                    waiters.wake();
                 }
             );
     };
@@ -425,15 +442,18 @@ export default function controller(context: ControllerContext) {
         if (canvas.hasPointerCapture?.(pointerId)) canvas.releasePointerCapture(pointerId);
         if (stroke !== undefined) changed();
         else syncDirty();
+        waiters.wake();
     };
 
     const undo = (): void => {
         gesture = undefined;
         if (ensurePainter()?.undo()) changed();
+        waiters.wake();
     };
     const redo = (): void => {
         gesture = undefined;
         if (ensurePainter()?.redo()) changed();
+        waiters.wake();
     };
     /** Wipes the painting (one undoable entry), empties `value` through the field base and gives back the file it held */
     const clear = (): void => {
@@ -562,6 +582,7 @@ export default function controller(context: ControllerContext) {
             if (blocked()) {
                 gesture = undefined;
                 painter?.cancel();
+                waiters.wake();
                 return;
             }
             const canvas = gesture.canvas;
@@ -577,6 +598,7 @@ export default function controller(context: ControllerContext) {
             if (gesture === undefined || event.pointerId !== gesture.pointerId) return;
             gesture = undefined;
             painter?.cancel();
+            waiters.wake();
         },
         dispose: () => {
             disposed = true;

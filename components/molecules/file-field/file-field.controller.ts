@@ -1,6 +1,6 @@
 import { report } from '@punyts/core';
 import type { ControllerContext } from '@punyts/stateui';
-import { createField } from '../shared/field/field.js';
+import { createField, createWaiters } from '../shared/field/field.js';
 import {
     ALLOWED_FILE_TYPES,
     acceptAttribute,
@@ -54,7 +54,8 @@ interface CommandHost {
  * with their progress; the remove button of a transfer aborts it through the hook's `signal`. The reference the hook
  * resolves with is appended to `value`; a rejection sets the error to its code (`too_large`, `unsupported_type`, `quota`,
  * `offline`, ...), and so does a host that gives no hook (`offline`). The error stays until the next attempt, a removal or
- * a successful transfer. Nothing but the reference is written to the store
+ * a successful transfer. Nothing but the reference is written to the store. A form's submit waits for the transfers under
+ * way (the field's `settle`), so it submits the files they add, or refuses with the error of one that failed
  */
 export default function controller(context: ControllerContext) {
     const { element, store, basePath } = context;
@@ -64,6 +65,8 @@ export default function controller(context: ControllerContext) {
     let counter = 0;
     let failure = '';
     let disposed = false;
+    /** The promises of `settle` (a form's submit): woken whenever a transfer ends or is dropped */
+    const waiters = createWaiters();
 
     const refs = (): unknown[] => {
         const value = read('value');
@@ -93,12 +96,15 @@ export default function controller(context: ControllerContext) {
     const field = createField(context, 'value', {
         entryRule: () => (failure !== '' ? failure : listRule()),
         empty: () => [],
+        //a form's submit waits while transfers are under way
+        settle: () => (uploads.size > 0 && !disposed ? waiters.wait() : undefined),
         //a reset (the command, or a form's) stops the transfers, so a late result cannot append a file to the restored list
         onReset: () => {
             for (const upload of uploads.values()) upload.abort.abort();
             uploads.clear();
             failure = '';
             draw();
+            waiters.wake();
         }
     });
     const reported = new Set<string>();
@@ -184,17 +190,20 @@ export default function controller(context: ControllerContext) {
                 if (!isFileRef(result)) {
                     draw();
                     fail('internal');
+                    waiters.wake();
                     return;
                 }
                 const reference: FileRef = { id: result.id, name: result.name, size: result.size, type: result.type };
                 store.set(valuePath, [...refs(), reference] as never);
                 draw();
                 succeed();
+                waiters.wake();
             },
             (error: unknown) => {
                 if (!uploads.delete(key) || disposed) return;
                 draw();
                 fail(transferCode(error));
+                waiters.wake();
             }
         );
     };
@@ -215,6 +224,7 @@ export default function controller(context: ControllerContext) {
     const abortAll = (): void => {
         for (const upload of uploads.values()) upload.abort.abort();
         uploads.clear();
+        waiters.wake();
     };
 
     const removeKey = (key: string): void => {
@@ -224,6 +234,7 @@ export default function controller(context: ControllerContext) {
             uploads.delete(key);
             upload.abort.abort();
             draw();
+            waiters.wake();
         } else if (key.startsWith('f')) {
             const index = Number(key.slice(1));
             const next = refs();

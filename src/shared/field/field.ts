@@ -36,6 +36,31 @@ export interface FieldConnect {
     onRelease(callback: () => void): void;
     /** Registers a function that runs whenever the field's `error` or `dirty` is written, whatever wrote it (a `clear`, a `reset`, a validation) */
     onStatus(callback: () => void): void;
+    /**
+     * Brings the work the field has under way to an end (a file transfer, a pending save, which it starts at once) and
+     * returns a promise that resolves when that work has ended, whatever its outcome; undefined when there is none. A form
+     * calls it before it validates for a submit, and again after each promise, until no field has work under way
+     */
+    settle(): Promise<void> | undefined;
+}
+
+/** Promises a field hands out from `settle`, resolved together by `wake` when its work under way ends or changes */
+export interface FieldWaiters {
+    /** A promise that resolves at the next `wake` */
+    wait(): Promise<void>;
+    /** Resolves every promise handed out so far */
+    wake(): void;
+}
+
+/** Makes the waiters of a field's `settle` */
+export function createWaiters(): FieldWaiters {
+    const waiting: Array<() => void> = [];
+    return {
+        wait: () => new Promise<void>((resolve) => waiting.push(resolve)),
+        wake: () => {
+            for (const resolve of waiting.splice(0)) resolve();
+        }
+    };
 }
 
 /** The names a field's controller members take in its view; every field of the family uses these */
@@ -73,6 +98,11 @@ export interface FieldOptions {
     readonly empty?: () => unknown;
     /** Runs first in every reset (the `reset` command and a form's reset of the field), before the baseline is restored; a field that holds work under way (a file transfer) stops it here */
     readonly onReset?: () => void;
+    /**
+     * The field's `settle` (see `FieldConnect`): a field that holds work under way (a file transfer, a save) finishes it
+     * and returns a promise for its end, or undefined when it has none. Without it a field has nothing to settle
+     */
+    readonly settle?: () => Promise<void> | undefined;
 }
 
 /** The element of a field as the command dispatcher sees it */
@@ -129,7 +159,8 @@ export function fieldDescribedBy(help: unknown, message: unknown): string | null
  * The field also raises `invalid` (`detail: { rule }`) on every failing validation and `valid` (`detail: { value }`) when
  * a validation passes after one failed; `options.entryRule` adds a rule that is checked first; it answers the commands `focus` and `clear`; and on attach it dispatches the
  * bubbling, composed `ui-field-connect` event whose detail is a `FieldConnect`, so a form finds it. With no form
- * listening nothing happens. On dispose the connect interface is released (`onRelease` callbacks run once)
+ * listening nothing happens. On dispose the connect interface is released (`onRelease` callbacks run once). Its
+ * `settle` is `options.settle` (nothing to settle without it, and after dispose)
  */
 export function createField({ element, store, basePath }: ControllerContext, valueName = 'value', options: FieldOptions = {}): FieldMembers {
     const iconPath = `${basePath}.icon`;
@@ -173,6 +204,7 @@ export function createField({ element, store, basePath }: ControllerContext, val
         return rule;
     };
     let managed: FieldManaged = 'none';
+    let released = false;
     const releases: Array<() => void> = [];
     const watchers: Array<() => void> = [];
     const statusPaths = [`${basePath}.error`, `${basePath}.dirty`];
@@ -249,7 +281,8 @@ export function createField({ element, store, basePath }: ControllerContext, val
         },
         onStatus: (callback) => {
             watchers.push(callback);
-        }
+        },
+        settle: () => (released ? undefined : options.settle?.())
     };
     raise(FIELD_CONNECT_EVENT, connect);
     return {
@@ -261,6 +294,7 @@ export function createField({ element, store, basePath }: ControllerContext, val
         focus,
         clear,
         dispose: () => {
+            released = true;
             delete host.commands;
             managed = 'none';
             watchers.length = 0;

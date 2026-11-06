@@ -11,6 +11,16 @@ interface CommandHost {
 
 const MODES: readonly FieldManaged[] = ['blur', 'change', 'submit'];
 
+/** How many times a submit asks the fields again for work under way before it validates what they hold */
+const MAX_SETTLE_ROUNDS = 20;
+
+/** A copy of a field's value for `submitted`: a list or a plain object is copied, so a later write does not change it */
+function copyValue(value: unknown): unknown {
+    if (Array.isArray(value)) return [...(value as unknown[])];
+    if (typeof value === 'object' && value !== null) return { ...(value as Record<string, unknown>) };
+    return value;
+}
+
 /**
  * Finds the fields inside the form through the bubbling `ui-field-connect` event and validates them together. The form
  * takes over each field's validation (`setManaged(validateOn)`): `blur` and `change` validate a field on that event,
@@ -22,7 +32,12 @@ const MODES: readonly FieldManaged[] = ['blur', 'change', 'submit'];
  * The commands `submit`, `reset` and `commit` add the reset point and the submission: `submit` validates, then raises
  * `submitted` with the values keyed by child key (`status` goes `submitting` then `submitted`) or `invalid`; `reset` restores
  * every field to its baseline; `commit` takes the current values as the new baseline. The form saves nothing: the fields'
- * links already hold the data
+ * links already hold the data.
+ * A field with work under way (a file transfer, a painting not yet saved) answers `settle()` with a promise: `submit` then
+ * stays `submitting` until every such promise has resolved (asking again after each round, since a field may start new
+ * work), and validates and collects the values only then, so a failed save makes the field invalid and a finished one
+ * submits its new value. A second `submit` while one waits does nothing; a `reset` or dispose drops the waiting submit.
+ * With no work under way a submit runs at once, as before
  */
 export default function controller({ element, store, basePath }: ControllerContext) {
     const host = element as Element & CommandHost;
@@ -33,6 +48,10 @@ export default function controller({ element, store, basePath }: ControllerConte
     let submitting = false;
     let submitted = false;
     let busy = false;
+    /** Whether a submit waits for the fields' work under way */
+    let waiting = false;
+    /** Counts the resets and the dispose; a waiting submit that sees it change raises nothing */
+    let generation = 0;
 
     const mode = (): FieldManaged => {
         const value = store.get<unknown>(path('validateOn'));
@@ -75,10 +94,44 @@ export default function controller({ element, store, basePath }: ControllerConte
         const root = element.shadowRoot;
         if (root) inDocumentOrder(root, failing)[0]?.focus();
     };
+    /** The promises of the fields that have work under way (`settle` starts it at once), in no order */
+    const unsettled = (): Promise<void>[] => {
+        const works: Promise<void>[] = [];
+        for (const field of fields.values()) {
+            const work = field.settle();
+            if (work !== undefined) works.push(work.catch(() => undefined));
+        }
+        return works;
+    };
+    /** Waits for the fields' work under way, round after round, then finishes the submit unless a reset or dispose came first */
+    const awaitFields = async (works: Promise<void>[], at: number): Promise<void> => {
+        let pending = works;
+        for (let round = 0; pending.length > 0 && round < MAX_SETTLE_ROUNDS; round += 1) {
+            await Promise.all(pending);
+            if (at !== generation) return;
+            pending = unsettled();
+        }
+        waiting = false;
+        finishSubmit();
+    };
     const submit = (): void => {
+        //a submit while one waits for the fields is the same submit: it raises nothing more
+        if (waiting) return;
         submitting = true;
         submitted = false;
         sync();
+        const works = unsettled();
+        if (works.length === 0) {
+            finishSubmit();
+            return;
+        }
+        waiting = true;
+        failed = false;
+        sync();
+        void awaitFields(works, generation);
+    };
+    /** Validates, then raises `invalid` or `submitted` with the values the fields hold now */
+    const finishSubmit = (): void => {
         const keys = validate();
         submitting = false;
         if (keys.length > 0) {
@@ -91,13 +144,21 @@ export default function controller({ element, store, basePath }: ControllerConte
                 const message = buildError('SUI-RUN-BINDING', { component: 'form', path: basePath, statePath: basePath }).message;
                 report.error(`${message}: two fields share the key "${field.key}", the later one wins`, { code: 'SUI-RUN-BINDING', path: basePath });
             }
-            values[field.key] = Array.isArray(field.value) ? [...field.value] : field.value;
+            values[field.key] = copyValue(field.value);
         }
         submitted = true;
         sync();
         element.dispatchEvent(new CustomEvent('submitted', { detail: { values }, bubbles: true, composed: true }));
     };
+    /** Drops a submit that waits for the fields: it raises nothing when their work ends */
+    const dropWaiting = (): void => {
+        generation += 1;
+        if (!waiting) return;
+        waiting = false;
+        submitting = false;
+    };
     const reset = (): void => {
+        dropWaiting();
         busy = true;
         for (const field of fields.values()) field.reset();
         busy = false;
@@ -156,6 +217,7 @@ export default function controller({ element, store, basePath }: ControllerConte
     host.commands = { validate: () => void validate(), focusFirstError, submit, reset, commit };
     return {
         dispose: () => {
+            dropWaiting();
             element.removeEventListener(FIELD_CONNECT_EVENT, onConnect);
             element.removeEventListener('change', onChange);
             element.removeEventListener('focusout', onBlur);
