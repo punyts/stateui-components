@@ -1,7 +1,6 @@
 :host {
     display: block;
     min-inline-size: 0;
-    --sui-series: var(--ui-color-data-categorical-1);
 }
 
 .chart {
@@ -89,45 +88,6 @@
     text-anchor: middle;
 }
 
-.s1 { --sui-series: var(--ui-color-data-categorical-1); }
-.s2 { --sui-series: var(--ui-color-data-categorical-2); }
-.s3 { --sui-series: var(--ui-color-data-categorical-3); }
-.s4 { --sui-series: var(--ui-color-data-categorical-4); }
-.s5 { --sui-series: var(--ui-color-data-categorical-5); }
-.s6 { --sui-series: var(--ui-color-data-categorical-6); }
-.s7 { --sui-series: var(--ui-color-data-categorical-7); }
-.s8 { --sui-series: var(--ui-color-data-categorical-8); }
-
-.bar {
-    fill: var(--sui-series);
-}
-
-.line {
-    fill: none;
-    stroke: var(--sui-series);
-    stroke-width: var(--ui-border-width-thick);
-    stroke-linejoin: round;
-    stroke-linecap: round;
-}
-
-.area {
-    fill: var(--sui-series);
-    fill-opacity: 0.2;
-    stroke: none;
-}
-
-.dot {
-    fill: var(--sui-series);
-    stroke: var(--ui-color-surface-base);
-    stroke-width: var(--ui-border-width-thin);
-}
-
-.slice {
-    fill: var(--sui-series);
-    stroke: var(--ui-color-surface-base);
-    stroke-width: var(--ui-border-width-thin);
-}
-
 .total {
     fill: var(--ui-color-text-base);
     font-family: var(--ui-text-heading-family);
@@ -141,6 +101,11 @@
     font-family: var(--ui-text-caption-family);
     font-size: var(--ui-text-caption-size);
     text-anchor: middle;
+}
+
+/* The renderer's svg takes no pointer events; the marks take them back for the tooltip */
+[data-point] {
+    pointer-events: visiblePainted;
 }
 
 [data-point]:focus-visible {
@@ -190,21 +155,20 @@
     inline-size: var(--ui-space-gap-md);
     block-size: var(--ui-space-gap-md);
     border-radius: var(--ui-radius-sm);
-    background: var(--sui-series);
 }
 
 .entry[aria-pressed="false"] .swatch {
     opacity: 0.4;
 }
 
-.swatch[data-color="s1"] { --sui-series: var(--ui-color-data-categorical-1); }
-.swatch[data-color="s2"] { --sui-series: var(--ui-color-data-categorical-2); }
-.swatch[data-color="s3"] { --sui-series: var(--ui-color-data-categorical-3); }
-.swatch[data-color="s4"] { --sui-series: var(--ui-color-data-categorical-4); }
-.swatch[data-color="s5"] { --sui-series: var(--ui-color-data-categorical-5); }
-.swatch[data-color="s6"] { --sui-series: var(--ui-color-data-categorical-6); }
-.swatch[data-color="s7"] { --sui-series: var(--ui-color-data-categorical-7); }
-.swatch[data-color="s8"] { --sui-series: var(--ui-color-data-categorical-8); }
+.swatch[data-color="s1"], .tip-swatch[data-color="s1"] { background: var(--ui-color-data-categorical-1); }
+.swatch[data-color="s2"], .tip-swatch[data-color="s2"] { background: var(--ui-color-data-categorical-2); }
+.swatch[data-color="s3"], .tip-swatch[data-color="s3"] { background: var(--ui-color-data-categorical-3); }
+.swatch[data-color="s4"], .tip-swatch[data-color="s4"] { background: var(--ui-color-data-categorical-4); }
+.swatch[data-color="s5"], .tip-swatch[data-color="s5"] { background: var(--ui-color-data-categorical-5); }
+.swatch[data-color="s6"], .tip-swatch[data-color="s6"] { background: var(--ui-color-data-categorical-6); }
+.swatch[data-color="s7"], .tip-swatch[data-color="s7"] { background: var(--ui-color-data-categorical-7); }
+.swatch[data-color="s8"], .tip-swatch[data-color="s8"] { background: var(--ui-color-data-categorical-8); }
 
 .anchor {
     position: absolute;
@@ -259,7 +223,6 @@
     inline-size: var(--ui-space-gap-sm);
     block-size: var(--ui-space-gap-sm);
     border-radius: var(--ui-radius-sm);
-    background: var(--sui-series);
 }
 
 .tip-value {

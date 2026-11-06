@@ -1,11 +1,10 @@
-import { parsePathData } from '@punyts/stateui-app/core';
-import type { JsonValue } from '@punyts/stateui-app/core';
-import { IDENTITY, boundsAt, hitTest, preserveAspectRatioOf, readFit, readViewBox, transformOf, treeBounds } from './geometry.js';
+import { IDENTITY, boundsAt, hitTest, preserveAspectRatioOf, readFit, readViewBox, transformOf } from './geometry.js';
 import type { Bounds, Matrix, ViewBox } from './geometry.js';
-import { createPaintResolver, tokenProperty } from './paint.js';
+import { createPaintResolver } from './paint.js';
 import type { Gradient, Paint, PaintResolver } from './paint.js';
 import { registerDrawingRenderer } from './render.js';
-import type { DrawingIssue, DrawingRenderer, DrawingRendererOptions } from './render.js';
+import type { DrawingIssue, DrawingRenderer, DrawingRendererOptions, ShapeEventName } from './render.js';
+import { ANCHORS, BASELINES, CAPS, JOINS, ShapeReader, Unusable, contentBox } from './shapeReader.js';
 import { shapeAttrs } from './tree.js';
 import type { ShapeKind, ShapeTree } from './tree.js';
 
@@ -31,11 +30,6 @@ const TAGS: Readonly<Record<Exclude<ShapeKind, 'drawImage'>, string>> = {
 /** The SVG initial values of the paint attributes: a shape that keeps one writes nothing, so a group's value reaches it */
 const INITIAL: Readonly<Record<string, string>> = { 'stroke-width': '1', opacity: '1', 'stroke-linecap': 'butt', 'stroke-linejoin': 'miter' };
 
-const ANCHORS = ['start', 'middle', 'end'];
-const BASELINES = ['alphabetic', 'middle', 'hanging'];
-const CAPS = ['butt', 'round', 'square'];
-const JOINS = ['miter', 'round', 'bevel'];
-
 /** A number as an attribute value: no exponent noise from the matrix maths */
 const num = (value: number): string => String(Math.round(value * 1e6) / 1e6);
 
@@ -43,102 +37,6 @@ const isMatrixIdentity = (m: Matrix): boolean => m.every((value, index) => Math.
 
 /** A paint name made safe for an element id */
 const idPart = (name: string): string => name.replace(/[^A-Za-z0-9_-]/g, '_');
-
-/** Thrown inside the attribute reading of one shape: the shape is not drawn, and the reason is reported */
-class Unusable extends Error {}
-
-/** Reads the resolved properties of one shape, refusing a value that is set but cannot be drawn */
-class PropertyReader {
-    constructor(private readonly shape: ShapeTree) {}
-
-    private value(name: string): JsonValue | undefined {
-        const value = this.shape.properties[name];
-        return value === null ? undefined : value;
-    }
-
-    /** A finite number (at least `min` when given); undefined when unset */
-    number(name: string, min?: number): number | undefined {
-        const value = this.value(name);
-        if (value === undefined) return undefined;
-        if (typeof value !== 'number' || !Number.isFinite(value)) throw new Unusable(`property "${name}" is not a number`);
-        if (min !== undefined && value < min) throw new Unusable(`property "${name}" is below ${min}`);
-        return value;
-    }
-
-    /** One of the allowed words; undefined when unset */
-    word(name: string, allowed: readonly string[]): string | undefined {
-        const value = this.value(name);
-        if (value === undefined) return undefined;
-        if (typeof value !== 'string' || !allowed.includes(value)) throw new Unusable(`property "${name}" is not one of ${allowed.join(', ')}`);
-        return value;
-    }
-
-    /** A list of `[x, y]` pairs as the `points` attribute (exactly `count` when given); undefined when unset */
-    points(name: string, count?: number): [number, number][] | undefined {
-        const value = this.value(name);
-        if (value === undefined) return undefined;
-        const bad = new Unusable(`property "${name}" is not a list of [x, y] pairs${count === undefined ? '' : ` of ${count} points`}`);
-        if (!Array.isArray(value) || (count !== undefined && value.length !== count)) throw bad;
-        return value.map((pair) => {
-            if (!Array.isArray(pair) || pair.length !== 2) throw bad;
-            const [x, y] = pair;
-            if (typeof x !== 'number' || typeof y !== 'number' || !Number.isFinite(x) || !Number.isFinite(y)) throw bad;
-            return [x, y];
-        });
-    }
-
-    /** A number or `[a, b]`, as `scale`; undefined when unset */
-    numberOrPair(name: string): void {
-        const value = this.value(name);
-        if (value === undefined || (typeof value === 'number' && Number.isFinite(value))) return;
-        if (Array.isArray(value) && value.length === 2 && value.every((item) => typeof item === 'number' && Number.isFinite(item))) return;
-        throw new Unusable(`property "${name}" is not a number or a pair of numbers`);
-    }
-
-    /** Two numbers `[x, y]`, as `origin`; nothing when unset */
-    pair(name: string): void {
-        const value = this.value(name);
-        if (value === undefined) return;
-        if (Array.isArray(value) && value.length === 2 && value.every((item) => typeof item === 'number' && Number.isFinite(item))) return;
-        throw new Unusable(`property "${name}" is not a pair of numbers [x, y]`);
-    }
-
-    /** A list of numbers of 0 or more, as `dash`; undefined when unset or empty */
-    numbers(name: string): number[] | undefined {
-        const value = this.value(name);
-        if (value === undefined) return undefined;
-        if (!Array.isArray(value) || !value.every((item) => typeof item === 'number' && Number.isFinite(item) && item >= 0)) {
-            throw new Unusable(`property "${name}" is not a list of numbers of 0 or more`);
-        }
-        return value.length === 0 ? undefined : (value as number[]);
-    }
-
-    /** Text: a string, or a number or boolean shown as text; empty when unset */
-    text(name: string): string {
-        const value = this.value(name);
-        if (value === undefined) return '';
-        if (typeof value === 'string') return value;
-        if (typeof value === 'number' || typeof value === 'boolean') return String(value);
-        throw new Unusable(`property "${name}" is not text`);
-    }
-
-    /** Path data that parses; undefined when unset */
-    pathData(name: string): string | undefined {
-        const value = this.value(name);
-        if (value === undefined) return undefined;
-        if (typeof value !== 'string' || !parsePathData(value).ok) throw new Unusable(`property "${name}" is not path data that parses`);
-        return value;
-    }
-
-    /** A token reference of a font (`{font.family.sans}`) as `var(--ui-font-family-sans)`; undefined when unset */
-    font(name: string): string | undefined {
-        const value = this.value(name);
-        if (value === undefined) return undefined;
-        const property = typeof value === 'string' ? tokenProperty(value) : undefined;
-        if (property === undefined) throw new Unusable(`property "${name}" is not a token reference such as {font.family.sans}`);
-        return `var(${property})`;
-    }
-}
 
 /** What the renderer wrote for one shape, so a redraw writes only what differs and never reads the DOM */
 interface Drawn {
@@ -168,6 +66,13 @@ interface DrawnGradient {
  * of shapes that are gone, and moves elements (never recreates them) to follow the order of a `children` map. A shape
  * with a value it cannot draw (text where a number belongs, path data that does not parse) is left out and reported
  * once through `onIssue`; the others draw. `drawText` text is set with `textContent`, never as markup.
+ *
+ * Events (G1.7): the svg takes no pointer events (`pointer-events="none"`), so a shape without `interactive: true` is
+ * not hit and a press on it or on empty space reaches nothing. An interactive shape is the button itself: `role="button"`,
+ * `tabindex="0"`, `aria-label` from `_label` and `pointer-events="visiblePainted"` (a feeder's `attrs` may override the
+ * first three); the shapes inside an interactive group take the group's. A click on it, or Enter or Space while it has
+ * focus, is `press`; the pointer entering it is `hover`, once per entry. Each goes to `onEvent` with the shape's path
+ * and key and the position in drawing units (the pointer's, or the shape's centre for a key or a click with no pointer)
  */
 export function createSvgRenderer(target: Element, options: DrawingRendererOptions): DrawingRenderer {
     const document = target.ownerDocument;
@@ -190,6 +95,10 @@ export function createSvgRenderer(target: Element, options: DrawingRendererOptio
     let seen = new Set<string>();
     let rootAttrs: Record<string, string> = {};
     let disposed = false;
+    /** The interactive shapes of the last update, by path: the ones that raise `press` and `hover` */
+    let interactive = new Map<string, ShapeTree>();
+    /** The path of the interactive shape the pointer is in, so `hover` fires once per entry */
+    let hovered: string | undefined;
 
     const issue = (problem: DrawingIssue): void => {
         const key = 'reason' in problem ? `${problem.path}\u0000${problem.reason}` : `${problem.code}\u0000${problem.path}\u0000${problem.value}`;
@@ -253,7 +162,8 @@ export function createSvgRenderer(target: Element, options: DrawingRendererOptio
     /** The `viewBox` and `preserveAspectRatio` of the svg: the caller's, the `viewBox` property, or the tree's bounds */
     const syncViewBox = (): void => {
         const box: ViewBox | undefined = options.viewBox ?? readViewBox(options.readProperty('viewBox')) ?? contentBox(tree);
-        const next: Record<string, string> = { fill: 'currentColor', class: 'svg' };
+        // No pointer events by default: only interactive shapes take them, a press elsewhere reaches nothing
+        const next: Record<string, string> = { fill: 'currentColor', class: 'svg', 'pointer-events': 'none' };
         if (box !== undefined) next.viewBox = [box.x, box.y, box.width, box.height].map(num).join(' ');
         next.preserveAspectRatio = preserveAspectRatioOf(readFit(options.readProperty('fit')));
         writeAttrs(svg, rootAttrs, next);
@@ -261,7 +171,7 @@ export function createSvgRenderer(target: Element, options: DrawingRendererOptio
     };
 
     /** The paint attributes of a shape: only what it sets, so an unset one falls back to its group */
-    const paintAttrs = (shape: ShapeTree, read: PropertyReader, attrs: Record<string, string>): void => {
+    const paintAttrs = (shape: ShapeTree, read: ShapeReader, attrs: Record<string, string>): void => {
         for (const name of ['fill', 'stroke'] as const) {
             const value = shape.properties[name];
             if (value === undefined || value === null || value === '') continue;
@@ -281,7 +191,7 @@ export function createSvgRenderer(target: Element, options: DrawingRendererOptio
     };
 
     /** The geometry attributes of a shape by its kind; throws `Unusable` for a value it cannot draw */
-    const geometryAttrs = (shape: ShapeTree, read: PropertyReader, attrs: Record<string, string>): void => {
+    const geometryAttrs = (shape: ShapeTree, read: ShapeReader, attrs: Record<string, string>): void => {
         const put = (attr: string, value: number | undefined): void => {
             if (value !== undefined) attrs[attr] = num(value);
         };
@@ -318,8 +228,8 @@ export function createSvgRenderer(target: Element, options: DrawingRendererOptio
                 break;
             }
             case 'path': {
-                const d = read.pathData('d');
-                if (d !== undefined) attrs.d = d;
+                // The commands are parsed only to refuse path data that does not parse; the text is written as given
+                if (read.pathCommands('d') !== undefined) attrs.d = shape.properties.d as string;
                 break;
             }
             case 'drawText': {
@@ -327,8 +237,8 @@ export function createSvgRenderer(target: Element, options: DrawingRendererOptio
                 put('y', read.number('y'));
                 attrs['text-anchor'] = read.word('anchor', ANCHORS) ?? 'start';
                 attrs['dominant-baseline'] = read.word('baseline', BASELINES) ?? 'alphabetic';
-                const font = read.font('font');
-                if (font !== undefined) attrs['font-family'] = font;
+                const font = read.fontProperty('font');
+                if (font !== undefined) attrs['font-family'] = `var(${font})`;
                 put('font-size', read.number('fontSize', 0));
                 break;
             }
@@ -337,14 +247,8 @@ export function createSvgRenderer(target: Element, options: DrawingRendererOptio
             case 'drawImage':
                 break;
         }
-        if (shape.kind !== 'rect' && shape.kind !== 'drawText' && shape.kind !== 'drawImage') {
-            // x and y are an offset in the transform; checked here so a bad one is reported, not taken as 0
-            read.number('x');
-            read.number('y');
-        }
-        read.number('rotate');
-        read.numberOrPair('scale');
-        read.pair('origin');
+        // x and y (an offset in the transform for most kinds) are checked here so a bad one is reported, not taken as 0
+        read.transform();
     };
 
     /** The element of a shape, made when it is new or its kind changed */
@@ -371,7 +275,7 @@ export function createSvgRenderer(target: Element, options: DrawingRendererOptio
     const drawShape = (shape: ShapeTree): SVGElement | undefined => {
         // A hidden shape (the shared `hidden`) is left out like a removed one; drawImage is drawn by G1.9b
         if (shape.kind === 'drawImage' || shape.properties.hidden === true) return undefined;
-        const read = new PropertyReader(shape);
+        const read = new ShapeReader(shape);
         const attrs: Record<string, string> = {};
         let text = '';
         try {
@@ -386,6 +290,16 @@ export function createSvgRenderer(target: Element, options: DrawingRendererOptio
         }
         const matrix = transformOf(shape);
         if (!isMatrixIdentity(matrix)) attrs.transform = `matrix(${matrix.map(num).join(' ')})`;
+        if (shape.properties.interactive === true) {
+            // An SVG element is not a native button: the role, the tab stop and the name make it one, and the keys are
+            // handled below. The svg takes no pointer events, so an interactive shape turns them back on for itself
+            interactive.set(shape.path, shape);
+            attrs.role = 'button';
+            attrs.tabindex = '0';
+            const label = shape.properties._label;
+            if (typeof label === 'string' && label !== '') attrs['aria-label'] = label;
+            attrs['pointer-events'] = 'visiblePainted';
+        }
         Object.assign(attrs, shapeAttrs(shape.attrs));
         attrs['data-shape-path'] = shape.path;
         attrs['data-shape-kind'] = shape.kind;
@@ -451,6 +365,69 @@ export function createSvgRenderer(target: Element, options: DrawingRendererOptio
 
     let frame: Promise<void> | undefined;
 
+    /** The interactive shape an event target is in: the nearest drawn element at or above it that is interactive */
+    const shapeAt = (target: EventTarget | null): ShapeTree | undefined => {
+        let node = target instanceof Node ? target : null;
+        while (node !== null && node !== svg) {
+            const path = node instanceof Element ? paths.get(node) : undefined;
+            const shape = path === undefined ? undefined : interactive.get(path);
+            if (shape !== undefined) return shape;
+            node = node.parentNode;
+        }
+        return undefined;
+    };
+
+    /** A pointer position in drawing units (the svg's own user space, its `viewBox`) */
+    const toDrawing = (event: MouseEvent): { x: number; y: number } => {
+        const matrix = svg.getScreenCTM();
+        if (matrix === null) return { x: 0, y: 0 };
+        const point = new DOMPoint(event.clientX, event.clientY).matrixTransform(matrix.inverse());
+        return { x: point.x, y: point.y };
+    };
+
+    /** The centre of a shape in drawing units, the position of a press that has no pointer (a key, a scripted click) */
+    const centreOf = (shape: ShapeTree): { x: number; y: number } => {
+        const box = boundsAt(tree, shape.path);
+        return box === undefined ? { x: 0, y: 0 } : { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+    };
+
+    const raise = (name: ShapeEventName, shape: ShapeTree, at: { x: number; y: number }): void => {
+        options.onEvent({ name, shape: shape.path, key: shape.key, x: at.x, y: at.y });
+    };
+
+    /** A click on an interactive shape is a press; one with no pointer (`detail` 0, as `element.click()`) is at its centre */
+    const onClick = (event: MouseEvent): void => {
+        const shape = shapeAt(event.target);
+        if (shape !== undefined) raise('press', shape, event.detail === 0 ? centreOf(shape) : toDrawing(event));
+    };
+
+    /** Enter and Space on a focused interactive shape are a press, as on a native button (held keys do not repeat it) */
+    const onKey = (event: KeyboardEvent): void => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        const shape = shapeAt(event.target);
+        if (shape === undefined) return;
+        event.preventDefault();
+        if (!event.repeat) raise('press', shape, centreOf(shape));
+    };
+
+    /** The pointer entered an element: `hover` when that puts it in an interactive shape it was not in */
+    const onOver = (event: PointerEvent): void => {
+        const shape = shapeAt(event.target);
+        if (shape?.path === hovered) return;
+        hovered = shape?.path;
+        if (shape !== undefined) raise('hover', shape, toDrawing(event));
+    };
+
+    /** The pointer left an element: out of the hovered shape unless it went to another part of the same one */
+    const onOut = (event: PointerEvent): void => {
+        if (shapeAt(event.relatedTarget)?.path !== hovered) hovered = undefined;
+    };
+
+    svg.addEventListener('click', onClick);
+    svg.addEventListener('keydown', onKey);
+    svg.addEventListener('pointerover', onOver);
+    svg.addEventListener('pointerout', onOut);
+
     return {
         update(next: readonly ShapeTree[]): void {
             if (disposed) return;
@@ -458,10 +435,12 @@ export function createSvgRenderer(target: Element, options: DrawingRendererOptio
             wanted = new Set();
             collectPaths(next, wanted);
             seen = new Set();
+            interactive = new Map();
             resolver.update({ paints: options.readProperty('paints'), paintsPath });
             syncGradients();
             syncViewBox();
             place(svg, next);
+            if (hovered !== undefined && !interactive.has(hovered)) hovered = undefined;
             for (const path of [...drawn.keys()]) if (!seen.has(path)) drop(path);
             for (const [path, clip] of clips) {
                 if (seen.has(path) && drawn.get(path)?.attrs['clip-path'] !== undefined) continue;
@@ -491,6 +470,12 @@ export function createSvgRenderer(target: Element, options: DrawingRendererOptio
         dispose(): void {
             if (disposed) return;
             disposed = true;
+            svg.removeEventListener('click', onClick);
+            svg.removeEventListener('keydown', onKey);
+            svg.removeEventListener('pointerover', onOver);
+            svg.removeEventListener('pointerout', onOut);
+            interactive.clear();
+            hovered = undefined;
             svg.remove();
             drawn.clear();
             gradients.clear();
@@ -498,30 +483,6 @@ export function createSvgRenderer(target: Element, options: DrawingRendererOptio
             tree = [];
         }
     };
-}
-
-/** The box a drawing with no `viewBox` shows: the bounds of its shapes, widened by half the widest stroke so no edge is cut */
-function contentBox(shapes: readonly ShapeTree[]): ViewBox | undefined {
-    const box = treeBounds(shapes);
-    if (box === undefined) return undefined;
-    const pad = widestStroke(shapes) / 2;
-    // A box with no width or no height (one straight line) is widened, since a viewBox of zero size draws nothing
-    return padded(box, box.width <= 0 || box.height <= 0 ? Math.max(pad, 1) : pad);
-}
-
-function padded(box: Bounds, pad: number): ViewBox {
-    return { x: box.x - pad, y: box.y - pad, width: box.width + 2 * pad, height: box.height + 2 * pad };
-}
-
-function widestStroke(shapes: readonly ShapeTree[]): number {
-    let widest = 0;
-    for (const shape of shapes) {
-        const stroke = shape.properties.stroke;
-        const width = shape.properties.strokeWidth;
-        if (stroke !== undefined && stroke !== null && stroke !== '' && typeof width === 'number' && Number.isFinite(width)) widest = Math.max(widest, width);
-        widest = Math.max(widest, widestStroke(shape.children));
-    }
-    return widest;
 }
 
 registerDrawingRenderer('svg', createSvgRenderer);

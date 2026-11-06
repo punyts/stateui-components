@@ -1,11 +1,15 @@
+import { report } from '@punyts/core';
 import type { ControllerContext } from '@punyts/stateui';
 import { buildScene } from '../shared/chart/chart.js';
 import { readCategories, readRows, readSeries, readValues } from '../shared/chart/data.js';
+import { primitivePath, sceneToTree } from '../shared/chart/drawingTree.js';
 import { POINT_KEYS, pointAfter, tabStop } from '../shared/chart/navigate.js';
 import { CHART_TYPES, px, seriesClass } from '../shared/chart/scene.js';
 import type { ChartInput, ChartType, Point } from '../shared/chart/scene.js';
-import { createSvgScene } from '../shared/chart/svgScene.js';
-import type { SvgScene } from '../shared/chart/svgScene.js';
+import type { ViewBox } from '../shared/drawing/geometry.js';
+import { createDrawingRenderer, drawingIssueError } from '../shared/drawing/render.js';
+import type { DrawingIssue, DrawingRenderer } from '../shared/drawing/render.js';
+import '../shared/drawing/svgRenderer.js';
 import { createDataTable, tableModel } from '../shared/chart/table.js';
 import type { DataTable } from '../shared/chart/table.js';
 import { createPopover } from '../shared/popover/popover.js';
@@ -16,6 +20,12 @@ import { isUnrendered } from '../shared/records/viewport.js';
 const text = (value: unknown, fallback = ''): string => (typeof value === 'string' && value !== '' ? value : fallback);
 const TIP_ANCHOR = '--chart-point';
 
+/** The scene's `viewBox` (`0 0 <width> <height>`) as the box the renderer writes back unchanged */
+const viewBoxOf = (value: string): ViewBox => {
+    const [x = 0, y = 0, width = 0, height = 0] = value.split(' ').map(Number);
+    return { x, y, width, height };
+};
+
 interface LegendItem {
     key: string;
     label: string;
@@ -24,15 +34,19 @@ interface LegendItem {
 }
 
 /**
- * Draws the records as SVG (`createElementNS`) in an `svg` the controller adds to the plot (the template parser makes
- * every element HTML, so an `svg` in the view would not draw), which has `role="group"`, is labelled by `_title` and
- * described by `_description`. The size comes from a `ResizeObserver` on the plot; scales, ticks and marks come from
- * `src/shared/chart/` (`scale.ts`, `geometry.ts`, `donut.ts`), and labels from the shared formatter for `$.locale`.
- * Series colours are `color.data.categorical.1` to `8` in key order (the classes `s1` to `s8`); a donut colours its slices.
+ * Draws the records through the SVG renderer of the drawing model (`createDrawingRenderer`, G2.2 of the graphics epic 2):
+ * the scene (`buildScene`) becomes a shape tree (`sceneToTree`) that the renderer draws into an `svg` it adds to the
+ * plot (the template parser makes every element HTML, so an `svg` in the view would not draw). The controller gives
+ * that `svg` `role="group"`, labels it by `_title` and describes it by `_description`; the renderer writes only its
+ * own attributes there, among them the `viewBox`, which the chart gives it as `0 0 <width> <height>`. The size comes
+ * from a `ResizeObserver` on the plot; scales, ticks and marks come from `src/shared/chart/` (`scale.ts`,
+ * `geometry.ts`, `donut.ts`), and labels from the shared formatter for `$.locale`. Series colours are the tokens
+ * `color.data.categorical.1` to `8` in key order, written by the tree as paint; a donut colours its slices.
  *
- * A drawing is a list of primitives with stable ids, so a data change recomputes the scene and writes only the attributes
- * that differ: one changed value touches its own mark. A change of the series, of `type` or of `stacked` clears the SVG and
- * draws it again. Nothing reads layout: the size is the observer's, and the margins are estimated from the label text.
+ * Shapes have stable paths from the primitive ids, so a data change recomputes the scene and the renderer writes only the
+ * attributes that differ: one changed value touches its own mark. A change of the series, of `type` or of `stacked`
+ * clears the drawing and draws it again. Nothing reads layout: the size is the observer's, and the margins are estimated
+ * from the label text.
  *
  * `type: "donut"` draws the first series as arcs with the total in the centre. The legend (`legend`: `bottom`, `end`,
  * `none`) lists the series (the slices of a donut); pressing an entry writes its key (a donut: the slice label) to or
@@ -51,7 +65,8 @@ export default function controller({ element, store, basePath }: ControllerConte
     let scheduled = false;
     let width = 0;
     let height = 0;
-    let svgScene: SvgScene | undefined;
+    let renderer: DrawingRenderer | undefined;
+    let viewBox: ViewBox = { x: 0, y: 0, width: 0, height: 0 };
     let svgElement: SVGSVGElement | undefined;
     let dataTable: DataTable | undefined;
     let popover: PopoverHandle | undefined;
@@ -66,13 +81,15 @@ export default function controller({ element, store, basePath }: ControllerConte
 
     const part = (selector: string): HTMLElement | null => element.shadowRoot?.querySelector<HTMLElement>(selector) ?? null;
     const rtl = (): boolean => getComputedStyle(element).direction === 'rtl';
+    /** The element of the mark of a point id, as the renderer drew it */
+    const markOf = (id: string): SVGElement | undefined => renderer?.elementOf(primitivePath({ id, layer: 'marks' })) as SVGElement | undefined;
     const readHidden = (): Set<string> => new Set((Array.isArray(read('hiddenSeries')) ? (read('hiddenSeries') as unknown[]) : []).filter((item): item is string => typeof item === 'string'));
 
     /** Moves the single tab stop to the point `id` (or the first point when it is gone); only the two marks involved are written */
     const syncStop = (): void => {
-        if (svgScene === undefined) return;
+        if (renderer === undefined) return;
         const id = tabStop(ordered, active);
-        const target = id === undefined ? undefined : svgScene.elementOf(id);
+        const target = id === undefined ? undefined : markOf(id);
         if (stop === undefined ? target === undefined : stop.id === id && stop.element === target) return;
         if (stop !== undefined && stop.element.isConnected) stop.element.setAttribute('tabindex', '-1');
         stop = id === undefined || target === undefined ? undefined : { id, element: target };
@@ -91,7 +108,8 @@ export default function controller({ element, store, basePath }: ControllerConte
             line.className = row.current ? 'tip-row current' : 'tip-row';
             if (row.colour !== '') {
                 const swatch = document.createElement('span');
-                swatch.className = `tip-swatch ${row.colour}`;
+                swatch.className = 'tip-swatch';
+                swatch.dataset['color'] = row.colour;
                 line.append(swatch);
             }
             const label = document.createElement('span');
@@ -126,7 +144,7 @@ export default function controller({ element, store, basePath }: ControllerConte
 
     const draw = (): void => {
         scheduled = false;
-        if (disposed || svgScene === undefined) return;
+        if (disposed || renderer === undefined) return;
         const rows = readRows(read('records'));
         const specs = readSeries(read('series'));
         const type: ChartType = CHART_TYPES.find((candidate) => candidate === read('type')) ?? 'bar';
@@ -134,7 +152,7 @@ export default function controller({ element, store, basePath }: ControllerConte
         const next = `${type}|${stacked}|${specs.map((spec) => `${spec.key}:${spec.field}`).join(',')}`;
         if (next !== structure) {
             structure = next;
-            svgScene.clear();
+            renderer.update([]);
             stop = undefined;
         }
         const digits = read('fractionDigits');
@@ -157,7 +175,8 @@ export default function controller({ element, store, basePath }: ControllerConte
         if (description === '') svgElement?.removeAttribute('aria-describedby');
         else svgElement?.setAttribute('aria-describedby', 'description');
         const scene = buildScene(input);
-        svgScene.draw(scene);
+        viewBox = viewBoxOf(scene.viewBox);
+        renderer.update(sceneToTree(scene).shapes);
         ordered = [...scene.points];
         points = new Map(scene.points.map((point) => [point.id, point]));
         syncStop();
@@ -207,15 +226,28 @@ export default function controller({ element, store, basePath }: ControllerConte
             if (attempts > 0) queueMicrotask(() => start(attempts - 1));
             return;
         }
-        //the template parser makes every element HTML, so the SVG is made here, in its own namespace
-        const svg = plot.ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.setAttribute('class', 'svg');
-        svg.setAttribute('role', 'group');
-        svg.setAttribute('aria-labelledby', 'title');
-        for (const [type, handler] of Object.entries(handlers)) svg.addEventListener(type, handler as EventListener);
-        plot.prepend(svg);
-        svgElement = svg;
-        svgScene = createSvgScene(svg);
+        renderer = createDrawingRenderer(plot, {
+            renderer: 'svg',
+            get viewBox(): ViewBox {
+                return viewBox;
+            },
+            reducedMotion: () => false,
+            readProperty: () => undefined,
+            onEvent: () => undefined,
+            onIssue: (issue: DrawingIssue) => {
+                const error = drawingIssueError(issue);
+                report.error(error.message, { code: error.code, path: basePath });
+            }
+        });
+        const svg = plot.querySelector<SVGSVGElement>(':scope > svg');
+        if (svg !== null) {
+            //first in the plot as before, so the anchor and the tip follow it
+            plot.prepend(svg);
+            svg.setAttribute('role', 'group');
+            svg.setAttribute('aria-labelledby', 'title');
+            for (const [type, handler] of Object.entries(handlers)) svg.addEventListener(type, handler as EventListener);
+            svgElement = svg;
+        }
         dataTable = createDataTable(data);
         popover = createPopover({ element: tip, placement: 'top', anchor: TIP_ANCHOR, onDismiss: () => (tipFor = undefined) });
         observer = new ResizeObserver((entries) => {
@@ -266,7 +298,7 @@ export default function controller({ element, store, basePath }: ControllerConte
             if (from === undefined) return;
             event.preventDefault();
             const next = pointAfter(ordered, from, event.key, { rtl: rtl(), ring: read('type') === 'donut' });
-            if (next !== undefined) svgScene?.elementOf(next)?.focus();
+            if (next !== undefined) markOf(next)?.focus();
         }
     };
 
@@ -284,10 +316,11 @@ export default function controller({ element, store, basePath }: ControllerConte
             store.off(watchedRecords, schedule);
             store.off(propertyPaths, onShape);
             if (svgElement) for (const [type, handler] of Object.entries(handlers)) svgElement.removeEventListener(type, handler as EventListener);
-            svgElement?.remove();
             popover?.dispose();
             dataTable?.clear();
-            svgScene?.clear();
+            //every shape is removed first, so nothing is left in the svg the renderer takes away
+            renderer?.update([]);
+            renderer?.dispose();
         }
     };
 }

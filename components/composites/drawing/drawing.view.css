@@ -44,3 +44,8 @@
     color: var(--ui-color-text-base);
     overflow: hidden;
 }
+
+/* An interactive shape is a button (G1.7); the shared sheet draws its focus ring from the focus tokens */
+.svg [role='button'] {
+    cursor: pointer;
+}

@@ -7,7 +7,7 @@ import type { ShapeTree } from './tree.js';
 
 /**
  * The checks of the SVG renderer's property reading, shared so the canvas renderer leaves out the same shapes with the
- * same `SUI-RUN-DRAW` reasons. (`svgRenderer.ts` keeps its own copy for now; it may import this instead.)
+ * same `SUI-RUN-DRAW` reasons; the SVG renderer reads through it too.
  */
 
 export const ANCHORS = ['start', 'middle', 'end'] as const;

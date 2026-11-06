@@ -2,7 +2,7 @@ import { report } from '@punyts/core';
 import type { ControllerContext } from '@punyts/stateui';
 import type { JsonValue } from '@punyts/stateui-app/core';
 import { createDrawingRenderer, drawingIssueError, isRendererKind } from '../shared/drawing/render.js';
-import type { DrawingIssue, DrawingRenderer, RendererKind } from '../shared/drawing/render.js';
+import type { DrawingIssue, DrawingRenderer, RendererKind, ShapeEvent } from '../shared/drawing/render.js';
 import '../shared/drawing/canvasRenderer.js';
 import '../shared/drawing/svgRenderer.js';
 import { expandRepeats } from '../shared/drawing/rows.js';
@@ -13,6 +13,10 @@ const rendererOf = (value: unknown): RendererKind => (isRendererKind(value) ? va
 
 /** The paths of the theme a mode, brand or motion switch writes; the drawing is pending until the next frame after one */
 const THEME_PATHS = ['$.theme.active', '$.theme.active.$all'];
+
+/** True when a shape of the tree (a group's children and a repeat's copies included) has `interactive: true` */
+const hasInteractive = (shapes: readonly ShapeTree[]): boolean =>
+    shapes.some((shape) => shape.properties.interactive === true || hasInteractive(shape.children));
 
 /**
  * The drawing (G1.5 of the graphics epic 1). The view holds the host (`role="img"`, labelled by `_title` and described
@@ -28,7 +32,13 @@ const THEME_PATHS = ['$.theme.active', '$.theme.active.$all'];
  *
  * The element carries `data-render="pending"` from the moment a redraw is asked for (the first draw, a state change, a
  * resize, a theme or mode switch) until the renderer says it is on screen (`drawn()`, after the next frame), then
- * `"ready"`; `ui_screenshot` waits for it
+ * `"ready"`; `ui_screenshot` waits for it.
+ *
+ * Events (G1.7): the renderer hears `press` and `hover` on interactive shapes, and the controller raises each on the
+ * element as a bubbling, composed `CustomEvent` with `detail: { shape, key, x, y }` (the shape's state path, its key or
+ * a copy's record key, the position in drawing units). The dispatcher runs the `on` entry of the shape `detail.shape`
+ * names (for a repeat copy, the row template's, with `$row` at the record). While any shape is interactive the drawing
+ * is a `group` rather than an `img`, since an image hides its children from assistive technology
  */
 export default function controller({ element, store, basePath }: ControllerContext) {
     const childrenPath = `${basePath}.children`;
@@ -71,12 +81,26 @@ export default function controller({ element, store, basePath }: ControllerConte
                 path: basePath,
                 reducedMotion: () => false,
                 readProperty: read,
-                onEvent: () => undefined,
+                onEvent: raise,
                 onIssue
             });
         } catch {
             // Both kinds are registered (the imports above); a renderer that is not draws nothing
         }
+    };
+
+    /** Raises a shape's event on the element, for the dispatcher (`detail.shape` names the shape) */
+    const raise = (event: ShapeEvent): void => {
+        if (disposed) return;
+        const detail = { shape: event.shape, key: event.key, x: event.x, y: event.y };
+        element.dispatchEvent(new CustomEvent(event.name, { detail, bubbles: true, composed: true }));
+    };
+
+    /** The role of the drawing: `group` while a shape is interactive, so the shapes are reached as buttons, else `img` */
+    const syncRole = (shapes: readonly ShapeTree[]): void => {
+        const box = element.shadowRoot?.querySelector('.drawing');
+        const role = hasInteractive(shapes) ? 'group' : 'img';
+        if (box && box.getAttribute('role') !== role) box.setAttribute('role', role);
     };
 
     /** Reports once a key not reported before */
@@ -144,7 +168,9 @@ export default function controller({ element, store, basePath }: ControllerConte
                 const what = node.component === '' ? 'it is not a node' : `component "${node.component}" is not a 2D shape`;
                 onIssue({ code: 'SUI-RUN-DRAW', path: node.path, reason: `${what}, so it is not drawn` });
             }
-            renderer.update(bindRepeats(shapes));
+            const tree = bindRepeats(shapes);
+            renderer.update(tree);
+            syncRole(tree);
             shown = renderer.drawn();
         }
         shown ??= new Promise((resolve) => requestAnimationFrame(() => resolve()));

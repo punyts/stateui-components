@@ -1,4 +1,4 @@
-import { buildError, extractLinks } from '@punyts/stateui-app/core';
+import { buildError, extractLinks, recordKeys } from '@punyts/stateui-app/core';
 import type { BuildError, JsonObject, JsonValue, Link, Node, ReferenceOptions } from '@punyts/stateui-app/core';
 import type { RendererKind } from './render.js';
 import { isShapeKind } from './tree.js';
@@ -104,7 +104,6 @@ type BaseValues = Map<string, Record<string, JsonValue>>;
 const RESERVED = new Set(['component', 'children', 'layout', 'placement', 'theme', 'on']);
 const NODE_SLOTS: Readonly<Partial<Record<ShapeKind, readonly string[]>>> = { drawGroup: ['clip'], drawRepeat: ['row'] };
 const ROW = '$row';
-const SEGMENT = /^[A-Za-z0-9_-]+$/;
 
 const isObject = (value: unknown): value is JsonObject => typeof value === 'object' && value !== null && !Array.isArray(value);
 
@@ -122,26 +121,11 @@ export function targetOf(copy: ShapeTree, property: string): string | undefined 
 }
 
 /**
- * The keys of a record set in order, each with the key the record has in the set. An array is keyed by each record's
- * `id` (a string or number usable as a path segment) when every record has a distinct one, so a copy keeps its key
- * when records are added before it, and by index otherwise; a map by its own keys. Anything else has no records
+ * The keys of a record set in order, each with the key the record has in the set: an array by distinct `id` (a path
+ * segment), else by index; a map by its own keys. It is `recordKeys` of `@punyts/stateui-app/core`, which the
+ * dispatcher also uses to find the record of a copy's event (G1.7), so the two always agree
  */
-export function recordKeys(records: JsonValue | undefined): { key: string; recordKey: string }[] {
-    if (Array.isArray(records)) {
-        const ids: string[] = [];
-        const seen = new Set<string>();
-        for (const record of records) {
-            const id = isObject(record) ? record['id'] : undefined;
-            const text = typeof id === 'string' || typeof id === 'number' ? String(id) : '';
-            if (!SEGMENT.test(text) || seen.has(text)) return records.map((_record, index) => ({ key: String(index), recordKey: String(index) }));
-            seen.add(text);
-            ids.push(text);
-        }
-        return ids.map((key, index) => ({ key, recordKey: String(index) }));
-    }
-    if (isObject(records)) return Object.keys(records).map((key) => ({ key, recordKey: key }));
-    return [];
-}
+export { recordKeys };
 
 /** The value at a field path below a record; undefined where a step is missing */
 function fieldOf(record: JsonValue | undefined, field: readonly string[]): JsonValue | undefined {

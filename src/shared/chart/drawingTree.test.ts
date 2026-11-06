@@ -4,7 +4,6 @@ import type { ShapeTree } from '../drawing/tree.js';
 import { buildScene } from './chart.js';
 import { primitivePath, sceneToTree, seriesToken } from './drawingTree.js';
 import type { ChartInput, ChartType, Scene } from './scene.js';
-import { createSvgScene } from './svgScene.js';
 
 const input = (type: ChartType, overrides: Partial<ChartInput> = {}): ChartInput => ({
     type,
@@ -35,18 +34,14 @@ const kinds = (shape: ShapeTree): Record<string, number> => {
     return counts;
 };
 
-/** What the old SVG scene wrote for each primitive: its attributes and text, by the primitive id */
+/**
+ * What the old SVG scene (`svgScene.ts`, removed in G2.2) wrote for each primitive, by the primitive id: an element of
+ * its tag with its `className` as `class`, its `attrs` as given and its text. The chart's parity test
+ * (`test/composites/chart-parity.browser.test.ts`) holds that scene's output for four charts as captured literals
+ */
 function svgSceneOutput(scene: Scene): Map<string, { tag: string; attrs: Record<string, string>; text: string }> {
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    const drawn = createSvgScene(svg);
-    drawn.draw(scene);
     const output = new Map<string, { tag: string; attrs: Record<string, string>; text: string }>();
-    for (const primitive of scene.primitives) {
-        const element = drawn.elementOf(primitive.id) as SVGElement;
-        const attrs: Record<string, string> = {};
-        for (const attr of Array.from(element.attributes)) attrs[attr.name] = attr.value;
-        output.set(primitive.id, { tag: element.tagName.toLowerCase(), attrs, text: element.textContent ?? '' });
-    }
+    for (const primitive of scene.primitives) output.set(primitive.id, { tag: primitive.tag, attrs: { class: primitive.className, ...primitive.attrs }, text: primitive.text ?? '' });
     return output;
 }
 
