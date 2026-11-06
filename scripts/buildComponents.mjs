@@ -8,6 +8,9 @@ import { buildCoreIcons, coreIconsModule, coreIconsTypes } from './core-icons.ts
 /** The shared CSS partials a component's `view.css` pulls in with `@include "<name>.css";` */
 const SHARED_CSS_DIR = resolve(import.meta.dirname, '../src/shared/css');
 
+/** The shared shape partials a component's `state.json` merges in with `"includes": ["<name>"]` */
+const SHARED_SHAPE_DIR = resolve(import.meta.dirname, '../src/shared/shape');
+
 /** The shared base controllers and helpers (every `.ts` file under `src/shared/`) a controller imports as `../shared/<folder>/<file>.js` */
 const SHARED_SRC_DIR = resolve(import.meta.dirname, '../src/shared');
 
@@ -74,6 +77,7 @@ export async function buildComponents(sourceDir, outDir) {
         cssTransforms: [],
         cssChecks: [],
         sharedCssDir: SHARED_CSS_DIR,
+        sharedShapeDir: SHARED_SHAPE_DIR,
         requireSearchKeys: true,
         ...(existsSync(patternsDir) ? { patternsDir } : {}),
         ...(existsSync(presetsDir) ? { presetsDir } : {})

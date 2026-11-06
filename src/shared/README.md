@@ -8,6 +8,9 @@ Partials a component's `view.css` pulls in with a line `@include "<name>.css";` 
 - `control.css`: the class `.control` for a bare native control (border, radius, padding, minimum height from `--control-height`, placeholder, read-only, disabled and focus states) from the `control` tokens. Used by `input` and `textarea`.
 - `overlay.css`: the dialog, backdrop, frame, header, close button, body and footer of `modal` and `drawer`; the including view sets `--pad`, `--gap` and `--radius` on `.dialog`.
 
+## shape/
+Shape partials a component's `state.json` merges in with `"includes": ["<name>"]` (the build's `sharedShapeDir`, set in `scripts/buildComponents.mjs`): `<name>.json` holds only `properties`, `events` and `tokens`, merged under the component's own (an own property or token wins), so the catalog shows the merged shape. None yet; G1.3 adds the paint, transform, interaction and motion partials of the 2D shapes.
+
 ## field/
 `field.ts`: `createField(context, valueName, options)` (options `entryRule`, `exclusive`, `empty`, `onReset`), the base controller of every field (glyph, message, baseline, `validate` and `reset` commands, `change`, `invalid` and `valid` events, `focus` and `clear` commands, the `ui-field-connect` event with `FieldConnect`, `touched` and `dirty`; the options `entryRule`, `exclusive` and `empty` for a field with a value of its own kind, such as `dateRangeField`) and the layout helpers; `rules.ts`: `failingRule`, `patternOf`, `NAMED_PATTERNS` and `FIELD_RULES`, the pure validation rules.
 `files.ts`: the pure parts of `fileField`: `ALLOWED_FILE_TYPES` (the ADR-0017 list), `MAX_FILE_SIZE` (10 MiB), `effectiveAccept` (`accept` narrowed to the list), `effectiveMaxSize`, `effectiveMaxFiles`, `mediaTypeOf` and `typeFromName` (the type of a file the browser gave none), `acceptAttribute`, `isFileRef`, `formatBytes`, `percentOf` and `transferCode`.
