@@ -40,6 +40,13 @@ const PART_COMPONENTS = ['tableRow'] as const;
 /** The six composed components of Epic 5 */
 const SPEC_COMPOSED = ['confirmDialog', 'formDialog', 'masterDetail', 'settingsPage', 'crudTable', 'dashboardGrid'] as const;
 
+/** The 2D shape components of the graphics epic 1 (G1.3): shape tier, in atoms and molecules, with no element */
+const SHAPE_NAMES = ['rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'path', 'drawText', 'drawImage', 'drawGroup', 'drawRepeat'] as const;
+const elements = catalog.components.filter((entry) => entry.tier !== 'shape');
+/** The shapes in `atoms` and in `molecules`: they need search keys like the other atoms and molecules */
+const SHAPE_ATOMS = SHAPE_NAMES.filter((name) => name !== 'drawGroup' && name !== 'drawRepeat');
+const SHAPE_MOLECULES = ['drawGroup', 'drawRepeat'] as const;
+
 const composedEntries = catalog.components.filter((entry): entry is ComposedCatalogEntry => entry.tier === 'composed');
 const library = libraryFromCatalog(catalog);
 
@@ -52,7 +59,7 @@ const difference = (found: readonly string[], spec: readonly string[]): { missin
 /** Components that joined the library after the first set (Epic 8, plus popover, numberField and segmented); the Epic 4 and 5 counts below stay as the spec fixed them */
 const LATER_ATOMS: readonly string[] = ['segmented', 'markdown'];
 const LATER_MOLECULES: readonly string[] = ['numberField', 'comboboxField', 'multiSelectField', 'breadcrumb', 'pagination', 'sliderField', 'disclosure', 'stepper', 'dateRangeField', 'fileField'];
-const LATER_COMPOSITES: readonly string[] = ['popover', 'accordion', 'splitPane', 'tree', 'chart', 'board', 'calendar', 'recordGrid', 'messageList', 'outlet'];
+const LATER_COMPOSITES: readonly string[] = ['popover', 'accordion', 'splitPane', 'tree', 'chart', 'board', 'calendar', 'recordGrid', 'messageList', 'outlet', 'drawing'];
 const LATER_COMPOSED: readonly string[] = ['wizard', 'chatView'];
 
 /** Every component Epic 8 adds; all are built, so none is skipped */
@@ -104,7 +111,7 @@ const sizeOfName = (name: string): string | undefined => catalog.components.find
 describe('the component catalog holds the first library', () => {
     it('should hold exactly the atoms the component spec names (16 and the later ones), each of size atom', () => {
         // Arrange
-        const found = catalog.components.filter((entry) => entry.size === 'atom').map((entry) => entry.name);
+        const found = elements.filter((entry) => entry.size === 'atom').map((entry) => entry.name);
 
         // Assert
         expect({ missing: [...SPEC_ATOMS, ...LATER_ATOMS].filter((name) => !found.includes(name)), extra: found.filter((name) => ![...SPEC_ATOMS, ...LATER_ATOMS].includes(name)) }).toEqual({
@@ -116,7 +123,7 @@ describe('the component catalog holds the first library', () => {
 
     it('should hold exactly the molecules the component spec names (16 and the later ones), each of size molecule', () => {
         // Arrange
-        const found = catalog.components.filter((entry) => entry.size === 'molecule').map((entry) => entry.name);
+        const found = elements.filter((entry) => entry.size === 'molecule').map((entry) => entry.name);
 
         // Assert
         expect({ missing: [...SPEC_MOLECULES, ...LATER_MOLECULES].filter((name) => !found.includes(name)), extra: found.filter((name) => ![...SPEC_MOLECULES, ...LATER_MOLECULES].includes(name)) }).toEqual({
@@ -126,10 +133,20 @@ describe('the component catalog holds the first library', () => {
         expect(found).toHaveLength(16 + LATER_MOLECULES.length);
     });
 
+    it('should hold exactly the 2D shapes as shape components, with no tag and no German overlay', () => {
+        // Arrange
+        const shapes = catalog.components.filter((entry) => entry.tier === 'shape');
+
+        // Assert
+        expect(difference(shapes.map((entry) => entry.name), SHAPE_NAMES)).toEqual({ missing: [], extra: [] });
+        expect(shapes.filter((entry) => 'tag' in entry || entry.locales.length > 0)).toEqual([]);
+        expect(shapes.every((entry) => entry.category === 'graphics')).toBe(true);
+    });
+
     it('should give every spec component its size and no other component the size atom or molecule', () => {
         // Arrange
         const specNames: readonly string[] = [...SPEC_ATOMS, ...SPEC_MOLECULES, ...LATER_ATOMS, ...LATER_MOLECULES];
-        const others = catalog.components.filter((entry) => !specNames.includes(entry.name));
+        const others = elements.filter((entry) => !specNames.includes(entry.name));
 
         // Assert
         expect([...SPEC_ATOMS, ...LATER_ATOMS].map(sizeOfName).every((size) => size === 'atom')).toBe(true);
@@ -181,7 +198,7 @@ describe('the component catalog holds the whole Epic 5 set', () => {
 
     it('should give every root and composed component a German overlay', () => {
         // Arrange
-        const without = catalog.components.filter((entry) => !entry.locales.includes('de')).map((entry) => entry.name);
+        const without = elements.filter((entry) => !entry.locales.includes('de')).map((entry) => entry.name);
 
         // Assert
         expect(without).toEqual([]);
@@ -557,7 +574,7 @@ describe('the search keys of the atoms', () => {
             .filter((entry) => !(COMPONENT_CATEGORIES as readonly string[]).includes(entry.category ?? '') || (entry.purposes?.length ?? 0) < 3 || (entry.purposes?.length ?? 0) > 8)
             .map((entry) => entry.name);
 
-        expect(atoms.length).toBe(SPEC_ATOMS.length + LATER_ATOMS.length);
+        expect(atoms.length).toBe(SPEC_ATOMS.length + LATER_ATOMS.length + SHAPE_ATOMS.length);
         expect(bad).toEqual([]);
     });
 
@@ -581,7 +598,7 @@ describe('the search keys of the molecules', () => {
             .filter((entry) => !(COMPONENT_CATEGORIES as readonly string[]).includes(entry.category ?? '') || (entry.purposes?.length ?? 0) < 3 || (entry.purposes?.length ?? 0) > 8)
             .map((entry) => entry.name);
 
-        expect(molecules.length).toBe(SPEC_MOLECULES.length + LATER_MOLECULES.length);
+        expect(molecules.length).toBe(SPEC_MOLECULES.length + LATER_MOLECULES.length + SHAPE_MOLECULES.length);
         expect(bad).toEqual([]);
     });
 

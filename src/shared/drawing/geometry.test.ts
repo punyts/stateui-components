@@ -126,7 +126,7 @@ describe('bounds', () => {
         expect(localBounds(shape('polyline', 'p', { points: [[0, 0], [10, 5], [3, -2]] }))).toEqual({ x: 0, y: -2, width: 10, height: 7 });
         expect(localBounds(shape('path', 'p', { d: 'M0 0 H10 V10 Z' }))).toEqual({ x: 0, y: 0, width: 10, height: 10 });
         expect(localBounds(shape('drawImage', 'i', { x: 0, y: 0, width: 8, height: 6 }))).toEqual({ x: 0, y: 0, width: 8, height: 6 });
-        expect(localBounds(shape('drawText', 't', { _text: 'abcd', x: 10, y: 20, size: 10, anchor: 'middle', baseline: 'middle' }))).toEqual({
+        expect(localBounds(shape('drawText', 't', { _text: 'abcd', x: 10, y: 20, fontSize: 10, anchor: 'middle', baseline: 'middle' }))).toEqual({
             x: -2,
             y: 15,
             width: 24,
@@ -275,7 +275,7 @@ describe('hit testing', () => {
     it('should give the nearest interactive shape when asked, and let a shape on top hide the ones below', () => {
         // Arrange
         const seat = shape('rect', 'seat', { x: 0, y: 0, width: 10, height: 10, interactive: true });
-        const label = shape('drawText', 'label', { _text: 'A', x: 0, y: 10, size: 10 });
+        const label = shape('drawText', 'label', { _text: 'A', x: 0, y: 10, fontSize: 10 });
         const group = shape('drawGroup', 'row', { interactive: true }, [shape('circle', 'dot', { cx: 50, cy: 5, r: 3 })]);
         const cover = shape('rect', 'cover', { x: 100, y: 0, width: 10, height: 10 });
         const hidden = shape('rect', 'hidden', { x: 100, y: 0, width: 10, height: 10, interactive: true });

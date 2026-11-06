@@ -229,9 +229,9 @@ export function transformBounds(m: Matrix, box: Bounds): Bounds {
     ])!;
 }
 
-/** The box of a `drawText`, estimated from its text length, `size`, `anchor` (`start`, `middle`, `end`) and `baseline` */
+/** The box of a `drawText`, estimated from its text length, `fontSize`, `anchor` (`start`, `middle`, `end`) and `baseline` */
 function textBounds(shape: ShapeTree): Bounds {
-    const size = sizeOf(shape, 'size') ?? DEFAULT_TEXT_SIZE;
+    const size = sizeOf(shape, 'fontSize') ?? DEFAULT_TEXT_SIZE;
     const text = shape.properties._text;
     const width = (typeof text === 'string' ? text.length : 0) * size * TEXT_ADVANCE;
     const anchor = shape.properties.anchor;

@@ -1,0 +1,20 @@
+{
+    "properties": {
+        "interactive": { "type": "boolean", "default": false },
+        "_label": { "type": "string", "kind": "content", "default": "" },
+        "draggable": { "type": "string", "values": ["x", "y", "both"] },
+        "bounds": {
+            "type": "object",
+            "validators": {
+                "fields": {
+                    "x": { "type": "number", "required": true },
+                    "y": { "type": "number", "required": true },
+                    "width": { "type": "number", "required": true, "validators": { "range": { "min": 0 } } },
+                    "height": { "type": "number", "required": true, "validators": { "range": { "min": 0 } } }
+                }
+            }
+        },
+        "step": { "type": "number", "validators": { "range": { "min": 0 } }, "default": 1 }
+    },
+    "events": ["press", "hover", "dragEnd"]
+}

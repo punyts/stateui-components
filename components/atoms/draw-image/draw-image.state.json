@@ -1,0 +1,17 @@
+{
+    "summary": "A picture placed in a drawing from a data: URL or an uploaded file",
+    "category": "graphics",
+    "purposes": ["place a picture inside a drawing", "use a map or plan image as a backdrop", "put a photo behind shapes"],
+    "includes": ["paint", "transform", "interaction", "motion"],
+    "properties": {
+        "src": {
+            "type": ["string", "object"],
+            "validators": { "fileRef": { "types": ["image/png", "image/jpeg", "image/gif", "image/webp"], "dataUrl": true } }
+        },
+        "x": { "type": "number", "default": 0 },
+        "y": { "type": "number", "default": 0 },
+        "width": { "type": "number", "validators": { "range": { "min": 0 } } },
+        "height": { "type": "number", "validators": { "range": { "min": 0 } } },
+        "fit": { "type": "string", "values": ["contain", "cover", "stretch"], "default": "contain" }
+    }
+}

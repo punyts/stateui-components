@@ -1,0 +1,9 @@
+{
+    "properties": {
+        "x": { "type": "number", "default": 0 },
+        "y": { "type": "number", "default": 0 },
+        "rotate": { "type": "number", "default": 0 },
+        "scale": { "type": ["number", "array"], "validators": { "vector": 2 }, "default": 1 },
+        "origin": { "type": "array", "validators": { "vector": 2 } }
+    }
+}

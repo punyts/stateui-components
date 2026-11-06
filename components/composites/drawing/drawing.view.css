@@ -1,0 +1,29 @@
+:host {
+    display: block;
+    min-inline-size: 0;
+}
+
+.drawing {
+    position: relative;
+    box-sizing: border-box;
+    inline-size: 100%;
+    block-size: var(--ui-drawing-height);
+    background: var(--ui-drawing-background);
+}
+
+.title,
+.description {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.surface {
+    inline-size: 100%;
+    block-size: 100%;
+}

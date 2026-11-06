@@ -1,0 +1,11 @@
+{
+    "summary": "A circle in a drawing, by centre and radius",
+    "category": "graphics",
+    "purposes": ["draw a circle or dot", "mark a point on a map or plot", "draw a round marker or badge shape"],
+    "includes": ["paint", "transform", "interaction", "motion"],
+    "properties": {
+        "cx": { "type": "number", "default": 0 },
+        "cy": { "type": "number", "default": 0 },
+        "r": { "type": "number", "validators": { "range": { "min": 0 } } }
+    }
+}

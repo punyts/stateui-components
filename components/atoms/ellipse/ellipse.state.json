@@ -1,0 +1,12 @@
+{
+    "summary": "An ellipse in a drawing, by centre and two radii",
+    "category": "graphics",
+    "purposes": ["draw an ellipse or oval", "draw an oval area on a plan", "draw a stretched round shape"],
+    "includes": ["paint", "transform", "interaction", "motion"],
+    "properties": {
+        "cx": { "type": "number", "default": 0 },
+        "cy": { "type": "number", "default": 0 },
+        "rx": { "type": "number", "validators": { "range": { "min": 0 } } },
+        "ry": { "type": "number", "validators": { "range": { "min": 0 } } }
+    }
+}

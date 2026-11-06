@@ -1,0 +1,9 @@
+{
+    "summary": "Any outline in a drawing from SVG path data (d), parsed and checked, never inserted as markup",
+    "category": "graphics",
+    "purposes": ["draw a curve or free outline", "draw an arc, wedge or custom symbol", "draw a shape from svg path data"],
+    "includes": ["paint", "transform", "interaction", "motion"],
+    "properties": {
+        "d": { "type": "string", "validators": { "pathData": true } }
+    }
+}

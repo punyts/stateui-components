@@ -1,0 +1,15 @@
+{
+    "summary": "A text label placed in a drawing at x, y, with anchor and baseline",
+    "category": "graphics",
+    "purposes": ["write a label inside a drawing", "name a part of a diagram", "put a number next to a shape"],
+    "includes": ["paint", "transform", "interaction", "motion"],
+    "properties": {
+        "_text": { "type": "string", "kind": "content", "default": "" },
+        "x": { "type": "number", "default": 0 },
+        "y": { "type": "number", "default": 0 },
+        "anchor": { "type": "string", "values": ["start", "middle", "end"], "default": "start" },
+        "baseline": { "type": "string", "values": ["alphabetic", "middle", "hanging"], "default": "alphabetic" },
+        "font": { "type": "string", "validators": { "pattern": "^\\{[a-z][a-z0-9]*(\\.[a-z0-9]+)+\\}$" } },
+        "fontSize": { "type": "number", "validators": { "range": { "min": 0 } } }
+    }
+}
