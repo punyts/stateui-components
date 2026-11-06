@@ -69,12 +69,14 @@ export declare function register(window: { readonly customElements: CustomElemen
  */
 export async function buildComponents(sourceDir, outDir) {
     const patternsDir = resolve(sourceDir, '../patterns');
+    const presetsDir = resolve(sourceDir, '../presets');
     const result = await buildLibrary(resolve(sourceDir), resolve(outDir), {
         cssTransforms: [],
         cssChecks: [],
         sharedCssDir: SHARED_CSS_DIR,
         requireSearchKeys: true,
-        ...(existsSync(patternsDir) ? { patternsDir } : {})
+        ...(existsSync(patternsDir) ? { patternsDir } : {}),
+        ...(existsSync(presetsDir) ? { presetsDir } : {})
     });
     const registerDir = dirname(resolve(outDir));
     await mkdir(registerDir, { recursive: true });
