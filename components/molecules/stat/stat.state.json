@@ -1,5 +1,5 @@
 {
-    "summary": "A headline number with a label, a unit and a trend, formatted for the locale; loading shows a skeleton",
+    "summary": "A headline number with a label, a unit and a trend, formatted for the locale; tone colours the change only",
     "category": "data",
     "purposes": ["show a big headline figure with a label", "show a balance or total with its change", "show a key metric with a trend", "display a money amount on a dashboard"],
     "shared": { "tone": {}, "size": { "default": "md" } },

@@ -192,6 +192,21 @@ describe('page responsive nav in Chromium', () => {
     const toggle = (element: Element): HTMLButtonElement => part(element, '.toggle') as HTMLButtonElement;
     const navBox = (element: Element): DOMRect => box(part(element, '.nav') as HTMLElement);
 
+    it('should show _title in the header on a wide page, in the bar on a narrow one, and not over a header of its own', async () => {
+        // Arrange and Act
+        const wideTitled = await mountAt(1200);
+        const narrowTitled = await mountAt(390);
+        const ownHeader = await mountAt(1200, { header: text('Brand') });
+
+        // Assert
+        expect(part(wideTitled.element, '.header .title')?.textContent).toBe('Shop');
+        expect(part(wideTitled.element, '.bar')).toBeNull();
+        expect(part(narrowTitled.element, '.header')).toBeNull();
+        expect(part(narrowTitled.element, '.bar-title')?.textContent).toBe('Shop');
+        expect(part(ownHeader.element, '.header .title')).toBeNull();
+        expect(part(ownHeader.element, '.header sui-node')).not.toBeNull();
+    });
+
     it('should collapse a start nav into a bar with a closed menu button below 768 px and give the main area the full width', async () => {
         // Arrange and Act
         const mounted = await mountAt(390);
@@ -408,7 +423,6 @@ describe('nav in Chromium', () => {
     const screenItems = Object.freeze({
         home: { ...item('Home'), screen: 'home' },
         users: { ...item('Users'), screen: 'users' },
-        orders: { ...item('Orders'), screen: 'orders' },
         open: { ...item('Open orders'), screen: 'orders', params: { status: 'open' } }
     });
     /** A page shell with the nav on top (it never collapses) and an outlet; `element` is the nav */
@@ -454,10 +468,12 @@ describe('nav in Chromium', () => {
 
     it('should keep the current item when the navigation of a pressed item is refused', async () => {
         // Arrange
+        // an item without the required status is refused when the document is checked, so the params go at run time
         const mounted = mountWithScreens();
+        mounted.store.set('$.app.nav.children.open.params', {});
 
         // Act
-        await userEvent.click(itemButton(mounted.element, 'orders'));
+        await userEvent.click(itemButton(mounted.element, 'open'));
 
         // Assert
         expect(mounted.store.get('$.route.screen' as never)).toBe('home');

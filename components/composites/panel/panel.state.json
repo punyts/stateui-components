@@ -1,7 +1,7 @@
 {
     "summary": "Flat box; bordered or elevation raised makes a card; padding none for a layout-only box; header, actions, collapse",
     "category": "layout",
-    "purposes": ["group content in a box with a header", "lay out children in a row, column or grid", "make a bordered or raised section"],
+    "purposes": ["group content in a box with a header", "lay out children in a row, column or grid", "make a bordered or raised section", "place sections side by side in columns", "split a screen into a sidebar and a main area"],
     "shared": { "elevation": { "default": "flat" }, "density": {} },
     "layout": true,
     "events": ["toggle"],
@@ -9,7 +9,8 @@
     "tokens": {
         "radius": "{radius.md}",
         "padding": "{space.inset.md} {space.inset.md}",
-        "gap": "{space.gap.md}"
+        "gap": "{space.gap.md}",
+        "border": { "width": "{border.width.thin}" }
     },
     "properties": {
         "collapsible": { "type": "boolean", "default": false, "reflect": true },

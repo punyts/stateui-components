@@ -1,6 +1,7 @@
 <div class="page" onkeydown="{{ onKeyDown }}">
-    <header class="header" if="{{ $.header }}">
-        <sui-node state=".header"></sui-node>
+    <header class="header" if="{{ $.header || (($._title !== '') &amp;&amp; !$.compact) }}">
+        <sui-node if="{{ $.header }}" state=".header"></sui-node>
+        <h1 class="title" if="{{ !$.header &amp;&amp; ($._title !== '') }}">{{ $._title }}</h1>
     </header>
     <div class="bar" if="{{ $.compact }}">
         <button class="toggle" type="button" aria-expanded="{{ $.navOpen ? 'true' : 'false' }}" aria-controls="nav" onclick="{{ onToggleNav }}">

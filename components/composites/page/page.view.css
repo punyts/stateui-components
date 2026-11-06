@@ -42,6 +42,14 @@
     padding: var(--ui-page-padding);
 }
 
+.title {
+    margin: 0;
+    font-family: var(--ui-text-title-family);
+    font-size: var(--ui-text-title-size);
+    font-weight: var(--ui-text-title-weight);
+    line-height: var(--ui-text-title-leading);
+}
+
 .nav {
     grid-area: nav;
     min-inline-size: 0;

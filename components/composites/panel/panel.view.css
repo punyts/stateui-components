@@ -12,7 +12,7 @@
     padding: var(--ui-panel-padding);
     color: var(--ui-color-text-base);
     background: var(--surface);
-    border: var(--ui-border-width-thin) solid transparent;
+    border: var(--ui-panel-border-width) solid transparent;
     border-radius: var(--ui-panel-radius);
     box-shadow: var(--shadow);
     font-family: var(--ui-text-body-family);
