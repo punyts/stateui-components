@@ -1,0 +1,146 @@
+@include "field.css";
+
+.paint {
+    box-sizing: border-box;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--ui-space-gap-sm);
+    padding: var(--ui-space-gap-sm);
+    background: var(--ui-paintfield-toolbar);
+    border: var(--ui-control-border) solid var(--ui-paintfield-border);
+    border-radius: var(--ui-control-radius);
+}
+
+.toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--ui-space-gap-md);
+}
+
+.set {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--ui-space-gap-sm);
+}
+
+.tool,
+.color,
+.size,
+.undo,
+.redo,
+.clear {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--ui-space-gap-sm);
+    min-inline-size: var(--ui-size-control-sm);
+    min-block-size: var(--ui-size-control-sm);
+    margin: 0;
+    padding-block: 0;
+    padding-inline: var(--ui-space-gap-sm);
+    color: var(--ui-color-text-base);
+    background: var(--ui-color-surface-base);
+    border: var(--ui-control-border) solid var(--ui-color-border-base);
+    border-radius: var(--ui-control-radius);
+    font: inherit;
+    font-size: var(--ui-text-label-size);
+    cursor: pointer;
+}
+
+.color,
+.size {
+    padding-inline: 0;
+}
+
+.tool[aria-pressed="true"],
+.color[aria-pressed="true"],
+.size[aria-pressed="true"] {
+    border-color: var(--ui-color-text-base);
+    box-shadow: inset 0 0 0 1px var(--ui-color-text-base);
+}
+
+.tool:hover:not(:disabled),
+.color:hover:not(:disabled),
+.size:hover:not(:disabled),
+.undo:hover:not(:disabled),
+.redo:hover:not(:disabled),
+.clear:hover:not(:disabled) {
+    border-color: var(--ui-color-text-muted);
+}
+
+.tool:focus-visible,
+.color:focus-visible,
+.size:focus-visible,
+.undo:focus-visible,
+.redo:focus-visible,
+.clear:focus-visible {
+    outline: 2px solid var(--ui-color-focus);
+    outline-offset: 2px;
+}
+
+.tool:disabled,
+.color:disabled,
+.size:disabled,
+.undo:disabled,
+.redo:disabled,
+.clear:disabled {
+    color: var(--ui-color-text-disabled);
+    background: var(--ui-color-surface-sunken);
+    cursor: not-allowed;
+}
+
+.swatch {
+    inline-size: 60%;
+    block-size: 60%;
+    background: var(--swatch);
+    border: 1px solid var(--ui-color-border-base);
+    border-radius: 50%;
+}
+
+.dot {
+    inline-size: min(var(--dot), 70%);
+    block-size: min(var(--dot), 70%);
+    min-inline-size: 2px;
+    min-block-size: 2px;
+    background: currentColor;
+    border-radius: 50%;
+}
+
+.color:disabled .swatch {
+    opacity: 0.4;
+}
+
+.surface {
+    inline-size: 100%;
+    max-inline-size: calc(var(--paint-width) * 1px);
+    line-height: 0;
+}
+
+.canvas {
+    box-sizing: border-box;
+    display: block;
+    inline-size: 100%;
+    block-size: auto;
+    aspect-ratio: var(--paint-width) / var(--paint-height);
+    background: var(--paint-background, var(--ui-paintfield-surface));
+    border-radius: var(--ui-radius-sm);
+    touch-action: none;
+    cursor: crosshair;
+}
+
+.canvas:focus-visible {
+    outline: 2px solid var(--ui-color-focus);
+    outline-offset: 2px;
+}
+
+.canvas[data-invalid] {
+    outline: 2px solid var(--ui-field-error-color);
+}
+
+.canvas[data-blocked] {
+    cursor: not-allowed;
+    opacity: 0.6;
+}

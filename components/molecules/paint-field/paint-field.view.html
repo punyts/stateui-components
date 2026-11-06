@@ -1,0 +1,46 @@
+<div class="field" role="group" aria-labelledby="label" aria-describedby="{{ describedBy($._description, $.message) }}">
+    <span class="label" id="label">{{ $._label }}</span>
+    <div class="box paint">
+        <div class="toolbar" role="group" aria-label="{{ $._toolbar }}">
+            <div class="set tools">
+                <button class="tool" type="button" repeat="{{ $k,$i,$v in $.toolButtons }}" key="{{ $k }}" data-key="{{ $k }}" aria-pressed="{{ $v.pressed }}" disabled="{{ $.disabled || $.locked || $.readonly }}" onclick="{{ onTool }}">
+                    <ui-icon name="{{ $v.icon }}" size="sm"></ui-icon>
+                    <span class="text">{{ $v.label }}</span>
+                </button>
+            </div>
+            <div class="set colors">
+                <button class="color" type="button" repeat="{{ $k,$i,$v in $.colorButtons }}" key="{{ $k }}" data-key="{{ $k }}" aria-pressed="{{ $v.pressed }}" aria-label="{{ $v.label }}" style="--swatch: {{ $v.css }}" disabled="{{ $.disabled || $.locked || $.readonly }}" onclick="{{ onColor }}">
+                    <span class="swatch"></span>
+                </button>
+            </div>
+            <div class="set sizes">
+                <button class="size" type="button" repeat="{{ $k,$i,$v in $.sizeButtons }}" key="{{ $k }}" data-key="{{ $k }}" aria-pressed="{{ $v.pressed }}" aria-label="{{ $v.label }}" style="--dot: {{ $v.dot }}px" disabled="{{ $.disabled || $.locked || $.readonly }}" onclick="{{ onSize }}">
+                    <span class="dot"></span>
+                </button>
+            </div>
+            <div class="set history">
+                <button class="undo" type="button" disabled="{{ $.disabled || $.locked || $.readonly }}" onclick="{{ onUndo }}">
+                    <ui-icon name="arrow-back-up" size="sm"></ui-icon>
+                    <span class="text">{{ $._undo }}</span>
+                </button>
+                <button class="redo" type="button" disabled="{{ $.disabled || $.locked || $.readonly }}" onclick="{{ onRedo }}">
+                    <ui-icon name="arrow-forward-up" size="sm"></ui-icon>
+                    <span class="text">{{ $._redo }}</span>
+                </button>
+                <button class="clear" type="button" disabled="{{ $.disabled || $.locked || $.readonly }}" onclick="{{ onClear }}">
+                    <ui-icon name="trash" size="sm"></ui-icon>
+                    <span class="text">{{ $._clear }}</span>
+                </button>
+            </div>
+        </div>
+        <div class="surface" style="--paint-width: {{ $.width }}; --paint-height: {{ $.height }}; --paint-background: {{ backgroundOf($.background) }}">
+            <canvas id="control" class="canvas" role="img" aria-labelledby="label" tabindex="0" data-blocked="{{ $.disabled || $.locked || $.readonly ? '' : null }}" data-invalid="{{ $.error !== '' ? '' : null }}" onpointerdown="{{ onPointerDown }}" onpointermove="{{ onPointerMove }}" onpointerup="{{ onPointerUp }}" onpointercancel="{{ onPointerCancel }}" onlostpointercapture="{{ onPointerUp }}" onblur="{{ onBlur }}"></canvas>
+        </div>
+    </div>
+    <div class="messages">
+        <p class="help" id="help" if="{{ $._description !== '' }}">{{ $._description }}</p>
+        <div class="alert" role="status" aria-live="polite">
+            <p class="error" id="error" if="{{ $.message !== '' }}">{{ $.message }}</p>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,22 @@
+{
+    "_label": "Zeichnung",
+    "_description": "Mit Maus, Stift oder Finger zeichnen: Malen braucht ein Zeigegerät.",
+    "_toolbar": "Malwerkzeuge",
+    "_tools": {
+        "brush": "Pinsel",
+        "eraser": "Radierer"
+    },
+    "_color": "Farbe {value}",
+    "_size": "Größe {value}",
+    "_undo": "Rückgängig",
+    "_redo": "Wiederholen",
+    "_clear": "Leeren",
+    "_errors": {
+        "required": "Hier etwas zeichnen",
+        "too_large": "Die Zeichnung ist zu groß zum Speichern",
+        "unsupported_type": "Die Zeichnung konnte in diesem Format nicht gespeichert werden",
+        "quota": "Das Speicherlimit dieser App ist erreicht",
+        "offline": "Die Zeichnung konnte nicht gespeichert werden",
+        "internal": "Das Speichern der Zeichnung ist fehlgeschlagen"
+    }
+}

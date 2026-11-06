@@ -6,6 +6,9 @@
 export const CORE_ICON_NAMES: readonly string[] = [
     'alert-circle',
     'alert-triangle',
+    'arrow-back-up',
+    'arrow-forward-up',
+    'brush',
     'calendar',
     'check',
     'chevron-down',
@@ -14,12 +17,14 @@ export const CORE_ICON_NAMES: readonly string[] = [
     'chevron-up',
     'circle-check',
     'dots',
+    'eraser',
     'grip-vertical',
     'info-circle',
     'menu-2',
     'minus',
     'plus',
     'search',
+    'trash',
     'upload',
     'x'
 ];
