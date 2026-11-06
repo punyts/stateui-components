@@ -18,6 +18,13 @@ const COMMERCE = [
     ['sign-in-form', ['fields', 'help'], { title: 'string', email: 'path' }]
 ] as const;
 
+/** The dashboard, master and detail, and settings screens (S2.4) */
+const FIRST_SCREENS = [
+    ['dashboard', ['chart', 'figures'], { title: 'string', records: 'path', x: 'string', value: 'string' }],
+    ['master-detail', ['detail', 'row'], { title: 'string', items: 'path' }],
+    ['settings', ['general', 'menu', 'sections'], { title: 'string' }]
+] as const;
+
 describe('catalog patterns', () => {
     it('should list the patterns sorted by kind then name', () => {
         // Arrange and Act
@@ -27,7 +34,15 @@ describe('catalog patterns', () => {
         expect(keys).toEqual([...keys].sort());
     });
 
-    it.each(COMMERCE)('should hold the screen pattern %s with its slots and params', (name, slots, params) => {
+    it('should list the seven screen patterns', () => {
+        // Arrange and Act
+        const screens = catalog.patterns.filter((entry) => entry.kind === 'screen').map((entry) => entry.name);
+
+        // Assert
+        expect(screens).toEqual(['bag-and-checkout', 'dashboard', 'master-detail', 'product-detail', 'product-grid', 'settings', 'sign-in-form']);
+    });
+
+    it.each([...COMMERCE, ...FIRST_SCREENS])('should hold the screen pattern %s with its slots and params', (name, slots, params) => {
         // Arrange and Act
         const entry = pattern(name);
 
@@ -45,5 +60,22 @@ describe('catalog patterns', () => {
 
         // Assert
         expect(entry.components).toEqual(expect.arrayContaining(['stepper', 'recordList']));
+    });
+
+    it.each(['master-detail', 'settings'])('should copy %s as plain nodes, with no composed component', (name) => {
+        // Arrange and Act
+        const entry = pattern(name);
+
+        // Assert
+        expect(entry.components).not.toContain('masterDetail');
+        expect(entry.components).not.toContain('settingsPage');
+    });
+
+    it('should build dashboard from stat tiles and a chart', () => {
+        // Arrange and Act
+        const entry = pattern('dashboard');
+
+        // Assert
+        expect(entry.components).toEqual(expect.arrayContaining(['stat', 'chart']));
     });
 });

@@ -1,0 +1,61 @@
+{
+    "summary": "Three headline figures in cards above a chart of a dataset over time; the grid stacks on a phone",
+    "purposes": ["show key figures and a chart on one screen", "overview of income and spending", "finance dashboard with totals and a trend", "track metrics over months"],
+    "tree": {
+        "component": "panel",
+        "_title": "Overview",
+        "layout": { "type": "grid", "cols": 3, "collapseBelow": "md" },
+        "children": {
+            "first": {
+                "component": "card",
+                "_title": "Revenue",
+                "children": { "stat": { "component": "stat", "_label": "This month", "format": "number", "value": 0 } }
+            },
+            "second": {
+                "component": "card",
+                "_title": "Orders",
+                "children": { "stat": { "component": "stat", "_label": "This month", "format": "number", "value": 0 } }
+            },
+            "third": {
+                "component": "card",
+                "_title": "Customers",
+                "children": { "stat": { "component": "stat", "_label": "Active", "format": "number", "value": 0 } }
+            },
+            "trend": {
+                "component": "card",
+                "placement": { "span": 3 },
+                "_title": "Over time",
+                "children": {
+                    "chart": {
+                        "component": "chart",
+                        "type": "line",
+                        "_title": "Amount by month",
+                        "x": "month",
+                        "series": { "amount": { "field": "amount", "_label": "Amount" } },
+                        "<-records": "$.data.sales"
+                    }
+                }
+            }
+        }
+    },
+    "slots": {
+        "figures": { "path": "children", "description": "The cards of the grid: link each stat value with <-value, or add a card for another figure" },
+        "chart": { "path": "children.trend.children", "description": "The views of the chart card: change the chart's type, x and series, or add a table of the same records" }
+    },
+    "params": {
+        "title": { "type": "string", "default": "Overview", "paths": ["_title"], "description": "The heading of the dashboard" },
+        "records": {
+            "type": "path",
+            "default": "$.data.sales",
+            "paths": ["children.trend.children.chart.<-records"],
+            "description": "The dataset the chart draws: records with the x field and the value field"
+        },
+        "x": { "type": "string", "default": "month", "paths": ["children.trend.children.chart.x"], "description": "The field of each record along the x axis, such as month" },
+        "value": {
+            "type": "string",
+            "default": "amount",
+            "paths": ["children.trend.children.chart.series.amount.field"],
+            "description": "The number field of each record the chart draws"
+        }
+    }
+}

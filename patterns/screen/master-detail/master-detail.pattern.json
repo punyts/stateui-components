@@ -1,0 +1,76 @@
+{
+    "summary": "A list of records beside the details of the picked one, with an edit form; stacks on a phone",
+    "purposes": ["browse records and see the picked one", "list with a details pane beside it", "pick an item from a list and edit it", "contacts list with contact details"],
+    "tree": {
+        "component": "panel",
+        "_title": "Records",
+        "layout": { "type": "grid", "cols": 3, "collapseBelow": "md" },
+        "children": {
+            "list": {
+                "component": "list",
+                "placement": { "span": 1 },
+                "selectable": "single",
+                "divided": true,
+                "<-items": "$.data.items",
+                "row": { "component": "text", "<-_text": "$row.title" }
+            },
+            "detail": {
+                "component": "panel",
+                "placement": { "span": 2 },
+                "_title": "Details",
+                "actions": {
+                    "component": "button",
+                    "variant": "outline",
+                    "_title": "Edit",
+                    "on": {
+                        "press": [
+                            { "command": "set", "target": "^view.hidden", "value": true },
+                            { "command": "set", "target": "^editor.hidden", "value": false }
+                        ]
+                    }
+                },
+                "children": {
+                    "view": {
+                        "component": "descriptionList",
+                        "<-record": "^list.current",
+                        "items": {
+                            "title": { "_term": "Title", "field": "title" },
+                            "description": { "_term": "Description", "field": "description" }
+                        }
+                    },
+                    "editor": {
+                        "component": "form",
+                        "hidden": true,
+                        "children": {
+                            "title": { "component": "textField", "_label": "Title", "required": true, "<-value": "^list.current.title" },
+                            "description": { "component": "textField", "_label": "Description", "<-value": "^list.current.description" }
+                        },
+                        "actions": { "component": "button", "_title": "Done", "on": { "press": { "command": "submit", "target": "$parent" } } },
+                        "on": {
+                            "submitted": [
+                                { "command": "set", "target": "^editor.hidden", "value": true },
+                                { "command": "set", "target": "^view.hidden", "value": false }
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "slots": {
+        "row": { "path": "children.list.row", "description": "The row of one record in the list: link its content to $row fields" },
+        "detail": {
+            "path": "children.detail.children",
+            "description": "The views of the picked record: link them to ^list.current or a field of it, as view and editor do"
+        }
+    },
+    "params": {
+        "title": { "type": "string", "default": "Records", "paths": ["_title"], "description": "The heading of the screen" },
+        "items": {
+            "type": "path",
+            "default": "$.data.items",
+            "paths": ["children.list.<-items"],
+            "description": "The dataset listed: records with title and description"
+        }
+    }
+}

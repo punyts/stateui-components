@@ -23,8 +23,11 @@ Ready screens and shells live in `patterns/<kind>/<name>/<name>.pattern.json` (k
 | `product-detail` | screen | `actions`, `detail` | `title`, `product` (one record) |
 | `bag-and-checkout` | screen | `line`, `summary`, `payment` | `title`, `bag` (records with `id`, `title`), `products` |
 | `sign-in-form` | screen | `fields`, `help` | `title`, `email` |
+| `dashboard` | screen | `figures`, `chart` | `title`, `records` (records with the `x` and `value` fields), `x` (default `month`), `value` (default `amount`) |
+| `master-detail` | screen | `row`, `detail` | `title`, `items` (records with `id`, `title`, `description`) |
+| `settings` | screen | `menu`, `sections`, `general` | `title` |
 
-`bag-and-checkout` steps through the bag, the buyer's details and payment with a `stepper` over a `tabs` without a strip; its buttons name the nodes by key (`^steps`, `^pages`). Tests: `test/patterns.test.ts` (catalog) and `test/patterns/commerceScreens.browser.test.ts` (each pattern mounted with its defaults over three products).
+`bag-and-checkout` steps through the bag, the buyer's details and payment with a `stepper` over a `tabs` without a strip; its buttons name the nodes by key (`^steps`, `^pages`). `master-detail` and `settings` are the default trees of the composed `masterDetail` and `settingsPage` as plain nodes, so an agent edits every node; their targets name nodes by a key that is unique in the screen (`^list.current`, `^editor.hidden`, `^generalSection.hidden`). Tests: `test/patterns.test.ts` (catalog), `test/patterns/commerceScreens.browser.test.ts` (each commerce pattern mounted with its defaults over three products) and `test/patterns/screens.browser.test.ts` (dashboard, master-detail and settings).
 
 ## Package exports
 - `.`: `COMPONENT_GROUPS`, and the server-side icon helpers: `isIconName` (the `isIconName` option of `validateNode`; reads `dist/icons.json`, names and aliases), `createIconNames` and `loadIconsFile` (the same lookups over any `icons.json`), `validateIconNode` (the `SUI-STATE-FILLED` warning), `CORE_ICON_NAMES` and `ICON_ALIASES`.

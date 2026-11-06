@@ -1,0 +1,106 @@
+{
+    "summary": "A settings screen: a side menu of sections, each a form with a save button",
+    "purposes": ["edit account and app settings", "preferences screen with sections", "change profile, notifications and theme"],
+    "tree": {
+        "component": "page",
+        "navPosition": "start",
+        "_title": "Settings",
+        "nav": {
+            "component": "nav",
+            "children": {
+                "general": {
+                    "component": "menuItem",
+                    "_label": "General",
+                    "on": {
+                        "press": [
+                            { "command": "set", "target": "^generalSection.hidden", "value": false },
+                            { "command": "set", "target": "^notificationsSection.hidden", "value": true },
+                            { "command": "set", "target": "^appearanceSection.hidden", "value": true }
+                        ]
+                    }
+                },
+                "notifications": {
+                    "component": "menuItem",
+                    "_label": "Notifications",
+                    "on": {
+                        "press": [
+                            { "command": "set", "target": "^generalSection.hidden", "value": true },
+                            { "command": "set", "target": "^notificationsSection.hidden", "value": false },
+                            { "command": "set", "target": "^appearanceSection.hidden", "value": true }
+                        ]
+                    }
+                },
+                "appearance": {
+                    "component": "menuItem",
+                    "_label": "Appearance",
+                    "on": {
+                        "press": [
+                            { "command": "set", "target": "^generalSection.hidden", "value": true },
+                            { "command": "set", "target": "^notificationsSection.hidden", "value": true },
+                            { "command": "set", "target": "^appearanceSection.hidden", "value": false }
+                        ]
+                    }
+                }
+            }
+        },
+        "children": {
+            "generalSection": {
+                "component": "panel",
+                "_title": "General",
+                "children": {
+                    "form": {
+                        "component": "form",
+                        "children": {
+                            "name": { "component": "textField", "_label": "Display name", "required": true },
+                            "email": { "component": "textField", "_label": "Email address" }
+                        },
+                        "actions": { "component": "button", "_title": "Save", "on": { "press": { "command": "submit", "target": "$parent" } } }
+                    }
+                }
+            },
+            "notificationsSection": {
+                "component": "panel",
+                "_title": "Notifications",
+                "hidden": true,
+                "children": {
+                    "form": {
+                        "component": "form",
+                        "children": {
+                            "email": { "component": "switchField", "_label": "Email me about activity" },
+                            "digest": { "component": "textField", "_label": "Digest time", "required": true }
+                        },
+                        "actions": { "component": "button", "_title": "Save", "on": { "press": { "command": "submit", "target": "$parent" } } }
+                    }
+                }
+            },
+            "appearanceSection": {
+                "component": "panel",
+                "_title": "Appearance",
+                "hidden": true,
+                "children": {
+                    "form": {
+                        "component": "form",
+                        "children": {
+                            "theme": {
+                                "component": "selectField",
+                                "_label": "Theme",
+                                "value": "light",
+                                "options": { "light": { "_label": "Light" }, "dark": { "_label": "Dark" } }
+                            }
+                        },
+                        "actions": { "component": "button", "_title": "Save", "on": { "press": { "command": "submit", "target": "$parent" } } }
+                    }
+                }
+            }
+        }
+    },
+    "slots": {
+        "sections": {
+            "path": "children",
+            "description": "The section panels, each holding a form: a new section also needs a nav item and a line in every item press list"
+        },
+        "menu": { "path": "nav.children", "description": "The menu items, one per section: each press shows its section and hides the others" },
+        "general": { "path": "children.generalSection.children.form.children", "description": "The fields of the general section: link each value to $.data" }
+    },
+    "params": { "title": { "type": "string", "default": "Settings", "paths": ["_title"], "description": "The heading of the settings screen" } }
+}
