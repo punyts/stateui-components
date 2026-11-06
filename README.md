@@ -14,6 +14,18 @@ The StateUI component library: atoms, molecules, composites and composed compone
 ## Search keys
 Every component carries the two keys the server's `ui_components_search` reads: `category` (one of `layout`, `navigation`, `forms`, `data`, `feedback`, `overlays`, `content`, `conversation`, `graphics`) and `purposes` (three to eight short phrases of what a person uses the component for, not the words of its name). A composed file also declares a one-line `summary`. `scripts/buildComponents.mjs` builds with `requireSearchKeys: true`, so a missing key fails the build: `SUI-BUILD-CATEGORY`, `SUI-BUILD-PURPOSES` or `SUI-BUILD-SUMMARY`. A purpose phrase that repeats another component's is `SUI-BUILD-PURPOSE-DUPLICATE`. The rules live in `@punyts/stateui-app` (its README, under Building a component library); `test/catalog.test.ts` checks every entry has both keys.
 
+## Patterns
+Ready screens and shells live in `patterns/<kind>/<name>/<name>.pattern.json` (kind `screen` or `shell`); the build checks them against the components and lists them in the catalog's `patterns` (the format and checks are in the `@punyts/stateui-app` README, under Patterns). Each has `slots` (the nodes an agent fills) and `params` (a title and the dataset paths, written into the tree by `applyPattern`).
+
+| Pattern | Kind | Slots | Params |
+| --- | --- | --- | --- |
+| `product-grid` | screen | `actions`, `card` | `title`, `products` (records with `id`, `title`, `price`, `description`) |
+| `product-detail` | screen | `actions`, `detail` | `title`, `product` (one record) |
+| `bag-and-checkout` | screen | `line`, `summary`, `payment` | `title`, `bag` (records with `id`, `title`), `products` |
+| `sign-in-form` | screen | `fields`, `help` | `title`, `email` |
+
+`bag-and-checkout` steps through the bag, the buyer's details and payment with a `stepper` over a `tabs` without a strip; its buttons name the nodes by key (`^steps`, `^pages`). Tests: `test/patterns.test.ts` (catalog) and `test/patterns/commerceScreens.browser.test.ts` (each pattern mounted with its defaults over three products).
+
 ## Package exports
 - `.`: `COMPONENT_GROUPS`, and the server-side icon helpers: `isIconName` (the `isIconName` option of `validateNode`; reads `dist/icons.json`, names and aliases), `createIconNames` and `loadIconsFile` (the same lookups over any `icons.json`), `validateIconNode` (the `SUI-STATE-FILLED` warning), `CORE_ICON_NAMES` and `ICON_ALIASES`.
 - `./components`: `components`, `componentTokens` and `registerAll()`.

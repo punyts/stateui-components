@@ -1,0 +1,39 @@
+{
+    "summary": "A grid of product cards with the title, price and description of each product in a dataset",
+    "purposes": ["show products for sale in a grid", "browse a shop catalog", "list the items a store sells"],
+    "tree": {
+        "component": "panel",
+        "_title": "Products",
+        "children": {
+            "grid": {
+                "component": "recordGrid",
+                "<-records": "$.data.products",
+                "row": {
+                    "component": "card",
+                    "<-_title": "$row.title",
+                    "children": {
+                        "price": {
+                            "component": "descriptionList",
+                            "<-record": "$row",
+                            "items": { "price": { "_term": "Price", "field": "price", "format": "currency", "currency": "USD" } }
+                        },
+                        "description": { "component": "text", "<-_text": "$row.description" }
+                    }
+                }
+            }
+        }
+    },
+    "slots": {
+        "actions": { "path": "actions", "description": "Controls beside the title, such as a search box or a sort" },
+        "card": { "path": "children.grid.row.children", "description": "More content on each product card, linked to $row fields" }
+    },
+    "params": {
+        "title": { "type": "string", "default": "Products", "paths": ["_title"], "description": "The heading over the grid" },
+        "products": {
+            "type": "path",
+            "default": "$.data.products",
+            "paths": ["children.grid.<-records"],
+            "description": "The dataset of products: records with id, title, price and description"
+        }
+    }
+}

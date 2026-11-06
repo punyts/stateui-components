@@ -1,0 +1,33 @@
+{
+    "summary": "The name, price and description of one product, with a button to add it to the bag",
+    "purposes": ["show the details of one product", "open a product page", "add one item to the shopping bag"],
+    "tree": {
+        "component": "panel",
+        "_title": "Product",
+        "actions": { "component": "button", "_title": "Add to bag" },
+        "children": {
+            "detail": {
+                "component": "descriptionList",
+                "<-record": "$.data.products.0",
+                "items": {
+                    "title": { "_term": "Name", "field": "title" },
+                    "price": { "_term": "Price", "field": "price", "format": "currency", "currency": "USD" },
+                    "description": { "_term": "Description", "field": "description" }
+                }
+            }
+        }
+    },
+    "slots": {
+        "detail": { "path": "children", "description": "More views of the product beside its details, such as a picture or reviews" },
+        "actions": { "path": "actions", "description": "The add to bag button: give it an on press that writes the product to the bag" }
+    },
+    "params": {
+        "title": { "type": "string", "default": "Product", "paths": ["_title"], "description": "The heading of the page" },
+        "product": {
+            "type": "path",
+            "default": "$.data.products.0",
+            "paths": ["children.detail.<-record"],
+            "description": "The product record shown: a path to one record with title, price and description"
+        }
+    }
+}

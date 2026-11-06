@@ -1,0 +1,138 @@
+{
+    "summary": "The bag and a three-step checkout: the lines of the bag, the buyer's details and payment, with a stepper",
+    "purposes": ["review the shopping bag and check out", "pay for the items in a cart", "collect delivery and payment details in steps"],
+    "tree": {
+        "component": "panel",
+        "_title": "Checkout",
+        "children": {
+            "steps": {
+                "component": "stepper",
+                "active": "bag",
+                "steps": {
+                    "bag": { "_label": "Bag" },
+                    "details": { "_label": "Details" },
+                    "payment": { "_label": "Payment" }
+                }
+            },
+            "pages": {
+                "component": "tabs",
+                "strip": "hidden",
+                "children": {
+                    "bag": {
+                        "component": "panel",
+                        "placement": { "_tab": "Bag" },
+                        "children": {
+                            "lines": {
+                                "component": "recordList",
+                                "<-records": "$.data.bag",
+                                "row": { "component": "text", "<-_text": "$row.title" }
+                            },
+                            "suggestions": {
+                                "component": "panel",
+                                "_title": "You may also like",
+                                "children": {
+                                    "products": {
+                                        "component": "recordList",
+                                        "<-records": "$.data.products",
+                                        "row": { "component": "text", "<-_text": "$row.title" }
+                                    }
+                                }
+                            }
+                        },
+                        "actions": {
+                            "component": "button",
+                            "_title": "Check out",
+                            "on": {
+                                "press": [
+                                    { "command": "complete", "target": "^steps", "value": "bag" },
+                                    { "command": "set", "target": "^steps.active", "value": "details" },
+                                    { "command": "select", "target": "^pages", "value": "details" }
+                                ]
+                            }
+                        }
+                    },
+                    "details": {
+                        "component": "form",
+                        "placement": { "_tab": "Details" },
+                        "children": {
+                            "name": { "component": "textField", "_label": "Full name", "required": true },
+                            "email": { "component": "textField", "_label": "Email address", "inputType": "email", "pattern": "email", "required": true },
+                            "address": { "component": "textareaField", "_label": "Delivery address", "required": true }
+                        },
+                        "actions": {
+                            "component": "toolbar",
+                            "align": "end",
+                            "children": {
+                                "back": {
+                                    "component": "button",
+                                    "variant": "ghost",
+                                    "_title": "Back",
+                                    "on": {
+                                        "press": [
+                                            { "command": "set", "target": "^steps.active", "value": "bag" },
+                                            { "command": "select", "target": "^pages", "value": "bag" }
+                                        ]
+                                    }
+                                },
+                                "next": { "component": "button", "_title": "Next", "on": { "press": { "command": "submit", "target": "$parent" } } }
+                            }
+                        },
+                        "on": {
+                            "submitted": [
+                                { "command": "complete", "target": "^steps", "value": "details" },
+                                { "command": "set", "target": "^steps.active", "value": "payment" },
+                                { "command": "select", "target": "^pages", "value": "payment" }
+                            ]
+                        }
+                    },
+                    "payment": {
+                        "component": "form",
+                        "placement": { "_tab": "Payment" },
+                        "children": {
+                            "cardName": { "component": "textField", "_label": "Name on card", "required": true }
+                        },
+                        "actions": {
+                            "component": "toolbar",
+                            "align": "end",
+                            "children": {
+                                "back": {
+                                    "component": "button",
+                                    "variant": "ghost",
+                                    "_title": "Back",
+                                    "on": {
+                                        "press": [
+                                            { "command": "set", "target": "^steps.active", "value": "details" },
+                                            { "command": "select", "target": "^pages", "value": "details" }
+                                        ]
+                                    }
+                                },
+                                "place": { "component": "button", "_title": "Place order", "on": { "press": { "command": "submit", "target": "$parent" } } }
+                            }
+                        },
+                        "on": { "submitted": { "command": "complete", "target": "^steps", "value": "payment" } }
+                    }
+                }
+            }
+        }
+    },
+    "slots": {
+        "line": { "path": "children.pages.children.bag.children.lines.row", "description": "The row of one bag line: link its content to $row fields, such as the quantity and price" },
+        "summary": { "path": "children.pages.children.bag.children", "description": "Views beside the bag lines, such as the total" },
+        "payment": { "path": "children.pages.children.payment.children", "description": "The payment fields; the order is placed when this form is submitted" }
+    },
+    "params": {
+        "title": { "type": "string", "default": "Checkout", "paths": ["_title"], "description": "The heading of the checkout" },
+        "bag": {
+            "type": "path",
+            "default": "$.data.bag",
+            "paths": ["children.pages.children.bag.children.lines.<-records"],
+            "description": "The dataset of bag lines: records with id and title"
+        },
+        "products": {
+            "type": "path",
+            "default": "$.data.products",
+            "paths": ["children.pages.children.bag.children.suggestions.children.products.<-records"],
+            "description": "The dataset of products suggested below the bag: records with id and title"
+        }
+    }
+}
