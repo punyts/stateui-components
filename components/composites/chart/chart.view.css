@@ -108,6 +108,11 @@
     pointer-events: visiblePainted;
 }
 
+/* An interactive chart raises press for a mark */
+:host([interactive]) [data-point] {
+    cursor: pointer;
+}
+
 [data-point]:focus-visible {
     stroke: var(--ui-color-focus);
     stroke-width: var(--ui-border-width-thick);

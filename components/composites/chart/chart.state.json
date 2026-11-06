@@ -2,6 +2,7 @@
     "summary": "SVG bar, line, area or donut chart over records; fractionDigits fixes decimals (0 drops currency cents)",
     "category": "data",
     "purposes": ["draw how a total splits across categories", "plot a trend over time", "compare values as bars or a donut"],
+    "events": ["press"],
     "tokenGroup": "chart",
     "tokens": {
         "height": "calc({size.control.md} * 6)"
@@ -18,6 +19,7 @@
             }
         },
         "stacked": { "type": "boolean", "default": false },
+        "interactive": { "type": "boolean", "default": false, "reflect": true },
         "legend": { "type": "string", "values": ["bottom", "end", "none"], "default": "bottom", "reflect": true },
         "hiddenSeries": { "type": "array", "default": [] },
         "format": { "type": "string", "values": ["number", "percent", "currency", "duration"], "default": "number" },

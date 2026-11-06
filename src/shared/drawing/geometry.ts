@@ -410,19 +410,26 @@ export function hitLocal(shape: ShapeTree, x: number, y: number): boolean {
     }
 }
 
-/** The shapes from the top-level one down to the topmost leaf drawn at a point (in the parent's coordinates), or undefined */
-function topmost(shapes: readonly ShapeTree[], x: number, y: number): ShapeTree[] | undefined {
+/**
+ * The shapes from the top-level one down to the topmost leaf drawn at a point (in the parent's coordinates), or
+ * undefined. With `pressable` only a leaf that is interactive or inside an interactive group counts, and a hidden shape
+ * is skipped, so the others are passed through as the SVG renderer's `pointer-events` lets them be; `within` is true
+ * below an interactive group
+ */
+function topmost(shapes: readonly ShapeTree[], x: number, y: number, pressable = false, within = false): ShapeTree[] | undefined {
     for (let i = shapes.length - 1; i >= 0; i--) {
         const shape = shapes[i];
+        if (pressable && shape.properties.hidden === true) continue;
+        const reached = !pressable || within || shape.properties.interactive === true;
         const inverse = invert(transformOf(shape));
         if (inverse === undefined) continue;
         const [lx, ly] = applyMatrix(inverse, x, y);
         if (shape.kind === 'drawGroup' || shape.kind === 'drawRepeat') {
-            // A repeat is hit through its copies, as a group through its children
+            // A repeat is hit through its copies, as a group through its children; the clip is geometry, never passed through
             if (shape.clip !== undefined && topmost([shape.clip], lx, ly) === undefined) continue;
-            const inner = topmost(shape.children, lx, ly);
+            const inner = topmost(shape.children, lx, ly, pressable, reached);
             if (inner !== undefined) return [shape, ...inner];
-        } else if (hitLocal(shape, lx, ly)) {
+        } else if (reached && hitLocal(shape, lx, ly)) {
             return [shape];
         }
     }
@@ -432,15 +439,16 @@ function topmost(shapes: readonly ShapeTree[], x: number, y: number): ShapeTree[
 export interface HitOptions {
     /**
      * When true, the result is the nearest shape with `interactive: true` from the topmost shape at the point up through
-     * its groups, as a pointer event on an SVG element reaches the closest interactive one; a shape on top that is not
-     * interactive, and has no interactive group, hides the shapes below it
+     * its groups, as a pointer event on an SVG element reaches the closest interactive one. Shapes that are neither
+     * interactive nor inside an interactive group, and hidden shapes, are passed through (click-through, as the SVG
+     * renderer's `pointer-events: none` makes them), so an interactive shape below one of them is still found (G1.7c)
      */
     readonly interactive?: boolean;
 }
 
 /** The topmost shape at a point in drawing units, later shapes on top of earlier ones as they are drawn; undefined when none */
 export function hitTest(shapes: readonly ShapeTree[], x: number, y: number, options: HitOptions = {}): ShapeTree | undefined {
-    const chain = topmost(shapes, x, y);
+    const chain = topmost(shapes, x, y, options.interactive === true);
     if (chain === undefined) return undefined;
     if (!options.interactive) return chain[chain.length - 1];
     for (let i = chain.length - 1; i >= 0; i--) {

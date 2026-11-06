@@ -272,3 +272,298 @@ describe('drawing events with the SVG renderer in Chromium', () => {
         expect(errors).not.toHaveBeenCalled();
     });
 });
+
+/** The canvas drawings are 200 by 100 CSS pixels with the seats' 100 by 50 `viewBox`, so a drawing unit is two pixels */
+const SCALE = 2;
+
+const canvasOf = (mounted: MountedComponent): HTMLCanvasElement => mounted.element.shadowRoot?.querySelector('.surface > canvas') as HTMLCanvasElement;
+
+/** Mounts a drawing on the canvas renderer at 200 by 100 CSS pixels, waits until it is drawn and parks the pointer */
+async function mountCanvasDrawing(node: NodeState, options: MountOptions = {}): Promise<Mounted> {
+    const emitted: string[] = [];
+    const mounted = mountComponent(
+        'drawing',
+        { renderer: 'canvas', ...node },
+        { data: { ui: { seat: '', hovered: '' } }, ...options, hooks: { onEmit: (name) => emitted.push(name) } }
+    );
+    mounted.host.style.width = '200px';
+    (mounted.element as HTMLElement).style.setProperty('--ui-drawing-height', '100px');
+    const raised: Mounted['raised'] = [];
+    for (const type of ['press', 'hover']) {
+        mounted.element.addEventListener(type, (event) => raised.push({ type, detail: (event as CustomEvent).detail }));
+    }
+    await drawn(mounted);
+    await userEvent.hover(canvasOf(mounted), { position: { x: 2, y: 2 } });
+    raised.length = 0;
+    emitted.length = 0;
+    return Object.assign(mounted, { raised, emitted });
+}
+
+/** The proxy buttons of a canvas drawing, in document order */
+const proxiesOf = (mounted: MountedComponent): HTMLButtonElement[] =>
+    Array.from(mounted.element.shadowRoot?.querySelectorAll<HTMLButtonElement>('.surface button[data-shape-path]') ?? []);
+
+const proxyOf = (mounted: MountedComponent, path: string): HTMLButtonElement => {
+    const found = mounted.element.shadowRoot?.querySelector<HTMLButtonElement>(`button[data-shape-path="${ROOT}.${path}"]`);
+    if (!found) throw new Error(`no proxy for ${path}`);
+    return found;
+};
+
+/** A point of the canvas in CSS pixels from one in drawing units */
+const at = (x: number, y: number): { position: { x: number; y: number } } => ({ position: { x: x * SCALE, y: y * SCALE } });
+
+describe('drawing events with the canvas renderer in Chromium', () => {
+    afterEach(() => {
+        mountComponent.unmountAll();
+        vi.restoreAllMocks();
+    });
+
+    it('should give each interactive shape a named proxy button over its bounds, and none to a non-interactive one', async () => {
+        // Act
+        const mounted = await mountCanvasDrawing(seats);
+
+        // Assert
+        const proxies = proxiesOf(mounted);
+        expect(proxies.map((proxy) => proxy.getAttribute('data-shape-path'))).toEqual([`${ROOT}.a`]);
+        const a = proxies[0]!;
+        expect([a.type, a.getAttribute('data-shape-kind'), a.getAttribute('aria-label'), a.tabIndex]).toEqual(['button', 'rect', 'Seat A', 0]);
+        expect([getComputedStyle(a).opacity, getComputedStyle(a).pointerEvents]).toEqual(['0', 'none']);
+        expect(mounted.element.shadowRoot?.querySelector('.drawing')?.getAttribute('role')).toBe('group');
+        // The proxy's box is the shape's bounds (10, 10, 30 by 30 drawing units) within a pixel
+        const canvas = canvasOf(mounted).getBoundingClientRect();
+        const box = a.getBoundingClientRect();
+        expect(Math.abs(box.left - canvas.left - 10 * SCALE)).toBeLessThanOrEqual(1);
+        expect(Math.abs(box.top - canvas.top - 10 * SCALE)).toBeLessThanOrEqual(1);
+        expect(Math.abs(box.width - 30 * SCALE)).toBeLessThanOrEqual(1);
+        expect(Math.abs(box.height - 30 * SCALE)).toBeLessThanOrEqual(1);
+    });
+
+    it('should keep the img role and add no proxy for a drawing with no interactive shape', async () => {
+        // Act
+        const mounted = await mountCanvasDrawing({ viewBox: seats.viewBox, children: { b: seats.children.b } });
+
+        // Assert
+        expect(mounted.element.shadowRoot?.querySelector('.drawing')?.getAttribute('role')).toBe('img');
+        expect(proxiesOf(mounted)).toEqual([]);
+    });
+
+    it('should run the on entry of an interactive shape exactly once for a pointer click, with the position in drawing units', async () => {
+        // Arrange
+        const mounted = await mountCanvasDrawing(seats);
+
+        // Act
+        await userEvent.click(canvasOf(mounted), at(20, 30));
+
+        // Assert
+        expect(mounted.store.get('$.data.ui.seat')).toBe('a');
+        expect(mounted.emitted).toEqual(['hovered-a', 'pressed-a']);
+        const presses = mounted.raised.filter((event) => event.type === 'press');
+        expect(presses).toHaveLength(1);
+        expect(presses[0]?.detail.shape).toBe(`${ROOT}.a`);
+        expect(presses[0]?.detail.key).toBe('a');
+        // The pointer lands on a whole pixel, so the position is within one drawing unit
+        expect(Math.abs(presses[0]!.detail.x - 20)).toBeLessThanOrEqual(1);
+        expect(Math.abs(presses[0]!.detail.y - 30)).toBeLessThanOrEqual(1);
+    });
+
+    it('should run nothing for a click on a non-interactive shape or on empty drawing space', async () => {
+        // Arrange
+        const mounted = await mountCanvasDrawing(seats);
+        const canvas = canvasOf(mounted);
+
+        // Act
+        await userEvent.click(canvas, at(75, 25));
+        await userEvent.click(canvas, at(1, 1));
+        await userEvent.click(canvas, at(99, 49));
+
+        // Assert
+        expect(mounted.store.get('$.data.ui.seat')).toBe('');
+        expect(mounted.emitted).toEqual([]);
+        expect(mounted.raised).toEqual([]);
+    });
+
+    it('should pass a click through a non-interactive shape on top to the interactive shape below, as SVG does', async () => {
+        // Arrange: a plain shape drawn over seat a
+        const cover = { component: 'rect', x: 15, y: 15, width: 20, height: 20, fill: '#000000', on: pressOn('cover') };
+        const mounted = await mountCanvasDrawing({ ...seats, children: { ...seats.children, cover } });
+
+        // Act
+        await userEvent.click(canvasOf(mounted), at(25, 25));
+
+        // Assert
+        expect(mounted.store.get('$.data.ui.seat')).toBe('a');
+        expect(mounted.raised.filter((event) => event.type === 'press').map((event) => event.detail.shape)).toEqual([`${ROOT}.a`]);
+    });
+
+    it('should raise hover once when the pointer enters a shape, and again only after it left and came back', async () => {
+        // Arrange
+        const mounted = await mountCanvasDrawing(seats);
+        const canvas = canvasOf(mounted);
+
+        // Act
+        await userEvent.hover(canvas, at(25, 25));
+        await userEvent.hover(canvas, at(12, 12));
+        await userEvent.hover(canvas, at(38, 30));
+        const afterFirstEntry = mounted.emitted.length;
+        await userEvent.hover(canvas, at(1, 1));
+        await userEvent.hover(canvas, at(25, 25));
+
+        // Assert
+        expect(afterFirstEntry).toBe(1);
+        expect(mounted.emitted).toEqual(['hovered-a', 'hovered-a']);
+        const hovers = mounted.raised.filter((event) => event.type === 'hover');
+        expect(hovers.map((event) => event.detail.shape)).toEqual([`${ROOT}.a`, `${ROOT}.a`]);
+        expect(Math.abs(hovers[0]!.detail.x - 25)).toBeLessThanOrEqual(1);
+        expect(Math.abs(hovers[0]!.detail.y - 25)).toBeLessThanOrEqual(1);
+    });
+
+    it('should not raise hover for a non-interactive shape', async () => {
+        // Arrange
+        const mounted = await mountCanvasDrawing(seats);
+
+        // Act
+        await userEvent.hover(canvasOf(mounted), at(75, 25));
+
+        // Assert
+        expect(mounted.raised).toEqual([]);
+    });
+
+    it('should press a focused proxy with Enter and with Space, once each, at the centre, and not repeat for a held key', async () => {
+        // Arrange
+        const mounted = await mountCanvasDrawing(seats);
+        const a = proxyOf(mounted, 'a');
+        a.focus();
+
+        // Act
+        await userEvent.keyboard('{Enter}');
+        await userEvent.keyboard('[Space]');
+        a.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', repeat: true, bubbles: true, composed: true, cancelable: true }));
+
+        // Assert
+        expect(mounted.element.shadowRoot?.activeElement).toBe(a);
+        expect(mounted.emitted).toEqual(['pressed-a', 'pressed-a']);
+        expect(mounted.raised.map((event) => [event.type, event.detail.shape, event.detail.x, event.detail.y])).toEqual([
+            ['press', `${ROOT}.a`, 25, 25],
+            ['press', `${ROOT}.a`, 25, 25]
+        ]);
+    });
+
+    it('should press a shape once for an element-level click on its proxy, as ui_interact clicks it', async () => {
+        // Arrange
+        const mounted = await mountCanvasDrawing(seats);
+
+        // Act
+        proxyOf(mounted, 'a').click();
+
+        // Assert
+        expect(mounted.emitted).toEqual(['pressed-a']);
+        expect(mounted.raised.map((event) => [event.type, event.detail.shape, event.detail.x, event.detail.y])).toEqual([['press', `${ROOT}.a`, 25, 25]]);
+    });
+
+    it('should make the proxies follow a state change: moved, added, removed and reordered with the shapes', async () => {
+        // Arrange
+        const errors = vi.spyOn(report, 'error');
+        const mounted = await mountCanvasDrawing(seats);
+        const a = proxyOf(mounted, 'a');
+
+        // Act: move a, then add an interactive seat c
+        mounted.store.set(`${ROOT}.a.x`, 50 as never);
+        mounted.store.set(`${ROOT}.c`, { component: 'circle', cx: 80, cy: 25, r: 5, interactive: true, _label: 'Seat C' } as never);
+        await drawn(mounted);
+        const moved = a.getBoundingClientRect();
+        const canvas = canvasOf(mounted).getBoundingClientRect();
+        const added = proxiesOf(mounted).map((proxy) => [proxy.getAttribute('data-shape-path'), proxy.getAttribute('data-shape-kind'), proxy.getAttribute('aria-label')]);
+        // Remove a and add it back (as the live preview writes a reorder): it is drawn after c now
+        const node = mounted.store.get(`${ROOT}.a`);
+        mounted.store.delete(`${ROOT}.a` as never);
+        mounted.store.set(`${ROOT}.a`, node as never);
+        await drawn(mounted);
+        const reordered = proxiesOf(mounted);
+        mounted.store.delete(`${ROOT}.c` as never);
+        await drawn(mounted);
+
+        // Assert
+        expect(Math.abs(moved.left - canvas.left - 50 * SCALE)).toBeLessThanOrEqual(1);
+        expect(added).toEqual([
+            [`${ROOT}.a`, 'rect', 'Seat A'],
+            [`${ROOT}.c`, 'circle', 'Seat C']
+        ]);
+        expect(reordered.map((proxy) => proxy.getAttribute('data-shape-path'))).toEqual([`${ROOT}.c`, `${ROOT}.a`]);
+        expect(reordered[1]).toBe(a);
+        expect(proxiesOf(mounted).map((proxy) => proxy.getAttribute('data-shape-path'))).toEqual([`${ROOT}.a`]);
+        expect(errors).not.toHaveBeenCalled();
+    });
+
+    it('should drop the proxy of a shape that turns non-interactive or hidden, and press nothing there', async () => {
+        // Arrange
+        const mounted = await mountCanvasDrawing(seats);
+
+        // Act
+        mounted.store.set(`${ROOT}.a.interactive`, false as never);
+        await drawn(mounted);
+        await userEvent.click(canvasOf(mounted), at(25, 25));
+        const afterOff = proxiesOf(mounted).length;
+        mounted.store.set(`${ROOT}.a.interactive`, true as never);
+        mounted.store.set(`${ROOT}.a.hidden`, true as never);
+        await drawn(mounted);
+        await userEvent.click(canvasOf(mounted), at(25, 25));
+
+        // Assert
+        expect(afterOff).toBe(0);
+        expect(proxiesOf(mounted)).toEqual([]);
+        expect(mounted.raised).toEqual([]);
+        expect(mounted.store.get('$.data.ui.seat')).toBe('');
+    });
+
+    it("should give repeat copies proxies and run the row template's entry with $row at the record, by pointer and by proxy", async () => {
+        // Arrange
+        const mounted = await mountCanvasDrawing(
+            {
+                viewBox: { x: 0, y: 0, width: 100, height: 50 },
+                children: {
+                    seats: {
+                        component: 'drawRepeat',
+                        '<-records': '$.data.seats',
+                        row: {
+                            component: 'rect',
+                            width: 20,
+                            height: 20,
+                            '<-x': '$row.x',
+                            '<-y': '$row.y',
+                            interactive: true,
+                            '<-_label': '$row.name',
+                            on: { press: { command: 'set', target: '$.data.ui.seat', value: '$row.name' } }
+                        }
+                    }
+                }
+            },
+            {
+                data: {
+                    ui: { seat: '', hovered: '' },
+                    seats: [
+                        { id: 's1', name: 'One', x: 10, y: 10 },
+                        { id: 's2', name: 'Two', x: 60, y: 10 }
+                    ]
+                }
+            }
+        );
+
+        // Act
+        await userEvent.click(canvasOf(mounted), at(70, 20));
+        const byPointer = mounted.store.get('$.data.ui.seat');
+        proxyOf(mounted, 'seats.rows.s1').click();
+
+        // Assert
+        expect(proxiesOf(mounted).map((proxy) => [proxy.getAttribute('data-shape-path'), proxy.getAttribute('aria-label')])).toEqual([
+            [`${ROOT}.seats.rows.s1`, 'One'],
+            [`${ROOT}.seats.rows.s2`, 'Two']
+        ]);
+        expect(byPointer).toBe('Two');
+        expect(mounted.store.get('$.data.ui.seat')).toBe('One');
+        expect(mounted.raised.map((event) => [event.type, event.detail.shape, event.detail.key])).toEqual([
+            ['hover', `${ROOT}.seats.rows.s2`, 's2'],
+            ['press', `${ROOT}.seats.rows.s2`, 's2'],
+            ['press', `${ROOT}.seats.rows.s1`, 's1']
+        ]);
+    });
+});

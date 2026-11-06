@@ -15,6 +15,15 @@ export function readRows(records: unknown): Record<string, unknown>[] {
     return values.filter(isRecord);
 }
 
+/**
+ * The key of each record `readRows` keeps, in the same order: an array's index as a string (the index in the array, so a
+ * left-out entry does not shift the keys after it), a keyed map's key. A chart's `press` names a mark's record by it
+ */
+export function readKeys(records: unknown): string[] {
+    const entries: [string, unknown][] = Array.isArray(records) ? (records as unknown[]).map((value, at) => [String(at), value]) : isRecord(records) ? Object.entries(records) : [];
+    return entries.filter(([, value]) => isRecord(value)).map(([key]) => key);
+}
+
 /** The series in key order. An entry with no `field` reads the field named like its key; a label defaults to the key */
 export function readSeries(series: unknown): SeriesSpec[] {
     if (!isRecord(series)) return [];

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readCategories, readRows, readSeries, readValues } from './data.js';
+import { readCategories, readKeys, readRows, readSeries, readValues } from './data.js';
 
 describe('readRows', () => {
     it('should read an array as it is and a keyed map in key order', () => {
@@ -13,6 +13,23 @@ describe('readRows', () => {
         expect(readRows([{ a: 1 }, 3, null, 'x', [1]])).toEqual([{ a: 1 }]);
         expect(readRows(undefined)).toEqual([]);
         expect(readRows(5)).toEqual([]);
+    });
+});
+
+describe('readKeys', () => {
+    it('should key an array by its index as a string and a keyed map by its key, in the order of readRows', () => {
+        // Assert
+        expect(readKeys([{ a: 1 }, { a: 2 }])).toEqual(['0', '1']);
+        expect(readKeys({ k2: { a: 2 }, k1: { a: 1 } })).toEqual(['k2', 'k1']);
+        expect(readKeys({ k2: { a: 2 }, k1: { a: 1 } }).length).toBe(readRows({ k2: { a: 2 }, k1: { a: 1 } }).length);
+    });
+
+    it('should leave out the keys of entries readRows leaves out, without shifting the array indexes after them', () => {
+        // Assert
+        expect(readKeys([{ a: 1 }, 3, null, { a: 2 }])).toEqual(['0', '3']);
+        expect(readKeys({ x: 'text', y: { a: 1 } })).toEqual(['y']);
+        expect(readKeys(undefined)).toEqual([]);
+        expect(readKeys(5)).toEqual([]);
     });
 });
 

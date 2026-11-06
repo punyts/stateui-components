@@ -1,7 +1,7 @@
 import { report } from '@punyts/core';
 import type { ControllerContext } from '@punyts/stateui';
 import { buildScene } from '../shared/chart/chart.js';
-import { readCategories, readRows, readSeries, readValues } from '../shared/chart/data.js';
+import { readCategories, readKeys, readRows, readSeries, readValues } from '../shared/chart/data.js';
 import { primitivePath, sceneToTree } from '../shared/chart/drawingTree.js';
 import { POINT_KEYS, pointAfter, tabStop } from '../shared/chart/navigate.js';
 import { CHART_TYPES, px, seriesClass } from '../shared/chart/scene.js';
@@ -54,7 +54,14 @@ interface LegendItem {
  * one is the tab stop, the arrow keys move between marks (Left and Right between categories, Up and Down between series,
  * Home and End to the ends), and hovering or focusing a mark shows its values in a tooltip drawn with the shared popover
  * code, anchored by custom properties on an element in the plot (an SVG mark cannot be a CSS anchor). A visually hidden
- * `table` with all the values follows the data
+ * `table` with all the values follows the data.
+ *
+ * With `interactive` (G2.4 of the graphics epic 2) a click on a mark, or Enter or Space while it has focus, raises
+ * `press` on the element with `detail: { key, series }`: the key of the mark's record (an array's index as a string, a
+ * keyed map's key, as `readKeys` gives them) and the series key (a donut's slice: its record and the first series).
+ * The chart raises it itself instead of making its shapes `interactive`, so the marks keep `role="img"`, their names
+ * and the single tab stop. A hidden series draws no marks, so it has nothing to press. Without `interactive` a mark
+ * raises nothing
  */
 export default function controller({ element, store, basePath }: ControllerContext) {
     const read = (name: string): unknown => store.get<unknown>(`${basePath}.${name}`);
@@ -78,6 +85,8 @@ export default function controller({ element, store, basePath }: ControllerConte
     let stop: { id: string; element: SVGElement } | undefined;
     let tipFor: string | undefined;
     let legendJson = '';
+    /** The record key of each category position (a mark's `data-index`), from the last draw */
+    let recordKeys: string[] = [];
 
     const part = (selector: string): HTMLElement | null => element.shadowRoot?.querySelector<HTMLElement>(selector) ?? null;
     const rtl = (): boolean => getComputedStyle(element).direction === 'rtl';
@@ -145,7 +154,9 @@ export default function controller({ element, store, basePath }: ControllerConte
     const draw = (): void => {
         scheduled = false;
         if (disposed || renderer === undefined) return;
-        const rows = readRows(read('records'));
+        const records = read('records');
+        const rows = readRows(records);
+        recordKeys = readKeys(records);
         const specs = readSeries(read('series'));
         const type: ChartType = CHART_TYPES.find((candidate) => candidate === read('type')) ?? 'bar';
         const stacked = read('stacked') === true;
@@ -271,7 +282,22 @@ export default function controller({ element, store, basePath }: ControllerConte
         return mark?.getAttribute('data-point') ?? undefined;
     };
 
+    /** Raises `press` for the mark `target` is in, when the chart is `interactive`; true when it raised one */
+    const press = (target: EventTarget | null): boolean => {
+        if (read('interactive') !== true) return false;
+        const mark = target instanceof Element ? target.closest('[data-point]') : null;
+        const series = mark?.getAttribute('data-series') ?? null;
+        const index = mark?.getAttribute('data-index') ?? null;
+        const key = index === null ? undefined : recordKeys[Number(index)];
+        if (series === null || key === undefined) return false;
+        element.dispatchEvent(new CustomEvent('press', { detail: { key, series }, bubbles: true, composed: true }));
+        return true;
+    };
+
     const handlers = {
+        click: (event: MouseEvent) => {
+            press(event.target);
+        },
         pointerover: (event: PointerEvent) => {
             const id = pointOf(event.target);
             if (id !== undefined) showTip(id);
@@ -293,6 +319,11 @@ export default function controller({ element, store, basePath }: ControllerConte
             if (pointOf(event.relatedTarget) === undefined) hideTip();
         },
         keydown: (event: KeyboardEvent) => {
+            if ((event.key === 'Enter' || event.key === ' ') && !event.repeat && !event.altKey && !event.ctrlKey && !event.metaKey) {
+                //Space would scroll the page and Enter could submit a form around the chart
+                if (press(event.target)) event.preventDefault();
+                return;
+            }
             if (event.altKey || event.ctrlKey || event.metaKey || !(POINT_KEYS as readonly string[]).includes(event.key)) return;
             const from = pointOf(event.target);
             if (from === undefined) return;

@@ -1,10 +1,10 @@
-import { IDENTITY, boundsAt, fitViewBox, hitTest, localBounds, readFit, readViewBox, transformOf } from './geometry.js';
+import { IDENTITY, boundsAt, fitViewBox, hitTest, localBounds, multiply, readFit, readViewBox, toDrawing, transformBounds, transformOf } from './geometry.js';
 import type { Bounds, Matrix, ViewBox, Viewport } from './geometry.js';
 import { buildPath } from './canvasPath.js';
 import { createPaintResolver, placeGradient } from './paint.js';
 import type { Paint, PaintResolver } from './paint.js';
 import { registerDrawingRenderer } from './render.js';
-import type { DrawingIssue, DrawingRenderer, DrawingRendererOptions } from './render.js';
+import type { DrawingIssue, DrawingRenderer, DrawingRendererOptions, ShapeEventName } from './render.js';
 import { ANCHORS, BASELINES, CAPS, JOINS, ShapeReader, Unusable, contentBox } from './shapeReader.js';
 import type { ShapeTree } from './tree.js';
 
@@ -99,15 +99,30 @@ type Geometry =
  * per draw, so the redraw the feeder asks for on a theme or mode switch recolours the bitmap. `update` draws in the next
  * animation frame, shared by every canvas drawing of the page, so many updates in one frame draw once. A shape with a
  * value it cannot draw is left out and reported once (`SUI-RUN-DRAW`) as in SVG. `hit` and `boundsOf` answer from
- * `geometry.ts`, as the SVG renderer does. The canvas has no element per shape, so `elementOf` gives nothing until the
- * proxy buttons (G1.7c)
+ * `geometry.ts`, as the SVG renderer does.
+ *
+ * Events (G1.7c): each interactive shape (not hidden) gets a proxy `button` in a layer the renderer adds before the
+ * canvas (class `proxies`), in drawing order, with `data-shape-path`, `data-shape-kind` and `aria-label` from `_label`,
+ * kept in step with the tree (added, removed and moved, never recreated). Each is placed over the shape's bounds in CSS
+ * pixels (cut to the canvas) with `opacity: 0` and `pointer-events: none`, so it has a real box that `ui_interact`
+ * measures, a screen reader and the tab order reach it, and `elementOf` gives it. A click on a proxy (`element.click()`)
+ * or Enter or Space on a focused one is `press` at the shape's centre (held keys do not repeat it). A pointer click on
+ * the canvas is `press` for the shape `hit()` finds there, which passes through shapes that are not interactive as the
+ * SVG renderer does; the pointer entering an interactive shape is `hover`, once per entry. A shape left out of the last draw
+ * raises nothing and its proxy is hidden. Every value is set through the CSSOM, never a `style` attribute
  */
 export function createCanvasRenderer(target: Element, options: DrawingRendererOptions): CanvasDrawingRenderer {
     const document = target.ownerDocument;
     const view = document.defaultView;
     const canvas = document.createElement('canvas');
     canvas.setAttribute('class', 'canvas');
-    target.append(canvas);
+    // The proxies sit in a layer of no height right before the canvas, so a proxy's offset is from the canvas's corner
+    const layer = document.createElement('div');
+    layer.setAttribute('class', 'proxies');
+    layer.style.position = 'relative';
+    layer.style.blockSize = '0';
+    layer.style.margin = '0';
+    target.append(layer, canvas);
 
     const reported = new Set<string>();
     let tree: readonly ShapeTree[] = [];
@@ -119,6 +134,13 @@ export function createCanvasRenderer(target: Element, options: DrawingRendererOp
     let unsizedFrames = 0;
     /** The `drawn()` promises waiting for the next draw */
     let waiters: (() => void)[] = [];
+    /** The proxy button of each interactive shape of the last update, by path, and what was written to it */
+    const proxies = new Map<string, { element: HTMLButtonElement; label: string; box: string; hidden: boolean }>();
+    const proxyPaths = new WeakMap<Element, string>();
+    /** The interactive shapes the last draw drew, by path: the only ones that raise events */
+    let shown = new Set<string>();
+    /** The path of the interactive shape the pointer is in, so `hover` fires once per entry */
+    let hovered: string | undefined;
 
     const issue = (problem: DrawingIssue): void => {
         const key = 'reason' in problem ? `${problem.path}\u0000${problem.reason}` : `${problem.code}\u0000${problem.path}\u0000${problem.value}`;
@@ -327,6 +349,7 @@ export function createCanvasRenderer(target: Element, options: DrawingRendererOp
                 issue({ code: 'SUI-RUN-DRAW', path: shape.path, reason: `${error.message}, so the shape is not drawn` });
                 continue;
             }
+            if (shape.properties.interactive === true) shown.add(shape.path);
             const matrix = transformOf(shape);
             const moved = !isIdentity(matrix);
             ctx.save();
@@ -395,6 +418,7 @@ export function createCanvasRenderer(target: Element, options: DrawingRendererOp
             return value;
         };
         resolver.update({ paints: options.readProperty('paints'), paintsPath, read });
+        shown = new Set();
         if (width > 0 && height > 0) {
             const viewport = viewportOf(size.width, size.height);
             ctx.setTransform(viewport.scaleX * ratio, 0, 0, viewport.scaleY * ratio, viewport.offsetX * ratio, viewport.offsetY * ratio);
@@ -411,8 +435,182 @@ export function createCanvasRenderer(target: Element, options: DrawingRendererOp
                 ROOT_STYLE
             );
         }
+        placeProxies();
         settle();
     };
+
+    /**
+     * Makes, removes and orders the proxy buttons to follow the interactive shapes of the tree (not hidden, not
+     * `drawImage`, which is not drawn yet), in drawing order: a group before the shapes inside it
+     */
+    const syncProxies = (): void => {
+        const wanted: ShapeTree[] = [];
+        const collect = (shapes: readonly ShapeTree[]): void => {
+            for (const shape of shapes) {
+                if (shape.properties.hidden === true || shape.kind === 'drawImage') continue;
+                if (shape.properties.interactive === true) wanted.push(shape);
+                collect(shape.children);
+            }
+        };
+        collect(tree);
+        const paths = new Set(wanted.map((shape) => shape.path));
+        for (const [path, proxy] of proxies) {
+            if (paths.has(path)) continue;
+            proxy.element.remove();
+            proxies.delete(path);
+        }
+        let previous: ChildNode | null = null;
+        for (const shape of wanted) {
+            let proxy = proxies.get(shape.path);
+            if (proxy === undefined) {
+                const element = document.createElement('button');
+                element.type = 'button';
+                const style = element.style;
+                style.position = 'absolute';
+                style.margin = '0';
+                style.padding = '0';
+                style.border = '0';
+                style.boxSizing = 'border-box';
+                style.opacity = '0';
+                style.pointerEvents = 'none';
+                element.setAttribute('data-shape-path', shape.path);
+                proxyPaths.set(element, shape.path);
+                proxy = { element, label: '', box: '', hidden: false };
+                proxies.set(shape.path, proxy);
+            }
+            const { element } = proxy;
+            if (element.getAttribute('data-shape-kind') !== shape.kind) element.setAttribute('data-shape-kind', shape.kind);
+            const label = typeof shape.properties._label === 'string' ? shape.properties._label : '';
+            if (proxy.label !== label) {
+                if (label === '') element.removeAttribute('aria-label');
+                else element.setAttribute('aria-label', label);
+                proxy.label = label;
+            }
+            const expected: ChildNode | null = previous === null ? layer.firstChild : previous.nextSibling;
+            if (expected !== element) layer.insertBefore(element, expected);
+            previous = element;
+        }
+    };
+
+    /** Puts each proxy over its shape's bounds in CSS pixels (cut to the canvas), and hides one whose shape was not drawn */
+    const placeProxies = (): void => {
+        if (proxies.size === 0 || size === undefined) return;
+        const viewport = viewportOf(size.width, size.height);
+        const { width, height } = size;
+        const clampX = (x: number): number => Math.min(width, Math.max(0, x * viewport.scaleX + viewport.offsetX));
+        const clampY = (y: number): number => Math.min(height, Math.max(0, y * viewport.scaleY + viewport.offsetY));
+        const walk = (shapes: readonly ShapeTree[], matrix: Matrix): void => {
+            for (const shape of shapes) {
+                if (shape.properties.hidden === true) continue;
+                const own = multiply(matrix, transformOf(shape));
+                const proxy = proxies.get(shape.path);
+                if (proxy !== undefined) {
+                    const local = localBounds(shape);
+                    const bounds = local === undefined ? undefined : transformBounds(own, local);
+                    const hidden = bounds === undefined || !shown.has(shape.path);
+                    if (proxy.hidden !== hidden) {
+                        proxy.element.hidden = hidden;
+                        proxy.hidden = hidden;
+                    }
+                    if (bounds !== undefined) {
+                        const left = clampX(bounds.x);
+                        const top = clampY(bounds.y);
+                        const right = clampX(bounds.x + bounds.width);
+                        const bottom = clampY(bounds.y + bounds.height);
+                        const box = `${left} ${top} ${right} ${bottom}`;
+                        if (proxy.box !== box) {
+                            const style = proxy.element.style;
+                            style.left = `${left}px`;
+                            style.top = `${top}px`;
+                            style.width = `${right - left}px`;
+                            style.height = `${bottom - top}px`;
+                            proxy.box = box;
+                        }
+                    }
+                }
+                walk(shape.children, own);
+            }
+        };
+        walk(tree, IDENTITY);
+    };
+
+    /** The shape at a path in the current tree */
+    const locate = (path: string): ShapeTree | undefined => {
+        let shapes = tree;
+        for (;;) {
+            const next = shapes.find((shape) => shape.path === path || path.startsWith(`${shape.path}.`));
+            if (next === undefined || next.path === path) return next;
+            shapes = next.children;
+        }
+    };
+
+    /** The centre of a shape in drawing units, the position of a press on its proxy */
+    const centreOf = (path: string): { x: number; y: number } => {
+        const box = boundsAt(tree, path);
+        return box === undefined ? { x: 0, y: 0 } : { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+    };
+
+    const raise = (name: ShapeEventName, shape: ShapeTree, at: { x: number; y: number }): void => {
+        options.onEvent({ name, shape: shape.path, key: shape.key, x: at.x, y: at.y });
+    };
+
+    /** The interactive shape under the pointer (as `hit` finds it, drawn in the last draw) and the point in drawing units */
+    const atPointer = (event: MouseEvent): { shape: ShapeTree; x: number; y: number } | undefined => {
+        if (disposed || size === undefined) return undefined;
+        const rect = canvas.getBoundingClientRect();
+        const [x, y] = toDrawing(viewportOf(size.width, size.height), event.clientX - rect.left, event.clientY - rect.top);
+        const shape = hitTest(tree, x, y, { interactive: true });
+        return shape === undefined || !shown.has(shape.path) ? undefined : { shape, x, y };
+    };
+
+    /** A pointer click on the canvas is a press of the interactive shape under it; nothing on empty space */
+    const onCanvasClick = (event: MouseEvent): void => {
+        const found = atPointer(event);
+        if (found !== undefined) raise('press', found.shape, found);
+    };
+
+    /** The pointer moved: `hover` when that puts it in an interactive shape it was not in */
+    const onMove = (event: PointerEvent): void => {
+        const found = atPointer(event);
+        canvas.style.cursor = found === undefined ? '' : 'pointer';
+        if (found?.shape.path === hovered) return;
+        hovered = found?.shape.path;
+        if (found !== undefined) raise('hover', found.shape, found);
+    };
+
+    const onLeave = (): void => {
+        hovered = undefined;
+        canvas.style.cursor = '';
+    };
+
+    /** The shape of the proxy an event came from, when it is an interactive shape the last draw drew */
+    const proxyShape = (event: Event): ShapeTree | undefined => {
+        const path = event.target instanceof Element ? proxyPaths.get(event.target) : undefined;
+        if (disposed || path === undefined || !proxies.has(path) || !shown.has(path)) return undefined;
+        return locate(path);
+    };
+
+    /** A click on a proxy (an element-level click, since a proxy takes no pointer events) is a press at the shape's centre */
+    const onProxyClick = (event: MouseEvent): void => {
+        const shape = proxyShape(event);
+        if (shape !== undefined) raise('press', shape, centreOf(shape.path));
+    };
+
+    /** Enter and Space on a focused proxy are a press, once per key press (held keys do not repeat it) */
+    const onProxyKey = (event: KeyboardEvent): void => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        const shape = proxyShape(event);
+        if (shape === undefined) return;
+        // The button's own activation would click it too (and Enter repeats while held), so the key is handled here alone
+        event.preventDefault();
+        if (!event.repeat) raise('press', shape, centreOf(shape.path));
+    };
+
+    canvas.addEventListener('click', onCanvasClick);
+    canvas.addEventListener('pointermove', onMove);
+    canvas.addEventListener('pointerleave', onLeave);
+    layer.addEventListener('click', onProxyClick);
+    layer.addEventListener('keydown', onProxyKey);
 
     /** The frame of a waiting update: draws when the canvas has a size; with none after two frames (not laid out) it stops waiting */
     const onFrame = (): void => {
@@ -446,6 +644,8 @@ export function createCanvasRenderer(target: Element, options: DrawingRendererOp
             if (disposed) return;
             tree = next;
             dirty = true;
+            syncProxies();
+            if (hovered !== undefined && !proxies.has(hovered)) hovered = undefined;
             if (view !== null) schedule(view, onFrame);
         },
         paint(): void {
@@ -459,8 +659,8 @@ export function createCanvasRenderer(target: Element, options: DrawingRendererOp
         boundsOf(path: string): Bounds | undefined {
             return disposed ? undefined : boundsAt(tree, path);
         },
-        elementOf(): Element | undefined {
-            return undefined;
+        elementOf(id: string): Element | undefined {
+            return disposed ? undefined : proxies.get(id)?.element;
         },
         drawn(): Promise<void> {
             if (disposed || !dirty) return Promise.resolve();
@@ -471,7 +671,16 @@ export function createCanvasRenderer(target: Element, options: DrawingRendererOp
             disposed = true;
             observer?.disconnect();
             unschedule(view, onFrame);
+            canvas.removeEventListener('click', onCanvasClick);
+            canvas.removeEventListener('pointermove', onMove);
+            canvas.removeEventListener('pointerleave', onLeave);
+            layer.removeEventListener('click', onProxyClick);
+            layer.removeEventListener('keydown', onProxyKey);
             canvas.remove();
+            layer.remove();
+            proxies.clear();
+            shown = new Set();
+            hovered = undefined;
             tree = [];
             settle();
         }

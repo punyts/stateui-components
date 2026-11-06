@@ -284,20 +284,27 @@ describe('hit testing', () => {
         expect(hitTest([group], 15, 15)).toBeUndefined();
     });
 
-    it('should give the nearest interactive shape when asked, and let a shape on top hide the ones below', () => {
+    it('should give the nearest interactive shape when asked, passing through the shapes on top that are not interactive', () => {
         // Arrange
         const seat = shape('rect', 'seat', { x: 0, y: 0, width: 10, height: 10, interactive: true });
         const label = shape('drawText', 'label', { _text: 'A', x: 0, y: 10, fontSize: 10 });
         const group = shape('drawGroup', 'row', { interactive: true }, [shape('circle', 'dot', { cx: 50, cy: 5, r: 3 })]);
+        const under = shape('rect', 'under', { x: 100, y: 0, width: 10, height: 10, interactive: true });
         const cover = shape('rect', 'cover', { x: 100, y: 0, width: 10, height: 10 });
-        const hidden = shape('rect', 'hidden', { x: 100, y: 0, width: 10, height: 10, interactive: true });
+        const plain = shape('drawGroup', 'plain', {}, [shape('rect', 'inner', { x: 100, y: 0, width: 10, height: 10 })]);
+        const gone = shape('rect', 'gone', { x: 100, y: 0, width: 10, height: 10, interactive: true, hidden: true });
 
         // Assert
         expect(hitTest([seat, group], 5, 5, { interactive: true })?.key).toBe('seat');
-        expect(hitTest([seat, label, group], 2, 5, { interactive: true })).toBeUndefined();
+        expect(hitTest([seat, label, group], 2, 5, { interactive: true })?.key).toBe('seat');
         expect(hitTest([seat, label, group], 2, 5)?.key).toBe('label');
         expect(hitTest([seat, group], 50, 5, { interactive: true })?.key).toBe('row');
-        expect(hitTest([hidden, cover], 105, 5, { interactive: true })).toBeUndefined();
+        expect(hitTest([under, cover], 105, 5, { interactive: true })?.key).toBe('under');
+        expect(hitTest([under, plain], 105, 5, { interactive: true })?.key).toBe('under');
+        expect(hitTest([under, gone], 105, 5, { interactive: true })?.key).toBe('under');
+        expect(hitTest([cover], 105, 5, { interactive: true })).toBeUndefined();
+        // Without the option the shape on top is still what is drawn there
+        expect(hitTest([under, cover], 105, 5)?.key).toBe('cover');
     });
 
     it('should skip a shape scaled to nothing', () => {

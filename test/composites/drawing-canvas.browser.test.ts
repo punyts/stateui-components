@@ -274,7 +274,8 @@ describe('drawing with the canvas renderer in Chromium', () => {
 
         // Assert
         expect(hits).toEqual(points.map(([x, y]) => svg.hit(x, y)?.path));
-        expect(hits.slice(0, 3)).toEqual([`${ROOT}.over`, `${ROOT}.under`, undefined]);
+        // The non-interactive cover is passed through to the shape below it, as SVG's pointer-events: none does (G1.7c)
+        expect(hits.slice(0, 3)).toEqual([`${ROOT}.over`, `${ROOT}.under`, `${ROOT}.under`]);
         expect(canvas.boundsOf(`${ROOT}.over`)).toEqual({ x: 30, y: 30, width: 20, height: 20 });
         canvas.dispose();
         svg.dispose();
