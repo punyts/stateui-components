@@ -1,0 +1,53 @@
+{
+    "summary": "A website frame: a header with page links and a call to action, and a large footer whose columns stack on a phone",
+    "purposes": ["marketing website with a big footer", "landing site with pages and a sign up button", "company website frame"],
+    "tree": {
+        "component": "page",
+        "navPosition": "none",
+        "maxWidth": "xl",
+        "_title": "Our company",
+        "header": {
+            "component": "panel",
+            "layout": { "type": "grid", "cols": 3, "collapseBelow": "md" },
+            "children": {
+                "title": { "component": "text", "textRole": "title", "_text": "Our company" },
+                "menu": {
+                    "component": "nav",
+                    "orientation": "horizontal",
+                    "children": { "home": { "component": "menuItem", "_label": "Home", "screen": "home" } }
+                },
+                "actions": { "component": "toolbar", "align": "end", "children": { "start": { "component": "button", "_title": "Get started" } } }
+            }
+        },
+        "children": { "screen": { "component": "outlet" } },
+        "footer": {
+            "component": "panel",
+            "layout": { "type": "grid", "cols": 3, "collapseBelow": "md" },
+            "children": {
+                "about": {
+                    "component": "panel",
+                    "_title": "About",
+                    "children": { "text": { "component": "text", "element": "p", "_text": "Who we are and what we make." } }
+                },
+                "links": {
+                    "component": "panel",
+                    "_title": "Links",
+                    "children": { "home": { "component": "link", "_text": "Home", "screen": "home" } }
+                },
+                "contact": {
+                    "component": "panel",
+                    "_title": "Contact",
+                    "children": { "email": { "component": "text", "element": "p", "_text": "hello@example.com" } }
+                }
+            }
+        }
+    },
+    "slots": {
+        "menu": { "path": "header.children.menu.children", "description": "One menuItem per page: set its screen to the screen name and its _label" },
+        "headerActions": { "path": "header.children.actions.children", "description": "The call to action at the end of the header: give the button an on press" },
+        "footer": { "path": "footer.children", "description": "The columns of the footer, each a panel with a _title and links or text" }
+    },
+    "params": {
+        "title": { "type": "string", "default": "Our company", "paths": ["_title", "header.children.title._text"], "description": "The name of the site in the header" }
+    }
+}
