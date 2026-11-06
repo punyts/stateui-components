@@ -2,11 +2,12 @@ import { report } from '@punyts/core';
 import type { ControllerContext } from '@punyts/stateui';
 import { resolveColor } from '../shared/drawing/paint.js';
 import { createField } from '../shared/field/field.js';
-import { isFileRef } from '../shared/field/files.js';
+import { isFileRef, MAX_FILE_SIZE, transferCode } from '../shared/field/files.js';
+import type { FileRef } from '../shared/field/files.js';
 import { createPainter } from '../shared/paint/draw.js';
 import type { Painter } from '../shared/paint/draw.js';
 import { clampBrushSize, clampDimension, clampSizes } from '../shared/paint/size.js';
-import { isPaintTool, PAINT_TOOLS } from '../shared/paint/strokes.js';
+import { isPaintTool, PAINT_TOOLS, strokeColor } from '../shared/paint/strokes.js';
 import type { PaintTool } from '../shared/paint/strokes.js';
 
 /** The width and height of a painting when the node gives none that can be used */
@@ -21,6 +22,24 @@ const TOOL_ICONS: Readonly<Record<PaintTool, string>> = { brush: 'brush', eraser
 
 /** The widest dot a size button shows, in pixels */
 const MAX_DOT = 16;
+
+/** The event that hands a file to the host's `transferFile` hook (the dispatcher of `@punyts/stateui-app` answers it) */
+const FILE_TRANSFER_EVENT = 'ui-file-transfer';
+
+/** The event that gives a stored file back through the host's `releaseFile` hook (G2.5; unanswered when there is none) */
+const FILE_RELEASE_EVENT = 'ui-file-release';
+
+/** How long painting must pause before the field saves, in milliseconds */
+const SAVE_DELAY_MS = 1500;
+
+/** The codes a failed save sets as the field's error; any other failure is `internal` */
+const SAVE_CODES: readonly string[] = ['too_large', 'unsupported_type', 'quota', 'offline', 'internal'];
+
+/** The name of the saved file when `_label` gives none */
+const DEFAULT_NAME = 'painting.png';
+
+/** Characters a file name cannot hold: control characters and the path and wildcard characters */
+const NAME_UNSAFE = /[\u0000-\u001f\u007f/\\:*?"<>|]+/g;
 
 /** One button of the toolbar as the view draws it; `pressed` is the `aria-pressed` text */
 interface ToolButton {
@@ -62,11 +81,26 @@ const fill = (template: unknown, value: string): string => (typeof template === 
  * buttons and the commands `undo`, `redo` and `clear` work the stroke log; `clear` also empties `value`.
  *
  * Pixels never enter the store: the field writes only its runtime properties (the button rows, `dirty`, `error`, ...)
- * and `value`, the reference `{ id, name, size, type }` of a saved PNG (saving is G2.8; an empty object until then).
- * `dirty` is `true` while the canvas holds strokes that are not saved, so here whenever it is not blank. A disabled,
+ * and `value`, the reference `{ id, name, size, type }` of the saved PNG, or an empty object. `dirty` is `true` while
+ * the painting has changed since it was last saved (with no file in `value`: while it is not blank). A disabled,
  * readonly or locked field draws nothing and its buttons are disabled; the canvas takes no keyboard input. `required`
  * fails while `value` holds no file reference. A change of `value` raises `changed` with it (beside the field base's
- * `change`, which a form listens for). A change of `width` or `height` starts a new, empty painting at the new size
+ * `change`, which a form listens for). A change of `width` or `height` starts a new, empty painting at the new size.
+ *
+ * Saving (G2.8): when painting pauses for `SAVE_DELAY_MS` (after a stroke, an undo or a redo) or focus leaves the field,
+ * and the field is `dirty`, the canvas is encoded as a PNG (`toBlob('image/png')`, over the `background` colour when
+ * there is one, else transparent) and handed to the host as a `File` named `<_label>.png` (`painting.png` without a
+ * label) with the bubbling, composed `ui-file-transfer` event, which the dispatcher answers with `hooks.transferFile`.
+ * The next stroke aborts a pending save through its `AbortSignal`; the next pause starts it again. On success `value`
+ * becomes the returned reference, `dirty` goes `false`, `changed` is raised, and the file it replaced is given back
+ * with the bubbling, composed `ui-file-release` event (`hooks.releaseFile`; an event nobody answers leaves the file to
+ * the host's sweep). A PNG over 10 MiB fails as `too_large` before it is sent; a rejection sets the error to its code
+ * (`too_large`, `unsupported_type`, `quota`, `offline`, else `internal`), and so does a host with no hook
+ * (`offline`). A failed save keeps the strokes and `dirty`, and the field does not try again until the painting
+ * changes. `clear` empties `value` and gives back the file it held; a reset aborts the save, restores the baseline
+ * value and gives back every file the field saved that the restored value does not reference; dispose aborts the save,
+ * and no late result reaches the store. Only files this field saved are given back: a file the value held when the
+ * field mounted (the document's) may come back with a reset, so it is left to the host's sweep
  */
 export default function controller(context: ControllerContext) {
     const { element, store, basePath } = context;
@@ -154,20 +188,83 @@ export default function controller(context: ControllerContext) {
         reportTools();
     };
 
-    /** Writes `dirty`: strokes on the canvas that are not saved (nothing is saved before G2.8, so a painting that is not blank) */
+    /** Counts the changes of the painting (strokes, undo, redo, clear, a new painting); `saved` is the count `value` shows */
+    let revision = 0;
+    let saved = 0;
+    /** The pause before the next save */
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    /** The save under way: aborting it stops the encoding and the transfer */
+    let saving: AbortController | undefined;
+    /** The code of the last failed save, or an empty string; the field does not try again until the painting changes */
+    let failure = '';
+    /** The ids of the files this field saved and has not given back */
+    const owned = new Set<string>();
+
+    /** Whether the painting changed since it was last saved: with no file in `value`, whether it is not blank */
+    const isDirty = (): boolean => {
+        if (painter === undefined) return false;
+        return isFileRef(store.get<unknown>(valuePath)) ? revision !== saved : !painter.blank;
+    };
+    /** Writes `dirty` from `isDirty` */
     const syncDirty = (): void => {
-        const dirty = painter !== undefined && !painter.blank;
+        const dirty = isDirty();
         if (store.get<unknown>(dirtyPath) !== dirty) store.set(dirtyPath, dirty);
     };
 
+    /** Stops the pause timer and aborts the save under way */
+    const cancelSave = (): void => {
+        if (timer !== undefined) clearTimeout(timer);
+        timer = undefined;
+        saving?.abort();
+        saving = undefined;
+    };
+
+    /**
+     * Gives a stored file back with `ui-file-release`, one task later, so the write of the value that let go of it
+     * reaches the host first. A failed or unanswered release leaves the file to the host's sweep
+     */
+    const release = (id: string): void => {
+        owned.delete(id);
+        setTimeout(() => {
+            const detail = {
+                id,
+                respond: (result: Promise<void>): void => {
+                    result.catch(() => undefined);
+                }
+            };
+            element.dispatchEvent(new CustomEvent(FILE_RELEASE_EVENT, { detail, bubbles: true, composed: true }));
+        }, 0);
+    };
+    /** The id of the file `value` holds, or undefined. An id, not the object: the store writes an object value into the one it holds, key by key */
+    const heldId = (): string | undefined => {
+        const value = store.get<unknown>(valuePath);
+        return isFileRef(value) ? value.id : undefined;
+    };
+    /** Gives back every file this field saved except the one `value` holds now */
+    const releaseUnheld = (): void => {
+        const kept = heldId();
+        for (const id of [...owned]) if (id !== kept) release(id);
+    };
+
     const field = createField(context, 'value', {
-        entryRule: () => (read('required') === true && !isFileRef(store.get<unknown>(valuePath)) ? 'required' : ''),
+        entryRule: () => {
+            if (failure !== '') return failure;
+            return read('required') === true && !isFileRef(store.get<unknown>(valuePath)) ? 'required' : '';
+        },
         exclusive: true,
         empty: () => ({}),
-        //a reset (the command, or a form's) starts a new painting: the strokes and their undo go
+        //a reset (the command, or a form's) aborts the save and starts a new painting: the strokes and their undo go. Once
+        //the baseline value is back, the files the field saved that it does not hold are given back
         onReset: () => {
             gesture = undefined;
+            cancelSave();
+            failure = '';
             painter?.reset();
+            revision += 1;
+            saved = revision;
+            queueMicrotask(() => {
+                if (!disposed) releaseUnheld();
+            });
         }
     });
 
@@ -181,6 +278,10 @@ export default function controller(context: ControllerContext) {
         painter?.dispose();
         painter = undefined;
         gesture = undefined;
+        //a new painting: a save of the old one stops, and the value stands for the new, blank painting
+        cancelSave();
+        revision += 1;
+        saved = revision;
         surface.width = width;
         surface.height = height;
         const canvas = surface;
@@ -204,30 +305,155 @@ export default function controller(context: ControllerContext) {
         return { x: (event.clientX - box.left) * scaleX, y: (event.clientY - box.top) * scaleY };
     };
 
+    /** The name of the saved file: `<_label>.png`, or `painting.png` when the label gives no usable name */
+    const fileName = (): string => {
+        const label = read('_label');
+        const base = typeof label === 'string' ? label.replace(NAME_UNSAFE, ' ').trim().slice(0, 100).trim() : '';
+        return base === '' ? DEFAULT_NAME : `${base}.png`;
+    };
+
+    /** Encodes the painting as a PNG: the visible canvas drawn over the `background` colour (none: transparent) */
+    const encode = (canvas: HTMLCanvasElement): Promise<Blob> =>
+        new Promise((resolve, reject) => {
+            const flat = canvas.ownerDocument.createElement('canvas');
+            flat.width = canvas.width;
+            flat.height = canvas.height;
+            const context2d = flat.getContext('2d');
+            if (context2d === null) {
+                reject({ code: 'internal' });
+                return;
+            }
+            const view = canvas.ownerDocument.defaultView;
+            const background = strokeColor(read('background'), (name) => view?.getComputedStyle(canvas).getPropertyValue(name));
+            if (background !== undefined) {
+                context2d.fillStyle = background;
+                context2d.fillRect(0, 0, flat.width, flat.height);
+            }
+            context2d.drawImage(canvas, 0, 0);
+            flat.toBlob((blob) => (blob === null ? reject({ code: 'internal' }) : resolve(blob)), 'image/png');
+        });
+
+    /** Raises `ui-file-transfer`; the promise rejects with `offline` when nothing answers (the host has no hook) */
+    const hand = (file: File, signal: AbortSignal): Promise<unknown> =>
+        new Promise((resolve, reject) => {
+            let answered = false;
+            const detail = {
+                file,
+                signal,
+                respond: (result: Promise<unknown>): void => {
+                    answered = true;
+                    result.then(resolve, reject);
+                }
+            };
+            element.dispatchEvent(new CustomEvent(FILE_TRANSFER_EVENT, { detail, bubbles: true, composed: true }));
+            if (!answered) reject({ code: 'offline' });
+        });
+
+    /** A save failed: the error shows its code, the strokes and `dirty` stay */
+    const fail = (code: string): void => {
+        failure = SAVE_CODES.includes(code) ? code : 'internal';
+        field.validate();
+        syncDirty();
+    };
+
+    /** Saves the painting when it is dirty and no stroke, save or earlier failure is in the way */
+    const save = (): void => {
+        if (timer !== undefined) clearTimeout(timer);
+        timer = undefined;
+        const canvas = surface;
+        if (disposed || failure !== '' || gesture !== undefined || saving !== undefined || canvas === undefined || !isDirty()) return;
+        const at = revision;
+        const abort = new AbortController();
+        saving = abort;
+        const name = fileName();
+        encode(canvas)
+            .then((blob) => {
+                if (abort.signal.aborted) return undefined;
+                if (blob.size > MAX_FILE_SIZE) throw { code: 'too_large' };
+                return hand(new File([blob], name, { type: 'image/png' }), abort.signal);
+            })
+            .then(
+                (result) => {
+                    if (saving === abort) saving = undefined;
+                    if (abort.signal.aborted || disposed) {
+                        //a file that arrived after its save was stopped is held by nothing: give it back
+                        if (!disposed && isFileRef(result)) release(result.id);
+                        return;
+                    }
+                    if (!isFileRef(result)) {
+                        fail('internal');
+                        return;
+                    }
+                    const previous = heldId();
+                    const reference: FileRef = { id: result.id, name: result.name, size: result.size, type: result.type };
+                    owned.add(reference.id);
+                    saved = at;
+                    failure = '';
+                    store.set(valuePath, reference as never);
+                    syncDirty();
+                    if (read('error') !== '') field.validate();
+                    if (previous !== undefined && previous !== reference.id && owned.has(previous)) release(previous);
+                },
+                (error: unknown) => {
+                    if (saving === abort) saving = undefined;
+                    if (abort.signal.aborted || disposed) return;
+                    fail(transferCode(error));
+                }
+            );
+    };
+
+    /** Starts the pause after which the field saves */
+    const schedule = (): void => {
+        if (timer !== undefined) clearTimeout(timer);
+        timer = disposed ? undefined : setTimeout(save, SAVE_DELAY_MS);
+    };
+
+    /** The painting changed: a save under way is stale, an earlier failure may be tried again, and the pause starts */
+    const changed = (): void => {
+        revision += 1;
+        failure = '';
+        cancelSave();
+        syncDirty();
+        schedule();
+    };
+
     const finish = (): void => {
         if (gesture === undefined) return;
         const { canvas, pointerId } = gesture;
         gesture = undefined;
-        painter?.end();
+        const stroke = painter?.end();
         if (canvas.hasPointerCapture?.(pointerId)) canvas.releasePointerCapture(pointerId);
-        syncDirty();
+        if (stroke !== undefined) changed();
+        else syncDirty();
     };
 
     const undo = (): void => {
         gesture = undefined;
-        if (ensurePainter()?.undo()) syncDirty();
+        if (ensurePainter()?.undo()) changed();
     };
     const redo = (): void => {
         gesture = undefined;
-        if (ensurePainter()?.redo()) syncDirty();
+        if (ensurePainter()?.redo()) changed();
     };
-    /** Wipes the painting (one undoable entry) and empties `value` through the field base */
+    /** Wipes the painting (one undoable entry), empties `value` through the field base and gives back the file it held */
     const clear = (): void => {
         gesture = undefined;
-        ensurePainter()?.clear();
+        const previous = heldId();
+        cancelSave();
+        if (ensurePainter()?.clear()) revision += 1;
+        failure = '';
         baseClear?.();
         syncDirty();
+        if (previous !== undefined && owned.has(previous)) release(previous);
     };
+
+    /** Focus left the field (not only moved inside it): save now */
+    const onFocusOut = (event: Event): void => {
+        const next = (event as FocusEvent).relatedTarget;
+        if (next instanceof Node && (next === element || element.contains(next) || element.shadowRoot?.contains(next) === true)) return;
+        save();
+    };
+    element.addEventListener('focusout', onFocusOut);
 
     //the command object belongs to the field base: `clear` is wrapped so it wipes the painting too, `undo` and `redo` are added
     const host = element as Element & CommandHost;
@@ -321,6 +547,8 @@ export default function controller(context: ControllerContext) {
             if (engine === undefined) return;
             finish();
             if (!engine.begin({ tool: currentTool(), color: currentColor(), size: currentSize() }, pointOf(canvas, event))) return;
+            //a new stroke stops a pending save; the pause after it starts the save again
+            cancelSave();
             event.preventDefault();
             gesture = { pointerId: event.pointerId, canvas };
             try {
@@ -353,6 +581,8 @@ export default function controller(context: ControllerContext) {
         dispose: () => {
             disposed = true;
             gesture = undefined;
+            cancelSave();
+            element.removeEventListener('focusout', onFocusOut);
             store.off(toolbarPaths, drawToolbar);
             store.off([valuePath, `${valuePath}.$all`, dirtyPath], onValue);
             store.off(sizePaths, onResize);
