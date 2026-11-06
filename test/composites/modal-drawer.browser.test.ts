@@ -146,7 +146,9 @@ describe.each(['modal', 'drawer'])('%s in Chromium', (name) => {
             }
         });
         const dialog = findByTag(root(mounted.element), `ui-${name}`) as Element;
-        const button = findByTag(root(mounted.element), 'ui-button') as HTMLElement;
+        // The native button, not the host: the panel body stacks its children as a column, which stretches the
+        // button's host across the panel while the button keeps its own width
+        const button = part<HTMLButtonElement>(findByTag(root(mounted.element), 'ui-button') as Element, 'button');
         const seen = counts(dialog);
 
         // Act
