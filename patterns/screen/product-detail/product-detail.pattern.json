@@ -1,6 +1,6 @@
 {
     "summary": "The name, price and description of one product, with a button to add it to the bag",
-    "purposes": ["show the details of one product", "open a product page", "add one item to the shopping bag"],
+    "purposes": ["show the details of one product", "open a product page", "product page of an online store", "add one item to the shopping bag"],
     "tree": {
         "component": "panel",
         "_title": "Product",

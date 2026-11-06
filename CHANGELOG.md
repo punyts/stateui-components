@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- **Pattern purpose** (S2.5 of the search-first epic 2): `product-detail` gains the purpose "product page of an online store", so the need "online store product page" ranks it above `product-grid` in `ui_patterns_search`.
 - **Commerce screen patterns** (S2.3 of the search-first epic 2): `product-grid`, `product-detail`, `bag-and-checkout` (a `stepper` and `recordList`s through bag, details and payment) and `sign-in-form` under `patterns/screen/`, each with slots, a title param and dataset params of type `path`. Tests in `test/patterns.test.ts` and `test/patterns/commerceScreens.browser.test.ts`; README section Patterns.
 - **Patterns folder** (S2.1b of the search-first epic 2): the build passes `patterns/` (next to `components/`) to `buildLibrary` as `patternsDir` when that folder exists, so its patterns go into the catalog's `patterns`; without it `patterns` is `[]`. Test in `test/patterns.test.ts`.
 - **Phone-width fixes** found in the measured builds: `segmented` is never wider than the space it has and its segments go on to a second line instead of past the edge (`flex-wrap: wrap`, `max-inline-size: 100%`), so a category filter of six segments shows all of them at 390px; a `toolbar` wraps when the layout it sits in is narrower than 480px, and no item is wider than the bar. Wider screens are unchanged.
