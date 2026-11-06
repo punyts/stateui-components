@@ -47,7 +47,15 @@ describe('image shape', () => {
         expect(result).toEqual(['SUI-STATE-CONDITION']);
     });
 
-    it.each(['http://example.com/a.png', 'https://example.com/a.png', '//example.com/a.png', 'javascript:alert(1)', '#top', 'images/a.png'])(
+    it('should accept an https picture', () => {
+        // Act
+        const result = codes({ component: 'image', src: 'https://example.com/a.png', _alt: 'A lamp' });
+
+        // Assert
+        expect(result).toEqual([]);
+    });
+
+    it.each(['http://example.com/a.png', '//example.com/a.png', 'javascript:alert(1)', '#top', 'images/a.png'])(
         'should report SUI-STATE-INVALID for the src %s',
         (src) => {
             // Act

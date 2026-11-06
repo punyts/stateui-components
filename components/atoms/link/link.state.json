@@ -6,7 +6,7 @@
     "shared": { "tone": { "default": "accent" } },
     "properties": {
         "_text": { "type": "string", "kind": "content", "default": "Link text" },
-        "href": { "type": "url", "default": "#", "validators": { "pattern": "^(?!data:)" } },
+        "href": { "type": "url", "default": "#", "validators": { "pattern": "^(?!data:|https:)" } },
         "screen": { "type": "string", "default": "" },
         "params": { "type": "object", "default": {} }
     }

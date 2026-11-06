@@ -1,10 +1,10 @@
 {
-    "summary": "A picture shown from inline data, with a fit, an aspect ratio and a corner radius, on the image.fill backdrop",
+    "summary": "A picture from an https URL or inline data, with a fit, an aspect ratio and a corner radius, on the image.fill backdrop",
     "category": "content",
     "purposes": ["show a picture or photo", "display a product photo", "show a thumbnail with a fixed aspect ratio", "crop a picture to fit a frame"],
     "tokens": { "fill": "{color.surface.sunken}" },
     "properties": {
-        "src": { "type": "url", "default": "", "validators": { "pattern": "^(?:data:|$)" } },
+        "src": { "type": "url", "default": "", "validators": { "pattern": "^(?:data:|https:|$)" } },
         "_alt": { "type": "string", "kind": "content", "requiredWhen": { "property": "decorative", "equals": false } },
         "decorative": { "type": "boolean", "default": false },
         "fit": { "type": "string", "values": ["cover", "contain"], "default": "cover", "reflect": true },

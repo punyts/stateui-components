@@ -6,7 +6,7 @@
     "properties": {
         "shape": { "type": "string", "values": ["circle", "square"], "default": "circle", "reflect": true },
         "_name": { "type": "string", "kind": "content", "default": "Sample name" },
-        "src": { "type": "url", "default": "", "validators": { "pattern": "^(?:data:|$)" } },
+        "src": { "type": "url", "default": "", "validators": { "pattern": "^(?:data:|https:|$)" } },
         "initials": { "type": "string", "default": "", "runtime": true }
     }
 }

@@ -68,9 +68,12 @@ describe('failingRangeRule', () => {
         expect(failingRangeRule(range('2026-03-01', '2026-03-02'), { ...none, min: '2026-03-02', minDays: 5 })).toBe('min');
     });
 
-    it('should judge a reversed range by its days', () => {
+    it('should fail order when the end is before the start, after required and before the other rules', () => {
         // Assert
-        expect(failingRangeRule(range('2026-03-09', '2026-03-01'), { ...none, maxDays: 5 })).toBe('maxDays');
+        expect(failingRangeRule(range('2026-03-09', '2026-03-01'), none)).toBe('order');
+        expect(failingRangeRule(range('2026-03-09', '2026-03-01'), { ...none, maxDays: 5, min: '2026-03-05' })).toBe('order');
+        expect(failingRangeRule(range('2026-03-01', '2026-03-01'), none)).toBe('');
+        expect(failingRangeRule(range('2026-03-09', ''), { ...none, required: true })).toBe('required');
     });
 });
 

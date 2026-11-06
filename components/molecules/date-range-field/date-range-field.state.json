@@ -49,6 +49,7 @@
             "default": {
                 "required": "Enter a start and an end date",
                 "format": "Enter a valid date",
+                "order": "The end date is before the start date",
                 "min": "Too early",
                 "max": "Too late",
                 "minDays": "The range is too short",
