@@ -1,12 +1,13 @@
 import { report } from '@punyts/core';
 import type { ControllerContext } from '@punyts/stateui';
 import type { JsonValue } from '@punyts/stateui-app/core';
+import { lockUnlinkedCopies } from '../shared/drawing/drag.js';
 import { createDrawingRenderer, drawingIssueError, isRendererKind } from '../shared/drawing/render.js';
-import type { DrawingIssue, DrawingRenderer, RendererKind, ShapeEvent } from '../shared/drawing/render.js';
+import type { DrawingIssue, DrawingRenderer, RendererKind, ShapeEvent, ShapeMove } from '../shared/drawing/render.js';
 import '../shared/drawing/canvasRenderer.js';
 import '../shared/drawing/svgRenderer.js';
-import { expandRepeats } from '../shared/drawing/rows.js';
-import { readShapeTree, shapeProperties } from '../shared/drawing/tree.js';
+import { expandRepeats, targetOf } from '../shared/drawing/rows.js';
+import { locateShape, readShapeTree, shapeProperties } from '../shared/drawing/tree.js';
 import type { ShapeTree } from '../shared/drawing/tree.js';
 
 const rendererOf = (value: unknown): RendererKind => (isRendererKind(value) ? value : 'svg');
@@ -39,6 +40,12 @@ const hasInteractive = (shapes: readonly ShapeTree[]): boolean =>
  * a copy's record key, the position in drawing units). The dispatcher runs the `on` entry of the shape `detail.shape`
  * names (for a repeat copy, the row template's, with `$row` at the record). While any shape is interactive the drawing
  * is a `group` rather than an `img`, since an image hides its children from assistive technology
+ *
+ * Drag (G1.7b): the renderer moves a dragged shape itself and writes nothing; on release (and for each arrow key) it
+ * hands the new position to `onMove`, and the controller writes one value per axis: to the shape's own `x` and `y`
+ * (where a `<-x` link on the node lands, since a linked property is a store alias of its target), or for a repeat copy
+ * to the record path the row binder reports (`targetOf`). A copy whose `x` or `y` is a literal has no such path: it is
+ * not draggable, and the repeat is reported once (`SUI-RUN-DRAW`). The renderer raises `dragEnd` after the write
  */
 export default function controller({ element, store, basePath }: ControllerContext) {
     const childrenPath = `${basePath}.children`;
@@ -60,6 +67,8 @@ export default function controller({ element, store, basePath }: ControllerConte
     let repeatPaths: string[] = [];
     /** The repeats whose cut has been reported; one under its cap again is forgotten, so a later cut reports again */
     const cut = new Set<string>();
+    /** The tree last handed to the renderer: a move's shape is found in it (a copy as the row binder made it, for `targetOf`) */
+    let drawnTree: readonly ShapeTree[] = [];
 
     const onIssue = (issue: DrawingIssue): void => {
         const error = drawingIssueError(issue);
@@ -82,6 +91,7 @@ export default function controller({ element, store, basePath }: ControllerConte
                 reducedMotion: () => false,
                 readProperty: read,
                 onEvent: raise,
+                onMove: write,
                 onIssue
             });
         } catch {
@@ -94,6 +104,24 @@ export default function controller({ element, store, basePath }: ControllerConte
         if (disposed) return;
         const detail = { shape: event.shape, key: event.key, x: event.x, y: event.y };
         element.dispatchEvent(new CustomEvent(event.name, { detail, bubbles: true, composed: true }));
+    };
+
+    /**
+     * Writes the position a drag or an arrow key gave a shape, one write per axis: to the node's own property (a link
+     * on it is an alias, so the write reaches the link's target), or for a shape of a repeat copy to its record path
+     */
+    const write = (move: ShapeMove): void => {
+        if (disposed) return;
+        const chain = locateShape(drawnTree, move.shape);
+        const shape = chain?.[chain.length - 1];
+        if (chain === undefined || shape === undefined) return;
+        const inCopy = chain.slice(0, -1).some((ancestor) => ancestor.kind === 'drawRepeat');
+        for (const axis of ['x', 'y'] as const) {
+            const value = move[axis];
+            if (value === undefined) continue;
+            const target = inCopy ? targetOf(shape, axis) : `${shape.path}.${axis}`;
+            if (target !== undefined) store.set(target, value);
+        }
     };
 
     /** The role of the drawing: `group` while a shape is interactive, so the shapes are reached as buttons, else `img` */
@@ -149,6 +177,20 @@ export default function controller({ element, store, basePath }: ControllerConte
         return expanded;
     };
 
+    /**
+     * Makes the draggable shapes of repeat copies that have no record path for an axis not draggable, and reports each
+     * such repeat once (`SUI-RUN-DRAW`): a copy is not a node, so its literal `x` or `y` has nowhere to be written
+     */
+    const lockCopies = (shapes: readonly ShapeTree[]): readonly ShapeTree[] => {
+        const { shapes: locked, unlinked } = lockUnlinkedCopies(shapes);
+        for (const { path, axis } of unlinked) {
+            const reason = `the copies' "${axis}" is not linked to a field of their record ($row), so a copy cannot be dragged`;
+            const error = drawingIssueError({ code: 'SUI-RUN-DRAW', path, reason });
+            reportOnce(`${path}\u0000drag`, error.message, error.code, path);
+        }
+        return locked;
+    };
+
     const draw = (): void => {
         scheduled = false;
         if (disposed) return;
@@ -168,7 +210,8 @@ export default function controller({ element, store, basePath }: ControllerConte
                 const what = node.component === '' ? 'it is not a node' : `component "${node.component}" is not a 2D shape`;
                 onIssue({ code: 'SUI-RUN-DRAW', path: node.path, reason: `${what}, so it is not drawn` });
             }
-            const tree = bindRepeats(shapes);
+            const tree = lockCopies(bindRepeats(shapes));
+            drawnTree = tree;
             renderer.update(tree);
             syncRole(tree);
             shown = renderer.drawn();
@@ -218,6 +261,7 @@ export default function controller({ element, store, basePath }: ControllerConte
             repeatPaths = [];
             renderer?.dispose();
             renderer = undefined;
+            drawnTree = [];
         }
     };
 }

@@ -1,6 +1,7 @@
 import { IDENTITY, boundsAt, fitViewBox, hitTest, localBounds, multiply, readFit, readViewBox, toDrawing, transformBounds, transformOf } from './geometry.js';
 import type { Bounds, Matrix, ViewBox, Viewport } from './geometry.js';
 import { buildPath } from './canvasPath.js';
+import { createShapeDrag, dragAxes } from './drag.js';
 import { createPaintResolver, placeGradient } from './paint.js';
 import type { Paint, PaintResolver } from './paint.js';
 import { registerDrawingRenderer } from './render.js';
@@ -78,6 +79,29 @@ function unschedule(view: Window | null, paint: () => void): void {
     if (view !== null) frames.get(view)?.dirty.delete(paint);
 }
 
+/** True for a shape attribute a proxy carries: `role`, `tabindex` and `data-*` (not the renderer's own `data-shape-*`) */
+const isProxyAttr = (name: string): boolean => name === 'role' || name === 'tabindex' || (name.startsWith('data-') && !name.startsWith('data-shape-'));
+
+/**
+ * Writes the proxy attributes of a shape's `attrs` (G2.3: the chart's marks keep `role`, the roving `tabindex` and
+ * their `data-*` on canvas) to its proxy, only those that changed since the last write, as the SVG renderer writes
+ * `attrs`, so a value the feeder set on the element itself (the chart's tab stop) stays until the tree changes it.
+ * Gives back what was written
+ */
+function writeProxyAttrs(element: Element, written: Readonly<Record<string, string>>, attrs: Readonly<Record<string, string>> | undefined): Readonly<Record<string, string>> {
+    const next: Record<string, string> = {};
+    for (const [name, value] of Object.entries(attrs ?? {})) {
+        if (!isProxyAttr(name)) continue;
+        next[name] = value;
+        if (written[name] !== value) element.setAttribute(name, value);
+    }
+    for (const name of Object.keys(written)) if (!(name in next)) element.removeAttribute(name);
+    return next;
+}
+
+/** True when a shape of the tree (inside groups and repeats too) can be dragged (G1.7b) */
+const hasDraggable = (shapes: readonly ShapeTree[]): boolean => shapes.some((shape) => dragAxes(shape).length > 0 || hasDraggable(shape.children));
+
 const isIdentity = (m: Matrix): boolean => m.every((value, index) => Math.abs(value - IDENTITY[index]!) < 1e-12);
 
 /** The geometry of one leaf shape, read and checked */
@@ -98,18 +122,26 @@ type Geometry =
  * at most 2, and a resize draws again at once. Token colours and fonts are read from the canvas's computed style once
  * per draw, so the redraw the feeder asks for on a theme or mode switch recolours the bitmap. `update` draws in the next
  * animation frame, shared by every canvas drawing of the page, so many updates in one frame draw once. A shape with a
- * value it cannot draw is left out and reported once (`SUI-RUN-DRAW`) as in SVG. `hit` and `boundsOf` answer from
+ * value it cannot draw is left out and reported once (`SUI-RUN-DRAW`) as in SVG, and so is a canvas that gives no 2D
+ * context (reported once under the feeder's `path`). `hit` and `boundsOf` answer from
  * `geometry.ts`, as the SVG renderer does.
  *
  * Events (G1.7c): each interactive shape (not hidden) gets a proxy `button` in a layer the renderer adds before the
  * canvas (class `proxies`), in drawing order, with `data-shape-path`, `data-shape-kind` and `aria-label` from `_label`,
- * kept in step with the tree (added, removed and moved, never recreated). Each is placed over the shape's bounds in CSS
+ * kept in step with the tree (added, removed and moved, never recreated). A proxy also carries the shape's `role`,
+ * `tabindex` and `data-*` `attrs` (written when they change, as SVG writes them), so a feeder's marks keep their role,
+ * roving tab stop and data on canvas (G2.3, the chart); its other `attrs` are ignored. Each is placed over the shape's bounds in CSS
  * pixels (cut to the canvas) with `opacity: 0` and `pointer-events: none`, so it has a real box that `ui_interact`
  * measures, a screen reader and the tab order reach it, and `elementOf` gives it. A click on a proxy (`element.click()`)
  * or Enter or Space on a focused one is `press` at the shape's centre (held keys do not repeat it). A pointer click on
  * the canvas is `press` for the shape `hit()` finds there, which passes through shapes that are not interactive as the
  * SVG renderer does; the pointer entering an interactive shape is `hover`, once per entry. A shape left out of the last draw
- * raises nothing and its proxy is hidden. Every value is set through the CSSOM, never a `style` attribute
+ * raises nothing and its proxy is hidden. Every value is set through the CSSOM, never a `style` attribute.
+ *
+ * Drag (G1.7b, `createShapeDrag` of `drag.ts`, as in SVG): a press on a draggable interactive shape captures the
+ * pointer on the canvas; the shape (and its proxy) is drawn where the pointer takes it in the next frame, nothing is
+ * written, and the release hands the new `x` and `y` to `onMove` and raises `dragEnd`. Escape or a pointer cancel puts
+ * it back; the arrow keys move a focused proxy's shape by `step` (Shift ten)
  */
 export function createCanvasRenderer(target: Element, options: DrawingRendererOptions): CanvasDrawingRenderer {
     const document = target.ownerDocument;
@@ -135,7 +167,7 @@ export function createCanvasRenderer(target: Element, options: DrawingRendererOp
     /** The `drawn()` promises waiting for the next draw */
     let waiters: (() => void)[] = [];
     /** The proxy button of each interactive shape of the last update, by path, and what was written to it */
-    const proxies = new Map<string, { element: HTMLButtonElement; label: string; box: string; hidden: boolean }>();
+    const proxies = new Map<string, { element: HTMLButtonElement; label: string; box: string; hidden: boolean; attrs: Readonly<Record<string, string>> }>();
     const proxyPaths = new WeakMap<Element, string>();
     /** The interactive shapes the last draw drew, by path: the only ones that raise events */
     let shown = new Set<string>();
@@ -404,6 +436,8 @@ export function createCanvasRenderer(target: Element, options: DrawingRendererOp
         if (canvas.height !== height) canvas.height = height;
         const ctx = canvas.getContext('2d');
         if (ctx === null) {
+            // Without a context nothing can be drawn; said once, so the feeder reports it instead of showing a silent blank
+            issue({ code: 'SUI-RUN-DRAW', path: options.path ?? '', reason: 'the browser gives no 2D canvas context, so nothing is drawn' });
             settle();
             return;
         }
@@ -475,10 +509,11 @@ export function createCanvasRenderer(target: Element, options: DrawingRendererOp
                 style.pointerEvents = 'none';
                 element.setAttribute('data-shape-path', shape.path);
                 proxyPaths.set(element, shape.path);
-                proxy = { element, label: '', box: '', hidden: false };
+                proxy = { element, label: '', box: '', hidden: false, attrs: {} };
                 proxies.set(shape.path, proxy);
             }
             const { element } = proxy;
+            proxy.attrs = writeProxyAttrs(element, proxy.attrs, shape.attrs);
             if (element.getAttribute('data-shape-kind') !== shape.kind) element.setAttribute('data-shape-kind', shape.kind);
             const label = typeof shape.properties._label === 'string' ? shape.properties._label : '';
             if (proxy.label !== label) {
@@ -563,8 +598,32 @@ export function createCanvasRenderer(target: Element, options: DrawingRendererOp
         return shape === undefined || !shown.has(shape.path) ? undefined : { shape, x, y };
     };
 
+    /** Drags (G1.7b): the tree with the dragged shape moved is drawn in the next frame, its proxy placed with it */
+    const drag = createShapeDrag({
+        options,
+        toDrawing(event) {
+            if (size === undefined) return { x: 0, y: 0 };
+            const rect = canvas.getBoundingClientRect();
+            const [x, y] = toDrawing(viewportOf(size.width, size.height), event.clientX - rect.left, event.clientY - rect.top);
+            return { x, y };
+        },
+        show(next) {
+            if (disposed) return;
+            tree = next;
+            dirty = true;
+            if (view !== null) schedule(view, onFrame);
+        }
+    });
+
+    /** A press on a draggable interactive shape under the pointer may start a drag (the pointer is captured on the canvas) */
+    const onDown = (event: PointerEvent): void => {
+        const found = atPointer(event);
+        if (found !== undefined) drag.pointerDown(event, found.shape, canvas, canvas);
+    };
+
     /** A pointer click on the canvas is a press of the interactive shape under it; nothing on empty space */
     const onCanvasClick = (event: MouseEvent): void => {
+        if (drag.swallowClick()) return;
         const found = atPointer(event);
         if (found !== undefined) raise('press', found.shape, found);
     };
@@ -572,7 +631,7 @@ export function createCanvasRenderer(target: Element, options: DrawingRendererOp
     /** The pointer moved: `hover` when that puts it in an interactive shape it was not in */
     const onMove = (event: PointerEvent): void => {
         const found = atPointer(event);
-        canvas.style.cursor = found === undefined ? '' : 'pointer';
+        canvas.style.cursor = found === undefined ? '' : options.onMove !== undefined && dragAxes(found.shape).length > 0 ? 'move' : 'pointer';
         if (found?.shape.path === hovered) return;
         hovered = found?.shape.path;
         if (found !== undefined) raise('hover', found.shape, found);
@@ -598,14 +657,17 @@ export function createCanvasRenderer(target: Element, options: DrawingRendererOp
 
     /** Enter and Space on a focused proxy are a press, once per key press (held keys do not repeat it) */
     const onProxyKey = (event: KeyboardEvent): void => {
-        if (event.key !== 'Enter' && event.key !== ' ') return;
         const shape = proxyShape(event);
         if (shape === undefined) return;
+        // The arrow keys move a draggable shape
+        if (drag.key(event, shape)) return;
+        if (event.key !== 'Enter' && event.key !== ' ') return;
         // The button's own activation would click it too (and Enter repeats while held), so the key is handled here alone
         event.preventDefault();
         if (!event.repeat) raise('press', shape, centreOf(shape.path));
     };
 
+    canvas.addEventListener('pointerdown', onDown);
     canvas.addEventListener('click', onCanvasClick);
     canvas.addEventListener('pointermove', onMove);
     canvas.addEventListener('pointerleave', onLeave);
@@ -642,9 +704,13 @@ export function createCanvasRenderer(target: Element, options: DrawingRendererOp
         canvas,
         update(next: readonly ShapeTree[]): void {
             if (disposed) return;
-            tree = next;
+            // A drag in progress keeps its shape where the pointer has it
+            tree = drag.apply(next);
             dirty = true;
             syncProxies();
+            // A touch on a draggable shape drags it rather than scrolling the page
+            const touch = options.onMove !== undefined && hasDraggable(tree) ? 'none' : '';
+            if (canvas.style.touchAction !== touch) canvas.style.touchAction = touch;
             if (hovered !== undefined && !proxies.has(hovered)) hovered = undefined;
             if (view !== null) schedule(view, onFrame);
         },
@@ -671,6 +737,8 @@ export function createCanvasRenderer(target: Element, options: DrawingRendererOp
             disposed = true;
             observer?.disconnect();
             unschedule(view, onFrame);
+            drag.dispose();
+            canvas.removeEventListener('pointerdown', onDown);
             canvas.removeEventListener('click', onCanvasClick);
             canvas.removeEventListener('pointermove', onMove);
             canvas.removeEventListener('pointerleave', onLeave);

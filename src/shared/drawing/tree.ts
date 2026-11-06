@@ -31,7 +31,7 @@ export interface ShapeTree {
     readonly clip?: ShapeTree;
     /**
      * Attributes the SVG renderer writes as given (`class`, `role`, `tabindex`, `aria-*`, `data-*` only, see
-     * `isShapeAttr`); canvas ignores them. No shape has such a property, so a node cannot set them: only a feeder can
+     * `isShapeAttr`); canvas writes only `role`, `tabindex` and `data-*` to the proxy of an interactive shape. No shape has such a property, so a node cannot set them: only a feeder can
      */
     readonly attrs?: Readonly<Record<string, string>>;
 }

@@ -1,11 +1,12 @@
 import { IDENTITY, boundsAt, hitTest, preserveAspectRatioOf, readFit, readViewBox, transformOf } from './geometry.js';
 import type { Bounds, Matrix, ViewBox } from './geometry.js';
+import { createShapeDrag, dragAxes } from './drag.js';
 import { createPaintResolver } from './paint.js';
 import type { Gradient, Paint, PaintResolver } from './paint.js';
 import { registerDrawingRenderer } from './render.js';
 import type { DrawingIssue, DrawingRenderer, DrawingRendererOptions, ShapeEventName } from './render.js';
 import { ANCHORS, BASELINES, CAPS, JOINS, ShapeReader, Unusable, contentBox } from './shapeReader.js';
-import { shapeAttrs } from './tree.js';
+import { locateShape, shapeAttrs } from './tree.js';
 import type { ShapeKind, ShapeTree } from './tree.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -73,6 +74,12 @@ interface DrawnGradient {
  * first three); the shapes inside an interactive group take the group's. A click on it, or Enter or Space while it has
  * focus, is `press`; the pointer entering it is `hover`, once per entry. Each goes to `onEvent` with the shape's path
  * and key and the position in drawing units (the pointer's, or the shape's centre for a key or a click with no pointer)
+ *
+ * Drag (G1.7b, `createShapeDrag` of `drag.ts`): an interactive shape with `draggable` (and a feeder that passes
+ * `onMove`) carries `data-draggable` with its axes. A press on it captures the pointer, the element follows every move
+ * (only its own attributes are rewritten, nothing is written to the store), and the release hands the new `x` and `y`
+ * to `onMove` and raises `dragEnd`; the click that ends a drag is not a press. Escape or a pointer cancel puts it back.
+ * The arrow keys move a focused one by `step` (Shift ten), each key a finished move
  */
 export function createSvgRenderer(target: Element, options: DrawingRendererOptions): DrawingRenderer {
     const document = target.ownerDocument;
@@ -299,6 +306,8 @@ export function createSvgRenderer(target: Element, options: DrawingRendererOptio
             const label = shape.properties._label;
             if (typeof label === 'string' && label !== '') attrs['aria-label'] = label;
             attrs['pointer-events'] = 'visiblePainted';
+            const axes = options.onMove === undefined ? [] : dragAxes(shape);
+            if (axes.length > 0) attrs['data-draggable'] = axes.length === 2 ? 'both' : axes[0]!;
         }
         Object.assign(attrs, shapeAttrs(shape.attrs));
         attrs['data-shape-path'] = shape.path;
@@ -395,17 +404,40 @@ export function createSvgRenderer(target: Element, options: DrawingRendererOptio
         options.onEvent({ name, shape: shape.path, key: shape.key, x: at.x, y: at.y });
     };
 
+    /** Drags: a moved shape is redrawn alone (its element's attributes), from the tree with it moved */
+    const drag = createShapeDrag({
+        options,
+        toDrawing,
+        show(next, path) {
+            if (disposed) return;
+            tree = next;
+            const chain = locateShape(next, path);
+            const shape = chain?.[chain.length - 1];
+            if (shape !== undefined) drawShape(shape);
+        }
+    });
+
+    /** A press on a draggable interactive shape may start a drag (the pointer is captured on its element) */
+    const onDown = (event: PointerEvent): void => {
+        const shape = shapeAt(event.target);
+        const element = shape === undefined ? undefined : drawn.get(shape.path)?.element;
+        if (shape !== undefined && element !== undefined) drag.pointerDown(event, shape, element, svg);
+    };
+
     /** A click on an interactive shape is a press; one with no pointer (`detail` 0, as `element.click()`) is at its centre */
     const onClick = (event: MouseEvent): void => {
+        if (drag.swallowClick()) return;
         const shape = shapeAt(event.target);
         if (shape !== undefined) raise('press', shape, event.detail === 0 ? centreOf(shape) : toDrawing(event));
     };
 
     /** Enter and Space on a focused interactive shape are a press, as on a native button (held keys do not repeat it) */
     const onKey = (event: KeyboardEvent): void => {
-        if (event.key !== 'Enter' && event.key !== ' ') return;
         const shape = shapeAt(event.target);
         if (shape === undefined) return;
+        // The arrow keys move a draggable shape
+        if (drag.key(event, shape)) return;
+        if (event.key !== 'Enter' && event.key !== ' ') return;
         event.preventDefault();
         if (!event.repeat) raise('press', shape, centreOf(shape));
     };
@@ -423,6 +455,7 @@ export function createSvgRenderer(target: Element, options: DrawingRendererOptio
         if (shapeAt(event.relatedTarget)?.path !== hovered) hovered = undefined;
     };
 
+    svg.addEventListener('pointerdown', onDown);
     svg.addEventListener('click', onClick);
     svg.addEventListener('keydown', onKey);
     svg.addEventListener('pointerover', onOver);
@@ -431,15 +464,16 @@ export function createSvgRenderer(target: Element, options: DrawingRendererOptio
     return {
         update(next: readonly ShapeTree[]): void {
             if (disposed) return;
-            tree = next;
+            // A drag in progress keeps its shape where the pointer has it
+            tree = drag.apply(next);
             wanted = new Set();
-            collectPaths(next, wanted);
+            collectPaths(tree, wanted);
             seen = new Set();
             interactive = new Map();
             resolver.update({ paints: options.readProperty('paints'), paintsPath });
             syncGradients();
             syncViewBox();
-            place(svg, next);
+            place(svg, tree);
             if (hovered !== undefined && !interactive.has(hovered)) hovered = undefined;
             for (const path of [...drawn.keys()]) if (!seen.has(path)) drop(path);
             for (const [path, clip] of clips) {
@@ -470,6 +504,8 @@ export function createSvgRenderer(target: Element, options: DrawingRendererOptio
         dispose(): void {
             if (disposed) return;
             disposed = true;
+            drag.dispose();
+            svg.removeEventListener('pointerdown', onDown);
             svg.removeEventListener('click', onClick);
             svg.removeEventListener('keydown', onKey);
             svg.removeEventListener('pointerover', onOver);

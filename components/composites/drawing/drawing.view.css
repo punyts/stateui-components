@@ -49,3 +49,10 @@
 .svg [role='button'] {
     cursor: pointer;
 }
+
+/* A draggable shape (G1.7b) is moved by the pointer: no text selection, no page scroll under a touch */
+.svg [data-draggable] {
+    cursor: move;
+    touch-action: none;
+    user-select: none;
+}

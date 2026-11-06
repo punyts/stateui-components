@@ -53,6 +53,7 @@
     },
     "devDependencies": {
         "@punyts/state": "^1.2.0",
+        "@punyts/state-sync": "^0.8.0",
         "@tabler/icons": "3.50.0",
         "@vitest/browser-playwright": "^4.1.10",
         "happy-dom": "^21.0.4",

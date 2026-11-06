@@ -9,8 +9,8 @@ export const RENDERERS = ['svg', 'canvas'] as const;
 
 export type RendererKind = (typeof RENDERERS)[number];
 
-/** The events a shape raises (`events` of every shape) */
-export type ShapeEventName = 'press' | 'hover' | 'drag-end';
+/** The events a shape raises (`events` of every shape, as the `interaction` partial declares them) */
+export type ShapeEventName = 'press' | 'hover' | 'dragEnd';
 
 /** What a renderer tells its feeder about a user action on a shape */
 export interface ShapeEvent {
@@ -22,6 +22,20 @@ export interface ShapeEvent {
     /** The pointer position in drawing units */
     readonly x: number;
     readonly y: number;
+}
+
+/**
+ * The position a drag or an arrow key gave a draggable shape (G1.7b): the new values of its `x` and `y` properties,
+ * only the axes it moves on. The feeder writes them (the `drawing` to the shape's own property, or for a repeat copy to
+ * the record path `targetOf` gives); the renderer raises `dragEnd` right after
+ */
+export interface ShapeMove {
+    /** The state path of the shape, as in `ShapeEvent` */
+    readonly shape: string;
+    /** The key of the shape, or the record key of a repeat copy */
+    readonly key: string;
+    readonly x?: number;
+    readonly y?: number;
 }
 
 /**
@@ -66,8 +80,14 @@ export interface DrawingRendererOptions {
     reducedMotion(): boolean;
     /** Reads a property of the feeding node (`fit`, `viewBox`, `paints`, …), links followed; undefined when unset */
     readProperty(name: string): JsonValue | undefined;
-    /** Called for every `press`, `hover` and `drag-end` on an interactive shape */
+    /** Called for every `press`, `hover` and `dragEnd` on an interactive shape */
     onEvent(event: ShapeEvent): void;
+    /**
+     * Called once when a pointer drag of a draggable shape is released, and for each arrow key that moves one (G1.7b),
+     * with its new position, right before its `dragEnd`. The renderer never writes: the feeder does, here. Without it
+     * no shape is draggable
+     */
+    onMove?(move: ShapeMove): void;
     /**
      * The state path of the feeding node (`$.app.children.map`), so the problems of its `paints` carry their path
      * (`<path>.paints.<name>.stops.<key>.color`); without it they are reported under `paints`
