@@ -324,6 +324,55 @@ export function createRowBinder(row: JsonValue | undefined, options: RowBinderOp
     };
 }
 
+/** What `expandRepeats` is made with: the binder options every repeat of a tree shares */
+export interface ExpandRepeatsOptions extends Omit<RowBinderOptions, 'path' | 'recordsPath' | 'read'> {
+    /** Reads one value by its state path, links followed (the store's `get`); the raw row template and the records come from it */
+    read(statePath: string): JsonValue | undefined;
+}
+
+/** One `drawRepeat` of a tree and what its bind gave */
+export interface BoundRepeat {
+    /** The state path of the repeat */
+    readonly path: string;
+    readonly binding: RowBinding;
+}
+
+/** What `expandRepeats` gives: the tree with each repeat's copies, and the binding of each repeat */
+export interface ExpandedTree {
+    readonly shapes: readonly ShapeTree[];
+    readonly repeats: readonly BoundRepeat[];
+}
+
+/**
+ * Binds every `drawRepeat` of a shape tree (at the top or inside groups) and gives the tree with each repeat's copies
+ * as its `children`, which the renderers draw (SVG one group per copy, canvas each copy directly). The template is the
+ * raw node `read(<repeat>.row)` gives (where a `$row` link is still a `<-key`; the repeat's `row` in the tree has lost
+ * it) and the records are `read(<repeat>.records)`, links followed. Each repeat's binding is in `repeats`, for the
+ * feeder to watch `recordsPath` and `watch`, and to report `cut`, `unknown` and `errors`. A repeat inside a row
+ * template is not bound. Pure: the tree it is given is not changed
+ */
+export function expandRepeats(shapes: readonly ShapeTree[], options: ExpandRepeatsOptions): ExpandedTree {
+    const repeats: BoundRepeat[] = [];
+    const visit = (shape: ShapeTree): ShapeTree => {
+        if (shape.kind === 'drawRepeat') {
+            const binder = createRowBinder(options.read(`${shape.path}.row`), { ...options, path: shape.path });
+            const binding = binder.bind(options.read(`${shape.path}.records`));
+            repeats.push({ path: shape.path, binding });
+            return { ...shape, children: binding.copies };
+        }
+        if (shape.kind !== 'drawGroup') return shape;
+        let changed = false;
+        const children = shape.children.map((child) => {
+            const next = visit(child);
+            if (next !== child) changed = true;
+            return next;
+        });
+        return changed ? { ...shape, children } : shape;
+    };
+    const expanded = shapes.map(visit);
+    return { shapes: expanded, repeats };
+}
+
 /** Binds a row template to one record set: `createRowBinder(row, options).bind(records)` */
 export function bindRows(row: JsonValue | undefined, records: JsonValue | undefined, options: RowBinderOptions): RowBinding {
     return createRowBinder(row, options).bind(records);

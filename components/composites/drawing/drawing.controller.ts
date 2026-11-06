@@ -3,8 +3,11 @@ import type { ControllerContext } from '@punyts/stateui';
 import type { JsonValue } from '@punyts/stateui-app/core';
 import { createDrawingRenderer, drawingIssueError, isRendererKind } from '../shared/drawing/render.js';
 import type { DrawingIssue, DrawingRenderer, RendererKind } from '../shared/drawing/render.js';
+import '../shared/drawing/canvasRenderer.js';
 import '../shared/drawing/svgRenderer.js';
+import { expandRepeats } from '../shared/drawing/rows.js';
 import { readShapeTree, shapeProperties } from '../shared/drawing/tree.js';
+import type { ShapeTree } from '../shared/drawing/tree.js';
 
 const rendererOf = (value: unknown): RendererKind => (isRendererKind(value) ? value : 'svg');
 
@@ -18,7 +21,10 @@ const THEME_PATHS = ['$.theme.active', '$.theme.active.$all'];
  * renderer `renderer` names (`createDrawingRenderer`; the SVG renderer is `src/shared/drawing/svgRenderer.ts`), again
  * on every change at or below `children`, `paints`, `viewBox` or `fit`, at most once per microtask. A node that is not a
  * 2D shape, a shape the renderer cannot draw and a colour that resolves to no paint are reported once each
- * (`SUI-RUN-DRAW`, `SUI-STATE-PAINT`, `SUI-STATE-TOKEN`); the other shapes draw.
+ * (`SUI-RUN-DRAW`, `SUI-STATE-PAINT`, `SUI-STATE-TOKEN`); the other shapes draw. Each `drawRepeat` is bound to its
+ * records with the row binder (`expandRepeats`, G1.5b) before the tree goes to the renderer, capped for the renderer
+ * (over the cap is `SUI-RUN-CAP`, reported once), and its record paths and the store paths its template reads are
+ * watched too.
  *
  * The element carries `data-render="pending"` from the moment a redraw is asked for (the first draw, a state change, a
  * resize, a theme or mode switch) until the renderer says it is on screen (`drawn()`, after the next frame), then
@@ -40,6 +46,10 @@ export default function controller({ element, store, basePath }: ControllerConte
     let scheduled = false;
     let generation = 0;
     const reported = new Set<string>();
+    /** The store paths the repeats read outside the drawing (records, linked template values), watched since the last draw */
+    let repeatPaths: string[] = [];
+    /** The repeats whose cut has been reported; one under its cap again is forgotten, so a later cut reports again */
+    const cut = new Set<string>();
 
     const onIssue = (issue: DrawingIssue): void => {
         const error = drawingIssueError(issue);
@@ -65,8 +75,54 @@ export default function controller({ element, store, basePath }: ControllerConte
                 onIssue
             });
         } catch {
-            // The canvas renderer comes with G1.6: until it is registered a canvas drawing draws nothing
+            // Both kinds are registered (the imports above); a renderer that is not draws nothing
         }
+    };
+
+    /** Reports once a key not reported before */
+    const reportOnce = (key: string, message: string, code: string, path: string): void => {
+        if (reported.has(key)) return;
+        reported.add(key);
+        report.error(message, { code, path });
+    };
+
+    /**
+     * Binds each `drawRepeat` (G1.5b, `expandRepeats`: the raw template at `<repeat>.row`, the records, capped for the
+     * renderer), reports a cut once as `SUI-RUN-CAP` and a template node or link it leaves out once, and watches the
+     * record paths and the store paths each binding lists, so a record change redraws
+     */
+    const bindRepeats = (shapes: readonly ShapeTree[]): readonly ShapeTree[] => {
+        const { shapes: expanded, repeats } = expandRepeats(shapes, {
+            renderer: kind ?? 'svg',
+            read: (path) => store.get<JsonValue | undefined>(path) ?? undefined,
+            resolve: (path) => store.resolve(path),
+            properties: shapeProperties
+        });
+        const paths = new Set<string>();
+        const stillCut = new Set<string>();
+        for (const { path, binding } of repeats) {
+            for (const watch of [binding.recordsPath, ...binding.watch]) paths.add(watch).add(`${watch}.$all`);
+            for (const node of binding.unknown) {
+                const what = node.component === '' ? 'it is not a node' : `component "${node.component}" is not a 2D shape`;
+                const issue = { code: 'SUI-RUN-DRAW', path: node.path, reason: `${what}, so it is not drawn` } as const;
+                const error = drawingIssueError(issue);
+                reportOnce(`${node.path}\u0000${node.component}`, error.message, error.code, node.path);
+            }
+            for (const error of binding.errors) reportOnce(`${error.code}\u0000${error.message}`, error.message, error.code, error.statePath ?? path);
+            if (binding.cut === undefined) continue;
+            stillCut.add(path);
+            if (cut.has(path)) continue;
+            cut.add(path);
+            report.error(binding.cut.error.message, { code: binding.cut.code, path });
+        }
+        for (const path of cut) if (!stillCut.has(path)) cut.delete(path);
+        const next = [...paths];
+        const added = next.filter((path) => !repeatPaths.includes(path));
+        const removed = repeatPaths.filter((path) => !paths.has(path));
+        if (removed.length > 0) store.off(removed, request);
+        if (added.length > 0) store.on(added, request);
+        repeatPaths = next;
+        return expanded;
     };
 
     const draw = (): void => {
@@ -74,7 +130,8 @@ export default function controller({ element, store, basePath }: ControllerConte
         if (disposed) return;
         const at = generation;
         ensureRenderer();
-        let shown: Promise<void> = new Promise((resolve) => requestAnimationFrame(() => resolve()));
+        // With no renderer the drawing is ready after the next frame; a renderer says itself (one frame for all canvases)
+        let shown: Promise<void> | undefined;
         if (renderer !== undefined) {
             const { shapes, unknown } = readShapeTree(store.get<JsonValue | undefined>(childrenPath), childrenPath, {
                 read: (path) => store.get<JsonValue | undefined>(path) ?? undefined,
@@ -87,9 +144,10 @@ export default function controller({ element, store, basePath }: ControllerConte
                 const what = node.component === '' ? 'it is not a node' : `component "${node.component}" is not a 2D shape`;
                 onIssue({ code: 'SUI-RUN-DRAW', path: node.path, reason: `${what}, so it is not drawn` });
             }
-            renderer.update(shapes);
+            renderer.update(bindRepeats(shapes));
             shown = renderer.drawn();
         }
+        shown ??= new Promise((resolve) => requestAnimationFrame(() => resolve()));
         void shown.then(() => {
             if (!disposed && at === generation) element.setAttribute('data-render', 'ready');
         });
@@ -130,6 +188,8 @@ export default function controller({ element, store, basePath }: ControllerConte
             observer?.disconnect();
             store.off(watched, request);
             store.off(rendererPath, request);
+            if (repeatPaths.length > 0) store.off(repeatPaths, request);
+            repeatPaths = [];
             renderer?.dispose();
             renderer = undefined;
         }

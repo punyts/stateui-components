@@ -244,7 +244,8 @@ function textBounds(shape: ShapeTree): Bounds {
 /**
  * The geometric bounds of a shape in its own coordinates (before its transform), stroke not included; undefined for a
  * shape that draws nothing (a missing size, unparsable path data, an empty group). A group's bounds hold its children's
- * (each through its own transform), cut by its `clip`. A `drawRepeat` has none here: its copies come from the row binder
+ * (each through its own transform), cut by its `clip`. A `drawRepeat`'s hold its copies' (its `children` once a feeder
+ * has bound them, `expandRepeats`); unbound it has none
  */
 export function localBounds(shape: ShapeTree): Bounds | undefined {
     switch (shape.kind) {
@@ -279,8 +280,11 @@ export function localBounds(shape: ShapeTree): Bounds | undefined {
             const clip = shape.clip === undefined ? undefined : shapeBounds(shape.clip);
             return box !== undefined && clip !== undefined ? intersectBounds(box, clip) : box;
         }
-        case 'drawRepeat':
-            return undefined;
+        case 'drawRepeat': {
+            let box: Bounds | undefined;
+            for (const copy of shape.children) box = unionBounds(box, shapeBounds(copy));
+            return box;
+        }
     }
 }
 
@@ -413,7 +417,8 @@ function topmost(shapes: readonly ShapeTree[], x: number, y: number): ShapeTree[
         const inverse = invert(transformOf(shape));
         if (inverse === undefined) continue;
         const [lx, ly] = applyMatrix(inverse, x, y);
-        if (shape.kind === 'drawGroup') {
+        if (shape.kind === 'drawGroup' || shape.kind === 'drawRepeat') {
+            // A repeat is hit through its copies, as a group through its children
             if (shape.clip !== undefined && topmost([shape.clip], lx, ly) === undefined) continue;
             const inner = topmost(shape.children, lx, ly);
             if (inner !== undefined) return [shape, ...inner];

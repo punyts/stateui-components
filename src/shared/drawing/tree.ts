@@ -20,7 +20,10 @@ export interface ShapeTree {
     readonly path: string;
     /** The resolved properties of the node, links followed; the reserved keys and the node slots are not among them */
     readonly properties: Readonly<Record<string, JsonValue>>;
-    /** The shapes of a `drawGroup`'s `children`, in the order of the map; empty for every other kind */
+    /**
+     * The shapes of a `drawGroup`'s `children`, in the order of the map. For a `drawRepeat`, its copies in record order
+     * once a feeder has bound them (`expandRepeats` of `rows.ts`; `readShapeTree` leaves them empty). Empty for every other kind
+     */
     readonly children: readonly ShapeTree[];
     /** The row template of a `drawRepeat` */
     readonly row?: ShapeTree;

@@ -12,8 +12,8 @@ import type { ShapeKind, ShapeTree } from './tree.js';
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
 /**
- * The element each shape is drawn as. `drawRepeat` is a group its copies go into (G1.5b); `drawImage` is drawn by
- * G1.9b, so it has no element yet
+ * The element each shape is drawn as. `drawRepeat` is a group its copies (its bound `children`) go into; `drawImage`
+ * is drawn by G1.9b, so it has no element yet
  */
 const TAGS: Readonly<Record<Exclude<ShapeKind, 'drawImage'>, string>> = {
     rect: 'rect',
@@ -160,7 +160,9 @@ interface DrawnGradient {
  * `g` for `drawGroup` and `drawRepeat`) and writes every value through `setAttribute`, never a `style` attribute, so
  * it stays inside a `style-src 'self'` policy. Paint is written as presentation attributes (a token colour as
  * `var(--ui-…)`, a gradient of `paints` as `url(#…)` to a `defs` entry), so a component stylesheet rule can override
- * it. Each element carries `data-shape-path` and `data-shape-kind`, and a feeder's `attrs` as given.
+ * it. Each element carries `data-shape-path` and `data-shape-kind`, and a feeder's `attrs` as given. A `drawRepeat`'s
+ * copies (its `children` as `expandRepeats` binds them, already capped at 2,000) are drawn into its `g` like a group's
+ * children, one element per copy at `<repeat>.rows.<recordKey>`, so a change to one record touches only its element.
  *
  * A redraw keeps what it wrote per shape: it writes only the attributes and text that changed, removes the elements
  * of shapes that are gone, and moves elements (never recreates them) to follow the order of a `children` map. A shape
@@ -393,6 +395,9 @@ export function createSvgRenderer(target: Element, options: DrawingRendererOptio
         if (shape.kind === 'drawGroup') {
             const clip = shape.clip === undefined ? undefined : drawClip(shape, shape.clip);
             if (clip !== undefined) attrs['clip-path'] = `url(#${clip})`;
+            place(entry.element, shape.children);
+        } else if (shape.kind === 'drawRepeat') {
+            // One element per copy the feeder bound (`expandRepeats`), keyed by its path `<repeat>.rows.<recordKey>`
             place(entry.element, shape.children);
         }
         writeAttrs(entry.element, entry.attrs, attrs);

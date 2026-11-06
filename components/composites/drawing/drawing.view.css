@@ -28,6 +28,14 @@
     block-size: 100%;
 }
 
+/* The canvas the canvas renderer adds; it draws a shape with no fill in this text colour, as the svg does */
+.canvas {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    color: var(--ui-color-text-base);
+}
+
 /* The svg the renderer adds; a shape with no fill of its own is drawn in the text colour (fill="currentColor") */
 .svg {
     display: block;

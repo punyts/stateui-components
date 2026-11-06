@@ -168,6 +168,18 @@ describe('bounds', () => {
         close(boundsAt(tree, '$.d.g.children.dot'), { x: 46, y: 46, width: 8, height: 8 });
         expect(boundsAt(tree, '$.d.g.children.none')).toBeUndefined();
     });
+
+    it('should hold the bound copies of a repeat, give a copy bounds by its path, and hit a copy', () => {
+        // Arrange
+        const copy = (key: string, cx: number): ShapeTree => ({ ...shape('circle', key, { cx, cy: 0, r: 2, interactive: true }), path: `$.d.r.rows.${key}` });
+        const repeat = shape('drawRepeat', 'r', { x: 10 }, [copy('a', 0), copy('b', 20)]);
+
+        // Assert
+        expect(localBounds(repeat)).toEqual({ x: -2, y: -2, width: 24, height: 4 });
+        close(boundsAt([repeat], '$.d.r.rows.b'), { x: 28, y: -2, width: 4, height: 4 });
+        expect(hitTest([repeat], 30, 0, { interactive: true })?.path).toBe('$.d.r.rows.b');
+        expect(hitTest([repeat], 20, 0)).toBeUndefined();
+    });
 });
 
 describe('hit testing', () => {

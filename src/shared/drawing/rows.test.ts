@@ -1,7 +1,8 @@
 import { createStore } from '@punyts/state';
 import type { JsonObject, JsonValue } from '@punyts/stateui-app/core';
 import { describe, expect, it } from 'vitest';
-import { ROW_CAPS, bindRows, createRowBinder, recordKeys, rowCap, targetOf } from './rows.js';
+import { ROW_CAPS, bindRows, createRowBinder, expandRepeats, recordKeys, rowCap, targetOf } from './rows.js';
+import { readShapeTree } from './tree.js';
 
 const REPEAT = '$.app.children.map.children.seats';
 
@@ -294,5 +295,60 @@ describe('recordKeys', () => {
             { key: 'y', recordKey: 'y' }
         ]);
         expect(recordKeys(null)).toEqual([]);
+    });
+});
+
+describe('expandRepeats', () => {
+    it('should give each repeat, at the top or in a group, its copies as children from the raw template and the records', () => {
+        // Arrange
+        const ROOT = '$.app.children';
+        const store = createStore<Record<string, unknown>>({
+            data: { seats: { s1: { x: 1, y: 2, fill: '#f00' }, s2: { x: 3, y: 4, fill: '#0f0' } } },
+            app: {
+                children: {
+                    top: { component: 'drawRepeat', records: [{ id: 'a', x: 9 }], row: { component: 'circle', r: 2, '<-cx': '$row.x' } },
+                    set: { component: 'drawGroup', children: { seats: { component: 'drawRepeat', row: seat } } },
+                    box: { component: 'rect', width: 1, height: 1 }
+                }
+            }
+        });
+        store.link(`${ROOT}.set.children.seats.records`, '$.data.seats');
+        const read = (path: string): JsonValue | undefined => store.get<JsonValue | undefined>(path) ?? undefined;
+        const shapes = readShapeTree(store.get<JsonValue>(ROOT), ROOT, { read }).shapes;
+
+        // Act
+        const { shapes: expanded, repeats } = expandRepeats(shapes, { renderer: 'svg', read, resolve: (path) => store.resolve(path) });
+
+        // Assert
+        expect(expanded[0]?.children.map((copy) => [copy.path, copy.properties['cx']])).toEqual([[`${ROOT}.top.rows.a`, 9]]);
+        const inner = expanded[1]?.children[0];
+        expect(inner?.children.map((copy) => [copy.path, copy.properties['fill']])).toEqual([
+            [`${ROOT}.set.children.seats.rows.s1`, '#f00'],
+            [`${ROOT}.set.children.seats.rows.s2`, '#0f0']
+        ]);
+        expect(targetOf(inner!.children[0]!, 'x')).toBe('$.data.seats.s1.x');
+        expect(expanded[2]).toBe(shapes[2]);
+        expect(shapes[0]?.children).toEqual([]);
+        expect(repeats.map((repeat) => [repeat.path, repeat.binding.recordsPath])).toEqual([
+            [`${ROOT}.top`, `${ROOT}.top.records`],
+            [`${ROOT}.set.children.seats`, '$.data.seats']
+        ]);
+    });
+
+    it('should cap the copies for the renderer and carry the cut, and give no copies for missing records', () => {
+        // Arrange
+        const records = Array.from({ length: 2500 }, (_value, index) => ({ id: `r${index}`, x: index }));
+        const values: Record<string, JsonValue> = { [`${REPEAT}.row`]: { component: 'rect', width: 1, height: 1, '<-x': '$row.x' }, [`${REPEAT}.records`]: records };
+        const tree = [{ kind: 'drawRepeat' as const, key: 'seats', path: REPEAT, properties: {}, children: [] }];
+
+        // Act
+        const svg = expandRepeats(tree, { renderer: 'svg', read: (path) => values[path] });
+        const none = expandRepeats(tree, { renderer: 'svg', read: (path) => (path.endsWith('.row') ? values[path] : undefined) });
+
+        // Assert
+        expect(svg.shapes[0]?.children).toHaveLength(2000);
+        expect(svg.repeats[0]?.binding.cut).toMatchObject({ code: 'SUI-RUN-CAP', total: 2500, cap: 2000 });
+        expect(none.shapes[0]?.children).toEqual([]);
+        expect(none.repeats[0]?.binding.cut).toBeUndefined();
     });
 });

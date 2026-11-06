@@ -1,0 +1,481 @@
+import { IDENTITY, boundsAt, fitViewBox, hitTest, localBounds, readFit, readViewBox, transformOf } from './geometry.js';
+import type { Bounds, Matrix, ViewBox, Viewport } from './geometry.js';
+import { buildPath } from './canvasPath.js';
+import { createPaintResolver, placeGradient } from './paint.js';
+import type { Paint, PaintResolver } from './paint.js';
+import { registerDrawingRenderer } from './render.js';
+import type { DrawingIssue, DrawingRenderer, DrawingRendererOptions } from './render.js';
+import { ANCHORS, BASELINES, CAPS, JOINS, ShapeReader, Unusable, contentBox } from './shapeReader.js';
+import type { ShapeTree } from './tree.js';
+
+/** The highest pixel ratio the bitmap is drawn at; a denser screen scales it up */
+export const MAX_PIXEL_RATIO = 2;
+
+/** The canvas `textAlign` of each `anchor` (left to right, as SVG's `text-anchor` in a left-to-right page) */
+const ALIGN: Readonly<Record<(typeof ANCHORS)[number], CanvasTextAlign>> = { start: 'left', middle: 'center', end: 'right' };
+
+/** What a shape paints with after its own values and those it inherits from its groups, as SVG inherits them */
+interface Style {
+    /** The fill; `current` is the text colour, which a shape with no fill anywhere up its groups gets (SVG's `currentColor`) */
+    readonly fill: Paint | 'current';
+    readonly stroke: Paint;
+    readonly strokeWidth: number;
+    readonly dash: readonly number[];
+    readonly cap: CanvasLineCap;
+    readonly join: CanvasLineJoin;
+    /** The product of the `opacity` of the shape and its groups */
+    readonly opacity: number;
+}
+
+const ROOT_STYLE: Style = { fill: 'current', stroke: { kind: 'none' }, strokeWidth: 1, dash: [], cap: 'butt', join: 'miter', opacity: 1 };
+
+/** What one draw reads from the canvas's computed style, once */
+interface DrawContext {
+    readonly ctx: CanvasRenderingContext2D;
+    /** The text colour (`currentColor`) */
+    readonly color: string;
+    /** The page font, for a `drawText` with no `font` or one that does not resolve */
+    readonly fontFamily: string;
+    readonly fontSize: number;
+    /** Reads a custom property, cached for the draw */
+    readonly read: (name: string) => string | undefined;
+}
+
+/** A canvas renderer can also draw at once, for a test that times a draw */
+export interface CanvasDrawingRenderer extends DrawingRenderer {
+    /** The canvas it draws into */
+    readonly canvas: HTMLCanvasElement;
+    /** Draws now when an update or a resize is waiting, instead of in the next frame */
+    paint(): void;
+}
+
+/**
+ * One `requestAnimationFrame` per window draws every canvas drawing that changed since the last frame: an update marks
+ * its renderer dirty and asks for the frame only when none is asked for yet, so any number of state changes in one
+ * frame draw once, and a drawing that did not change does not draw
+ */
+const frames = new WeakMap<Window, { dirty: Set<() => void>; requested: boolean }>();
+
+function schedule(view: Window, paint: () => void): void {
+    let frame = frames.get(view);
+    if (frame === undefined) {
+        frame = { dirty: new Set(), requested: false };
+        frames.set(view, frame);
+    }
+    frame.dirty.add(paint);
+    if (frame.requested) return;
+    frame.requested = true;
+    const pending = frame;
+    view.requestAnimationFrame(() => {
+        pending.requested = false;
+        const due = [...pending.dirty];
+        pending.dirty.clear();
+        for (const run of due) run();
+    });
+}
+
+function unschedule(view: Window | null, paint: () => void): void {
+    if (view !== null) frames.get(view)?.dirty.delete(paint);
+}
+
+const isIdentity = (m: Matrix): boolean => m.every((value, index) => Math.abs(value - IDENTITY[index]!) < 1e-12);
+
+/** The geometry of one leaf shape, read and checked */
+type Geometry =
+    | { readonly kind: 'path'; readonly path: Path2D | undefined; readonly closed: boolean }
+    | { readonly kind: 'text'; readonly text: string; readonly x: number; readonly y: number; readonly align: CanvasTextAlign; readonly baseline: CanvasTextBaseline; readonly fontProperty?: string; readonly fontSize?: number };
+
+/**
+ * The canvas renderer (G1.6 of the graphics epic 1). It draws the same shape tree as the SVG renderer into a `canvas`
+ * it adds to `target` (class `canvas`), with the 2D context: every shape kind but `drawImage` (G1.9b), paint (colours,
+ * tokens, the linear and radial gradients of `paints`), `strokeWidth`, `dash`, `cap`, `join`, `opacity`, a group's
+ * `clip`, the transforms of `geometry.ts` and the `anchor` and `baseline` of text. A `path` is a `Path2D` built from the
+ * parsed command list (`buildPath`), never from the raw string. A group's paint reaches its shapes as in SVG, and a
+ * shape with no fill anywhere is drawn in the text colour. A `drawRepeat` draws its copies (its `children` as
+ * `expandRepeats` binds them, capped at 20,000) directly, with no element or store entry per record.
+ *
+ * The bitmap is sized from the canvas's own `ResizeObserver` entry (never from a layout read) at `devicePixelRatio`,
+ * at most 2, and a resize draws again at once. Token colours and fonts are read from the canvas's computed style once
+ * per draw, so the redraw the feeder asks for on a theme or mode switch recolours the bitmap. `update` draws in the next
+ * animation frame, shared by every canvas drawing of the page, so many updates in one frame draw once. A shape with a
+ * value it cannot draw is left out and reported once (`SUI-RUN-DRAW`) as in SVG. `hit` and `boundsOf` answer from
+ * `geometry.ts`, as the SVG renderer does. The canvas has no element per shape, so `elementOf` gives nothing until the
+ * proxy buttons (G1.7c)
+ */
+export function createCanvasRenderer(target: Element, options: DrawingRendererOptions): CanvasDrawingRenderer {
+    const document = target.ownerDocument;
+    const view = document.defaultView;
+    const canvas = document.createElement('canvas');
+    canvas.setAttribute('class', 'canvas');
+    target.append(canvas);
+
+    const reported = new Set<string>();
+    let tree: readonly ShapeTree[] = [];
+    let disposed = false;
+    let dirty = false;
+    /** The canvas's size in CSS pixels from its last `ResizeObserver` entry; undefined until the first one */
+    let size: { width: number; height: number } | undefined;
+    /** Frames that passed with an update waiting and no size yet */
+    let unsizedFrames = 0;
+    /** The `drawn()` promises waiting for the next draw */
+    let waiters: (() => void)[] = [];
+
+    const issue = (problem: DrawingIssue): void => {
+        const key = 'reason' in problem ? `${problem.path}\u0000${problem.reason}` : `${problem.code}\u0000${problem.path}\u0000${problem.value}`;
+        if (reported.has(key)) return;
+        reported.add(key);
+        try {
+            options.onIssue?.(problem);
+        } catch {
+            // A failing reporter must not stop a drawing
+        }
+    };
+
+    const paintsPath = options.path === undefined ? 'paints' : `${options.path}.paints`;
+    const resolver: PaintResolver = createPaintResolver({ paints: options.readProperty('paints'), paintsPath, onIssue: issue });
+
+    const settle = (): void => {
+        const done = waiters;
+        waiters = [];
+        for (const resolve of done) resolve();
+    };
+
+    /** Sets the paint of a shape as the fill or stroke style; false when there is nothing to paint */
+    const usePaint = (draw: DrawContext, paint: Paint | 'current', bounds: Bounds | undefined, as: 'fillStyle' | 'strokeStyle'): boolean | 'radial' => {
+        const { ctx } = draw;
+        if (paint === 'current') {
+            ctx[as] = draw.color;
+            return true;
+        }
+        if (paint.kind === 'none') return false;
+        if (paint.kind === 'color') {
+            if (paint.computed === undefined) return false;
+            ctx[as] = paint.computed;
+            return true;
+        }
+        if (bounds === undefined || bounds.width <= 0 || bounds.height <= 0) return false;
+        const placed = placeGradient(paint.gradient, bounds);
+        let gradient: CanvasGradient;
+        if (placed.kind === 'linear') gradient = ctx.createLinearGradient(placed.x1, placed.y1, placed.x2, placed.y2);
+        else if (placed.rx === placed.ry || as === 'strokeStyle') {
+            const r = Math.max(placed.rx, placed.ry);
+            gradient = ctx.createRadialGradient(placed.cx, placed.cy, 0, placed.cx, placed.cy, r);
+        } else {
+            // An elliptical gradient: the caller fills through a clip in the scaled space (see `fillRadial`)
+            return 'radial';
+        }
+        for (const stop of paint.gradient.stops) if (stop.color.computed !== undefined) gradient.addColorStop(stop.offset, stop.color.computed);
+        ctx[as] = gradient;
+        return true;
+    };
+
+    /** Fills `path` with an elliptical radial gradient: clipped to the path, the gradient drawn in a space scaled to its radii */
+    const fillRadial = (draw: DrawContext, paint: Paint, path: Path2D, bounds: Bounds): void => {
+        if (paint.kind !== 'gradient') return;
+        const placed = placeGradient(paint.gradient, bounds);
+        if (placed.kind !== 'radial' || placed.rx <= 0 || placed.ry <= 0) return;
+        const { ctx } = draw;
+        ctx.save();
+        ctx.clip(path);
+        ctx.transform(placed.rx, 0, 0, placed.ry, placed.cx, placed.cy);
+        const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+        for (const stop of paint.gradient.stops) if (stop.color.computed !== undefined) gradient.addColorStop(stop.offset, stop.color.computed);
+        ctx.fillStyle = gradient;
+        ctx.fillRect((bounds.x - placed.cx) / placed.rx, (bounds.y - placed.cy) / placed.ry, bounds.width / placed.rx, bounds.height / placed.ry);
+        ctx.restore();
+    };
+
+    /** The style of a shape: its own paint values over the inherited ones; throws `Unusable` for a value it cannot draw */
+    const styleOf = (shape: ShapeTree, read: ShapeReader, inherited: Style): Style => {
+        let { fill, stroke } = inherited;
+        const ownFill = shape.properties.fill;
+        if (ownFill !== undefined && ownFill !== null && ownFill !== '') fill = resolver.resolve(ownFill, shape.path, 'fill');
+        const ownStroke = shape.properties.stroke;
+        if (ownStroke !== undefined && ownStroke !== null && ownStroke !== '') stroke = resolver.resolve(ownStroke, shape.path, 'stroke');
+        const strokeWidth = read.number('strokeWidth', 0) ?? inherited.strokeWidth;
+        const opacity = Math.min(1, read.number('opacity', 0) ?? 1) * inherited.opacity;
+        const dash = read.numbers('dash') ?? (shape.properties.dash === undefined || shape.properties.dash === null ? inherited.dash : []);
+        const cap = read.word('cap', CAPS) ?? inherited.cap;
+        const join = read.word('join', JOINS) ?? inherited.join;
+        return { fill, stroke, strokeWidth, dash, cap, join, opacity };
+    };
+
+    /**
+     * The outline of a shape in its own coordinates as a `Path2D` (a group's is its children's, each through its own
+     * transform), or undefined when it draws nothing; throws `Unusable` for a value it cannot draw. Text has no outline
+     */
+    const outlineOf = (shape: ShapeTree, read: ShapeReader): { path: Path2D | undefined; closed: boolean } => {
+        const path = new Path2D();
+        switch (shape.kind) {
+            case 'rect': {
+                const x = read.number('x') ?? 0;
+                const y = read.number('y') ?? 0;
+                const width = read.number('width', 0);
+                const height = read.number('height', 0);
+                const radius = read.number('radius', 0) ?? 0;
+                if (width === undefined || height === undefined || width === 0 || height === 0) return { path: undefined, closed: true };
+                const r = Math.min(radius, width / 2, height / 2);
+                if (r > 0) path.roundRect(x, y, width, height, r);
+                else path.rect(x, y, width, height);
+                return { path, closed: true };
+            }
+            case 'circle':
+            case 'ellipse': {
+                const cx = read.number('cx') ?? 0;
+                const cy = read.number('cy') ?? 0;
+                const rx = read.number(shape.kind === 'circle' ? 'r' : 'rx', 0);
+                const ry = shape.kind === 'circle' ? rx : read.number('ry', 0);
+                if (rx === undefined || ry === undefined || rx === 0 || ry === 0) return { path: undefined, closed: true };
+                path.ellipse(cx, cy, rx, ry, 0, 0, 2 * Math.PI);
+                return { path, closed: true };
+            }
+            case 'line':
+            case 'polyline':
+            case 'polygon': {
+                const points = read.points('points', shape.kind === 'line' ? 2 : undefined);
+                if (points === undefined || points.length === 0) return { path: undefined, closed: false };
+                points.forEach(([x, y], index) => (index === 0 ? path.moveTo(x, y) : path.lineTo(x, y)));
+                if (shape.kind === 'polygon') path.closePath();
+                return { path, closed: shape.kind === 'polygon' };
+            }
+            case 'path': {
+                const commands = read.pathCommands('d');
+                if (commands === undefined) return { path: undefined, closed: false };
+                buildPath(commands, path);
+                return { path, closed: false };
+            }
+            case 'drawGroup':
+            case 'drawRepeat': {
+                let any = false;
+                for (const child of shape.children) {
+                    if (child.properties.hidden === true || child.kind === 'drawImage' || child.kind === 'drawText') continue;
+                    const inner = outlineOf(child, new ShapeReader(child));
+                    if (inner.path === undefined) continue;
+                    const m = transformOf(child);
+                    path.addPath(inner.path, new DOMMatrix([m[0], m[1], m[2], m[3], m[4], m[5]]));
+                    any = true;
+                }
+                return { path: any ? path : undefined, closed: true };
+            }
+            case 'drawText':
+            case 'drawImage':
+                return { path: undefined, closed: false };
+        }
+    };
+
+    /** The geometry of a leaf shape; throws `Unusable` */
+    const geometryOf = (shape: ShapeTree, read: ShapeReader): Geometry => {
+        read.transform();
+        if (shape.kind !== 'drawText') {
+            const { path, closed } = outlineOf(shape, read);
+            return { kind: 'path', path, closed };
+        }
+        const text = read.text('_text');
+        const align = ALIGN[read.word('anchor', ANCHORS) ?? 'start'];
+        const baseline = read.word('baseline', BASELINES) ?? 'alphabetic';
+        const fontProperty = read.fontProperty('font');
+        const fontSize = read.number('fontSize', 0);
+        return { kind: 'text', text, x: read.number('x') ?? 0, y: read.number('y') ?? 0, align, baseline, fontProperty, fontSize };
+    };
+
+    /** Draws a leaf shape in its own coordinates (its transform already applied) */
+    const drawLeaf = (draw: DrawContext, shape: ShapeTree, geometry: Geometry, style: Style): void => {
+        const { ctx } = draw;
+        if (style.opacity <= 0) return;
+        ctx.globalAlpha = style.opacity;
+        const bounds = localBounds(shape);
+        const stroking = style.stroke.kind !== 'none' && style.strokeWidth > 0;
+        if (stroking) {
+            ctx.lineWidth = style.strokeWidth;
+            ctx.setLineDash(style.dash as number[]);
+            ctx.lineCap = style.cap;
+            ctx.lineJoin = style.join;
+        }
+        if (geometry.kind === 'text') {
+            if (geometry.text === '') return;
+            const family = (geometry.fontProperty === undefined ? undefined : draw.read(geometry.fontProperty)) || draw.fontFamily;
+            ctx.font = `${geometry.fontSize ?? draw.fontSize}px ${family}`;
+            ctx.textAlign = geometry.align;
+            ctx.textBaseline = geometry.baseline;
+            if (usePaint(draw, style.fill, bounds, 'fillStyle') === true) ctx.fillText(geometry.text, geometry.x, geometry.y);
+            if (stroking && usePaint(draw, style.stroke, bounds, 'strokeStyle') === true) ctx.strokeText(geometry.text, geometry.x, geometry.y);
+            return;
+        }
+        const { path } = geometry;
+        if (path === undefined) return;
+        const fill = usePaint(draw, style.fill, bounds, 'fillStyle');
+        if (fill === true) ctx.fill(path);
+        else if (fill === 'radial' && bounds !== undefined && style.fill !== 'current') fillRadial(draw, style.fill, path, bounds);
+        if (stroking && usePaint(draw, style.stroke, bounds, 'strokeStyle') === true) ctx.stroke(path);
+    };
+
+    /** Draws shapes in order, each through its transform; a group's or repeat's children inherit its paint */
+    const drawShapes = (draw: DrawContext, shapes: readonly ShapeTree[], inherited: Style): void => {
+        const { ctx } = draw;
+        for (const shape of shapes) {
+            // A hidden shape (the shared `hidden`) is left out like a removed one; drawImage is drawn by G1.9b
+            if (shape.kind === 'drawImage' || shape.properties.hidden === true) continue;
+            const read = new ShapeReader(shape);
+            let style: Style;
+            let geometry: Geometry | undefined;
+            try {
+                if (shape.kind === 'drawGroup' || shape.kind === 'drawRepeat') read.transform();
+                else geometry = geometryOf(shape, read);
+                style = styleOf(shape, read, inherited);
+            } catch (error) {
+                if (!(error instanceof Unusable)) throw error;
+                issue({ code: 'SUI-RUN-DRAW', path: shape.path, reason: `${error.message}, so the shape is not drawn` });
+                continue;
+            }
+            const matrix = transformOf(shape);
+            const moved = !isIdentity(matrix);
+            ctx.save();
+            if (moved) ctx.transform(matrix[0], matrix[1], matrix[2], matrix[3], matrix[4], matrix[5]);
+            if (geometry !== undefined) drawLeaf(draw, shape, geometry, style);
+            else {
+                if (shape.clip !== undefined) clipTo(draw, shape.clip);
+                drawShapes(draw, shape.children, style);
+            }
+            ctx.restore();
+        }
+    };
+
+    /** Clips to a group's clip shape (through its own transform); a clip that cannot be drawn is reported and does not clip, as in SVG */
+    const clipTo = (draw: DrawContext, clip: ShapeTree): void => {
+        if (clip.properties.hidden === true || clip.kind === 'drawImage' || clip.kind === 'drawText') return;
+        const read = new ShapeReader(clip);
+        let outline: Path2D | undefined;
+        try {
+            read.transform();
+            outline = outlineOf(clip, read).path;
+            styleOf(clip, read, ROOT_STYLE);
+        } catch (error) {
+            if (!(error instanceof Unusable)) throw error;
+            issue({ code: 'SUI-RUN-DRAW', path: clip.path, reason: `${error.message}, so the shape is not drawn` });
+            return;
+        }
+        const m = transformOf(clip);
+        const path = new Path2D();
+        if (outline !== undefined) path.addPath(outline, new DOMMatrix([m[0], m[1], m[2], m[3], m[4], m[5]]));
+        // An empty clip shape hides the whole group, as an empty clipPath does
+        draw.ctx.clip(path);
+    };
+
+    /** The drawing units to CSS pixels: the caller's `viewBox`, the `viewBox` property, or the tree's bounds, by `fit` */
+    const viewportOf = (width: number, height: number): Viewport => {
+        const box: ViewBox | undefined = options.viewBox ?? readViewBox(options.readProperty('viewBox')) ?? contentBox(tree);
+        if (box === undefined) return { scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0 };
+        return fitViewBox(box, width, height, readFit(options.readProperty('fit')));
+    };
+
+    /** Draws the tree now at the canvas's size and pixel ratio, and resolves what waits for it */
+    const draw = (): void => {
+        if (disposed || size === undefined) return;
+        dirty = false;
+        unsizedFrames = 0;
+        const ratio = Math.min(view?.devicePixelRatio || 1, MAX_PIXEL_RATIO);
+        const width = Math.max(0, Math.round(size.width * ratio));
+        const height = Math.max(0, Math.round(size.height * ratio));
+        // Setting a size clears the bitmap, so it is set only when it changes
+        if (canvas.width !== width) canvas.width = width;
+        if (canvas.height !== height) canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx === null) {
+            settle();
+            return;
+        }
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, width, height);
+        const style = view?.getComputedStyle(canvas);
+        const tokens = new Map<string, string | undefined>();
+        const read = (name: string): string | undefined => {
+            if (tokens.has(name)) return tokens.get(name);
+            const value = style?.getPropertyValue(name).trim() || undefined;
+            tokens.set(name, value);
+            return value;
+        };
+        resolver.update({ paints: options.readProperty('paints'), paintsPath, read });
+        if (width > 0 && height > 0) {
+            const viewport = viewportOf(size.width, size.height);
+            ctx.setTransform(viewport.scaleX * ratio, 0, 0, viewport.scaleY * ratio, viewport.offsetX * ratio, viewport.offsetY * ratio);
+            const fontSize = Number.parseFloat(style?.fontSize ?? '');
+            drawShapes(
+                {
+                    ctx,
+                    color: style?.color || '#000',
+                    fontFamily: style?.fontFamily || 'sans-serif',
+                    fontSize: Number.isFinite(fontSize) && fontSize > 0 ? fontSize : 16,
+                    read
+                },
+                tree,
+                ROOT_STYLE
+            );
+        }
+        settle();
+    };
+
+    /** The frame of a waiting update: draws when the canvas has a size; with none after two frames (not laid out) it stops waiting */
+    const onFrame = (): void => {
+        if (disposed || !dirty) return;
+        if (size !== undefined) {
+            draw();
+            return;
+        }
+        unsizedFrames += 1;
+        if (unsizedFrames >= 2) settle();
+        else if (view !== null) schedule(view, onFrame);
+    };
+
+    const observer =
+        view !== null && typeof view.ResizeObserver === 'function'
+            ? new view.ResizeObserver((entries) => {
+                  const entry = entries[entries.length - 1];
+                  const box = entry?.contentBoxSize?.[0];
+                  if (entry === undefined || disposed) return;
+                  size = box === undefined ? { width: entry.contentRect.width, height: entry.contentRect.height } : { width: box.inlineSize, height: box.blockSize };
+                  // ResizeObserver runs after the frame's callbacks and before paint: drawing here shows the new size with no blank frame
+                  unschedule(view, onFrame);
+                  draw();
+              })
+            : undefined;
+    observer?.observe(canvas);
+
+    return {
+        canvas,
+        update(next: readonly ShapeTree[]): void {
+            if (disposed) return;
+            tree = next;
+            dirty = true;
+            if (view !== null) schedule(view, onFrame);
+        },
+        paint(): void {
+            if (disposed || !dirty) return;
+            unschedule(view, onFrame);
+            draw();
+        },
+        hit(x: number, y: number): ShapeTree | undefined {
+            return disposed ? undefined : hitTest(tree, x, y, { interactive: true });
+        },
+        boundsOf(path: string): Bounds | undefined {
+            return disposed ? undefined : boundsAt(tree, path);
+        },
+        elementOf(): Element | undefined {
+            return undefined;
+        },
+        drawn(): Promise<void> {
+            if (disposed || !dirty) return Promise.resolve();
+            return new Promise<void>((resolve) => waiters.push(resolve));
+        },
+        dispose(): void {
+            if (disposed) return;
+            disposed = true;
+            observer?.disconnect();
+            unschedule(view, onFrame);
+            canvas.remove();
+            tree = [];
+            settle();
+        }
+    };
+}
+
+registerDrawingRenderer('canvas', createCanvasRenderer);
