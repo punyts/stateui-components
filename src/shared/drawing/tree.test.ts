@@ -1,6 +1,6 @@
 import type { JsonObject, JsonValue } from '@punyts/stateui-app/core';
 import { describe, expect, it } from 'vitest';
-import { SHAPE_KINDS, isShapeAttr, isShapeKind, locateShape, readShapeTree, shapeAttrs } from './tree.js';
+import { SHAPE_KINDS, SHAPE_PROPERTIES, isShapeAttr, isShapeKind, locateShape, readShapeTree, shapeAttrs, shapeProperties } from './tree.js';
 
 const ROOT = '$.app.children.map.children';
 
@@ -142,6 +142,30 @@ describe('shape kinds and attrs', () => {
         expect(['style', 'onclick', 'href', 'fill', 'aria-', 'xlink:href'].some(isShapeAttr)).toBe(false);
         expect(shapeAttrs({ class: 'mark s1', style: 'color: red', onclick: 'x()', 'data-point': '3' })).toEqual({ class: 'mark s1', 'data-point': '3' });
         expect(shapeAttrs(undefined)).toEqual({});
+    });
+});
+
+describe('readShapeTree with the declared properties', () => {
+    it('should read a property the mount linked, which the node object shows in neither form', () => {
+        // Arrange
+        const store: Record<string, JsonValue> = { [`${ROOT}.dot.cx`]: 40 };
+        const children: JsonObject = { dot: { component: 'circle', cy: 5, r: 3 } };
+
+        // Act
+        const { shapes } = readShapeTree(children, ROOT, { read: (path) => store[path], properties: shapeProperties });
+        const without = readShapeTree(children, ROOT, { read: (path) => store[path] }).shapes;
+
+        // Assert
+        expect(shapes[0]?.properties).toEqual({ cy: 5, r: 3, cx: 40 });
+        expect(without[0]?.properties).toEqual({ cy: 5, r: 3 });
+    });
+
+    it('should list the shared and own properties of each kind, never a node slot', () => {
+        // Assert
+        expect(shapeProperties('rect')).toEqual(expect.arrayContaining(['fill', 'x', 'rotate', '_label', 'transition', 'width', 'radius']));
+        expect(SHAPE_PROPERTIES.drawGroup).not.toContain('clip');
+        expect(SHAPE_PROPERTIES.drawRepeat).not.toContain('row');
+        expect(Object.keys(SHAPE_PROPERTIES)).toEqual([...SHAPE_KINDS]);
     });
 });
 

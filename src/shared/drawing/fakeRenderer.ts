@@ -43,6 +43,9 @@ export function createFakeRenderer(target: Element, options: DrawingRendererOpti
         elementOf(): Element | undefined {
             return undefined;
         },
+        drawn(): Promise<void> {
+            return Promise.resolve();
+        },
         dispose(): void {
             disposed = true;
             tree = [];

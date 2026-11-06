@@ -35,6 +35,7 @@ describe('drawing view (the skeleton of G1.3) in Chromium', () => {
 
         // Act
         mounted.store.set('$.app.renderer', 'canvas');
+        await settle();
 
         // Assert
         expect(before).toBe('svg');

@@ -3,6 +3,7 @@ import { themeTokenLookup, libraryFromCatalog, validateDocument } from '@punyts/
 import { formatError } from '@punyts/stateui-app/build';
 import type { Catalog, RootCatalogEntry, ShapeCatalogEntry } from '@punyts/stateui-app/build';
 import catalogJson from '../.test-build/real/components/catalog.json';
+import { SHAPE_PROPERTIES } from '../src/shared/drawing/tree.js';
 
 const catalog = catalogJson as unknown as Catalog;
 const hasToken = themeTokenLookup(libraryFromCatalog(catalog));
@@ -100,6 +101,17 @@ describe('the drawing and the 2D shapes in the catalog', () => {
             expect.arrayContaining(['fill', 'stroke', 'strokeWidth', 'opacity', 'dash', 'cap', 'join', 'x', 'y', 'rotate', 'scale', 'origin', 'interactive', '_label', 'draggable', 'bounds', 'step', 'transition', 'animate'])
         );
         expect(entry.shape.properties.fill?.validators).toEqual({ color: true });
+    });
+
+    it.each(Object.keys(SHAPES))('should list the properties of %s in SHAPE_PROPERTIES, which the drawing reads linked values by', (name) => {
+        // Arrange
+        const entry = catalog.components.find((candidate) => candidate.name === name) as ShapeCatalogEntry;
+        const declared = Object.entries(entry.shape.properties)
+            .filter(([, property]) => property.type !== 'node')
+            .map(([key]) => key);
+
+        // Assert
+        expect([...SHAPE_PROPERTIES[name as keyof typeof SHAPES]].sort()).toEqual(declared.sort());
     });
 });
 

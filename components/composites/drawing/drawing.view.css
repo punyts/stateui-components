@@ -27,3 +27,12 @@
     inline-size: 100%;
     block-size: 100%;
 }
+
+/* The svg the renderer adds; a shape with no fill of its own is drawn in the text colour (fill="currentColor") */
+.svg {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    color: var(--ui-color-text-base);
+    overflow: hidden;
+}

@@ -53,7 +53,63 @@ export interface ReadShapeTreeOptions {
      * the value in the node object is used
      */
     read?(statePath: string): JsonValue | undefined;
+    /**
+     * The properties a shape kind declares (`shapeProperties`). A link the mount applied is a store alias that the node
+     * object no longer shows (neither `<-key` nor `key`), so with this and `read` each declared property the node object
+     * lacks is read through `read`, and kept when it has a value
+     */
+    properties?(kind: ShapeKind): readonly string[];
 }
+
+/** The properties of the shared partials (`src/shared/shape/`) every 2D shape merges in, and the shared `hidden` */
+const SHARED_PROPERTIES = [
+    'fill',
+    'stroke',
+    'strokeWidth',
+    'opacity',
+    'dash',
+    'cap',
+    'join',
+    'x',
+    'y',
+    'rotate',
+    'scale',
+    'origin',
+    'interactive',
+    '_label',
+    'draggable',
+    'bounds',
+    'step',
+    'transition',
+    'animate',
+    'hidden'
+] as const;
+
+/**
+ * The properties each 2D shape declares (its own and the partials'), node slots (`clip`, `row`) left out. A test
+ * compares it with the built catalog, so it follows the `state.json` files
+ */
+export const SHAPE_PROPERTIES: Readonly<Record<ShapeKind, readonly string[]>> = (() => {
+    const own: Record<ShapeKind, readonly string[]> = {
+        rect: ['width', 'height', 'radius'],
+        circle: ['cx', 'cy', 'r'],
+        ellipse: ['cx', 'cy', 'rx', 'ry'],
+        line: ['points'],
+        polyline: ['points'],
+        polygon: ['points'],
+        path: ['d'],
+        drawText: ['_text', 'anchor', 'baseline', 'font', 'fontSize'],
+        drawImage: ['src', 'width', 'height', 'fit'],
+        drawGroup: [],
+        drawRepeat: ['records']
+    };
+    const all = {} as Record<ShapeKind, readonly string[]>;
+    for (const kind of SHAPE_KINDS) all[kind] = Object.freeze([...SHARED_PROPERTIES, ...own[kind]]);
+    return Object.freeze(all);
+})();
+
+/** The properties a 2D shape declares; the `properties` option of `readShapeTree` (and of the row binder) */
+export const shapeProperties = (kind: ShapeKind): readonly string[] => SHAPE_PROPERTIES[kind];
 
 /** The keys of a node that are not shape properties (`RESERVED_KEYS` of `@punyts/stateui-app/core`) */
 const RESERVED = new Set(['component', 'children', 'layout', 'placement', 'theme', 'on']);
@@ -114,6 +170,14 @@ class TreeReader {
             if (Object.hasOwn(properties, property) || RESERVED.has(property) || slots.includes(property)) continue;
             const read = this.options.read?.(`${path}.${property}`);
             if (read !== undefined) properties[property] = read;
+        }
+        // A link the mount applied shows in neither form: each declared property the node lacks is read from the store
+        if (this.options.read !== undefined && this.options.properties !== undefined) {
+            for (const property of this.options.properties(component)) {
+                if (Object.hasOwn(properties, property) || Object.hasOwn(value, property) || slots.includes(property)) continue;
+                const read = this.options.read(`${path}.${property}`);
+                if (read !== undefined) properties[property] = read;
+            }
         }
         const shape: { -readonly [K in keyof ShapeTree]: ShapeTree[K] } = {
             kind: component,
