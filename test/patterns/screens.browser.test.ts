@@ -14,6 +14,11 @@ const SALES = Object.freeze([
     Object.freeze({ id: 'feb', month: 'Feb', amount: 150 }),
     Object.freeze({ id: 'mar', month: 'Mar', amount: 90 })
 ]);
+const AVAILABILITY = Object.freeze([
+    Object.freeze({ id: 'w1', start: '2026-11-09', end: '2026-11-13', title: '3 rooms free' }),
+    Object.freeze({ id: 'w2', start: '2026-11-16', end: '2026-11-20', title: '1 room free' })
+]);
+const BOOKINGS = Object.freeze([Object.freeze({ id: 'b1', title: 'Ada, 2 guests' })]);
 const ITEMS = Object.freeze([
     Object.freeze({ id: 'a', title: 'Alder', description: 'A tree by the river' }),
     Object.freeze({ id: 'b', title: 'Birch', description: 'A tree with white bark' })
@@ -74,7 +79,7 @@ async function mountPattern(name: string): Promise<Mounted> {
     expect(applied.errors).toEqual([]);
     const document = {
         locale: 'en',
-        data: { sales: structuredClone(SALES), items: structuredClone(ITEMS) },
+        data: { sales: structuredClone(SALES), items: structuredClone(ITEMS), availability: structuredClone(AVAILABILITY), bookings: structuredClone(BOOKINGS), booking: { dates: { start: '2026-11-10', end: '2026-11-12' }, guests: 2 } },
         app: applied.tree
     } as unknown as AppDocument;
     expect(validateDocument(document, catalog).errors.filter((error) => error.severity !== 'warning')).toEqual([]);
@@ -130,5 +135,27 @@ describe('first screen patterns', () => {
         expect(text).toContain('Display name');
         expect(text).toContain('Save');
         expect(text).not.toContain('Digest time');
+    });
+
+    it('should show the date range, the calendar, the guest form with a book button and the summary in booking', async () => {
+        // Arrange
+        const { host, store } = await mountPattern('booking');
+
+        // Act
+        store.set('$.data.booking.guests', 3);
+        await settle();
+
+        // Assert
+        expect(deep(host, 'ui-date-range-field')).toHaveLength(1);
+        expect(deep(host, 'ui-calendar')).toHaveLength(1);
+        expect(deep(host, 'ui-form')).toHaveLength(1);
+        const buttons = deep(host, 'ui-button').filter((button) => visibleText(button).includes('Book'));
+        expect(buttons).toHaveLength(1);
+        const summary = visibleText(host);
+        expect(summary).toContain('Your booking');
+        expect(summary).toContain('Check in');
+        expect(summary).toContain('Ada, 2 guests');
+        const guests = deep(host, 'ui-stat').find((stat) => visibleText(stat).includes('Guests')) as HTMLElement;
+        expect(visibleText(guests)).toContain('3');
     });
 });

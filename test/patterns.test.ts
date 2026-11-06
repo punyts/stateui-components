@@ -18,11 +18,12 @@ const COMMERCE = [
     ['sign-in-form', ['fields', 'help'], { title: 'string', email: 'path' }]
 ] as const;
 
-/** The dashboard, master and detail, and settings screens (S2.4) */
+/** The dashboard, master and detail, and settings screens (S2.4), and booking (S2.12) */
 const FIRST_SCREENS = [
     ['dashboard', ['chart', 'figures'], { title: 'string', records: 'path', x: 'string', value: 'string' }],
     ['master-detail', ['detail', 'row'], { title: 'string', items: 'path' }],
-    ['settings', ['general', 'menu', 'sections'], { title: 'string' }]
+    ['settings', ['general', 'menu', 'sections'], { title: 'string' }],
+    ['booking', ['details', 'summary'], { title: 'string', availability: 'path', dates: 'path', guests: 'path', bookings: 'path' }]
 ] as const;
 
 describe('catalog patterns', () => {
@@ -34,12 +35,12 @@ describe('catalog patterns', () => {
         expect(keys).toEqual([...keys].sort());
     });
 
-    it('should list the seven screen patterns', () => {
+    it('should list the eight screen patterns', () => {
         // Arrange and Act
         const screens = catalog.patterns.filter((entry) => entry.kind === 'screen').map((entry) => entry.name);
 
         // Assert
-        expect(screens).toEqual(['bag-and-checkout', 'dashboard', 'master-detail', 'product-detail', 'product-grid', 'settings', 'sign-in-form']);
+        expect(screens).toEqual(['bag-and-checkout', 'booking', 'dashboard', 'master-detail', 'product-detail', 'product-grid', 'settings', 'sign-in-form']);
     });
 
     it.each([...COMMERCE, ...FIRST_SCREENS])('should hold the screen pattern %s with its slots and params', (name, slots, params) => {
@@ -99,5 +100,13 @@ describe('catalog patterns', () => {
 
         // Assert
         expect(shells).toEqual(['marketing', 'side-navigation', 'top-navigation']);
+    });
+
+    it('should build booking from a date range field, a calendar, a form and a summary', () => {
+        // Arrange and Act
+        const entry = pattern('booking');
+
+        // Assert
+        expect(entry.components).toEqual(expect.arrayContaining(['dateRangeField', 'calendar', 'form', 'numberField', 'stat']));
     });
 });
