@@ -15,8 +15,8 @@ import {
 } from './files.js';
 
 describe('file field helpers', () => {
-    it('should list exactly the ADR-0017 types and a 10 MiB limit', () => {
-        // Assert
+    it('should list exactly the ADR-0017 types and GLB, and a 10 MiB limit', () => {
+        // Assert: the same literal as `UiFile.test.ts` in @punyts/stateui-mcp, whose domain cannot import this list
         expect(ALLOWED_FILE_TYPES).toEqual([
             'image/png',
             'image/jpeg',
@@ -28,9 +28,11 @@ describe('file field helpers', () => {
             'text/plain',
             'text/csv',
             'text/markdown',
-            'application/json'
+            'application/json',
+            'model/gltf-binary'
         ]);
         expect(ALLOWED_FILE_TYPES).not.toContain('text/html');
+        expect(ALLOWED_FILE_TYPES).not.toContain('model/gltf+json');
         expect(ALLOWED_FILE_TYPES).not.toContain('image/svg+xml');
         expect(MAX_FILE_SIZE).toBe(10485760);
     });
@@ -63,12 +65,15 @@ describe('file field helpers', () => {
         expect(mediaTypeOf({ name: 'notes.MD', type: '' })).toBe('text/markdown');
         expect(mediaTypeOf({ name: 'data.csv', type: 'text/csv; charset=utf-8' })).toBe('text/csv');
         expect(mediaTypeOf({ name: 'run.exe', type: '' })).toBe('');
+        expect(mediaTypeOf({ name: 'Chair.GLB', type: '' })).toBe('model/gltf-binary');
+        expect(mediaTypeOf({ name: 'scene.gltf', type: '' })).toBe('');
         expect(typeFromName('noextension')).toBe('');
     });
 
     it('should build the picker accept hint with types and extensions', () => {
         // Assert
         expect(acceptAttribute(['image/jpeg', 'text/markdown'])).toBe('image/jpeg,.jpg,.jpeg,text/markdown,.md,.markdown');
+        expect(acceptAttribute(['model/gltf-binary'])).toBe('model/gltf-binary,.glb');
     });
 
     it('should recognise a reference and reject anything else', () => {

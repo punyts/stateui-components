@@ -1,0 +1,14 @@
+{
+    "summary": "A light in a 3D scene: ambient, directional, point or spot, with a colour, an intensity and shadows",
+    "category": "graphics",
+    "purposes": ["light a 3D scene", "add a spotlight or sun to a 3D scene", "cast shadows in a 3D scene"],
+    "includes": ["transform3d", "interaction3d", "motion3d"],
+    "properties": {
+        "kind": { "type": "string", "values": ["ambient", "directional", "point", "spot"], "default": "directional" },
+        "color": { "type": "string", "validators": { "color": true } },
+        "intensity": { "type": "number", "validators": { "range": { "min": 0, "max": 100 } }, "default": 1 },
+        "position": { "type": "array", "validators": { "vector": 3 }, "default": [5, 10, 5] },
+        "target": { "type": "array", "validators": { "vector": 3 }, "default": [0, 0, 0] },
+        "shadows": { "type": "boolean", "default": false }
+    }
+}

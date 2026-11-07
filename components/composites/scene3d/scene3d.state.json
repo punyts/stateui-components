@@ -1,0 +1,30 @@
+{
+    "summary": "A 3D scene of camera, light, mesh, model and group3d nodes, drawn with WebGL and checked in a screenshot",
+    "category": "graphics",
+    "purposes": ["show a 3D product model", "build a 3D scene from state", "let people orbit a 3D model", "light and display a GLB model"],
+    "tokenGroup": "scene3d",
+    "tokens": {
+        "background": "{color.surface.base}",
+        "ambient": "{color.surface.raised}",
+        "height": "calc({size.control.md} * 8)"
+    },
+    "childComponents": ["camera", "light", "mesh", "model", "group3d"],
+    "properties": {
+        "background": { "type": "string", "validators": { "color": true } },
+        "environment": { "type": "string", "values": ["none", "studio", "daylight", "neutral"], "default": "studio" },
+        "fog": {
+            "type": "object",
+            "validators": {
+                "fields": {
+                    "color": { "type": "string", "validators": { "color": true } },
+                    "near": { "type": "number", "validators": { "range": { "min": 0 } } },
+                    "far": { "type": "number", "validators": { "range": { "min": 0 } } }
+                }
+            }
+        },
+        "controls": { "type": "string", "values": ["none", "orbit", "pan"], "default": "none" },
+        "_title": { "type": "string", "kind": "content", "default": "3D scene" },
+        "_description": { "type": "string", "kind": "content", "default": "" },
+        "_fallback": { "type": "string", "kind": "content", "default": "This 3D scene cannot be shown in this browser." }
+    }
+}

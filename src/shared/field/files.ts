@@ -1,4 +1,9 @@
-/** The media types ADR-0017 allows for an app's files; `fileField.accept` can narrow this list, never widen it. The host (`previewFiles.ts`) and the server check the same list */
+/**
+ * The media types ADR-0017 allows for an app's files, with `model/gltf-binary` (a GLB, G3.7); `fileField.accept` can
+ * narrow this list, never widen it. The host (`previewFiles.ts`) and the server check the same list: the server's
+ * domain cannot import this library, so `files.test.ts` here and `UiFile.test.ts` in `@punyts/stateui-mcp` pin it to
+ * the same literal
+ */
 export const ALLOWED_FILE_TYPES: readonly string[] = [
     'image/png',
     'image/jpeg',
@@ -10,7 +15,8 @@ export const ALLOWED_FILE_TYPES: readonly string[] = [
     'text/plain',
     'text/csv',
     'text/markdown',
-    'application/json'
+    'application/json',
+    'model/gltf-binary'
 ];
 
 /** The largest file, in bytes: 10 MiB, which is also the default of `maxSize` */
@@ -28,7 +34,8 @@ const EXTENSIONS: Readonly<Record<string, readonly string[]>> = {
     'text/plain': ['txt'],
     'text/csv': ['csv'],
     'text/markdown': ['md', 'markdown'],
-    'application/json': ['json']
+    'application/json': ['json'],
+    'model/gltf-binary': ['glb']
 };
 
 /** The reference a stored file leaves in `value`: never the bytes */

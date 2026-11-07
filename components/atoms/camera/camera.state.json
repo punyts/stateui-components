@@ -1,0 +1,13 @@
+{
+    "summary": "The camera a 3D scene is seen through: perspective or orthographic, placed and aimed at a target",
+    "category": "graphics",
+    "purposes": ["set the viewpoint of a 3D scene", "aim a camera at a 3D model", "switch between views of a 3D scene"],
+    "includes": ["transform3d", "interaction3d", "motion3d"],
+    "properties": {
+        "kind": { "type": "string", "values": ["perspective", "orthographic"], "default": "perspective" },
+        "position": { "type": "array", "validators": { "vector": 3 }, "default": [0, 0, 5] },
+        "target": { "type": "array", "validators": { "vector": 3 }, "default": [0, 0, 0] },
+        "fov": { "type": "number", "validators": { "range": { "min": 1, "max": 179 } }, "default": 50 },
+        "active": { "type": "boolean", "default": false }
+    }
+}

@@ -40,12 +40,12 @@ const PART_COMPONENTS = ['tableRow'] as const;
 /** The six composed components of Epic 5 */
 const SPEC_COMPOSED = ['confirmDialog', 'formDialog', 'masterDetail', 'settingsPage', 'crudTable', 'dashboardGrid'] as const;
 
-/** The 2D shape components of the graphics epic 1 (G1.3): shape tier, in atoms and molecules, with no element */
-const SHAPE_NAMES = ['rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'path', 'drawText', 'drawImage', 'drawGroup', 'drawRepeat'] as const;
+/** The 2D shape components of the graphics epic 1 (G1.3) and the 3D nodes of epic 3 (G3.4): shape tier, in atoms and molecules, with no element */
+const SHAPE_NAMES = ['rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'path', 'drawText', 'drawImage', 'drawGroup', 'drawRepeat', 'camera', 'light', 'mesh', 'model', 'group3d'] as const;
 const elements = catalog.components.filter((entry) => entry.tier !== 'shape');
 /** The shapes in `atoms` and in `molecules`: they need search keys like the other atoms and molecules */
-const SHAPE_ATOMS = SHAPE_NAMES.filter((name) => name !== 'drawGroup' && name !== 'drawRepeat');
-const SHAPE_MOLECULES = ['drawGroup', 'drawRepeat'] as const;
+const SHAPE_MOLECULES = ['drawGroup', 'drawRepeat', 'group3d'] as const;
+const SHAPE_ATOMS = SHAPE_NAMES.filter((name) => !(SHAPE_MOLECULES as readonly string[]).includes(name));
 
 const composedEntries = catalog.components.filter((entry): entry is ComposedCatalogEntry => entry.tier === 'composed');
 const library = libraryFromCatalog(catalog);
@@ -59,7 +59,7 @@ const difference = (found: readonly string[], spec: readonly string[]): { missin
 /** Components that joined the library after the first set (Epic 8, plus popover, numberField and segmented); the Epic 4 and 5 counts below stay as the spec fixed them */
 const LATER_ATOMS: readonly string[] = ['segmented', 'markdown'];
 const LATER_MOLECULES: readonly string[] = ['numberField', 'comboboxField', 'multiSelectField', 'breadcrumb', 'pagination', 'sliderField', 'disclosure', 'stepper', 'dateRangeField', 'fileField', 'paintField'];
-const LATER_COMPOSITES: readonly string[] = ['popover', 'accordion', 'splitPane', 'tree', 'chart', 'board', 'calendar', 'recordGrid', 'messageList', 'outlet', 'drawing'];
+const LATER_COMPOSITES: readonly string[] = ['popover', 'accordion', 'splitPane', 'tree', 'chart', 'board', 'calendar', 'recordGrid', 'messageList', 'outlet', 'drawing', 'scene3d'];
 const LATER_COMPOSED: readonly string[] = ['wizard', 'chatView'];
 
 /** Every component Epic 8 adds; all are built, so none is skipped */
@@ -439,12 +439,12 @@ describe('component tokens and icon defaults', () => {
         expect(roots.some((entry) => (entry.tokens ?? []).length > 0)).toBe(true);
     });
 
-    it('should name every token group as one lower-case word', () => {
+    it('should name every token group as one lower-case word, digits allowed after the first letter (scene3d)', () => {
         // Arrange
         const groups = new Set(roots.flatMap((entry) => (entry.tokens ?? []).map((token) => token.group)));
 
         // Assert
-        expect([...groups].filter((group) => !/^[a-z]+$/.test(group))).toEqual([]);
+        expect([...groups].filter((group) => !/^[a-z][a-z0-9]*$/.test(group))).toEqual([]);
         expect(groups.size).toBeGreaterThan(5);
     });
 

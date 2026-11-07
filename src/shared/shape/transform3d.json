@@ -1,0 +1,8 @@
+{
+    "properties": {
+        "position": { "type": "array", "validators": { "vector": 3 }, "default": [0, 0, 0] },
+        "rotation": { "type": "array", "validators": { "vector": 3 }, "default": [0, 0, 0] },
+        "scale": { "type": "array", "validators": { "vector": 3 }, "default": [1, 1, 1] },
+        "visible": { "type": "boolean", "default": true }
+    }
+}
