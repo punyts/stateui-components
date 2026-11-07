@@ -71,6 +71,43 @@ function countFrames(): { count(): number } {
 /** Waits for a time with timers, not frames, so nothing asks for a frame while it waits */
 const wait = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
+/** A wide interactive bar (so its bounds change as it turns, and canvas gives it a proxy) with `animate: spin` (G1.8b) */
+const spinner = (animate: Record<string, unknown> = { name: 'spin', duration: 1000 }): NodeState => ({
+    component: 'rect',
+    x: 30,
+    y: 20,
+    width: 40,
+    height: 10,
+    interactive: true,
+    _label: 'Spinner',
+    animate
+});
+
+/**
+ * Where the spinner is on screen: the SVG element's `transform` attribute (none at rest), or for canvas the box of the
+ * proxy the renderer places over the shape's turned bounds in every frame it draws
+ */
+function turnOf(mounted: MountedComponent, renderer: Renderer): string {
+    const element = mounted.element.shadowRoot?.querySelector<HTMLElement>(`[data-shape-path="${ROOT}.a"]`);
+    if (!element) throw new Error('no element for the spinner');
+    if (renderer === 'svg') return element.getAttribute('transform') ?? 'none';
+    const { left, top, width, height } = element.style;
+    return [left, top, width, height].join(' ');
+}
+
+/** The spinner at rest: no transform in SVG, and on canvas its proxy over the unturned bar (30 to 70 by 20 to 30 units) */
+const RESTING: Readonly<Record<Renderer, string>> = { svg: 'none', canvas: '60px 40px 80px 20px' };
+
+/** The turns of the spinner seen over a number of frames */
+async function turns(mounted: MountedComponent, renderer: Renderer, frames: number): Promise<string[]> {
+    const seen: string[] = [];
+    for (let at = 0; at < frames; at += 1) {
+        await frame();
+        seen.push(turnOf(mounted, renderer));
+    }
+    return seen;
+}
+
 for (const renderer of ['svg', 'canvas'] as const) {
     describe(`drawing motion with the ${renderer} renderer in Chromium`, () => {
         beforeEach(() => {
@@ -245,6 +282,76 @@ for (const renderer of ['svg', 'canvas'] as const) {
                 const [r, g, b] = canvas.getContext('2d')!.getImageData(Math.round(100 * ratio), Math.round(50 * ratio), 1, 1).data;
                 expect([r, g, b]).toEqual([255, 0, 0]);
             }
+        });
+
+        it('should spin a shape with animate over time and leave the store untouched (G1.8b)', async () => {
+            // Arrange
+            const mounted = await mountDrawing(renderer, { children: { a: spinner() } });
+            const before = JSON.stringify(mounted.store.get(ROOT));
+            const set = vi.spyOn(mounted.store, 'set');
+
+            // Act
+            const seen = await turns(mounted, renderer, 8);
+
+            // Assert: it turns from frame to frame, the drawing is ready while it does, and nothing was written
+            expect(new Set(seen).size).toBeGreaterThan(2);
+            expect(seen.some((turn) => turn !== RESTING[renderer])).toBe(true);
+            expect(mounted.element.getAttribute('data-render')).toBe('ready');
+            expect(set).not.toHaveBeenCalled();
+            expect(JSON.stringify(mounted.store.get(ROOT))).toBe(before);
+        });
+
+        it('should show the resting shape and ask for no frame with the reduced overlay, and spin once full motion is back (G1.8b)', async () => {
+            // Arrange
+            const mounted = await mountDrawing(renderer, { children: { a: spinner() } }, { motion: 'reduced' });
+            await frame();
+            const frames = countFrames();
+
+            // Act: reduced
+            await wait(150);
+            const reduced = turnOf(mounted, renderer);
+            const asked = frames.count();
+
+            // Act: full motion again
+            mounted.setTheme('motion', 'full');
+            await drawn(mounted);
+            const seen = await turns(mounted, renderer, 8);
+
+            // Assert
+            expect(reduced).toBe(RESTING[renderer]);
+            expect(asked).toBe(0);
+            expect(new Set(seen).size).toBeGreaterThan(2);
+        });
+
+        it('should stop a spinning shape at rest when the reduced overlay is switched on (G1.8b)', async () => {
+            // Arrange
+            const mounted = await mountDrawing(renderer, { children: { a: spinner() } });
+            await turns(mounted, renderer, 3);
+
+            // Act
+            mounted.setTheme('motion', 'reduced');
+            await drawn(mounted);
+            await frame();
+            const frames = countFrames();
+            await wait(150);
+
+            // Assert
+            expect(turnOf(mounted, renderer)).toBe(RESTING[renderer]);
+            expect(frames.count()).toBe(0);
+        });
+
+        it('should play blink once without loop, then rest and ask for no frame (G1.8b)', async () => {
+            // Arrange
+            const mounted = await mountDrawing(renderer, { children: { a: spinner({ name: 'blink', duration: 100, loop: false }) } });
+
+            // Act: the single cycle ends within a few frames, then the drawing is at rest
+            for (let at = 0; at < 30; at += 1) await frame();
+            const frames = countFrames();
+            await wait(150);
+
+            // Assert
+            expect(frames.count()).toBe(0);
+            expect(turnOf(mounted, renderer)).toBe(RESTING[renderer]);
         });
     });
 }

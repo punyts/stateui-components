@@ -7,6 +7,7 @@ import type { DrawingIssue, DrawingRenderer, RendererKind, ShapeEvent, ShapeMove
 import '../shared/drawing/canvasRenderer.js';
 import '../shared/drawing/svgRenderer.js';
 import { expandRepeats, targetOf } from '../shared/drawing/rows.js';
+import { readStoredFile } from '../shared/field/files.js';
 import { isReducedMotion } from '../shared/drawing/scheduler.js';
 import { locateShape, readShapeTree, shapeProperties } from '../shared/drawing/tree.js';
 import type { ShapeTree } from '../shared/drawing/tree.js';
@@ -52,7 +53,13 @@ const hasInteractive = (shapes: readonly ShapeTree[]): boolean =>
  * controller reads `--ui-motion-duration-base` from the element's computed style on mount and again after a theme
  * switch (the `motion` overlay writes `$.theme.active.motion`): a duration of 0 (`0ms`, `0s`, `0`) is reduced
  * motion, and every change jumps. The drawing stays `pending` while a tween runs (`drawn()` waits for it), so a
- * screenshot shows the shapes where they go
+ * screenshot shows the shapes where they go. The renderer also plays each shape's `animate` (G1.8b) without writing to
+ * the store and without holding `data-render` pending; with reduced motion the shapes rest
+ *
+ * Pictures (G1.9b): a `drawImage` whose `src` is a file reference is read with the bubbling, composed `ui-file-read`
+ * event (the dispatcher answers it with `hooks.readFile`; an unanswered one is `offline`). The drawing stays
+ * `pending` until its pictures are decoded and drawn; a picture that cannot be read or decoded is not drawn and is
+ * reported once as `SUI-RUN-FILE` with the node's path, and the other shapes draw
  */
 export default function controller({ element, store, basePath }: ControllerContext) {
     const childrenPath = `${basePath}.children`;
@@ -115,7 +122,8 @@ export default function controller({ element, store, basePath }: ControllerConte
                 readProperty: read,
                 onEvent: raise,
                 onMove: write,
-                onIssue
+                onIssue,
+                readFile: (id, signal) => readStoredFile(element, id, signal)
             });
         } catch {
             // Both kinds are registered (the imports above); a renderer that is not draws nothing

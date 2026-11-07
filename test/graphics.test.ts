@@ -197,4 +197,24 @@ describe('a drawing document', () => {
             ['SUI-STATE-INVALID', '$.app.children.negative.transition']
         ]);
     });
+
+    it('should take the four animate names and refuse any other name or a missing one (G1.8b)', () => {
+        // Act
+        const result = validate(
+            drawingDocument({
+                spin: { component: 'rect', width: 1, height: 1, animate: { name: 'spin', duration: 1000, loop: true, delay: 100 } },
+                pulse: { component: 'circle', r: 1, animate: { name: 'pulse' } },
+                fade: { component: 'circle', r: 1, animate: { name: 'fade', loop: false } },
+                blink: { component: 'circle', r: 1, animate: { name: 'blink', duration: 400 } },
+                bob: { component: 'circle', r: 1, animate: { name: 'bob' } },
+                nameless: { component: 'circle', r: 1, animate: { duration: 400 } }
+            })
+        );
+
+        // Assert
+        expect(result.errors.map((error) => [error.code, error.statePath])).toEqual([
+            ['SUI-STATE-INVALID', '$.app.children.bob.animate'],
+            ['SUI-STATE-INVALID', '$.app.children.nameless.animate']
+        ]);
+    });
 });

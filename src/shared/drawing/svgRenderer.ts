@@ -1,6 +1,8 @@
-import { IDENTITY, boundsAt, hitTest, preserveAspectRatioOf, readFit, readViewBox, transformOf } from './geometry.js';
+import { createAnimations } from './animate.js';
+import { FITS, IDENTITY, boundsAt, hitTest, preserveAspectRatioOf, readFit, readViewBox, transformOf } from './geometry.js';
 import type { Bounds, Matrix, ViewBox } from './geometry.js';
 import { createShapeDrag, dragAxes } from './drag.js';
+import { createImageLoader, imageSourceOf, loadImageUrl } from './images.js';
 import { createPaintResolver } from './paint.js';
 import type { Gradient, Paint, PaintResolver } from './paint.js';
 import { registerDrawingRenderer } from './render.js';
@@ -13,11 +15,8 @@ import type { ShapeKind, ShapeTree } from './tree.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
-/**
- * The element each shape is drawn as. `drawRepeat` is a group its copies (its bound `children`) go into; `drawImage`
- * is drawn by G1.9b, so it has no element yet
- */
-const TAGS: Readonly<Record<Exclude<ShapeKind, 'drawImage'>, string>> = {
+/** The element each shape is drawn as. `drawRepeat` is a group its copies (its bound `children`) go into */
+const TAGS: Readonly<Record<ShapeKind, string>> = {
     rect: 'rect',
     circle: 'circle',
     ellipse: 'ellipse',
@@ -26,6 +25,7 @@ const TAGS: Readonly<Record<Exclude<ShapeKind, 'drawImage'>, string>> = {
     polygon: 'polygon',
     path: 'path',
     drawText: 'text',
+    drawImage: 'image',
     drawGroup: 'g',
     drawRepeat: 'g'
 };
@@ -87,6 +87,17 @@ interface DrawnGradient {
  * `transition` tweens in the renderer's own frame loop (only the moving shapes' attributes are rewritten each frame);
  * with reduced motion (`options.reducedMotion()`, asked on every update) it jumps. A position a drag or an arrow key
  * hands to `onMove` is shown at once, not tweened. `drawn()` resolves once the running tweens have ended
+ *
+ * Animate (G1.8b, `animate.ts`): a shape with `animate` plays its named animation (`spin`, `pulse`, `fade`, `blink`)
+ * in the same frame loop, its `transform` or `opacity` rewritten each frame; nothing is written to the store. With
+ * reduced motion it shows its resting values and no frame is asked for. `drawn()` does not wait for an animation
+ *
+ * Pictures (G1.9b, `images.ts`): a `drawImage` is an `image` element at `x`, `y`, `width` by `height` (each 0
+ * when unset), its `fit` as `preserveAspectRatio`. The frame's policy has `img-src data:` and no `blob:`, so its
+ * `href` is always a `data:` URL: a `data:` `src` as written, or for a file reference one built from the bytes
+ * `options.readFile` gives. Each is decoded before it is set, and `drawn()` waits for that; a picture that cannot be
+ * read or decoded is not drawn and is reported once as `SUI-RUN-FILE` (its reason the file code), and a `src` that is
+ * not a png, jpeg, gif or webp picture is `SUI-RUN-DRAW`
  */
 export function createSvgRenderer(target: Element, options: DrawingRendererOptions): DrawingRenderer {
     const document = target.ownerDocument;
@@ -256,9 +267,15 @@ export function createSvgRenderer(target: Element, options: DrawingRendererOptio
                 put('font-size', read.number('fontSize', 0));
                 break;
             }
+            case 'drawImage':
+                put('x', read.number('x'));
+                put('y', read.number('y'));
+                put('width', read.number('width', 0) ?? 0);
+                put('height', read.number('height', 0) ?? 0);
+                attrs.preserveAspectRatio = preserveAspectRatioOf(read.word('fit', FITS) ?? 'contain');
+                break;
             case 'drawGroup':
             case 'drawRepeat':
-            case 'drawImage':
                 break;
         }
         // x and y (an offset in the transform for most kinds) are checked here so a bad one is reported, not taken as 0
@@ -285,16 +302,55 @@ export function createSvgRenderer(target: Element, options: DrawingRendererOptio
         drawn.delete(path);
     };
 
+    /**
+     * Pictures (G1.9b): each `src` is loaded once as a `data:` URL (`loadImageUrl`: the source's own, or one built from
+     * the file's bytes, decoded before it is used); the `image` element gets it as `href` once it is loaded. The
+     * `drawImage` shapes still loading are drawn again when a load ends
+     */
+    let loading = new Set<string>();
+    const images = createImageLoader<string>({
+        load: loadImageUrl(document, options.readFile),
+        onSettled() {
+            if (disposed) return;
+            const paths = [...loading];
+            loading = new Set();
+            for (const path of paths) {
+                const chain = locateShape(tree, path);
+                const shape = chain?.[chain.length - 1];
+                if (shape !== undefined) drawShape(shape);
+            }
+        }
+    });
+
+    /**
+     * The `href` of a `drawImage`: its URL once loaded, undefined while it loads or with no `src`, false when it cannot
+     * be loaded (reported once as `SUI-RUN-FILE`, the shape not drawn); throws `Unusable` for a `src` that is not a picture
+     */
+    const pictureOf = (shape: ShapeTree): string | false | undefined => {
+        const source = imageSourceOf(shape.properties.src);
+        if (source === undefined) return undefined;
+        const state = images.use(source);
+        if (state.status === 'ready') return state.value;
+        if (state.status === 'failed') {
+            issue({ code: 'SUI-RUN-FILE', path: shape.path, reason: state.reason });
+            return false;
+        }
+        loading.add(shape.path);
+        return undefined;
+    };
+
     /** Draws one shape and gives its element, or undefined when it is not drawn */
     const drawShape = (shape: ShapeTree): SVGElement | undefined => {
-        // A hidden shape (the shared `hidden`) is left out like a removed one; drawImage is drawn by G1.9b
-        if (shape.kind === 'drawImage' || shape.properties.hidden === true) return undefined;
+        // A hidden shape (the shared `hidden`) is left out like a removed one
+        if (shape.properties.hidden === true) return undefined;
         const read = new ShapeReader(shape);
         const attrs: Record<string, string> = {};
         let text = '';
+        let picture: string | false | undefined;
         try {
             geometryAttrs(shape, read, attrs);
             if (shape.kind === 'drawText') text = read.text('_text');
+            if (shape.kind === 'drawImage') picture = pictureOf(shape);
             paintAttrs(shape, read, attrs);
         } catch (error) {
             if (!(error instanceof Unusable)) throw error;
@@ -302,6 +358,11 @@ export function createSvgRenderer(target: Element, options: DrawingRendererOptio
             drop(shape.path);
             return undefined;
         }
+        if (picture === false) {
+            drop(shape.path);
+            return undefined;
+        }
+        if (picture !== undefined) attrs.href = picture;
         const matrix = transformOf(shape);
         if (!isMatrixIdentity(matrix)) attrs.transform = `matrix(${matrix.map(num).join(' ')})`;
         if (shape.properties.interactive === true) {
@@ -381,6 +442,14 @@ export function createSvgRenderer(target: Element, options: DrawingRendererOptio
 
     let frame: Promise<void> | undefined;
 
+    /** Resolves after the next animation frame (at once with no window) */
+    const nextFrame = (): Promise<void> =>
+        new Promise((resolve) => {
+            const view = document.defaultView;
+            if (view === null) resolve();
+            else view.requestAnimationFrame(() => resolve());
+        });
+
     /** The interactive shape an event target is in: the nearest drawn element at or above it that is interactive */
     const shapeAt = (target: EventTarget | null): ShapeTree | undefined => {
         let node = target instanceof Node ? target : null;
@@ -418,8 +487,8 @@ export function createSvgRenderer(target: Element, options: DrawingRendererOptio
         cancelFrame: (handle) => view?.cancelAnimationFrame(handle),
         onFrame(changed) {
             if (disposed) return;
-            tree = drag.apply(transitions.current());
-            for (const path of new Set([...changed].map(keyPath))) {
+            tree = drag.apply(animations.decorate(transitions.current()));
+            for (const path of new Set([...[...changed].map(keyPath), ...animations.paths()])) {
                 const chain = locateShape(tree, path);
                 const shape = chain?.[chain.length - 1];
                 if (shape !== undefined) drawShape(shape);
@@ -427,6 +496,7 @@ export function createSvgRenderer(target: Element, options: DrawingRendererOptio
         }
     });
     const transitions = createTransitions({ scheduler, read: styleReader(svg), normalize: tokenNormalizer(document) });
+    const animations = createAnimations(scheduler);
 
     /** Drags: a moved shape is redrawn alone (its element's attributes), from the tree with it moved */
     const drag = createShapeDrag({
@@ -492,10 +562,11 @@ export function createSvgRenderer(target: Element, options: DrawingRendererOptio
             // a changed value of a shape with `transition` starts at the value on screen, and a drag in progress keeps
             // its shape where the pointer has it
             scheduler.setReduced(options.reducedMotion());
-            tree = drag.apply(transitions.apply(next));
+            tree = drag.apply(animations.follow(transitions.apply(next)));
             wanted = new Set();
             collectPaths(tree, wanted);
             seen = new Set();
+            loading = new Set();
             interactive = new Map();
             resolver.update({ paints: options.readProperty('paints'), paintsPath });
             syncGradients();
@@ -503,6 +574,8 @@ export function createSvgRenderer(target: Element, options: DrawingRendererOptio
             place(svg, tree);
             if (hovered !== undefined && !interactive.has(hovered)) hovered = undefined;
             for (const path of [...drawn.keys()]) if (!seen.has(path)) drop(path);
+            // The pictures no shape uses any more are let go
+            images.sweep();
             for (const [path, clip] of clips) {
                 if (seen.has(path) && drawn.get(path)?.attrs['clip-path'] !== undefined) continue;
                 clip.element.remove();
@@ -526,8 +599,12 @@ export function createSvgRenderer(target: Element, options: DrawingRendererOptio
                 if (view === null) resolve();
                 else view.requestAnimationFrame(() => resolve());
             });
-            // On screen once the tweens that run have ended, so a screenshot shows where the shapes go
-            return frame.then(() => scheduler.settled());
+            // On screen once the tweens that run have ended, so a screenshot shows where the shapes go; and once the
+            // pictures that load are decoded and set (a frame after the last one is)
+            const pictures = loading.size > 0;
+            return frame
+                .then(() => scheduler.settled())
+                .then(() => (pictures ? images.settled().then(nextFrame) : undefined));
         },
         dispose(): void {
             if (disposed) return;
@@ -535,6 +612,8 @@ export function createSvgRenderer(target: Element, options: DrawingRendererOptio
             drag.dispose();
             scheduler.dispose();
             transitions.dispose();
+            animations.dispose();
+            images.dispose();
             svg.removeEventListener('pointerdown', onDown);
             svg.removeEventListener('click', onClick);
             svg.removeEventListener('keydown', onKey);

@@ -3,7 +3,7 @@ import type { ControllerContext } from '@punyts/stateui';
 import { buildError } from '@punyts/stateui-app';
 import { resolveColor } from '../shared/drawing/paint.js';
 import { createField, createWaiters } from '../shared/field/field.js';
-import { isFileRef, MAX_FILE_SIZE, transferCode } from '../shared/field/files.js';
+import { IMAGE_FILE_TYPES, isFileRef, MAX_FILE_SIZE, readImageBitmap, readStoredFile, transferCode } from '../shared/field/files.js';
 import type { FileRef } from '../shared/field/files.js';
 import { createPainter } from '../shared/paint/draw.js';
 import type { Painter } from '../shared/paint/draw.js';
@@ -33,11 +33,8 @@ const FILE_TRANSFER_EVENT = 'ui-file-transfer';
 /** The event that gives a stored file back through the host's `releaseFile` hook (G2.5; unanswered when there is none) */
 const FILE_RELEASE_EVENT = 'ui-file-release';
 
-/** The event that reads a stored file through the host's `readFile` hook (G1.9; unanswered when there is none) */
-const FILE_READ_EVENT = 'ui-file-read';
-
 /** The types a background file may have: the ones the file store holds as images (the `fileRef` validator of the shape) */
-const BACKGROUND_TYPES: readonly string[] = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
+const BACKGROUND_TYPES: readonly string[] = IMAGE_FILE_TYPES;
 
 /** The colour under a background file, and in its place while it is read or when it cannot be read */
 const FILE_BACKDROP = '#ffffff';
@@ -75,12 +72,6 @@ interface SizeButton {
 
 interface CommandHost {
     commands?: Record<string, () => void>;
-}
-
-/** A stored file as the host's `readFile` hook gives it: its reference and its bytes */
-interface StoredFile {
-    file: FileRef;
-    data: ArrayBuffer;
 }
 
 /** The pointer a stroke follows: the one that pressed on the canvas, until it is lifted */
@@ -418,22 +409,6 @@ export default function controller(context: ControllerContext) {
         drawPicture(context2d, width, height);
     };
 
-    /** Raises `ui-file-read`; the promise rejects with `offline` when nothing answers (the host has no hook) */
-    const readStored = (id: string, signal: AbortSignal): Promise<StoredFile> =>
-        new Promise((resolve, reject) => {
-            let answered = false;
-            const detail = {
-                id,
-                signal,
-                respond: (result: Promise<StoredFile>): void => {
-                    answered = true;
-                    result.then(resolve, reject);
-                }
-            };
-            element.dispatchEvent(new CustomEvent(FILE_READ_EVENT, { detail, bubbles: true, composed: true }));
-            if (!answered) reject({ code: 'offline' });
-        });
-
     /** Reports a background file that cannot be used, as `SUI-RUN-FILE` with the field's path */
     const reportFile = (reason: string): void => {
         const error = buildError('SUI-RUN-FILE', { component: 'paintField', path: basePath, reason, statePath: `${basePath}.background` });
@@ -464,16 +439,8 @@ export default function controller(context: ControllerContext) {
         }
         const abort = new AbortController();
         reading = abort;
-        pictureLoaded = readStored(id, abort.signal)
-            .then(
-                ({ file, data }) =>
-                    createImageBitmap(new Blob([data], { type: file.type })).catch(() => {
-                        throw { reason: 'not_an_image' };
-                    }),
-                (error: unknown) => {
-                    throw { reason: transferCode(error) };
-                }
-            )
+        // Read with `ui-file-read` (`readStoredFile`) and decoded, as `drawImage` reads its file on canvas
+        pictureLoaded = readImageBitmap((fileId, signal) => readStoredFile(element, fileId, signal), id, abort.signal)
             .then(
                 (bitmap) => {
                     if (abort.signal.aborted || disposed) {

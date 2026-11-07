@@ -1,6 +1,7 @@
 import { buildError } from '@punyts/stateui-app/core';
 import type { BuildError, JsonValue } from '@punyts/stateui-app/core';
 import type { Bounds, ViewBox } from './geometry.js';
+import type { ReadStoredFile } from '../field/files.js';
 import type { PaintIssue } from './paint.js';
 import type { ShapeTree } from './tree.js';
 
@@ -40,10 +41,12 @@ export interface ShapeMove {
 
 /**
  * A shape a renderer leaves out because a resolved value cannot be drawn (a link that delivers text where a number is
- * expected, path data that does not parse), or a node whose component is not a 2D shape. Reported as `SUI-RUN-DRAW`
+ * expected, path data that does not parse), or a node whose component is not a 2D shape. Reported as `SUI-RUN-DRAW`.
+ * A `drawImage` whose picture cannot be read or decoded (G1.9b) is `SUI-RUN-FILE`, its reason the file code
+ * (`not_found`, `offline`, `not_an_image`, …)
  */
 export interface ShapeIssue {
-    readonly code: 'SUI-RUN-DRAW';
+    readonly code: 'SUI-RUN-DRAW' | 'SUI-RUN-FILE';
     /** The state path of the shape */
     readonly path: string;
     /** Why, in words that name properties and components only, never values: `property "x" is not a number` */
@@ -58,9 +61,11 @@ export const isShapeIssue = (issue: DrawingIssue): issue is ShapeIssue => 'reaso
 
 /**
  * The error a feeder reports for an issue (with `report.error` of `@punyts/core`): `SUI-STATE-PAINT` and
- * `SUI-STATE-TOKEN` as the document check words them, `SUI-RUN-DRAW` with its reason
+ * `SUI-STATE-TOKEN` as the document check words them, `SUI-RUN-DRAW` with its reason, `SUI-RUN-FILE` for the
+ * picture of a `drawImage`
  */
 export function drawingIssueError(issue: DrawingIssue): BuildError {
+    if (isShapeIssue(issue) && issue.code === 'SUI-RUN-FILE') return buildError('SUI-RUN-FILE', { component: 'drawImage', path: issue.path, reason: issue.reason, statePath: issue.path });
     if (isShapeIssue(issue)) return buildError('SUI-RUN-DRAW', { path: issue.path, reason: issue.reason, statePath: issue.path });
     if (issue.code === 'SUI-STATE-PAINT') return buildError('SUI-STATE-PAINT', { name: issue.property, path: issue.path, key: issue.value, statePath: issue.path });
     if (issue.code === 'SUI-STATE-TOKEN') return buildError('SUI-STATE-TOKEN', { name: issue.property, path: issue.path, token: issue.value, statePath: issue.path });
@@ -95,6 +100,11 @@ export interface DrawingRendererOptions {
     readonly path?: string;
     /** Hears each problem once: a colour that resolved to no paint, or a shape left out; the feeder reports it */
     onIssue?(issue: DrawingIssue): void;
+    /**
+     * Reads a stored file for a `drawImage` whose `src` is a file reference (G1.9b; the `drawing` raises
+     * `ui-file-read`). Without it such a picture is not drawn and is reported as `SUI-RUN-FILE` `offline`
+     */
+    readonly readFile?: ReadStoredFile;
 }
 
 /**

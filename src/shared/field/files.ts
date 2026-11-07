@@ -131,3 +131,55 @@ export function transferCode(error: unknown): string {
     const code = typeof error === 'object' && error !== null ? (error as { code?: unknown }).code : undefined;
     return typeof code === 'string' && TRANSFER_CODES.includes(code) ? code : 'internal';
 }
+
+/** The event that reads a stored file through the host's `readFile` hook (G1.9; the dispatcher answers it, unanswered when there is no hook) */
+export const FILE_READ_EVENT = 'ui-file-read';
+
+/** The types of the app's files that are pictures: what a `paintField` background and a `drawImage` file may be */
+export const IMAGE_FILE_TYPES: readonly string[] = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
+
+/** A stored file as the host's `readFile` hook gives it: its reference and its bytes */
+export interface StoredFile {
+    readonly file: FileRef;
+    readonly data: ArrayBuffer;
+}
+
+/** Reads a stored file by its id; rejects with an object whose `code` names the failure */
+export type ReadStoredFile = (id: string, signal: AbortSignal) => Promise<StoredFile>;
+
+/**
+ * Reads a stored file with the bubbling, composed `ui-file-read` event raised on `target` (the dispatcher answers it
+ * with `hooks.readFile`); the promise rejects with `{ code: 'offline' }` when nothing answers (the host has no hook)
+ */
+export function readStoredFile(target: EventTarget, id: string, signal: AbortSignal): Promise<StoredFile> {
+    return new Promise((resolve, reject) => {
+        let answered = false;
+        const detail = {
+            id,
+            signal,
+            respond: (result: Promise<StoredFile>): void => {
+                answered = true;
+                result.then(resolve, reject);
+            }
+        };
+        target.dispatchEvent(new CustomEvent(FILE_READ_EVENT, { detail, bubbles: true, composed: true }));
+        if (!answered) reject({ code: 'offline' });
+    });
+}
+
+/**
+ * Reads a stored picture and decodes it to an `ImageBitmap` (`createImageBitmap` on a `Blob`, which the frame's
+ * `img-src` does not govern). Rejects with `{ reason }`: the read's code (`transferCode`), or `not_an_image` when the
+ * bytes do not decode
+ */
+export function readImageBitmap(read: ReadStoredFile, id: string, signal: AbortSignal): Promise<ImageBitmap> {
+    return read(id, signal).then(
+        ({ file, data }) =>
+            createImageBitmap(new Blob([data], { type: file.type })).catch(() => {
+                throw { reason: 'not_an_image' };
+            }),
+        (error: unknown) => {
+            throw { reason: transferCode(error) };
+        }
+    );
+}

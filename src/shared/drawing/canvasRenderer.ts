@@ -1,7 +1,9 @@
-import { IDENTITY, boundsAt, fitViewBox, hitTest, localBounds, multiply, readFit, readViewBox, toDrawing, transformBounds, transformOf } from './geometry.js';
-import type { Bounds, Matrix, ViewBox, Viewport } from './geometry.js';
+import { createAnimations } from './animate.js';
+import { FITS, IDENTITY, boundsAt, fitViewBox, hitTest, localBounds, multiply, readFit, readViewBox, toDrawing, transformBounds, transformOf } from './geometry.js';
+import type { Bounds, Fit, Matrix, ViewBox, Viewport } from './geometry.js';
 import { buildPath } from './canvasPath.js';
 import { createShapeDrag, dragAxes } from './drag.js';
+import { createImageLoader, imageSourceOf, loadImageBitmap, placeImage } from './images.js';
 import { createPaintResolver, placeGradient } from './paint.js';
 import type { Paint, PaintResolver } from './paint.js';
 import { registerDrawingRenderer } from './render.js';
@@ -109,11 +111,12 @@ const isIdentity = (m: Matrix): boolean => m.every((value, index) => Math.abs(va
 /** The geometry of one leaf shape, read and checked */
 type Geometry =
     | { readonly kind: 'path'; readonly path: Path2D | undefined; readonly closed: boolean }
+    | { readonly kind: 'image'; readonly bitmap: ImageBitmap | undefined; readonly box: Bounds; readonly fit: Fit }
     | { readonly kind: 'text'; readonly text: string; readonly x: number; readonly y: number; readonly align: CanvasTextAlign; readonly baseline: CanvasTextBaseline; readonly fontProperty?: string; readonly fontSize?: number };
 
 /**
  * The canvas renderer (G1.6 of the graphics epic 1). It draws the same shape tree as the SVG renderer into a `canvas`
- * it adds to `target` (class `canvas`), with the 2D context: every shape kind but `drawImage` (G1.9b), paint (colours,
+ * it adds to `target` (class `canvas`), with the 2D context: every shape kind (`drawImage` since G1.9b), paint (colours,
  * tokens, the linear and radial gradients of `paints`), `strokeWidth`, `dash`, `cap`, `join`, `opacity`, a group's
  * `clip`, the transforms of `geometry.ts` and the `anchor` and `baseline` of text. A `path` is a `Path2D` built from the
  * parsed command list (`buildPath`), never from the raw string. A group's paint reaches its shapes as in SVG, and a
@@ -149,6 +152,15 @@ type Geometry =
  * shape with `transition` tweens in the renderer's own frame loop, which draws the whole bitmap (and places the
  * proxies) in each of its frames; with reduced motion it jumps. A position handed to `onMove` is shown at once.
  * `drawn()` resolves once the running tweens have ended
+ *
+ * Animate (G1.8b, `animate.ts`, as in SVG): a shape with `animate` plays its named animation in the same frame loop,
+ * the bitmap drawn and the proxies placed in each frame; nothing is written to the store, reduced motion shows the
+ * resting shape and asks for no frame, and `drawn()` does not wait for an animation
+ *
+ * Pictures (G1.9b, `images.ts`): a `drawImage` draws the decoded `ImageBitmap` of its `src` (a file's bytes through
+ * `options.readFile` and `createImageBitmap` on a `Blob`, a `data:` URL decoded through an `img`) into its box by
+ * `fit` (`cover` cut to the box), as SVG does. `drawn()` waits for the pictures that load and the draw after them; a
+ * picture that cannot be read or decoded is not drawn and is reported once as `SUI-RUN-FILE`
  */
 export function createCanvasRenderer(target: Element, options: DrawingRendererOptions): CanvasDrawingRenderer {
     const document = target.ownerDocument;
@@ -324,9 +336,40 @@ export function createCanvasRenderer(target: Element, options: DrawingRendererOp
         }
     };
 
+    /**
+     * Pictures (G1.9b): each `src` is loaded once as a decoded `ImageBitmap` (`loadImageBitmap`); a draw draws the
+     * loaded ones, and a load that ends asks for another draw. The bitmaps no draw used are closed after it
+     */
+    const images = createImageLoader<ImageBitmap>({
+        load: loadImageBitmap(document, options.readFile),
+        release: (bitmap) => bitmap.close(),
+        onSettled() {
+            if (disposed) return;
+            dirty = true;
+            if (view !== null) schedule(view, onFrame);
+        }
+    });
+
+    /**
+     * The bitmap of a `drawImage`: undefined while it loads, with no `src`, or when it cannot be loaded (reported once as
+     * `SUI-RUN-FILE`); throws `Unusable` for a `src` that is not a picture
+     */
+    const pictureOf = (shape: ShapeTree): ImageBitmap | undefined => {
+        const source = imageSourceOf(shape.properties.src);
+        if (source === undefined) return undefined;
+        const state = images.use(source);
+        if (state.status === 'ready') return state.value;
+        if (state.status === 'failed') issue({ code: 'SUI-RUN-FILE', path: shape.path, reason: state.reason });
+        return undefined;
+    };
+
     /** The geometry of a leaf shape; throws `Unusable` */
     const geometryOf = (shape: ShapeTree, read: ShapeReader): Geometry => {
         read.transform();
+        if (shape.kind === 'drawImage') {
+            const box = { x: read.number('x') ?? 0, y: read.number('y') ?? 0, width: read.number('width', 0) ?? 0, height: read.number('height', 0) ?? 0 };
+            return { kind: 'image', bitmap: pictureOf(shape), box, fit: read.word('fit', FITS) ?? 'contain' };
+        }
         if (shape.kind !== 'drawText') {
             const { path, closed } = outlineOf(shape, read);
             return { kind: 'path', path, closed };
@@ -344,6 +387,20 @@ export function createCanvasRenderer(target: Element, options: DrawingRendererOp
         const { ctx } = draw;
         if (style.opacity <= 0) return;
         ctx.globalAlpha = style.opacity;
+        if (geometry.kind === 'image') {
+            if (geometry.bitmap === undefined) return;
+            const placed = placeImage(geometry.fit, geometry.bitmap.width, geometry.bitmap.height, geometry.box);
+            if (placed.width <= 0 || placed.height <= 0) return;
+            if (placed.clip) {
+                // `cover` cuts the picture to its box, as SVG's `slice` does
+                const { x, y, width, height } = geometry.box;
+                ctx.beginPath();
+                ctx.rect(x, y, width, height);
+                ctx.clip();
+            }
+            ctx.drawImage(geometry.bitmap, placed.x, placed.y, placed.width, placed.height);
+            return;
+        }
         const bounds = localBounds(shape);
         const stroking = style.stroke.kind !== 'none' && style.strokeWidth > 0;
         if (stroking) {
@@ -374,8 +431,8 @@ export function createCanvasRenderer(target: Element, options: DrawingRendererOp
     const drawShapes = (draw: DrawContext, shapes: readonly ShapeTree[], inherited: Style): void => {
         const { ctx } = draw;
         for (const shape of shapes) {
-            // A hidden shape (the shared `hidden`) is left out like a removed one; drawImage is drawn by G1.9b
-            if (shape.kind === 'drawImage' || shape.properties.hidden === true) continue;
+            // A hidden shape (the shared `hidden`) is left out like a removed one
+            if (shape.properties.hidden === true) continue;
             const read = new ShapeReader(shape);
             let style: Style;
             let geometry: Geometry | undefined;
@@ -475,6 +532,8 @@ export function createCanvasRenderer(target: Element, options: DrawingRendererOp
                 tree,
                 ROOT_STYLE
             );
+            // The pictures no shape drew from are let go
+            images.sweep();
         }
         placeProxies();
         settle();
@@ -498,14 +557,14 @@ export function createCanvasRenderer(target: Element, options: DrawingRendererOp
     };
 
     /**
-     * Makes, removes and orders the proxy buttons to follow the interactive shapes of the tree (not hidden, not
-     * `drawImage`, which is not drawn yet), in drawing order: a group before the shapes inside it
+     * Makes, removes and orders the proxy buttons to follow the interactive shapes of the tree (not hidden), in drawing
+     * order: a group before the shapes inside it
      */
     const syncProxies = (): void => {
         const wanted: ShapeTree[] = [];
         const collect = (shapes: readonly ShapeTree[]): void => {
             for (const shape of shapes) {
-                if (shape.properties.hidden === true || shape.kind === 'drawImage') continue;
+                if (shape.properties.hidden === true) continue;
                 if (shape.properties.interactive === true) wanted.push(shape);
                 collect(shape.children);
             }
@@ -621,7 +680,7 @@ export function createCanvasRenderer(target: Element, options: DrawingRendererOp
         cancelFrame: (handle) => view?.cancelAnimationFrame(handle),
         onFrame() {
             if (disposed) return;
-            tree = drag.apply(transitions.current());
+            tree = drag.apply(animations.decorate(transitions.current()));
             dirty = true;
             unschedule(view, onFrame);
             if (size !== undefined) draw();
@@ -629,6 +688,7 @@ export function createCanvasRenderer(target: Element, options: DrawingRendererOp
         }
     });
     const transitions = createTransitions({ scheduler, read: styleReader(canvas), normalize: tokenNormalizer(document) });
+    const animations = createAnimations(scheduler);
 
     const drag = createShapeDrag({
         options: settleMoves(options, transitions),
@@ -739,7 +799,7 @@ export function createCanvasRenderer(target: Element, options: DrawingRendererOp
             // Reduced motion is asked for each update; a changed value of a shape with `transition` starts at the
             // value on screen, and a drag in progress keeps its shape where the pointer has it
             scheduler.setReduced(options.reducedMotion());
-            tree = drag.apply(transitions.apply(next));
+            tree = drag.apply(animations.follow(transitions.apply(next)));
             dirty = true;
             syncProxies();
             // A touch on a draggable shape drags it rather than scrolling the page
@@ -765,8 +825,12 @@ export function createCanvasRenderer(target: Element, options: DrawingRendererOp
         drawn(): Promise<void> {
             if (disposed) return Promise.resolve();
             const shown = dirty ? new Promise<void>((resolve) => waiters.push(resolve)) : Promise.resolve();
-            // On screen once the tweens that run have ended, so a screenshot shows where the shapes go
-            return shown.then(() => scheduler.settled());
+            // On screen once the tweens that run have ended, so a screenshot shows where the shapes go, and once the
+            // pictures that load are decoded and drawn
+            return shown
+                .then(() => scheduler.settled())
+                .then(() => images.settled())
+                .then(() => (dirty && !disposed ? new Promise<void>((resolve) => waiters.push(resolve)) : undefined));
         },
         dispose(): void {
             if (disposed) return;
@@ -776,6 +840,8 @@ export function createCanvasRenderer(target: Element, options: DrawingRendererOp
             drag.dispose();
             scheduler.dispose();
             transitions.dispose();
+            animations.dispose();
+            images.dispose();
             canvas.removeEventListener('pointerdown', onDown);
             canvas.removeEventListener('click', onCanvasClick);
             canvas.removeEventListener('pointermove', onMove);
