@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createFakeBitmap, createFakeContext, createFakeSurface } from '../../../test/harness/fakePaintCanvas.ts';
 import type { FakeBitmap } from '../../../test/harness/fakePaintCanvas.ts';
-import { compositeOf, createPainter, drawStroke, smoothPath } from './draw.js';
+import { compositeOf, createPainter, drawStroke, shapeEnds, smoothPath } from './draw.js';
 import type { Painter, PathStep } from './draw.js';
 import { addPoint } from './strokes.js';
 import type { PaintPoint } from './strokes.js';
@@ -105,7 +105,7 @@ describe('createPainter', () => {
 
     it('should refuse a stroke it cannot draw', () => {
         const { painter } = setup();
-        expect(painter.begin({ tool: 'fill' as 'brush', color: '#000', size: 2 }, { x: 1, y: 1 })).toBe(false);
+        expect(painter.begin({ tool: 'spray' as 'brush', color: '#000', size: 2 }, { x: 1, y: 1 })).toBe(false);
         expect(painter.begin({ tool: 'brush', color: '{color.accent.base}', size: 2 }, { x: 1, y: 1 })).toBe(false);
         expect(painter.begin({ tool: 'brush', color: '#000', size: 'big' }, { x: 1, y: 1 })).toBe(false);
         expect(painter.begin({ tool: 'brush', color: '#000', size: 2 }, { x: 'a', y: 1 })).toBe(false);
@@ -194,5 +194,182 @@ describe('createPainter', () => {
         expect(painter.begin({ tool: 'brush', color: '#000', size: 2 }, { x: 1, y: 1 })).toBe(false);
         expect(painter.undo()).toBe(false);
         expect(painter.clear()).toBe(false);
+    });
+});
+
+describe('shape tools (G2.6b)', () => {
+    /** Where each shape from (8, 8) to (40, 28) paints, and where it does not */
+    const SHAPES = [
+        { tool: 'line', on: [[24, 18]], off: [[8, 28], [40, 8]] },
+        { tool: 'rect', on: [[24, 8], [40, 18], [24, 28], [8, 18]], off: [[24, 18]] },
+        { tool: 'ellipse', on: [[24, 8], [40, 18], [24, 28], [8, 18]], off: [[24, 18], [9, 9]] }
+    ] as const;
+
+    it.each(SHAPES)('should preview a $tool that follows the pointer and commit it on release', ({ tool, on, off }) => {
+        const { painter, bitmap } = setup();
+        expect(painter.begin({ tool, color: '#ff0000', size: 2 }, { x: 8, y: 8 })).toBe(true);
+        painter.extend({ x: 46, y: 34 });
+        const first = bitmap.data.slice();
+        painter.extend({ x: 30, y: 30 }, { x: 40, y: 28 });
+        // The preview moved: the earlier one left no trail
+        expect(bitmap.data).not.toEqual(first);
+        for (const [x, y] of on) expect(pixel(bitmap, x, y)).toEqual([255, 0, 0, 255]);
+        expect(pixel(bitmap, 46, 34)[3]).toBe(0);
+        expect(painter.canUndo).toBe(false);
+
+        const stroke = painter.end();
+        expect(stroke).toMatchObject({ tool, points: [{ x: 8, y: 8 }, { x: 40, y: 28 }] });
+        for (const [x, y] of on) expect(pixel(bitmap, x, y)).toEqual([255, 0, 0, 255]);
+        for (const [x, y] of off) expect(pixel(bitmap, x, y)).toEqual([0, 0, 0, 0]);
+        expect(painter.blank).toBe(false);
+        expect(painter.undo()).toBe(true);
+        expect(bitmap.data.every((byte) => byte === 0)).toBe(true);
+        expect(painter.redo()).toBe(true);
+        for (const [x, y] of on) expect(pixel(bitmap, x, y)).toEqual([255, 0, 0, 255]);
+    });
+
+    it.each(SHAPES)('should leave the bitmap unchanged when a $tool is cancelled before release', ({ tool }) => {
+        const { painter, bitmap } = setup();
+        painter.begin({ tool: 'brush', color: '#0000ff', size: 3 }, { x: 2, y: 30 });
+        painter.extend({ x: 46, y: 30 });
+        painter.end();
+        const before = bitmap.data.slice();
+        painter.begin({ tool, color: '#ff0000', size: 2 }, { x: 8, y: 8 });
+        painter.extend({ x: 40, y: 28 });
+        expect(bitmap.data).not.toEqual(before);
+        painter.cancel();
+        expect(bitmap.data).toEqual(before);
+        expect(painter.end()).toBeUndefined();
+        expect(painter.undo()).toBe(true);
+        expect(bitmap.data.every((byte) => byte === 0)).toBe(true);
+    });
+
+    it('should commit nothing for a shape pressed and released on one point', () => {
+        const { painter, bitmap } = setup();
+        painter.begin({ tool: 'rect', color: '#ff0000', size: 4 }, { x: 10, y: 10 });
+        expect(painter.end()).toBeUndefined();
+        expect(painter.canUndo).toBe(false);
+        expect(bitmap.data.every((byte) => byte === 0)).toBe(true);
+        expect(shapeEnds([{ x: 1, y: 1 }])).toBeUndefined();
+        expect(shapeEnds([{ x: 1, y: 1 }, { x: 1, y: 1 }])).toBeUndefined();
+        expect(shapeEnds([{ x: 1, y: 1 }, { x: 2, y: 1 }])).toEqual([{ x: 1, y: 1 }, { x: 2, y: 1 }]);
+    });
+
+    it('should keep a shape inside the canvas', () => {
+        const { painter } = setup();
+        painter.begin({ tool: 'line', color: '#000', size: 2 }, { x: 4, y: 4 });
+        painter.extend({ x: 500, y: -40 });
+        expect(painter.end()?.points).toEqual([{ x: 4, y: 4 }, { x: WIDTH, y: 0 }]);
+    });
+});
+
+describe('fill tool (G2.6b)', () => {
+    /** A painter with a closed green rectangle outline from (8, 8) to (40, 28) */
+    function ring(): { painter: Painter; bitmap: FakeBitmap } {
+        const made = setup();
+        made.painter.begin({ tool: 'rect', color: '#00ff00', size: 2 }, { x: 8, y: 8 });
+        made.painter.extend({ x: 40, y: 28 });
+        made.painter.end();
+        return made;
+    }
+
+    it('should fill inside the ring in slices, then show it; undo and redo take it back and put it back', async () => {
+        const { painter, bitmap } = ring();
+        expect(painter.begin({ tool: 'fill', color: '#0000ff', size: 2 }, { x: 24, y: 18 })).toBe(true);
+        painter.extend({ x: 2, y: 2 });
+        const stroke = painter.end();
+        expect(stroke).toMatchObject({ tool: 'fill', color: '#0000ff', points: [{ x: 24, y: 18 }], tolerance: 32 });
+        expect(painter.canUndo).toBe(true);
+        await painter.idle();
+        expect(painter.busy).toBe(false);
+        expect(pixel(bitmap, 24, 18)).toEqual([0, 0, 255, 255]);
+        expect(pixel(bitmap, 11, 11)).toEqual([0, 0, 255, 255]);
+        expect(pixel(bitmap, 24, 8)).toEqual([0, 255, 0, 255]);
+        expect(pixel(bitmap, 2, 2)).toEqual([0, 0, 0, 0]);
+        expect(pixel(bitmap, 46, 34)).toEqual([0, 0, 0, 0]);
+
+        expect(painter.undo()).toBe(true);
+        expect(pixel(bitmap, 24, 18)).toEqual([0, 0, 0, 0]);
+        expect(painter.redo()).toBe(true);
+        expect(pixel(bitmap, 24, 18)).toEqual([0, 0, 255, 255]);
+    });
+
+    it('should yield between slices: a fill with a tiny slice is still under way after end', async () => {
+        const bitmap = createFakeBitmap(WIDTH, HEIGHT);
+        const painter = createPainter({ context: createFakeContext(bitmap), width: WIDTH, height: HEIGHT, createSurface: createFakeSurface, fillSliceMs: 0.0001 });
+        painter.begin({ tool: 'fill', color: '#0000ff', size: 2 }, { x: 1, y: 1 });
+        painter.end();
+        expect(painter.busy).toBe(true);
+        expect(pixel(bitmap, 1, 1)).toEqual([0, 0, 0, 0]);
+        await painter.idle();
+        expect(pixel(bitmap, 1, 1)).toEqual([0, 0, 255, 255]);
+        expect(pixel(bitmap, WIDTH - 1, HEIGHT - 1)).toEqual([0, 0, 255, 255]);
+    });
+
+    it('should fill outside the ring to every border', async () => {
+        const { painter, bitmap } = ring();
+        painter.begin({ tool: 'fill', color: '#ff0000', size: 2 }, { x: 0, y: 0 });
+        painter.end();
+        await painter.idle();
+        for (const [x, y] of [[0, 0], [WIDTH - 1, 0], [0, HEIGHT - 1], [WIDTH - 1, HEIGHT - 1], [24, 2]]) expect(pixel(bitmap, x, y)).toEqual([255, 0, 0, 255]);
+        expect(pixel(bitmap, 24, 18)).toEqual([0, 0, 0, 0]);
+    });
+
+    it('should finish a fill under way before the next stroke, and drop it on undo or clear', async () => {
+        const bitmap = createFakeBitmap(WIDTH, HEIGHT);
+        const painter = createPainter({ context: createFakeContext(bitmap), width: WIDTH, height: HEIGHT, createSurface: createFakeSurface, fillSliceMs: 0.0001 });
+        painter.begin({ tool: 'fill', color: '#0000ff', size: 2 }, { x: 24, y: 18 });
+        painter.end();
+        expect(painter.busy).toBe(true);
+        painter.begin({ tool: 'brush', color: '#ff0000', size: 2 }, { x: 2, y: 2 });
+        expect(painter.busy).toBe(false);
+        expect(pixel(bitmap, 24, 18)).toEqual([0, 0, 255, 255]);
+        painter.end();
+
+        painter.begin({ tool: 'fill', color: '#ffffff', size: 2 }, { x: 24, y: 18 });
+        painter.end();
+        expect(painter.busy).toBe(true);
+        expect(painter.undo()).toBe(true);
+        expect(painter.busy).toBe(false);
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        expect(pixel(bitmap, 24, 18)).toEqual([0, 0, 255, 255]);
+
+        painter.begin({ tool: 'fill', color: '#ffffff', size: 2 }, { x: 24, y: 18 });
+        painter.end();
+        expect(painter.clear()).toBe(true);
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        expect(bitmap.data.every((byte) => byte === 0)).toBe(true);
+    });
+
+    it('should keep a fill colour it can parse, and read one it cannot from a one-pixel surface', () => {
+        const { painter } = setup();
+        painter.begin({ tool: 'fill', color: 'rgba(10, 20, 30, 0.5)', size: 2 }, { x: 1, y: 1 });
+        expect(painter.end()?.color).toBe('rgba(10, 20, 30, 0.5)');
+        const probed = createPainter({
+            context: createFakeContext(createFakeBitmap(4, 4)),
+            width: 4,
+            height: 4,
+            // A surface that reads every colour as a fixed blue, as a browser reads a named colour
+            createSurface: (width, height) => {
+                const surface = createFakeSurface(width, height);
+                const fillRect = surface.context.fillRect.bind(surface.context);
+                surface.context.fillRect = (x, y, w, h) => {
+                    surface.context.fillStyle = '#0000ff';
+                    fillRect(x, y, w, h);
+                };
+                return surface;
+            },
+            read: (name) => (name === '--ui-color-accent-base' ? 'oklch(0.5 0.1 260)' : '')
+        });
+        expect(probed.begin({ tool: 'fill', color: '{color.accent.base}', size: 2 }, { x: 1, y: 1 })).toBe(true);
+        expect(probed.end()?.color).toBe('rgba(0, 0, 255, 1)');
+    });
+
+    it('should draw no fill without the canvas size', () => {
+        const bitmap = createFakeBitmap(10, 10);
+        drawStroke(createFakeContext(bitmap), { tool: 'fill', color: '#ff0000', size: 2, points: [{ x: 1, y: 1 }] });
+        expect(bitmap.data.every((byte) => byte === 0)).toBe(true);
+        drawStroke(createFakeContext(bitmap), { tool: 'fill', color: '#ff0000', size: 2, points: [{ x: 1, y: 1 }] }, { width: 10, height: 10 });
+        expect(pixel(bitmap, 9, 9)).toEqual([255, 0, 0, 255]);
     });
 });

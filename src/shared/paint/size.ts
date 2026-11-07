@@ -61,3 +61,24 @@ export function clampSizes(value: unknown): number[] {
 export function pickSize(value: unknown, sizes: readonly number[]): number {
     return clampBrushSize(value) ?? clampBrushSize(sizes[0]) ?? DEFAULT_SIZES[0];
 }
+
+/** Where a picture lies in a painting, in canvas pixels */
+export interface PlacedBox {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+}
+
+/**
+ * Where a background picture of `imageWidth` by `imageHeight` pixels is drawn in a painting of `width` by `height`
+ * (G2.9b): scaled to fit without changing its aspect ratio (`contain`) and centred, so a wide picture leaves bands above
+ * and below and a tall one bands left and right. A picture with no pixels gives an empty box in the centre
+ */
+export function containBox(imageWidth: number, imageHeight: number, width: number, height: number): PlacedBox {
+    if (!(imageWidth > 0) || !(imageHeight > 0)) return { x: width / 2, y: height / 2, width: 0, height: 0 };
+    const scale = Math.min(width / imageWidth, height / imageHeight);
+    const placedWidth = imageWidth * scale;
+    const placedHeight = imageHeight * scale;
+    return { x: (width - placedWidth) / 2, y: (height - placedHeight) / 2, width: placedWidth, height: placedHeight };
+}

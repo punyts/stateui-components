@@ -5,7 +5,8 @@ import type { PaintContext2D, PaintSurface } from '../../src/shared/paint/draw.t
  * context with the members `PaintContext2D` names. Coverage is all or nothing per pixel (a pixel is covered when its
  * centre lies within half the line width of the path, or within the radius of a dot), so results are exact and
  * repeatable. It knows `source-over` and `destination-out` and colours written `#rgb`, `#rrggbb`, `#rrggbbaa` and
- * `rgba(r, g, b, a)`; quadratic curves are flattened into short lines
+ * `rgba(r, g, b, a)`; quadratic curves and ellipses are flattened into short lines. The pixel members read and write
+ * the bitmap directly, as `ImageData` does
  */
 export interface FakeBitmap {
     readonly width: number;
@@ -17,6 +18,9 @@ export type FakeContext = PaintContext2D<FakeBitmap>;
 
 /** How many lines a quadratic curve is flattened into */
 const CURVE_STEPS = 6;
+
+/** How many lines an ellipse is flattened into */
+const ELLIPSE_STEPS = 64;
 
 function parseColor(value: string): [number, number, number, number] {
     const hex = /^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.exec(value);
@@ -51,6 +55,7 @@ export function createFakeContext(bitmap: FakeBitmap): FakeContext {
     let segments: Segment[] = [];
     let dots: [number, number, number][] = [];
     let at: [number, number] | undefined;
+    let subpath: [number, number] | undefined;
     const stack: Record<string, unknown>[] = [];
 
     /** Composites one pixel of colour `color` at alpha `alpha` with the context's operation */
@@ -107,9 +112,23 @@ export function createFakeContext(bitmap: FakeBitmap): FakeContext {
             segments = [];
             dots = [];
             at = undefined;
+            subpath = undefined;
         },
         moveTo(x, y) {
             at = [x, y];
+            subpath = [x, y];
+        },
+        closePath() {
+            if (subpath !== undefined) context.lineTo(subpath[0], subpath[1]);
+        },
+        ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle) {
+            for (let i = 0; i <= ELLIPSE_STEPS; i++) {
+                const angle = startAngle + ((endAngle - startAngle) * i) / ELLIPSE_STEPS;
+                const px = x + radiusX * Math.cos(angle) * Math.cos(rotation) - radiusY * Math.sin(angle) * Math.sin(rotation);
+                const py = y + radiusX * Math.cos(angle) * Math.sin(rotation) + radiusY * Math.sin(angle) * Math.cos(rotation);
+                if (i === 0 && at === undefined) context.moveTo(px, py);
+                else context.lineTo(px, py);
+            }
         },
         lineTo(x, y) {
             if (at !== undefined) segments.push([at[0], at[1], x, y]);
@@ -140,6 +159,34 @@ export function createFakeContext(bitmap: FakeBitmap): FakeContext {
         },
         clearRect(x, y, w, h) {
             for (let row = Math.max(0, y); row < Math.min(height, y + h); row++) data.fill(0, (row * width + Math.max(0, x)) * 4, (row * width + Math.min(width, x + w)) * 4);
+        },
+        fillRect(x, y, w, h) {
+            paintPixels([x, y, x + w - 1, y + h - 1], (px, py) => px >= x && px <= x + w && py >= y && py <= y + h, context.fillStyle);
+        },
+        createImageData(w, h) {
+            return createFakeBitmap(w, h);
+        },
+        getImageData(x, y, w, h) {
+            const out = createFakeBitmap(w, h);
+            for (let row = 0; row < h; row++) {
+                for (let column = 0; column < w; column++) {
+                    const tx = x + column;
+                    const ty = y + row;
+                    if (tx < 0 || ty < 0 || tx >= width || ty >= height) continue;
+                    out.data.set(data.subarray((ty * width + tx) * 4, (ty * width + tx) * 4 + 4), (row * w + column) * 4);
+                }
+            }
+            return out;
+        },
+        putImageData(pixels, dx, dy, dirtyX, dirtyY, dirtyWidth, dirtyHeight) {
+            for (let row = dirtyY; row < dirtyY + dirtyHeight && row < pixels.height; row++) {
+                for (let column = dirtyX; column < dirtyX + dirtyWidth && column < pixels.width; column++) {
+                    const tx = dx + column;
+                    const ty = dy + row;
+                    if (row < 0 || column < 0 || tx < 0 || ty < 0 || tx >= width || ty >= height) continue;
+                    data.set(pixels.data.subarray((row * pixels.width + column) * 4, (row * pixels.width + column) * 4 + 4), (ty * width + tx) * 4);
+                }
+            }
         },
         drawImage(image, dx, dy) {
             for (let y = 0; y < image.height; y++) {

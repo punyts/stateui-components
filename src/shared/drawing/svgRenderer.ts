@@ -5,7 +5,9 @@ import { createPaintResolver } from './paint.js';
 import type { Gradient, Paint, PaintResolver } from './paint.js';
 import { registerDrawingRenderer } from './render.js';
 import type { DrawingIssue, DrawingRenderer, DrawingRendererOptions, ShapeEventName } from './render.js';
+import { createScheduler } from './scheduler.js';
 import { ANCHORS, BASELINES, CAPS, JOINS, ShapeReader, Unusable, contentBox } from './shapeReader.js';
+import { createTransitions, keyPath, settleMoves, styleReader, tokenNormalizer } from './transition.js';
 import { locateShape, shapeAttrs } from './tree.js';
 import type { ShapeKind, ShapeTree } from './tree.js';
 
@@ -80,6 +82,11 @@ interface DrawnGradient {
  * (only its own attributes are rewritten, nothing is written to the store), and the release hands the new `x` and `y`
  * to `onMove` and raises `dragEnd`; the click that ends a drag is not a press. Escape or a pointer cancel puts it back.
  * The arrow keys move a focused one by `step` (Shift ten), each key a finished move
+ *
+ * Motion (G1.8, `scheduler.ts` and `transition.ts`): a change of a number or of `fill` or `stroke` of a shape with
+ * `transition` tweens in the renderer's own frame loop (only the moving shapes' attributes are rewritten each frame);
+ * with reduced motion (`options.reducedMotion()`, asked on every update) it jumps. A position a drag or an arrow key
+ * hands to `onMove` is shown at once, not tweened. `drawn()` resolves once the running tweens have ended
  */
 export function createSvgRenderer(target: Element, options: DrawingRendererOptions): DrawingRenderer {
     const document = target.ownerDocument;
@@ -404,9 +411,26 @@ export function createSvgRenderer(target: Element, options: DrawingRendererOptio
         options.onEvent({ name, shape: shape.path, key: shape.key, x: at.x, y: at.y });
     };
 
+    /** Transitions: the tweened shapes are redrawn alone in each frame of the scheduler */
+    const view = document.defaultView;
+    const scheduler = createScheduler({
+        requestFrame: view === null ? undefined : (callback) => view.requestAnimationFrame(callback),
+        cancelFrame: (handle) => view?.cancelAnimationFrame(handle),
+        onFrame(changed) {
+            if (disposed) return;
+            tree = drag.apply(transitions.current());
+            for (const path of new Set([...changed].map(keyPath))) {
+                const chain = locateShape(tree, path);
+                const shape = chain?.[chain.length - 1];
+                if (shape !== undefined) drawShape(shape);
+            }
+        }
+    });
+    const transitions = createTransitions({ scheduler, read: styleReader(svg), normalize: tokenNormalizer(document) });
+
     /** Drags: a moved shape is redrawn alone (its element's attributes), from the tree with it moved */
     const drag = createShapeDrag({
-        options,
+        options: settleMoves(options, transitions),
         toDrawing,
         show(next, path) {
             if (disposed) return;
@@ -464,8 +488,11 @@ export function createSvgRenderer(target: Element, options: DrawingRendererOptio
     return {
         update(next: readonly ShapeTree[]): void {
             if (disposed) return;
-            // A drag in progress keeps its shape where the pointer has it
-            tree = drag.apply(next);
+            // Reduced motion is asked for each update (the feeder reads it on mount and when the motion overlay changes);
+            // a changed value of a shape with `transition` starts at the value on screen, and a drag in progress keeps
+            // its shape where the pointer has it
+            scheduler.setReduced(options.reducedMotion());
+            tree = drag.apply(transitions.apply(next));
             wanted = new Set();
             collectPaths(tree, wanted);
             seen = new Set();
@@ -499,12 +526,15 @@ export function createSvgRenderer(target: Element, options: DrawingRendererOptio
                 if (view === null) resolve();
                 else view.requestAnimationFrame(() => resolve());
             });
-            return frame;
+            // On screen once the tweens that run have ended, so a screenshot shows where the shapes go
+            return frame.then(() => scheduler.settled());
         },
         dispose(): void {
             if (disposed) return;
             disposed = true;
             drag.dispose();
+            scheduler.dispose();
+            transitions.dispose();
             svg.removeEventListener('pointerdown', onDown);
             svg.removeEventListener('click', onClick);
             svg.removeEventListener('keydown', onKey);

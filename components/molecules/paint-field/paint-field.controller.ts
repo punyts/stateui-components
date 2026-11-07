@@ -1,13 +1,14 @@
 import { report } from '@punyts/core';
 import type { ControllerContext } from '@punyts/stateui';
+import { buildError } from '@punyts/stateui-app';
 import { resolveColor } from '../shared/drawing/paint.js';
 import { createField, createWaiters } from '../shared/field/field.js';
 import { isFileRef, MAX_FILE_SIZE, transferCode } from '../shared/field/files.js';
 import type { FileRef } from '../shared/field/files.js';
 import { createPainter } from '../shared/paint/draw.js';
 import type { Painter } from '../shared/paint/draw.js';
-import { clampBrushSize, clampDimension, clampSizes } from '../shared/paint/size.js';
-import { isPaintTool, PAINT_TOOLS, strokeColor } from '../shared/paint/strokes.js';
+import { clampBrushSize, clampDimension, clampSizes, containBox } from '../shared/paint/size.js';
+import { isPaintTool, strokeColor } from '../shared/paint/strokes.js';
 import type { PaintTool } from '../shared/paint/strokes.js';
 
 /** The width and height of a painting when the node gives none that can be used */
@@ -17,8 +18,11 @@ const DEFAULT_HEIGHT = 200;
 /** The colours when `colors` gives none that can be used */
 const DEFAULT_COLORS: readonly string[] = ['{color.text.base}'];
 
-/** The icon of each tool's button */
-const TOOL_ICONS: Readonly<Record<PaintTool, string>> = { brush: 'brush', eraser: 'eraser' };
+/** The tools when `tools` gives none that can be used */
+const DEFAULT_TOOLS: readonly PaintTool[] = ['brush', 'eraser'];
+
+/** The icon of each tool's button (Tabler names, each in the core icon list `src/icons/coreNames.ts`) */
+const TOOL_ICONS: Readonly<Record<PaintTool, string>> = { brush: 'brush', eraser: 'eraser', line: 'line', rect: 'square', ellipse: 'oval', fill: 'bucket-droplet' };
 
 /** The widest dot a size button shows, in pixels */
 const MAX_DOT = 16;
@@ -28,6 +32,15 @@ const FILE_TRANSFER_EVENT = 'ui-file-transfer';
 
 /** The event that gives a stored file back through the host's `releaseFile` hook (G2.5; unanswered when there is none) */
 const FILE_RELEASE_EVENT = 'ui-file-release';
+
+/** The event that reads a stored file through the host's `readFile` hook (G1.9; unanswered when there is none) */
+const FILE_READ_EVENT = 'ui-file-read';
+
+/** The types a background file may have: the ones the file store holds as images (the `fileRef` validator of the shape) */
+const BACKGROUND_TYPES: readonly string[] = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
+
+/** The colour under a background file, and in its place while it is read or when it cannot be read */
+const FILE_BACKDROP = '#ffffff';
 
 /** How long painting must pause before the field saves, in milliseconds */
 const SAVE_DELAY_MS = 1500;
@@ -64,6 +77,12 @@ interface CommandHost {
     commands?: Record<string, () => void>;
 }
 
+/** A stored file as the host's `readFile` hook gives it: its reference and its bytes */
+interface StoredFile {
+    file: FileRef;
+    data: ArrayBuffer;
+}
+
 /** The pointer a stroke follows: the one that pressed on the canvas, until it is lifted */
 interface Gesture {
     pointerId: number;
@@ -75,7 +94,9 @@ const fill = (template: unknown, value: string): string => (typeof template === 
 /**
  * A painting field on the field base (G2.7 of the graphics epic 2): a canvas of `width` by `height` pixels (each 1..4096,
  * scaled to its container by CSS, drawn at its own size) on which a person paints with a pointer, using the painting
- * engine of `src/shared/paint/` (`createPainter`). The toolbar has a button per entry of `tools` (`brush`, `eraser`), of
+ * engine of `src/shared/paint/` (`createPainter`). The toolbar has a button per entry of `tools` (`brush`, `eraser`, and
+ * since G2.6b `line`, `rect`, `ellipse` and `fill`: a shape follows the pointer as a live preview and is drawn when the
+ * pointer is released, a pointer cancel drops it; `fill` flood fills from where the pointer is released), of
  * `colors` (literals or tokens, the first is the default) and of `sizes`, each with `aria-pressed` for the current
  * `tool`, `color` and `brushSize`, which are writable: a write from outside moves the choice, a press writes it. The
  * buttons and the commands `undo`, `redo` and `clear` work the stroke log; `clear` also empties `value`.
@@ -102,6 +123,15 @@ const fill = (template: unknown, value: string): string => (typeof template === 
  * and no late result reaches the store. Only files this field saved are given back: a file the value held when the
  * field mounted (the document's) may come back with a reset, so it is left to the host's sweep.
  *
+ * Background files (G2.9b): `background` is a colour, a token, or the reference of an image file of the app's store
+ * (`image/png`, `image/jpeg`, `image/gif`, `image/webp`; the shape's `fileRef` validator refuses any other type as
+ * `SUI-STATE-INVALID`). The file is read with the bubbling, composed `ui-file-read` event (the dispatcher answers it
+ * with `hooks.readFile`) and drawn on the backdrop canvas under the painting, over white, scaled to fit the field
+ * without changing its aspect ratio (`contain`, centred). The eraser and `clear` take strokes away down to it, and a
+ * saved PNG has it under the strokes (a save waits for the read). A file that is missing, cannot be read (an unanswered
+ * event is `offline`) or cannot be decoded leaves the backdrop white and is reported as `SUI-RUN-FILE` with the field's
+ * path; painting and saving still work. The background file is not the field's: it is never given back.
+ *
  * In a form (G2.9): the field's `settle` (the form's submit asks it) saves a dirty painting at once instead of after the
  * pause, and returns a promise that resolves when the save (or a stroke under way) ends; the form then validates, so a
  * failed save is the field's error and refuses the submit, and a finished one submits the new reference
@@ -115,16 +145,23 @@ export default function controller(context: ControllerContext) {
     let surface: HTMLCanvasElement | undefined;
     let gesture: Gesture | undefined;
     let disposed = false;
+    /** The canvas under the painting that shows the background file */
+    let backdrop: HTMLCanvasElement | undefined;
+    /** The decoded background file, the id of the file it is (or is being read), the read under way, and its end */
+    let picture: ImageBitmap | undefined;
+    let pictureId: string | undefined;
+    let reading: AbortController | undefined;
+    let pictureLoaded: Promise<void> = Promise.resolve();
 
     const blocked = (): boolean => read('disabled') === true || read('readonly') === true || read('locked') === true;
     const size = (): { width: number; height: number } => ({ width: clampDimension(read('width'), DEFAULT_WIDTH), height: clampDimension(read('height'), DEFAULT_HEIGHT) });
 
-    /** The usable tools of `tools`, in order, repeats left out; none usable gives both */
+    /** The usable tools of `tools`, in order, repeats left out; none usable gives the brush and the eraser */
     const tools = (): PaintTool[] => {
         const list = read('tools');
         const found: PaintTool[] = [];
         if (Array.isArray(list)) for (const entry of list) if (isPaintTool(entry) && !found.includes(entry)) found.push(entry);
-        return found.length > 0 ? found : [...PAINT_TOOLS];
+        return found.length > 0 ? found : [...DEFAULT_TOOLS];
     };
     /** The usable colours of `colors` (a literal or a token), repeats left out */
     const colors = (): string[] => {
@@ -154,7 +191,10 @@ export default function controller(context: ControllerContext) {
     };
 
     const reported = new Set<string>();
-    /** Reports each entry of `tools` the field cannot use once, as a `SUI-STATE` warning; the entry is left out */
+    /**
+     * Reports each entry of `tools` the engine lacks once, as a `SUI-STATE-INVALID` warning (the document check refuses
+     * it with the same code, through the `eachOf` validator of the shape); the entry is left out
+     */
     const reportTools = (): void => {
         const list = read('tools');
         const outside = new Set(Array.isArray(list) ? list.filter((entry) => !isPaintTool(entry)).map((entry) => (typeof entry === 'string' ? entry : JSON.stringify(entry))) : []);
@@ -162,7 +202,7 @@ export default function controller(context: ControllerContext) {
         for (const entry of outside) {
             if (reported.has(entry)) continue;
             reported.add(entry);
-            report.warning(`paintField: the tool "${entry}" is not a painting tool, so it is left out`, { code: 'SUI-STATE', path: basePath });
+            report.warning(`paintField: the tool "${entry}" is not a painting tool, so it is left out`, { code: 'SUI-STATE-INVALID', path: basePath });
         }
     };
 
@@ -205,6 +245,8 @@ export default function controller(context: ControllerContext) {
     const owned = new Set<string>();
     /** The promises of `settle` (a form's submit): woken whenever a save or a stroke ends, so the form asks again */
     const waiters = createWaiters();
+    /** Whether a save waits for a flood fill to be written to the canvas */
+    let awaitingFill = false;
 
     /** Whether the painting changed since it was last saved: with no file in `value`, whether it is not blank */
     const isDirty = (): boolean => {
@@ -265,7 +307,7 @@ export default function controller(context: ControllerContext) {
         settle: () => {
             if (disposed) return undefined;
             save();
-            return saving !== undefined || gesture !== undefined ? waiters.wait() : undefined;
+            return saving !== undefined || gesture !== undefined || awaitingFill ? waiters.wait() : undefined;
         },
         //a reset (the command, or a form's) aborts the save and starts a new painting: the strokes and their undo go. Once
         //the baseline value is back, the files the field saved that it does not hold are given back
@@ -326,8 +368,12 @@ export default function controller(context: ControllerContext) {
         return base === '' ? DEFAULT_NAME : `${base}.png`;
     };
 
-    /** Encodes the painting as a PNG: the visible canvas drawn over the `background` colour (none: transparent) */
-    const encode = (canvas: HTMLCanvasElement): Promise<Blob> =>
+    /**
+     * Encodes the painting as a PNG: the visible canvas drawn over the `background` colour (none: transparent), or over
+     * the background file on white once its read has ended
+     */
+    const encode = (canvas: HTMLCanvasElement): Promise<Blob> => pictureLoaded.then(() => encodeNow(canvas));
+    const encodeNow = (canvas: HTMLCanvasElement): Promise<Blob> =>
         new Promise((resolve, reject) => {
             const flat = canvas.ownerDocument.createElement('canvas');
             flat.width = canvas.width;
@@ -342,10 +388,121 @@ export default function controller(context: ControllerContext) {
             if (background !== undefined) {
                 context2d.fillStyle = background;
                 context2d.fillRect(0, 0, flat.width, flat.height);
+            } else if (isFileRef(read('background'))) {
+                context2d.fillStyle = FILE_BACKDROP;
+                context2d.fillRect(0, 0, flat.width, flat.height);
+                drawPicture(context2d, flat.width, flat.height);
             }
             context2d.drawImage(canvas, 0, 0);
             flat.toBlob((blob) => (blob === null ? reject({ code: 'internal' }) : resolve(blob)), 'image/png');
         });
+
+    /** Draws the decoded background file into a context of `width` by `height`, scaled to fit (`contain`) and centred */
+    const drawPicture = (context2d: CanvasRenderingContext2D, width: number, height: number): void => {
+        if (picture === undefined) return;
+        const box = containBox(picture.width, picture.height, width, height);
+        context2d.drawImage(picture, box.x, box.y, box.width, box.height);
+    };
+
+    /** Sizes the backdrop canvas to the painting and draws the background file on it (none: the CSS background shows) */
+    const drawBackdrop = (): void => {
+        if (disposed) return;
+        backdrop ??= element.shadowRoot?.querySelector<HTMLCanvasElement>('canvas.backdrop') ?? undefined;
+        if (backdrop === undefined) return;
+        const { width, height } = size();
+        if (backdrop.width !== width) backdrop.width = width;
+        if (backdrop.height !== height) backdrop.height = height;
+        const context2d = backdrop.getContext('2d');
+        if (context2d === null) return;
+        context2d.clearRect(0, 0, width, height);
+        drawPicture(context2d, width, height);
+    };
+
+    /** Raises `ui-file-read`; the promise rejects with `offline` when nothing answers (the host has no hook) */
+    const readStored = (id: string, signal: AbortSignal): Promise<StoredFile> =>
+        new Promise((resolve, reject) => {
+            let answered = false;
+            const detail = {
+                id,
+                signal,
+                respond: (result: Promise<StoredFile>): void => {
+                    answered = true;
+                    result.then(resolve, reject);
+                }
+            };
+            element.dispatchEvent(new CustomEvent(FILE_READ_EVENT, { detail, bubbles: true, composed: true }));
+            if (!answered) reject({ code: 'offline' });
+        });
+
+    /** Reports a background file that cannot be used, as `SUI-RUN-FILE` with the field's path */
+    const reportFile = (reason: string): void => {
+        const error = buildError('SUI-RUN-FILE', { component: 'paintField', path: basePath, reason, statePath: `${basePath}.background` });
+        report.error(error.message, { code: 'SUI-RUN-FILE', path: basePath });
+    };
+
+    /**
+     * Follows `background`: a new image file is read and decoded (the read of the one before is aborted), anything else
+     * drops the picture. The backdrop is drawn again either way
+     */
+    const loadBackground = (): void => {
+        if (disposed) return;
+        const background = read('background');
+        const id = isFileRef(background) && BACKGROUND_TYPES.includes(background.type) ? background.id : undefined;
+        if (id === pictureId) {
+            drawBackdrop();
+            return;
+        }
+        reading?.abort();
+        reading = undefined;
+        picture?.close();
+        picture = undefined;
+        pictureId = id;
+        drawBackdrop();
+        if (id === undefined) {
+            pictureLoaded = Promise.resolve();
+            return;
+        }
+        const abort = new AbortController();
+        reading = abort;
+        pictureLoaded = readStored(id, abort.signal)
+            .then(
+                ({ file, data }) =>
+                    createImageBitmap(new Blob([data], { type: file.type })).catch(() => {
+                        throw { reason: 'not_an_image' };
+                    }),
+                (error: unknown) => {
+                    throw { reason: transferCode(error) };
+                }
+            )
+            .then(
+                (bitmap) => {
+                    if (abort.signal.aborted || disposed) {
+                        bitmap.close();
+                        return;
+                    }
+                    picture = bitmap;
+                    drawBackdrop();
+                },
+                (error: { reason: string }) => {
+                    if (abort.signal.aborted || disposed) return;
+                    reportFile(error.reason);
+                }
+            )
+            .finally(() => {
+                if (reading === abort) reading = undefined;
+            });
+    };
+
+    /** A write of `background` reaches the backdrop once, after the microtask: an object value is written key by key */
+    let backgroundQueued = false;
+    const onBackground = (): void => {
+        if (backgroundQueued) return;
+        backgroundQueued = true;
+        queueMicrotask(() => {
+            backgroundQueued = false;
+            loadBackground();
+        });
+    };
 
     /** Raises `ui-file-transfer`; the promise rejects with `offline` when nothing answers (the host has no hook) */
     const hand = (file: File, signal: AbortSignal): Promise<unknown> =>
@@ -376,6 +533,18 @@ export default function controller(context: ControllerContext) {
         timer = undefined;
         const canvas = surface;
         if (disposed || failure !== '' || gesture !== undefined || saving !== undefined || canvas === undefined || !isDirty()) return;
+        //a fill still being written: save once the canvas holds it
+        const engine = painter;
+        if (engine?.busy === true) {
+            if (awaitingFill) return;
+            awaitingFill = true;
+            void engine.idle().then(() => {
+                awaitingFill = false;
+                if (painter === engine) save();
+                waiters.wake();
+            });
+            return;
+        }
         const at = revision;
         const abort = new AbortController();
         saving = abort;
@@ -508,6 +677,7 @@ export default function controller(context: ControllerContext) {
     };
     const onResize = (): void => {
         if (ensurePainter() !== undefined) syncDirty();
+        drawBackdrop();
     };
 
     const toolbarPaths = ['tools', 'colors', 'sizes', 'tool', 'color', 'brushSize', '_tools', '_color', '_size'].flatMap((name) => [`${basePath}.${name}`, `${basePath}.${name}.$all`]);
@@ -515,13 +685,18 @@ export default function controller(context: ControllerContext) {
     store.on(toolbarPaths, drawToolbar);
     store.on([valuePath, `${valuePath}.$all`, dirtyPath], onValue);
     store.on(sizePaths, onResize);
+    const backgroundPaths = [`${basePath}.background`, `${basePath}.background.$all`];
+    store.on(backgroundPaths, onBackground);
     drawToolbar();
 
     //the view is stamped after the controller runs: find the canvas once it is there
     const start = (attempts: number): void => {
         if (disposed) return;
         if (ensurePainter() === undefined && attempts > 0) queueMicrotask(() => start(attempts - 1));
-        else syncDirty();
+        else {
+            syncDirty();
+            loadBackground();
+        }
     };
     queueMicrotask(() => start(8));
 
@@ -529,8 +704,12 @@ export default function controller(context: ControllerContext) {
 
     return {
         ...field,
-        /** The CSS colour behind the painting: `background` (a literal or a token), or the field's surface token when it has none */
+        /**
+         * The CSS colour behind the painting: `background` (a literal or a token), white under a background file, or the
+         * field's surface token when it has none
+         */
         backgroundOf: (background: unknown): string => {
+            if (isFileRef(background)) return FILE_BACKDROP;
             const resolved = typeof background === 'string' ? resolveColor(background) : undefined;
             return resolved?.kind === 'color' ? resolved.css : 'var(--ui-paintfield-surface)';
         },
@@ -608,6 +787,11 @@ export default function controller(context: ControllerContext) {
             store.off(toolbarPaths, drawToolbar);
             store.off([valuePath, `${valuePath}.$all`, dirtyPath], onValue);
             store.off(sizePaths, onResize);
+            store.off(backgroundPaths, onBackground);
+            reading?.abort();
+            reading = undefined;
+            picture?.close();
+            picture = undefined;
             painter?.dispose();
             painter = undefined;
             field.dispose();

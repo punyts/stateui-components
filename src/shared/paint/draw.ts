@@ -1,12 +1,15 @@
 import type { ReadCustomProperty } from '../drawing/paint.js';
-import { addPoint, createPaintLog, isPaintTool, strokeColor, UNDO_LIMIT } from './strokes.js';
+import { addPoint, clampPoint, createPaintLog, isPaintTool, isShapeTool, strokeColor, UNDO_LIMIT } from './strokes.js';
 import type { PaintEntry, PaintPoint, PaintTool, Stroke } from './strokes.js';
 import { clampBrushSize, clampDimension } from './size.js';
+import { clampTolerance, createFillSearch, parseRgba } from './fill.js';
+import type { FillSearch, PaintPixels } from './fill.js';
 
 /**
  * The part of a 2D context the engine draws with. A `CanvasRenderingContext2D` and an
  * `OffscreenCanvasRenderingContext2D` are one; `Image` is what `drawImage` takes (a canvas), so a test can bring a
- * fake context with fake images
+ * fake context with fake images. The pixel members (`createImageData`, `getImageData`, `putImageData`) serve the
+ * flood fill, `fillRect` the reading of a colour the fill cannot parse
  */
 export interface PaintContext2D<Image = CanvasImageSource> {
     globalCompositeOperation: GlobalCompositeOperation;
@@ -24,8 +27,14 @@ export interface PaintContext2D<Image = CanvasImageSource> {
     arc(x: number, y: number, radius: number, startAngle: number, endAngle: number): void;
     stroke(): void;
     fill(): void;
+    closePath(): void;
+    ellipse(x: number, y: number, radiusX: number, radiusY: number, rotation: number, startAngle: number, endAngle: number): void;
     clearRect(x: number, y: number, width: number, height: number): void;
+    fillRect(x: number, y: number, width: number, height: number): void;
     drawImage(image: Image, dx: number, dy: number): void;
+    createImageData(width: number, height: number): PaintPixels;
+    getImageData(x: number, y: number, width: number, height: number): PaintPixels;
+    putImageData(pixels: PaintPixels, dx: number, dy: number, dirtyX: number, dirtyY: number, dirtyWidth: number, dirtyHeight: number): void;
 }
 
 /** A bitmap the engine keeps off screen: its context, and itself as an image to draw onto another */
@@ -64,13 +73,124 @@ export function compositeOf(tool: PaintTool): GlobalCompositeOperation {
     return tool === 'eraser' ? 'destination-out' : 'source-over';
 }
 
+/** The two points of a shape stroke, or undefined when it has fewer than two or they coincide (a shape of no size) */
+export function shapeEnds(points: readonly PaintPoint[]): [PaintPoint, PaintPoint] | undefined {
+    const start = points[0];
+    const end = points[points.length - 1];
+    if (points.length < 2 || start === undefined || end === undefined || (start.x === end.x && start.y === end.y)) return undefined;
+    return [start, end];
+}
+
 /**
- * Draws one stroke: a smoothed line with round caps and joins, `size` pixels wide, as one path (so a translucent colour
- * does not darken where the stroke crosses itself); a single point is a round dot of the same size. The eraser draws
- * with `destination-out`, so it clears the painting layer down to transparent and whatever lies under the canvas (the
- * field's background) shows through
+ * Draws a shape stroke: a `line` from its first point to its second with round caps, a `rect` with those points as
+ * opposite corners (mitred corners), an `ellipse` inside that box; each outlined `size` pixels wide in the stroke's
+ * colour. A shape of no size draws nothing
  */
-export function drawStroke<Image>(context: PaintContext2D<Image>, stroke: Stroke): void {
+function drawShape<Image>(context: PaintContext2D<Image>, stroke: Stroke): void {
+    const ends = shapeEnds(stroke.points);
+    if (ends === undefined) return;
+    const [start, end] = ends;
+    context.save();
+    context.globalCompositeOperation = 'source-over';
+    context.strokeStyle = stroke.color;
+    context.lineWidth = stroke.size;
+    context.lineCap = 'round';
+    context.lineJoin = stroke.tool === 'rect' ? 'miter' : 'round';
+    context.beginPath();
+    if (stroke.tool === 'line') {
+        context.moveTo(start.x, start.y);
+        context.lineTo(end.x, end.y);
+    } else if (stroke.tool === 'rect') {
+        context.moveTo(start.x, start.y);
+        context.lineTo(end.x, start.y);
+        context.lineTo(end.x, end.y);
+        context.lineTo(start.x, end.y);
+        context.closePath();
+    } else {
+        const radiusX = Math.abs(end.x - start.x) / 2;
+        const radiusY = Math.abs(end.y - start.y) / 2;
+        context.ellipse((start.x + end.x) / 2, (start.y + end.y) / 2, radiusX, radiusY, 0, 0, Math.PI * 2);
+        context.closePath();
+    }
+    context.stroke();
+    context.restore();
+}
+
+/** How many pixels one read or write of the fill moves at most: a band of rows, so no single call blocks for long */
+export const FILL_BAND_PIXELS = 1 << 18;
+
+/** A fill on a surface, in steps: it reads the pixels band by band, searches, then writes back the rows it changed */
+export interface FillJob {
+    /** Works until `deadline` (a `performance.now()` time); gives whether the fill is done and on the surface */
+    step(deadline: number): boolean;
+}
+
+const clock = (): number => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+
+/**
+ * Makes the job of a `fill` stroke on a `width` by `height` context: its pixels are read in bands of at most
+ * `FILL_BAND_PIXELS` into one buffer, filled by `createFillSearch` (`./fill.ts`) from the stroke's seed with its
+ * colour and tolerance, and the rows it changed are written back band by band. Undefined when the stroke is not a fill
+ * or its colour cannot be read (`parseRgba`)
+ */
+export function createFillJob<Image>(context: PaintContext2D<Image>, stroke: Stroke, width: number, height: number): FillJob | undefined {
+    const seed = stroke.points[0];
+    const color = parseRgba(stroke.color);
+    if (stroke.tool !== 'fill' || seed === undefined || color === undefined) return undefined;
+    const band = Math.max(1, Math.floor(FILL_BAND_PIXELS / width));
+    let pixels: PaintPixels | undefined;
+    let search: FillSearch | undefined;
+    let read = 0;
+    let written = -1;
+    let done = false;
+    return {
+        step(deadline: number): boolean {
+            while (!done) {
+                pixels ??= context.createImageData(width, height);
+                if (read < height) {
+                    const rows = Math.min(band, height - read);
+                    pixels.data.set(context.getImageData(0, read, width, rows).data, read * width * 4);
+                    read += rows;
+                } else if (search === undefined) {
+                    search = createFillSearch(pixels, seed.x, seed.y, color, clampTolerance(stroke.tolerance));
+                } else if (!search.done) {
+                    search.step(deadline);
+                } else {
+                    const { count, top, bottom } = search.result;
+                    if (written < 0) written = top;
+                    if (count === 0 || written > bottom) {
+                        done = true;
+                        pixels = undefined;
+                        break;
+                    }
+                    const rows = Math.min(band, bottom - written + 1);
+                    context.putImageData(pixels, 0, 0, 0, written, width, rows);
+                    written += rows;
+                }
+                if (clock() >= deadline) break;
+            }
+            return done;
+        }
+    };
+}
+
+/**
+ * Draws one stroke. The brush and the eraser draw a smoothed line with round caps and joins, `size` pixels wide, as one
+ * path (so a translucent colour does not darken where the stroke crosses itself); a single point is a round dot of the
+ * same size. The eraser draws with `destination-out`, so it clears the painting layer down to transparent and whatever
+ * lies under the canvas (the field's background) shows through. `line`, `rect` and `ellipse` draw their outline
+ * (`drawShape`). A `fill` needs the canvas size (`bounds`) and is done at once here (`createFillJob`, run to its
+ * end); without `bounds` it draws nothing
+ */
+export function drawStroke<Image>(context: PaintContext2D<Image>, stroke: Stroke, bounds?: { readonly width: number; readonly height: number }): void {
+    if (stroke.tool === 'fill') {
+        if (bounds !== undefined) createFillJob(context, stroke, bounds.width, bounds.height)?.step(Infinity);
+        return;
+    }
+    if (isShapeTool(stroke.tool)) {
+        drawShape(context, stroke);
+        return;
+    }
     const steps = smoothPath(stroke.points);
     if (steps.length === 0) return;
     const color = stroke.tool === 'eraser' ? '#000' : stroke.color;
@@ -99,7 +219,7 @@ export function drawStroke<Image>(context: PaintContext2D<Image>, stroke: Stroke
 /** Draws one entry of the log: a stroke, or `clear`, which wipes the whole surface */
 export function drawEntry<Image>(context: PaintContext2D<Image>, entry: PaintEntry, width: number, height: number): void {
     if (entry.kind === 'clear') context.clearRect(0, 0, width, height);
-    else drawStroke(context, entry.stroke);
+    else drawStroke(context, entry.stroke, { width, height });
 }
 
 /** Makes an off-screen surface: an `OffscreenCanvas` where there is one, else a detached `canvas` element */
@@ -133,34 +253,56 @@ export interface PainterOptions<Image = CanvasImageSource> {
     readonly read?: ReadCustomProperty;
     /** How many entries undo reaches (default 200) */
     readonly limit?: number;
+    /**
+     * How long one slice of a flood fill may run before it yields to the page, in milliseconds (default
+     * `FILL_SLICE_MS`). The fill runs in slices on timers, so a large fill never freezes the page
+     */
+    readonly fillSliceMs?: number;
 }
 
-/** What a stroke begins with: the tool, the colour (a literal or a token; the eraser needs none) and the size */
+/** How long one slice of a flood fill runs before the painter yields to the page, in milliseconds */
+export const FILL_SLICE_MS = 12;
+
+/**
+ * What a stroke begins with: the tool, the colour (a literal or a token; the eraser needs none), the size (the line
+ * width of the brush, the eraser and the shapes; a fill keeps it but does not use it) and, for `fill`, the tolerance
+ * (0..255, default `DEFAULT_FILL_TOLERANCE` of `./fill.ts`)
+ */
 export interface StrokeStart {
     readonly tool: PaintTool;
     readonly color?: unknown;
     readonly size: unknown;
+    readonly tolerance?: unknown;
 }
 
-/** The painting engine of one canvas: strokes, undo, redo and clear. It keeps no DOM and no store state */
+/** The painting engine of one canvas: strokes, shapes, fills, undo, redo and clear. It keeps no DOM and no store state */
 export interface Painter {
     readonly width: number;
     readonly height: number;
     /** Whether a stroke is being drawn */
     readonly drawing: boolean;
+    /** Whether a flood fill is still being written to the painting (see `idle`) */
+    readonly busy: boolean;
     readonly canUndo: boolean;
     readonly canRedo: boolean;
     /** Whether nothing is painted (see `PaintLog.blank`) */
     readonly blank: boolean;
     /**
-     * Begins a stroke at `point` (a stroke still being drawn is committed first). Gives false, and begins nothing, for
-     * an unknown tool, a size that is not a number, a point that is not a number, or a brush colour that does not
-     * resolve (`strokeColor`)
+     * Begins a stroke at `point` (a stroke still being drawn is committed first, and a fill under way is finished).
+     * Gives false, and begins nothing, for an unknown tool, a size that is not a number, a point that is not a number,
+     * or a colour that does not resolve (`strokeColor`; for a fill, also one whose bytes cannot be read)
      */
     begin(start: StrokeStart, point: { readonly x: unknown; readonly y: unknown }): boolean;
-    /** Adds points to the stroke being drawn (coalesced pointer events may bring several) and shows it */
+    /**
+     * Moves the stroke being drawn on and shows it (the live preview): the brush and the eraser add the points (coalesced
+     * pointer events may bring several), a shape moves its second point to the last of them, a fill ignores them
+     */
     extend(...points: { readonly x: unknown; readonly y: unknown }[]): void;
-    /** Commits the stroke being drawn to the log and gives it; undefined when no stroke was being drawn */
+    /**
+     * Commits the stroke being drawn to the log and gives it; undefined when no stroke was being drawn, or when it was a
+     * shape of no size (pressed and released on one point), which leaves the painting as it was. A fill goes into the log
+     * at once and is written to the painting in slices (`busy` until it is done)
+     */
     end(): Stroke | undefined;
     /** Drops the stroke being drawn; the canvas shows what it showed before it began */
     cancel(): void;
@@ -174,6 +316,8 @@ export interface Painter {
     reset(): void;
     /** Draws the painting onto the visible canvas again (after the canvas was resized or lost its bitmap) */
     render(): void;
+    /** Resolves once no fill is being written (at once when none is), so a save reads the finished painting */
+    idle(): Promise<void>;
     /** Lets go of the off-screen surfaces; the painter does nothing after it */
     dispose(): void;
 }
@@ -182,18 +326,24 @@ export interface Painter {
  * Makes the painting engine of one canvas. It keeps two off-screen surfaces: the committed painting (the base bitmap
  * and the entries of the log, drawn in order) and, made on the first flatten, the base bitmap itself, which takes the
  * entries that fall off the 200-entry undo stack. A stroke being drawn is shown by copying the committed painting to
- * the visible canvas and drawing the whole stroke over it, so a translucent brush never doubles up; on `end` it is
- * drawn onto the committed painting. Undo rebuilds the committed painting from the base and the log. Pixels never
- * leave the canvases: the caller reads them from its own canvas when it saves
+ * the visible canvas and drawing the whole stroke over it, so a translucent brush never doubles up and a shape's preview
+ * follows the pointer without leaving a trail; on `end` it is drawn onto the committed painting. A fill is written onto
+ * the committed painting by a `FillJob` in slices of `fillSliceMs` on timers, and shown when it is done; a stroke begun
+ * meanwhile finishes it first, and undo, clear and reset drop it (they draw the committed painting again). Undo rebuilds
+ * the committed painting from the base and the log, running any fill in it at once. Pixels never leave the canvases:
+ * the caller reads them from its own canvas when it saves
  */
 export function createPainter<Image = CanvasImageSource>(options: PainterOptions<Image>): Painter {
     const width = clampDimension(options.width, 1);
     const height = clampDimension(options.height, 1);
     const visible = options.context;
     const createSurface = options.createSurface ?? (createCanvasSurface as unknown as (width: number, height: number) => PaintSurface<Image>);
+    const sliceMs = typeof options.fillSliceMs === 'number' && options.fillSliceMs > 0 ? options.fillSliceMs : FILL_SLICE_MS;
     let committed: PaintSurface<Image> | undefined = createSurface(width, height);
     let base: PaintSurface<Image> | undefined;
-    let live: { tool: PaintTool; color: string; size: number; points: PaintPoint[] } | undefined;
+    let live: { tool: PaintTool; color: string; size: number; points: PaintPoint[]; tolerance?: number } | undefined;
+    let filling: { job: FillJob; timer: ReturnType<typeof setTimeout> | undefined } | undefined;
+    let waiting: (() => void)[] = [];
     let disposed = false;
 
     const log = createPaintLog({
@@ -216,9 +366,48 @@ export function createPainter<Image = CanvasImageSource>(options: PainterOptions
         if (live !== undefined) drawStroke(visible, live);
     };
 
+    /** Wakes the promises of `idle` */
+    const wake = (): void => {
+        const callbacks = waiting;
+        waiting = [];
+        for (const callback of callbacks) callback();
+    };
+
+    /** Stops the fill under way without finishing it; the caller draws the committed painting again */
+    const dropFill = (): void => {
+        if (filling === undefined) return;
+        if (filling.timer !== undefined) clearTimeout(filling.timer);
+        filling = undefined;
+        wake();
+    };
+
+    /** Runs the fill under way to its end at once (a stroke begins over it) */
+    const finishFill = (): void => {
+        if (filling === undefined) return;
+        const { job, timer } = filling;
+        if (timer !== undefined) clearTimeout(timer);
+        filling = undefined;
+        job.step(Infinity);
+        show();
+        wake();
+    };
+
+    /** Runs one slice of the fill under way, then yields to the page until the next */
+    const sliceFill = (): void => {
+        const current = filling;
+        if (current === undefined) return;
+        current.timer = undefined;
+        if (current.job.step(clock() + sliceMs)) {
+            filling = undefined;
+            show();
+            wake();
+        } else current.timer = setTimeout(sliceFill, 0);
+    };
+
     /** Draws the committed painting again: the base, then every entry of the log */
     const rebuild = (): void => {
         if (committed === undefined) return;
+        dropFill();
         const context = committed.context;
         context.save();
         context.globalCompositeOperation = 'source-over';
@@ -236,12 +425,41 @@ export function createPainter<Image = CanvasImageSource>(options: PainterOptions
 
     const commit = (): Stroke | undefined => {
         if (live === undefined || committed === undefined) return undefined;
-        const stroke: Stroke = Object.freeze({ tool: live.tool, color: live.color, size: live.size, points: Object.freeze([...live.points]) });
+        const { tool, color, size, points, tolerance } = live;
         live = undefined;
-        drawStroke(committed.context, stroke);
+        if (isShapeTool(tool) && shapeEnds(points) === undefined) {
+            show();
+            return undefined;
+        }
+        const stroke: Stroke = Object.freeze(tool === 'fill' ? { tool, color, size, points: Object.freeze([...points]), tolerance } : { tool, color, size, points: Object.freeze([...points]) });
         log.push(stroke);
+        if (tool === 'fill') {
+            const job = createFillJob(committed.context, stroke, width, height);
+            if (job !== undefined) {
+                filling = { job, timer: undefined };
+                sliceFill();
+            }
+        } else drawStroke(committed.context, stroke);
         show();
         return stroke;
+    };
+
+    /**
+     * The colour a fill writes, as text `parseRgba` reads: the resolved colour as it is when it parses, else read back
+     * from a one-pixel surface (a named colour, `oklch()`, ...) as `rgba()`; undefined when it cannot be read
+     */
+    const fillColor = (color: string): string | undefined => {
+        if (parseRgba(color) !== undefined) return color;
+        try {
+            const probe = createSurface(1, 1).context;
+            probe.clearRect(0, 0, 1, 1);
+            probe.fillStyle = color;
+            probe.fillRect(0, 0, 1, 1);
+            const [r, g, b, a] = probe.getImageData(0, 0, 1, 1).data;
+            return `rgba(${r}, ${g}, ${b}, ${a / 255})`;
+        } catch {
+            return undefined;
+        }
     };
 
     return {
@@ -249,6 +467,9 @@ export function createPainter<Image = CanvasImageSource>(options: PainterOptions
         height,
         get drawing(): boolean {
             return live !== undefined;
+        },
+        get busy(): boolean {
+            return filling !== undefined;
         },
         get canUndo(): boolean {
             return log.canUndo;
@@ -263,17 +484,27 @@ export function createPainter<Image = CanvasImageSource>(options: PainterOptions
             if (disposed || !isPaintTool(start.tool)) return false;
             const size = clampBrushSize(start.size);
             if (size === undefined) return false;
-            const color = start.tool === 'eraser' ? (strokeColor(start.color, options.read) ?? '#000') : strokeColor(start.color, options.read);
+            const resolved = start.tool === 'eraser' ? (strokeColor(start.color, options.read) ?? '#000') : strokeColor(start.color, options.read);
+            const color = start.tool === 'fill' && resolved !== undefined ? fillColor(resolved) : resolved;
             if (color === undefined) return false;
             const points: PaintPoint[] = [];
             if (!addPoint(points, point, width, height)) return false;
             commit();
-            live = { tool: start.tool, color, size, points };
+            finishFill();
+            live = start.tool === 'fill' ? { tool: start.tool, color, size, points, tolerance: clampTolerance(start.tolerance) } : { tool: start.tool, color, size, points };
             show();
             return true;
         },
         extend(...points: { readonly x: unknown; readonly y: unknown }[]): void {
-            if (live === undefined) return;
+            if (live === undefined || live.tool === 'fill') return;
+            if (isShapeTool(live.tool)) {
+                let end: PaintPoint | undefined;
+                for (const point of points) end = clampPoint(point, width, height) ?? end;
+                if (end === undefined) return;
+                live.points = [live.points[0] as PaintPoint, end];
+                show();
+                return;
+            }
             let added = false;
             for (const point of points) added = addPoint(live.points, point, width, height) || added;
             if (added) show();
@@ -295,6 +526,7 @@ export function createPainter<Image = CanvasImageSource>(options: PainterOptions
         redo(): boolean {
             if (disposed || committed === undefined) return false;
             dropLive();
+            finishFill();
             const entry = log.redo();
             if (entry === undefined) return false;
             drawEntry(committed.context, entry, width, height);
@@ -305,6 +537,7 @@ export function createPainter<Image = CanvasImageSource>(options: PainterOptions
             if (disposed || committed === undefined) return false;
             dropLive();
             if (!log.clear()) return false;
+            dropFill();
             committed.context.clearRect(0, 0, width, height);
             show();
             return true;
@@ -320,9 +553,14 @@ export function createPainter<Image = CanvasImageSource>(options: PainterOptions
         render(): void {
             if (!disposed) show();
         },
+        idle(): Promise<void> {
+            if (filling === undefined) return Promise.resolve();
+            return new Promise((resolve) => waiting.push(resolve));
+        },
         dispose(): void {
             disposed = true;
             live = undefined;
+            dropFill();
             committed = undefined;
             base = undefined;
         }

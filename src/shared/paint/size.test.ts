@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_SIZES, MAX_BRUSH_SIZE, MAX_CANVAS_SIZE, MAX_SIZES, clampBrushSize, clampCanvasSize, clampDimension, clampSizes, pickSize } from './size.js';
+import { DEFAULT_SIZES, MAX_BRUSH_SIZE, MAX_CANVAS_SIZE, MAX_SIZES, clampBrushSize, clampCanvasSize, clampDimension, clampSizes, containBox, pickSize } from './size.js';
 
 describe('clampDimension', () => {
     it.each([
@@ -69,5 +69,24 @@ describe('pickSize', () => {
         expect(pickSize(0, [2, 4])).toBe(1);
         expect(pickSize('big', [6, 4])).toBe(6);
         expect(pickSize(undefined, [])).toBe(DEFAULT_SIZES[0]);
+    });
+});
+
+describe('containBox (G2.9b)', () => {
+    it('should fit a wide picture to the width and centre it with bands above and below', () => {
+        expect(containBox(400, 100, 200, 100)).toEqual({ x: 0, y: 25, width: 200, height: 50 });
+    });
+
+    it('should fit a tall picture to the height and centre it with bands left and right', () => {
+        expect(containBox(100, 400, 200, 100)).toEqual({ x: 87.5, y: 0, width: 25, height: 100 });
+    });
+
+    it('should scale a small picture up and keep a picture of the same ratio whole', () => {
+        expect(containBox(20, 10, 200, 100)).toEqual({ x: 0, y: 0, width: 200, height: 100 });
+        expect(containBox(200, 100, 200, 100)).toEqual({ x: 0, y: 0, width: 200, height: 100 });
+    });
+
+    it('should give an empty box for a picture with no pixels', () => {
+        expect(containBox(0, 10, 200, 100)).toEqual({ x: 100, y: 50, width: 0, height: 0 });
     });
 });

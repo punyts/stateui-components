@@ -4,7 +4,11 @@
     "_toolbar": "Malwerkzeuge",
     "_tools": {
         "brush": "Pinsel",
-        "eraser": "Radierer"
+        "eraser": "Radierer",
+        "line": "Linie",
+        "rect": "Rechteck",
+        "ellipse": "Ellipse",
+        "fill": "Füllen"
     },
     "_color": "Farbe {value}",
     "_size": "Größe {value}",

@@ -1,5 +1,5 @@
 {
-    "summary": "A labelled field to paint on with brush and eraser, with undo, redo and clear; the value is a PNG file reference",
+    "summary": "A labelled field to paint with brush, eraser, shapes and fill, with undo, redo and clear; the value is a PNG file",
     "category": "forms",
     "purposes": ["capture a handwritten signature", "sketch a drawing by hand", "mark up a picture with a brush", "draw freehand with a pen or finger", "paint a quick doodle to attach"],
     "events": ["changed", "change", "invalid", "valid"],
@@ -14,11 +14,11 @@
         "value": { "type": "object", "default": {} },
         "width": { "type": "integer", "default": 480, "validators": { "range": { "min": 1, "max": 4096 } } },
         "height": { "type": "integer", "default": 200, "validators": { "range": { "min": 1, "max": 4096 } } },
-        "background": { "type": "string", "validators": { "color": true } },
-        "tools": { "type": "array", "default": ["brush", "eraser"] },
+        "background": { "type": ["string", "object"], "validators": { "color": true, "fileRef": { "types": ["image/png", "image/jpeg", "image/gif", "image/webp"] } } },
+        "tools": { "type": "array", "default": ["brush", "eraser"], "validators": { "eachOf": ["brush", "eraser", "line", "rect", "ellipse", "fill"] } },
         "colors": { "type": "array", "default": ["{color.text.base}", "#d32f2f", "#1976d2", "#2e7d32"] },
         "sizes": { "type": "array", "default": [2, 4, 8, 16] },
-        "tool": { "type": "string", "values": ["brush", "eraser"], "default": "brush" },
+        "tool": { "type": "string", "values": ["brush", "eraser", "line", "rect", "ellipse", "fill"], "default": "brush" },
         "color": { "type": "string", "validators": { "color": true } },
         "brushSize": { "type": "number", "validators": { "range": { "min": 1, "max": 200 } } },
         "disabled": { "type": "boolean", "default": false },
@@ -39,7 +39,7 @@
             "type": "map",
             "items": "string",
             "kind": "content",
-            "default": { "brush": "Brush", "eraser": "Eraser" }
+            "default": { "brush": "Brush", "eraser": "Eraser", "line": "Line", "rect": "Rectangle", "ellipse": "Ellipse", "fill": "Fill" }
         },
         "_color": { "type": "string", "kind": "content", "default": "Colour {value}" },
         "_size": { "type": "string", "kind": "content", "default": "Size {value}" },

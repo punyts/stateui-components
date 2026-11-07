@@ -6,7 +6,9 @@ import { createPaintResolver, placeGradient } from './paint.js';
 import type { Paint, PaintResolver } from './paint.js';
 import { registerDrawingRenderer } from './render.js';
 import type { DrawingIssue, DrawingRenderer, DrawingRendererOptions, ShapeEventName } from './render.js';
+import { createScheduler } from './scheduler.js';
 import { ANCHORS, BASELINES, CAPS, JOINS, ShapeReader, Unusable, contentBox } from './shapeReader.js';
+import { createTransitions, settleMoves, styleReader, tokenNormalizer } from './transition.js';
 import type { ShapeTree } from './tree.js';
 
 /** The highest pixel ratio the bitmap is drawn at; a denser screen scales it up */
@@ -142,6 +144,11 @@ type Geometry =
  * pointer on the canvas; the shape (and its proxy) is drawn where the pointer takes it in the next frame, nothing is
  * written, and the release hands the new `x` and `y` to `onMove` and raises `dragEnd`. Escape or a pointer cancel puts
  * it back; the arrow keys move a focused proxy's shape by `step` (Shift ten)
+ *
+ * Motion (G1.8, `scheduler.ts` and `transition.ts`, as in SVG): a change of a number or of `fill` or `stroke` of a
+ * shape with `transition` tweens in the renderer's own frame loop, which draws the whole bitmap (and places the
+ * proxies) in each of its frames; with reduced motion it jumps. A position handed to `onMove` is shown at once.
+ * `drawn()` resolves once the running tweens have ended
  */
 export function createCanvasRenderer(target: Element, options: DrawingRendererOptions): CanvasDrawingRenderer {
     const document = target.ownerDocument;
@@ -473,6 +480,23 @@ export function createCanvasRenderer(target: Element, options: DrawingRendererOp
         settle();
     };
 
+    let template: HTMLButtonElement | undefined;
+    /** The button every proxy is copied from: a `type="button"` with no box of its own, invisible and taking no pointer events */
+    const proxyTemplate = (): HTMLButtonElement => {
+        if (template !== undefined) return template;
+        template = document.createElement('button');
+        template.type = 'button';
+        const style = template.style;
+        style.position = 'absolute';
+        style.margin = '0';
+        style.padding = '0';
+        style.border = '0';
+        style.boxSizing = 'border-box';
+        style.opacity = '0';
+        style.pointerEvents = 'none';
+        return template;
+    };
+
     /**
      * Makes, removes and orders the proxy buttons to follow the interactive shapes of the tree (not hidden, not
      * `drawImage`, which is not drawn yet), in drawing order: a group before the shapes inside it
@@ -497,16 +521,8 @@ export function createCanvasRenderer(target: Element, options: DrawingRendererOp
         for (const shape of wanted) {
             let proxy = proxies.get(shape.path);
             if (proxy === undefined) {
-                const element = document.createElement('button');
-                element.type = 'button';
-                const style = element.style;
-                style.position = 'absolute';
-                style.margin = '0';
-                style.padding = '0';
-                style.border = '0';
-                style.boxSizing = 'border-box';
-                style.opacity = '0';
-                style.pointerEvents = 'none';
+                // A copy of one styled button is cheaper than styling each of thousands of proxies (G2.3, a big chart)
+                const element = proxyTemplate().cloneNode() as HTMLButtonElement;
                 element.setAttribute('data-shape-path', shape.path);
                 proxyPaths.set(element, shape.path);
                 proxy = { element, label: '', box: '', hidden: false, attrs: {} };
@@ -599,8 +615,23 @@ export function createCanvasRenderer(target: Element, options: DrawingRendererOp
     };
 
     /** Drags (G1.7b): the tree with the dragged shape moved is drawn in the next frame, its proxy placed with it */
+    /** Transitions: each frame of the scheduler draws the tree with the tweens where they are, at once (it is a frame) */
+    const scheduler = createScheduler({
+        requestFrame: view === null ? undefined : (callback) => view.requestAnimationFrame(callback),
+        cancelFrame: (handle) => view?.cancelAnimationFrame(handle),
+        onFrame() {
+            if (disposed) return;
+            tree = drag.apply(transitions.current());
+            dirty = true;
+            unschedule(view, onFrame);
+            if (size !== undefined) draw();
+            else if (view !== null) schedule(view, onFrame);
+        }
+    });
+    const transitions = createTransitions({ scheduler, read: styleReader(canvas), normalize: tokenNormalizer(document) });
+
     const drag = createShapeDrag({
-        options,
+        options: settleMoves(options, transitions),
         toDrawing(event) {
             if (size === undefined) return { x: 0, y: 0 };
             const rect = canvas.getBoundingClientRect();
@@ -705,7 +736,10 @@ export function createCanvasRenderer(target: Element, options: DrawingRendererOp
         update(next: readonly ShapeTree[]): void {
             if (disposed) return;
             // A drag in progress keeps its shape where the pointer has it
-            tree = drag.apply(next);
+            // Reduced motion is asked for each update; a changed value of a shape with `transition` starts at the
+            // value on screen, and a drag in progress keeps its shape where the pointer has it
+            scheduler.setReduced(options.reducedMotion());
+            tree = drag.apply(transitions.apply(next));
             dirty = true;
             syncProxies();
             // A touch on a draggable shape drags it rather than scrolling the page
@@ -729,8 +763,10 @@ export function createCanvasRenderer(target: Element, options: DrawingRendererOp
             return disposed ? undefined : proxies.get(id)?.element;
         },
         drawn(): Promise<void> {
-            if (disposed || !dirty) return Promise.resolve();
-            return new Promise<void>((resolve) => waiters.push(resolve));
+            if (disposed) return Promise.resolve();
+            const shown = dirty ? new Promise<void>((resolve) => waiters.push(resolve)) : Promise.resolve();
+            // On screen once the tweens that run have ended, so a screenshot shows where the shapes go
+            return shown.then(() => scheduler.settled());
         },
         dispose(): void {
             if (disposed) return;
@@ -738,6 +774,8 @@ export function createCanvasRenderer(target: Element, options: DrawingRendererOp
             observer?.disconnect();
             unschedule(view, onFrame);
             drag.dispose();
+            scheduler.dispose();
+            transitions.dispose();
             canvas.removeEventListener('pointerdown', onDown);
             canvas.removeEventListener('click', onCanvasClick);
             canvas.removeEventListener('pointermove', onMove);

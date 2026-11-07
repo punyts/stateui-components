@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PAINT_TOOLS, UNDO_LIMIT, addPoint, clampPoint, createPaintLog, isPaintTool, strokeColor } from './strokes.js';
+import { PAINT_TOOLS, UNDO_LIMIT, addPoint, clampPoint, createPaintLog, isPaintTool, isShapeTool, strokeColor } from './strokes.js';
 import type { PaintEntry, PaintPoint, Stroke } from './strokes.js';
 
 const stroke = (n: number, tool: Stroke['tool'] = 'brush'): Stroke => ({ tool, color: '#000', size: 2, points: [{ x: n, y: n }] });
@@ -8,12 +8,26 @@ const numberOf = (entry: PaintEntry | undefined): number | string | undefined =>
     entry === undefined ? undefined : entry.kind === 'clear' ? 'clear' : entry.stroke.points[0].x;
 
 describe('tools', () => {
-    it('should know the brush and the eraser only', () => {
-        expect(PAINT_TOOLS).toEqual(['brush', 'eraser']);
+    it('should know the brush, the eraser, the shapes and the fill (G2.6b)', () => {
+        expect(PAINT_TOOLS).toEqual(['brush', 'eraser', 'line', 'rect', 'ellipse', 'fill']);
         expect(isPaintTool('brush')).toBe(true);
         expect(isPaintTool('eraser')).toBe(true);
-        expect(isPaintTool('fill')).toBe(false);
+        expect(isPaintTool('fill')).toBe(true);
+        expect(isPaintTool('spray')).toBe(false);
         expect(isPaintTool(undefined)).toBe(false);
+        expect(['line', 'rect', 'ellipse'].every(isShapeTool)).toBe(true);
+        expect(isShapeTool('fill')).toBe(false);
+        expect(isShapeTool('brush')).toBe(false);
+    });
+
+    it('should count a shape or a fill as painted, and an eraser alone as blank', () => {
+        for (const tool of ['line', 'rect', 'ellipse', 'fill'] as const) {
+            const log = createPaintLog();
+            log.push(stroke(1, 'eraser'));
+            expect(log.blank).toBe(true);
+            log.push(stroke(2, tool));
+            expect(log.blank).toBe(false);
+        }
     });
 });
 

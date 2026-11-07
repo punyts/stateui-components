@@ -4,7 +4,7 @@
             "type": "object",
             "validators": {
                 "fields": {
-                    "duration": { "type": "number", "validators": { "range": { "min": 0, "max": 60000 } } },
+                    "duration": { "type": ["number", "string"], "values": ["fast", "base", "slow"], "validators": { "range": { "min": 0, "max": 60000 } } },
                     "easing": { "type": "string", "values": ["standard", "enter", "exit"] }
                 }
             }

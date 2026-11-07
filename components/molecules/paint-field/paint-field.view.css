@@ -114,9 +114,16 @@
 }
 
 .surface {
+    display: grid;
     inline-size: 100%;
     max-inline-size: calc(var(--paint-width) * 1px);
     line-height: 0;
+}
+
+/* The painting canvas lies over the backdrop, which shows the background colour and draws a background file */
+.canvas,
+.backdrop {
+    grid-area: 1 / 1;
 }
 
 .canvas {
@@ -125,7 +132,8 @@
     inline-size: 100%;
     block-size: auto;
     aspect-ratio: var(--paint-width) / var(--paint-height);
-    background: var(--paint-background, var(--ui-paintfield-surface));
+    position: relative;
+    z-index: 1;
     border-radius: var(--ui-radius-sm);
     touch-action: none;
     cursor: crosshair;
@@ -142,5 +150,20 @@
 
 .canvas[data-blocked] {
     cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.backdrop {
+    box-sizing: border-box;
+    display: block;
+    inline-size: 100%;
+    block-size: auto;
+    aspect-ratio: var(--paint-width) / var(--paint-height);
+    background: var(--paint-background, var(--ui-paintfield-surface));
+    border-radius: var(--ui-radius-sm);
+    pointer-events: none;
+}
+
+.backdrop[data-blocked] {
     opacity: 0.6;
 }

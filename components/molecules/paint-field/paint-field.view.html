@@ -35,6 +35,7 @@
         </div>
         <div class="surface" style="--paint-width: {{ $.width }}; --paint-height: {{ $.height }}; --paint-background: {{ backgroundOf($.background) }}">
             <canvas id="control" class="canvas" role="img" aria-labelledby="label" tabindex="0" data-blocked="{{ $.disabled || $.locked || $.readonly ? '' : null }}" data-invalid="{{ $.error !== '' ? '' : null }}" onpointerdown="{{ onPointerDown }}" onpointermove="{{ onPointerMove }}" onpointerup="{{ onPointerUp }}" onpointercancel="{{ onPointerCancel }}" onlostpointercapture="{{ onPointerUp }}" onblur="{{ onBlur }}"></canvas>
+            <canvas class="backdrop" aria-hidden="true" data-blocked="{{ $.disabled || $.locked || $.readonly ? '' : null }}"></canvas>
         </div>
     </div>
     <div class="messages">

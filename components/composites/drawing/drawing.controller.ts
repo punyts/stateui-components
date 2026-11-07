@@ -7,6 +7,7 @@ import type { DrawingIssue, DrawingRenderer, RendererKind, ShapeEvent, ShapeMove
 import '../shared/drawing/canvasRenderer.js';
 import '../shared/drawing/svgRenderer.js';
 import { expandRepeats, targetOf } from '../shared/drawing/rows.js';
+import { isReducedMotion } from '../shared/drawing/scheduler.js';
 import { locateShape, readShapeTree, shapeProperties } from '../shared/drawing/tree.js';
 import type { ShapeTree } from '../shared/drawing/tree.js';
 
@@ -46,6 +47,12 @@ const hasInteractive = (shapes: readonly ShapeTree[]): boolean =>
  * (where a `<-x` link on the node lands, since a linked property is a store alias of its target), or for a repeat copy
  * to the record path the row binder reports (`targetOf`). A copy whose `x` or `y` is a literal has no such path: it is
  * not draggable, and the repeat is reported once (`SUI-RUN-DRAW`). The renderer raises `dragEnd` after the write
+ *
+ * Motion (G1.8): the renderer tweens the shapes with `transition` and asks `reducedMotion()` on every update. The
+ * controller reads `--ui-motion-duration-base` from the element's computed style on mount and again after a theme
+ * switch (the `motion` overlay writes `$.theme.active.motion`): a duration of 0 (`0ms`, `0s`, `0`) is reduced
+ * motion, and every change jumps. The drawing stays `pending` while a tween runs (`drawn()` waits for it), so a
+ * screenshot shows the shapes where they go
  */
 export default function controller({ element, store, basePath }: ControllerContext) {
     const childrenPath = `${basePath}.children`;
@@ -69,6 +76,22 @@ export default function controller({ element, store, basePath }: ControllerConte
     const cut = new Set<string>();
     /** The tree last handed to the renderer: a move's shape is found in it (a copy as the row binder made it, for `targetOf`) */
     let drawnTree: readonly ShapeTree[] = [];
+    /** Reduced motion as last read from the theme; undefined until read, and again after a theme switch */
+    let reduced: boolean | undefined;
+
+    /** True while motion is reduced: read on mount and after a theme switch, not on every update */
+    const reducedMotion = (): boolean => {
+        if (reduced === undefined) {
+            const style = getComputedStyle(element);
+            reduced = isReducedMotion((name) => style.getPropertyValue(name).trim() || undefined);
+        }
+        return reduced;
+    };
+
+    /** A theme switch (the `motion` overlay among them) may change reduced motion; it is read again at the next draw */
+    const onTheme = (): void => {
+        reduced = undefined;
+    };
 
     const onIssue = (issue: DrawingIssue): void => {
         const error = drawingIssueError(issue);
@@ -88,7 +111,7 @@ export default function controller({ element, store, basePath }: ControllerConte
             renderer = createDrawingRenderer(surface, {
                 renderer: wanted,
                 path: basePath,
-                reducedMotion: () => false,
+                reducedMotion,
                 readProperty: read,
                 onEvent: raise,
                 onMove: write,
@@ -233,6 +256,7 @@ export default function controller({ element, store, basePath }: ControllerConte
     };
 
     element.setAttribute('data-render', 'pending');
+    store.on(THEME_PATHS, onTheme);
     store.on(watched, request);
     store.on(rendererPath, request);
 
@@ -255,6 +279,7 @@ export default function controller({ element, store, basePath }: ControllerConte
         dispose: () => {
             disposed = true;
             observer?.disconnect();
+            store.off(THEME_PATHS, onTheme);
             store.off(watched, request);
             store.off(rendererPath, request);
             if (repeatPaths.length > 0) store.off(repeatPaths, request);

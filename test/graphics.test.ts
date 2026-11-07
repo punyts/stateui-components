@@ -179,4 +179,22 @@ describe('a drawing document', () => {
             ['SUI-STATE-INVALID', '$.app.children.dot.transition']
         ]);
     });
+
+    it('should take a transition duration in milliseconds or as a motion.duration name, and refuse another name (G1.8)', () => {
+        // Act
+        const result = validate(
+            drawingDocument({
+                ms: { component: 'circle', r: 1, transition: { duration: 300, easing: 'enter' } },
+                named: { component: 'circle', r: 1, transition: { duration: 'slow' } },
+                unknown: { component: 'circle', r: 1, transition: { duration: 'medium' } },
+                negative: { component: 'circle', r: 1, transition: { duration: -5 } }
+            })
+        );
+
+        // Assert
+        expect(result.errors.map((error) => [error.code, error.statePath])).toEqual([
+            ['SUI-STATE-INVALID', '$.app.children.unknown.transition'],
+            ['SUI-STATE-INVALID', '$.app.children.negative.transition']
+        ]);
+    });
 });

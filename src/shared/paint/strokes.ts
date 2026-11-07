@@ -1,10 +1,28 @@
 import { resolveColor } from '../drawing/paint.js';
 import type { ReadCustomProperty } from '../drawing/paint.js';
 
-/** The tools of the painting engine; G2.6b adds `line`, `rect`, `ellipse` and `fill` */
-export const PAINT_TOOLS = ['brush', 'eraser'] as const;
+/**
+ * The tools of the painting engine: freehand `brush` and `eraser` (G2.6), the shapes `line`, `rect` and `ellipse`
+ * and the flood `fill` (G2.6b)
+ */
+export const PAINT_TOOLS = ['brush', 'eraser', 'line', 'rect', 'ellipse', 'fill'] as const;
 
 export type PaintTool = (typeof PAINT_TOOLS)[number];
+
+/** The shape tools: a stroke of two points (where the pointer pressed and where it is), outlined `size` pixels wide */
+export const SHAPE_TOOLS = ['line', 'rect', 'ellipse'] as const;
+
+export type ShapeTool = (typeof SHAPE_TOOLS)[number];
+
+/** Whether a tool draws a shape from two points */
+export function isShapeTool(tool: unknown): tool is ShapeTool {
+    return typeof tool === 'string' && (SHAPE_TOOLS as readonly string[]).includes(tool);
+}
+
+/** Whether a stroke of this tool paints (every tool but the eraser): what makes a painting not blank */
+export function paints(tool: PaintTool): boolean {
+    return tool !== 'eraser';
+}
 
 /** Whether a value names a tool of the engine */
 export function isPaintTool(value: unknown): value is PaintTool {
@@ -22,13 +40,16 @@ export interface PaintPoint {
 
 /**
  * One stroke: the tool, the colour as it was resolved when the stroke began (so a theme switch does not recolour it;
- * the eraser keeps the colour it was given but draws none), the brush size in pixels and the points in canvas pixels
+ * the eraser keeps the colour it was given but draws none), the brush size in pixels and the points in canvas pixels.
+ * A shape (`line`, `rect`, `ellipse`) has two points, its corners or ends; a `fill` has one, the seed, and the
+ * `tolerance` it filled with
  */
 export interface Stroke {
     readonly tool: PaintTool;
     readonly color: string;
     readonly size: number;
     readonly points: readonly PaintPoint[];
+    readonly tolerance?: number;
 }
 
 /** One command of the log: a stroke, or `clear`, which wipes what is under it */
@@ -87,8 +108,8 @@ export interface PaintLog {
     readonly canUndo: boolean;
     readonly canRedo: boolean;
     /**
-     * Whether nothing is painted: no brush stroke since the last `clear`, and, without a `clear` in reach, nothing
-     * flattened into the base either (an eraser alone paints nothing)
+     * Whether nothing is painted: no stroke of a painting tool (any but the eraser) since the last `clear`, and,
+     * without a `clear` in reach, nothing flattened into the base either (an eraser alone paints nothing)
      */
     readonly blank: boolean;
     /** Adds a stroke; the redo stack is dropped, and the oldest entry is flattened when the stack is full */
@@ -118,7 +139,7 @@ export function createPaintLog(options: PaintLogOptions = {}): PaintLog {
         while (done.length > limit) {
             const oldest = done.shift() as PaintEntry;
             if (oldest.kind === 'clear') baseBlank = true;
-            else if (oldest.stroke.tool === 'brush') baseBlank = false;
+            else if (paints(oldest.stroke.tool)) baseBlank = false;
             options.onFlatten?.(oldest);
         }
     };
@@ -126,7 +147,7 @@ export function createPaintLog(options: PaintLogOptions = {}): PaintLog {
         for (let i = done.length - 1; i >= 0; i--) {
             const entry = done[i];
             if (entry.kind === 'clear') return true;
-            if (entry.stroke.tool === 'brush') return false;
+            if (paints(entry.stroke.tool)) return false;
         }
         return baseBlank;
     };
