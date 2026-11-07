@@ -68,12 +68,15 @@ export type Scene3dStatus = 'pending' | 'lost' | 'failed';
  * Something a node of a scene cannot draw (`Scene3dIssue` of `@punyts/stateui-3d`, G3.7b): `file` when a `model`'s file
  * cannot be had (`no_file` for an empty `src`, else the read's code), reported as `SUI-RUN-FILE`; `model` when its bytes
  * cannot be drawn (`not_glb`, `draco`, `meshopt`, `ktx2`, `external_uri`, `invalid_glb`, with what in the file it is
- * about), reported as `SUI-RUN-3D`
+ * about), reported as `SUI-RUN-3D`. A `mesh`'s `material.map` (G3.7c) is a `file` issue too (the read's code,
+ * `not_an_image` or `unsupported_type`), with `node` `mesh`, or `repeat3d` at the repeat's path
  */
 export interface Scene3dIssue {
     readonly kind: 'file' | 'model';
     readonly path: string;
     readonly reason: string;
+    /** The kind of node it is about; unset for a `model` */
+    readonly node?: string;
 }
 
 /** What a scene is made with (`Scene3dOptions` of `@punyts/stateui-3d`) */
@@ -85,11 +88,25 @@ export interface Scene3dOptions {
     readonly onCamera?: (move: CameraMove) => void;
     /** The element that is focusable with controls and whose keys move the camera (G3.8b); default the host */
     readonly keyTarget?: Element;
-    /** Reads a stored file's bytes by its id (a `model`'s `src`); rejects with an object whose `code` names the failure */
+    /** Reads a stored file's bytes by its id (a `model`'s `src`, a `mesh`'s `material.map`); rejects with an object whose `code` names the failure */
     readonly readFile?: (id: string, signal: AbortSignal) => Promise<ArrayBuffer>;
     readonly onIssue?: (issue: Scene3dIssue) => void;
     /** Reads a theme token (`--ui-motion-duration-slow`) for `transition` (G3.9); default the host's computed style */
     readonly readToken?: (name: string) => string | undefined;
+    /** Told a `press` or a `hover` of an interactive node (G3.8) */
+    readonly onEvent?: (event: Scene3dEvent) => void;
+}
+
+/**
+ * A `press` or a `hover` of an interactive node (`Scene3dEvent` of `@punyts/stateui-3d`, G3.8): the node's state path
+ * (`<repeat>.rows.<recordKey>` for a `repeat3d` copy), its key (a copy's record key) and the point in world space (where
+ * the ray hit it, or the centre of its bounds for a press through its proxy)
+ */
+export interface Scene3dEvent {
+    readonly name: 'press' | 'hover';
+    readonly shape: string;
+    readonly key: string;
+    readonly point: readonly [number, number, number];
 }
 
 /** A drawn scene (`Scene3d` of `@punyts/stateui-3d`) */
@@ -98,6 +115,7 @@ export interface Scene3d {
     /** The interactive node at a point; for an instance of a `repeat3d`, its copy (`key` the record key, G3.6) */
     hit(x: number, y: number): Scene3dTree | undefined;
     boundsOf(path: string): { readonly min: readonly [number, number, number]; readonly max: readonly [number, number, number] } | undefined;
+    /** The proxy button of an interactive node that is drawn (G3.8) */
     elementOf(path: string): Element | undefined;
     /** Resolves every colour again and draws (a theme or mode change) */
     restyle(): void;

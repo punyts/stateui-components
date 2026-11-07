@@ -11,6 +11,10 @@ import type { Load3dFailure, Scene3dChunk } from '../shared/scene3d/load.js';
 import { isScene3dError, readScene3dTree } from '../shared/scene3d/tree.js';
 import type { ColorResolver, Scene3d, Scene3dIssue, Scene3dSettings, Scene3dStatus } from '../shared/scene3d/tree.js';
 import type { CameraMove } from '../shared/scene3d/tree.js';
+import type { Scene3dEvent, Scene3dTree } from '../shared/scene3d/tree.js';
+
+/** True when a node of the tree (a group's children and a repeat's copies included) has `interactive: true` (G3.8) */
+const hasInteractive = (nodes: readonly Scene3dTree[]): boolean => nodes.some((node) => node.properties.interactive === true || hasInteractive(node.children));
 
 /** The scene's own properties; a change at or below one of them, or below `children`, redraws the scene */
 const SCENE_PROPERTIES = ['children', 'background', 'environment', 'fog', 'controls'] as const;
@@ -68,6 +72,14 @@ const THEME_PATHS = ['$.theme.active', '$.theme.active.$all'];
  * outside the file) as `SUI-RUN-3D` at the node's path with the reason. The other nodes draw, and the element stays
  * `pending` until every model asked for has loaded or failed (the scene's `drawn()` waits for them)
  *
+ * Textures (G3.7c): a `mesh`'s `material.map` is a picture file (png, jpeg, gif or webp; the shape's `fileRef`
+ * validator refuses another type, a GLB or a text file among them, as `SUI-STATE-INVALID`) read the same way: the
+ * scene decodes it to an `ImageBitmap` (no `blob:` URL) and wraps the mesh in it, the right way up and in sRGB. Until
+ * it is drawn, and when its file is missing or does not decode, the mesh shows its colour only and the map is reported
+ * as `SUI-RUN-FILE` at the mesh's path (reason the read's code, `not_an_image`, or `unsupported_type` for a linked
+ * value of another type); the element stays `pending` until every map has loaded or failed. A `repeat3d`'s instances
+ * share one material, so they share the first record's map (one read), each tinted by its own colour
+ *
  * Controls (G3.8b): `controls` goes to the scene with its other properties (`none` when unset). With `orbit` or `pan`
  * the scene box (`role="img"`, labelled) is focusable and takes the keys, and a pointer drag, the wheel or the keys
  * move the camera in the renderer only: each frame of a gesture marks the element `pending` until it is drawn, and
@@ -81,6 +93,15 @@ const THEME_PATHS = ['$.theme.active', '$.theme.active.$all'];
  * 20,000 are cut (`SUI-RUN-CAP`, once); a row property every instance shares (`geometry`, `material` but its
  * colour, the shadow flags) that differs between records is `SUI-RUN-DRAW` naming it, and the first record's is
  * drawn. The records and the store paths the row reads are watched, so a record change redraws
+ *
+ * Events (G3.8): the scene casts a ray on pointer events and tells `press` (a click that did not move the camera: a
+ * drag to rotate is never a press) and `hover` (entering) of a node with `interactive: true`; the controller raises
+ * each on the element as a bubbling, composed `CustomEvent` with `detail: { shape, key, point }` (the node's state path,
+ * `<repeat>.rows.<recordKey>` for a `repeat3d` copy; its key or the copy's record key; the point in world space). The
+ * dispatcher runs the `on` entry of the node `detail.shape` names (for a copy, the row template's, with `$row` at the
+ * record), as for a 2D shape. Each interactive node has a hidden proxy button over its projected box, in tree order,
+ * named by `_label`, so the keyboard (Enter, Space), a screen reader and `ui_interact` reach it; while any node is
+ * interactive the scene box's role is `group` (its buttons are reached), else `img`
  */
 export default function controller({ element, store, basePath }: ControllerContext) {
     const read = (path: string): JsonValue | undefined => store.get<JsonValue | undefined>(path) ?? undefined;
@@ -99,15 +120,18 @@ export default function controller({ element, store, basePath }: ControllerConte
         report.error(error.message, { code: 'SUI-RUN-3D', path });
     };
 
-    /** A node the scene cannot draw (G3.7b): a model's file as `SUI-RUN-FILE`, its bytes as `SUI-RUN-3D`, at the node's path */
-    const onIssue = ({ kind, path, reason }: Scene3dIssue): void => {
+    /**
+     * A node the scene cannot draw (G3.7b): a model's file as `SUI-RUN-FILE`, its bytes as `SUI-RUN-3D`, at the node's
+     * path; a mesh's `material.map` file (G3.7c) as `SUI-RUN-FILE` naming the mesh (or the repeat3d)
+     */
+    const onIssue = ({ kind, path, reason, node }: Scene3dIssue): void => {
         if (disposed) return;
         const code = kind === 'file' ? 'SUI-RUN-FILE' : 'SUI-RUN-3D';
-        const error = buildError(code, { component: 'model', path, reason, statePath: path });
+        const error = buildError(code, { component: node ?? 'model', path, reason, statePath: path });
         report.error(error.message, { code, path });
     };
 
-    /** Reads a model's file through the host, as `drawImage` reads its picture */
+    /** Reads a model's or a map's file through the host, as `drawImage` reads its picture */
     const readFile = (id: string, signal: AbortSignal): Promise<ArrayBuffer> => readStoredFile(element, id, signal).then((stored) => stored.data);
 
     const showFallback = (reason: string): void => {
@@ -140,6 +164,20 @@ export default function controller({ element, store, basePath }: ControllerConte
         store.set(`${move.path}.target`, [...move.target]);
     };
 
+    /** Raises a node's `press` or `hover` on the element, for the dispatcher (`detail.shape` names the node, G3.8) */
+    const onEvent = (event: Scene3dEvent): void => {
+        if (disposed) return;
+        const detail = { shape: event.shape, key: event.key, point: [...event.point] };
+        element.dispatchEvent(new CustomEvent(event.name, { detail, bubbles: true, composed: true }));
+    };
+
+    /** The role of the scene box: `group` while a node is interactive, so its proxy buttons are reached, else `img` (G3.8) */
+    const syncRole = (nodes: readonly Scene3dTree[]): void => {
+        const box = element.shadowRoot?.querySelector('.scene');
+        const role = hasInteractive(nodes) ? 'group' : 'img';
+        if (box && box.getAttribute('role') !== role) box.setAttribute('role', role);
+    };
+
     /** Marks the element `ready` once the scene's next frame is on screen, unless another change came first */
     const readyAfterFrame = (): void => {
         const at = generation;
@@ -169,7 +207,9 @@ export default function controller({ element, store, basePath }: ControllerConte
             const what = node.component === '' ? 'it is not a node' : `component "${node.component}" is not a 3D node`;
             fail(`${what}, so it is not drawn`, node.path);
         }
-        scene.update(repeats.expand(nodes), settings());
+        const expanded = repeats.expand(nodes);
+        syncRole(expanded);
+        scene.update(expanded, settings());
         readyAfterFrame();
     };
 
@@ -263,7 +303,7 @@ export default function controller({ element, store, basePath }: ControllerConte
             return resolved.kind === 'color' ? resolved.computed : undefined;
         };
         try {
-            scene = chunk.createScene3d(surface, { resolveColor: resolve, reducedMotion: readReducedMotion(), onStatus, readFile, onIssue, onCamera, keyTarget: box });
+            scene = chunk.createScene3d(surface, { resolveColor: resolve, reducedMotion: readReducedMotion(), onStatus, readFile, onIssue, onCamera, keyTarget: box, onEvent });
         } catch (error) {
             showFallback(isScene3dError(error) ? error.code : `script_error: ${error instanceof Error ? error.message : String(error)}`);
             return;
