@@ -1,4 +1,6 @@
 import { report } from '@punyts/core';
+import { FileTransferError } from '@punyts/stateui-app';
+import type { ReadFile } from '@punyts/stateui-app';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mountComponent } from '../harness/mountComponent.js';
 
@@ -139,5 +141,81 @@ describe('scene3d view and controller skeleton (G3.4) in Chromium', () => {
         // Assert
         expect(mounted.element.shadowRoot?.querySelector('.title')?.textContent).toBe('3D-Szene');
         expect(fallback(mounted.element).textContent).toBe('Diese 3D-Szene kann in diesem Browser nicht angezeigt werden.');
+    });
+});
+
+describe('scene3d model files (G3.7b) in Chromium, with a fake chunk', () => {
+    let remove: (() => void) | undefined;
+
+    afterEach(() => {
+        remove?.();
+        remove = undefined;
+        mountComponent.unmountAll();
+        vi.restoreAllMocks();
+    });
+
+    /** Mounts a scene whose fake chunk keeps the options it was made with */
+    async function mountWithOptions(readFile?: ReadFile): Promise<{ options: Record<string, unknown> }> {
+        const made: { options: Record<string, unknown> } = { options: {} };
+        const create = (_: Element, options: Record<string, unknown>) => {
+            made.options = options;
+            return fakeScene().create();
+        };
+        remove = fakeChunk(() => Promise.resolve({ version: '0.0.0', createScene3d: create }));
+        mountComponent('scene3d', {}, { hooks: readFile === undefined ? {} : { readFile } });
+        await settle();
+        return made;
+    }
+
+    it('should give the scene a readFile that reads a stored file through ui-file-read', async () => {
+        // Arrange
+        const reads: string[] = [];
+        const bytes = new Uint8Array([103, 108, 84, 70]).buffer;
+        const { options } = await mountWithOptions(async (id) => {
+            reads.push(id);
+            if (id !== 'chair') throw new FileTransferError('not_found', 'no such file');
+            return { file: { id, name: 'chair.glb', size: 4, type: 'model/gltf-binary' }, data: bytes };
+        });
+        const readFile = options.readFile as (id: string, signal: AbortSignal) => Promise<ArrayBuffer>;
+
+        // Act
+        const data = await readFile('chair', new AbortController().signal);
+        const missing = await readFile('gone', new AbortController().signal).catch((error: unknown) => error);
+
+        // Assert
+        expect(reads).toEqual(['chair', 'gone']);
+        expect(new Uint8Array(data)).toEqual(new Uint8Array(bytes));
+        expect((missing as { code?: string }).code).toBe('not_found');
+    });
+
+    it('should read offline when the host has no readFile hook', async () => {
+        // Arrange
+        const { options } = await mountWithOptions();
+        const readFile = options.readFile as (id: string, signal: AbortSignal) => Promise<ArrayBuffer>;
+
+        // Act
+        const error = await readFile('chair', new AbortController().signal).catch((caught: unknown) => caught);
+
+        // Assert
+        expect(error).toEqual({ code: 'offline' });
+    });
+
+    it('should report a file issue as SUI-RUN-FILE and a model issue as SUI-RUN-3D, at the node path', async () => {
+        // Arrange
+        const spy = vi.spyOn(report, 'error').mockImplementation(() => undefined);
+        const { options } = await mountWithOptions();
+        const onIssue = options.onIssue as (issue: { kind: string; path: string; reason: string }) => void;
+
+        // Act
+        onIssue({ kind: 'file', path: '$.app.children.chair', reason: 'not_found' });
+        onIssue({ kind: 'model', path: '$.app.children.lamp', reason: 'draco: it uses KHR_draco_mesh_compression' });
+
+        // Assert
+        expect(spy.mock.calls.map((call) => call[1])).toEqual([
+            { code: 'SUI-RUN-FILE', path: '$.app.children.chair' },
+            { code: 'SUI-RUN-3D', path: '$.app.children.lamp' }
+        ]);
+        expect(spy.mock.calls[0]?.[0]).toContain('not_found');
+        expect(spy.mock.calls[1]?.[0]).toContain('draco: it uses KHR_draco_mesh_compression');
     });
 });

@@ -3,11 +3,13 @@ import type { ControllerContext } from '@punyts/stateui';
 import { buildError } from '@punyts/stateui-app';
 import type { JsonValue } from '@punyts/stateui-app/core';
 import { resolveColor } from '../shared/drawing/paint.js';
+import { readStoredFile } from '../shared/field/files.js';
 import { isReducedMotion } from '../shared/drawing/scheduler.js';
 import { requestScene3dChunk } from '../shared/scene3d/load.js';
 import type { Load3dFailure, Scene3dChunk } from '../shared/scene3d/load.js';
 import { isScene3dError, readScene3dTree } from '../shared/scene3d/tree.js';
-import type { ColorResolver, Scene3d, Scene3dSettings, Scene3dStatus } from '../shared/scene3d/tree.js';
+import type { ColorResolver, Scene3d, Scene3dIssue, Scene3dSettings, Scene3dStatus } from '../shared/scene3d/tree.js';
+import type { CameraMove } from '../shared/scene3d/tree.js';
 
 /** The scene's own properties; a change at or below one of them, or below `children`, redraws the scene */
 const SCENE_PROPERTIES = ['children', 'background', 'environment', 'fog', 'controls'] as const;
@@ -49,7 +51,23 @@ const THEME_PATHS = ['$.theme.active', '$.theme.active.$all'];
  * (`createScene3d` throws a `Scene3dError`), and `context_lost` when a lost WebGL context is not restored within the
  * scene's 5 s (its `onStatus` `failed`): `_fallback` shows then, until the context comes back after all. A node in
  * `children` that is not a 3D node the renderer draws is reported once as `SUI-RUN-3D` at its own path, and the other
- * nodes draw
+ * nodes draw.
+ *
+ * A `model`'s GLB file (G3.7b) is read by the controller for the scene (its `readFile` option), with the bubbling
+ * `ui-file-read` event (`readStoredFile`, as `drawImage` reads its picture), since the chunk has no access to the store
+ * or the host; the scene parses the bytes. A `model` whose `src` is empty or whose file cannot be read draws nothing
+ * and is reported as `SUI-RUN-FILE` at the node's path (reason `no_file` or the read's code: `not_found`, `offline`,
+ * ...); one whose file is not a GLB the frame can draw (compressed with Draco, Meshopt or KTX2, or with a buffer or image
+ * outside the file) as `SUI-RUN-3D` at the node's path with the reason. The other nodes draw, and the element stays
+ * `pending` until every model asked for has loaded or failed (the scene's `drawn()` waits for them)
+ *
+ * Controls (G3.8b): `controls` goes to the scene with its other properties (`none` when unset). With `orbit` or `pan`
+ * the scene box (`role="img"`, labelled) is focusable and takes the keys, and a pointer drag, the wheel or the keys
+ * move the camera in the renderer only: each frame of a gesture marks the element `pending` until it is drawn, and
+ * nothing is written until the gesture ends (the release, the wheel idle for 200 ms, the key's release). Then the
+ * scene hands over the active camera's `position` and `target` (`onCamera`), and the controller writes each once to the
+ * camera node, as a 2D drag writes once per axis; a reload reads the view back from state. A camera written by state
+ * during a gesture is shown when it ends, and the gesture writes nothing
  */
 export default function controller({ element, store, basePath }: ControllerContext) {
     const read = (path: string): JsonValue | undefined => store.get<JsonValue | undefined>(path) ?? undefined;
@@ -68,6 +86,17 @@ export default function controller({ element, store, basePath }: ControllerConte
         report.error(error.message, { code: 'SUI-RUN-3D', path });
     };
 
+    /** A node the scene cannot draw (G3.7b): a model's file as `SUI-RUN-FILE`, its bytes as `SUI-RUN-3D`, at the node's path */
+    const onIssue = ({ kind, path, reason }: Scene3dIssue): void => {
+        if (disposed) return;
+        const code = kind === 'file' ? 'SUI-RUN-FILE' : 'SUI-RUN-3D';
+        const error = buildError(code, { component: 'model', path, reason, statePath: path });
+        report.error(error.message, { code, path });
+    };
+
+    /** Reads a model's file through the host, as `drawImage` reads its picture */
+    const readFile = (id: string, signal: AbortSignal): Promise<ArrayBuffer> => readStoredFile(element, id, signal).then((stored) => stored.data);
+
     const showFallback = (reason: string): void => {
         element.setAttribute('data-fallback', '');
         element.setAttribute('data-render', 'ready');
@@ -83,8 +112,19 @@ export default function controller({ element, store, basePath }: ControllerConte
             ambient: AMBIENT_TOKEN,
             environment: read(`${basePath}.environment`) ?? 'studio',
             // A copy: the store may change the object it holds in place on a later write
-            fog: fog === undefined ? undefined : (JSON.parse(JSON.stringify(fog)) as JsonValue)
+            fog: fog === undefined ? undefined : (JSON.parse(JSON.stringify(fog)) as JsonValue),
+            controls: read(`${basePath}.controls`) ?? 'none'
         };
+    };
+
+    /**
+     * Writes the camera an orbit or pan gesture ended with (G3.8b): once per property, to the camera node's own
+     * `position` and `target` (a link on it is an alias, so the write reaches the link's target), as a 2D drag writes
+     */
+    const onCamera = (move: CameraMove): void => {
+        if (disposed) return;
+        store.set(`${move.path}.position`, [...move.position]);
+        store.set(`${move.path}.target`, [...move.target]);
     };
 
     /** Marks the element `ready` once the scene's next frame is on screen, unless another change came first */
@@ -198,7 +238,7 @@ export default function controller({ element, store, basePath }: ControllerConte
             return resolved.kind === 'color' ? resolved.computed : undefined;
         };
         try {
-            scene = chunk.createScene3d(surface, { resolveColor: resolve, reducedMotion: readReducedMotion(), onStatus });
+            scene = chunk.createScene3d(surface, { resolveColor: resolve, reducedMotion: readReducedMotion(), onStatus, readFile, onIssue, onCamera, keyTarget: box });
         } catch (error) {
             showFallback(isScene3dError(error) ? error.code : `script_error: ${error instanceof Error ? error.message : String(error)}`);
             return;

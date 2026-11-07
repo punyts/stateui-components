@@ -35,6 +35,18 @@ export interface Scene3dSettings {
     readonly ambient?: JsonValue;
     readonly environment?: JsonValue;
     readonly fog?: JsonValue;
+    /** `none`, `orbit` or `pan` (G3.8b) */
+    readonly controls?: JsonValue;
+}
+
+/**
+ * What a scene hands its feeder when an orbit or pan gesture that moved the camera ends (`CameraMove` of
+ * `@punyts/stateui-3d`, G3.8b): the active camera node's path and its new `position` and `target`, in its parent's space
+ */
+export interface CameraMove {
+    readonly path: string;
+    readonly position: readonly [number, number, number];
+    readonly target: readonly [number, number, number];
 }
 
 /** Resolves a colour value (a literal or a token reference) to a CSS colour, or undefined (`ColorResolver`) */
@@ -46,11 +58,30 @@ export type ColorResolver = (value: JsonValue) => string | undefined;
  */
 export type Scene3dStatus = 'pending' | 'lost' | 'failed';
 
+/**
+ * Something a node of a scene cannot draw (`Scene3dIssue` of `@punyts/stateui-3d`, G3.7b): `file` when a `model`'s file
+ * cannot be had (`no_file` for an empty `src`, else the read's code), reported as `SUI-RUN-FILE`; `model` when its bytes
+ * cannot be drawn (`not_glb`, `draco`, `meshopt`, `ktx2`, `external_uri`, `invalid_glb`, with what in the file it is
+ * about), reported as `SUI-RUN-3D`
+ */
+export interface Scene3dIssue {
+    readonly kind: 'file' | 'model';
+    readonly path: string;
+    readonly reason: string;
+}
+
 /** What a scene is made with (`Scene3dOptions` of `@punyts/stateui-3d`) */
 export interface Scene3dOptions {
     readonly reducedMotion?: boolean;
     readonly resolveColor?: ColorResolver;
     readonly onStatus?: (status: Scene3dStatus) => void;
+    /** Told the camera once when an orbit or pan gesture ends (G3.8b) */
+    readonly onCamera?: (move: CameraMove) => void;
+    /** The element that is focusable with controls and whose keys move the camera (G3.8b); default the host */
+    readonly keyTarget?: Element;
+    /** Reads a stored file's bytes by its id (a `model`'s `src`); rejects with an object whose `code` names the failure */
+    readonly readFile?: (id: string, signal: AbortSignal) => Promise<ArrayBuffer>;
+    readonly onIssue?: (issue: Scene3dIssue) => void;
 }
 
 /** A drawn scene (`Scene3d` of `@punyts/stateui-3d`) */

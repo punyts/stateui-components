@@ -11,6 +11,12 @@
     background: var(--ui-scene3d-background);
 }
 
+/* With controls the scene box takes the focus and the arrow, + and - keys (G3.8b) */
+.scene:focus-visible {
+    outline: 2px solid var(--ui-color-focus);
+    outline-offset: 2px;
+}
+
 .title,
 .description {
     position: absolute;
