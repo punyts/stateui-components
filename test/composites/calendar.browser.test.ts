@@ -74,6 +74,17 @@ describe('calendar month view in Chromium', () => {
         expect(cellOf(mounted, '2026-03-14').getAttribute('aria-label')).toBe('Saturday, March 14, 2026');
     });
 
+    it('should lay the weekday headings out in one row, each above its column of days', async () => {
+        // Arrange and Act
+        const mounted = await mountCalendar();
+        const heads = Array.from(root(mounted).querySelectorAll<HTMLElement>('.month .weekday')).map((head) => head.getBoundingClientRect());
+        const firstWeek = cells(mounted).slice(0, 7).map((cell) => cell.getBoundingClientRect());
+
+        // Assert: one shared top, and the left edge of each heading at the left edge of its day
+        expect(new Set(heads.map((box) => Math.round(box.top))).size).toBe(1);
+        heads.forEach((box, index) => expect(Math.abs(box.left - (firstWeek[index]?.left ?? 0)), `column ${index}`).toBeLessThan(1));
+    });
+
     it('should show each record on the days it covers, with the time of a timed record', async () => {
         // Arrange and Act
         const mounted = await mountCalendar();

@@ -59,6 +59,11 @@
                     },
                     "text": {
                         "base": "{palette.neutral.900}"
+                    },
+                    "data": {
+                        "categorical": {
+                            "7": "{palette.amber.700}"
+                        }
                     }
                 }
             }
