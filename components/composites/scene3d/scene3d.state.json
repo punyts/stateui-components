@@ -1,5 +1,5 @@
 {
-    "summary": "A 3D scene of camera, light, mesh, model and group3d nodes, drawn with WebGL and checked in a screenshot",
+    "summary": "A WebGL 3D scene of camera, light, mesh, model, label3d, group3d and repeat3d nodes, checked in a screenshot",
     "category": "graphics",
     "purposes": ["show a 3D product model", "build a 3D scene from state", "let people orbit a 3D model", "light and display a GLB model"],
     "tokenGroup": "scene3d",
