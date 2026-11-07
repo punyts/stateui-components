@@ -103,7 +103,7 @@ describe('scene3d drawing through the chunk (G3.5), with a fake chunk', () => {
         expect(tree[2]?.children[0]?.properties).toMatchObject({ geometry: { kind: 'box' }, material: { color: '#ff0000' } });
         // The defaults of the shapes are there, as the store holds them
         expect(tree[0]?.properties).toMatchObject({ kind: 'perspective', fov: 50, target: [0, 0, 0] });
-        expect(scene?.updates[0]?.settings).toEqual({ background: '{scene3d.background}', ambient: '{scene3d.ambient}', environment: 'studio', fog: undefined, controls: 'none' });
+        expect(scene?.updates[0]?.settings).toEqual({ background: '{scene3d.background}', ambient: '{scene3d.ambient}', environment: 'studio', fog: undefined, controls: 'none', labelColor: '{color.text.base}' });
     });
 
     it('should be pending until the first frame is on screen, then ready', async () => {

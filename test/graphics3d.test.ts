@@ -8,14 +8,15 @@ import { NODE3D_KINDS, NODE3D_PROPERTIES } from '../src/shared/scene3d/tree.js';
 const catalog = catalogJson as unknown as Catalog;
 const hasToken = themeTokenLookup(libraryFromCatalog(catalog));
 
-/** The 3D nodes (G3.4 of the graphics epic 3; `repeat3d` with its renderer, G3.6) and the group folders they sit in; `label3d` comes with its renderer (G3.6b) */
+/** The 3D nodes (G3.4 of the graphics epic 3; `repeat3d` and `label3d` with their renderers, G3.6 and G3.6b) and the group folders they sit in */
 const NODES = {
     camera: 'atom',
     light: 'atom',
     mesh: 'atom',
     model: 'atom',
     group3d: 'molecule',
-    repeat3d: 'molecule'
+    repeat3d: 'molecule',
+    label3d: 'atom'
 } as const;
 
 /** The properties every 3D node has: the partials `transform3d`, `interaction3d` and `motion3d` */
@@ -40,6 +41,7 @@ const ONE_OF_EACH: Record<string, Record<string, unknown>> = {
         transition: { duration: 300, easing: 'standard' }
     },
     chair: { component: 'model', src: GLB, animation: 'Idle', playing: true, scale: [2, 2, 2] },
+    tag: { component: 'label3d', _text: 'Oak chair', color: '{color.text.base}', fontSize: 0.25, position: [0, 1.5, 0], interactive: true, _label: 'Chair label' },
     rig: {
         component: 'group3d',
         position: [1, 0, 0],
@@ -124,9 +126,16 @@ describe('scene3d and the 3D nodes in the catalog', () => {
         expect(entry.shape.properties.row?.childComponents).toEqual(['mesh']);
     });
 
-    it('should not yet list label3d, whose renderer comes later', () => {
+    it('should hold label3d with _text as content, a color and a fontSize in scene units (G3.6b)', () => {
+        // Arrange
+        const entry = catalog.components.find((candidate) => candidate.name === 'label3d') as ShapeCatalogEntry;
+
         // Assert
-        expect(catalog.components.map((entry) => entry.name)).not.toContain('label3d');
+        expect(entry.shape.properties._text?.kind).toBe('content');
+        expect(entry.shape.properties.color?.validators).toEqual({ color: true });
+        expect(entry.shape.properties.fontSize?.validators).toEqual({ range: { min: 0, max: 1000 } });
+        expect(entry.shape.properties.fontSize?.default).toBe(0.3);
+        expect(entry.shape.childComponents).toBeUndefined();
     });
 
     it('should read the nodes the catalog has, and no other (G3.5)', () => {
@@ -309,6 +318,29 @@ describe('a 3D scene document', () => {
         // Assert
         expect(inScene).toEqual([['SUI-NODE-CHILD', '$.app.children.lamps.row']]);
         expect(outside).toEqual([['SUI-NODE-CHILD', '$.app.children.crates']]);
+    });
+
+    it('should take a label3d in a scene and in a group3d, linked text included, and refuse a bad fontSize, colour or size (G3.6b)', () => {
+        // Act
+        const valid = validate({
+            ...sceneDocument({ tag: { component: 'label3d', '<-_text': '$.data.price' }, rig: { component: 'group3d', children: { name: { component: 'label3d', _text: 'Lid', fontSize: 0.1 } } } }),
+            data: { price: '12 EUR' }
+        });
+        const found = codesAt(
+            sceneDocument({
+                a: { component: 'label3d', _text: 'A', fontSize: -1 },
+                b: { component: 'label3d', _text: 'B', color: 'not a colour' },
+                c: { component: 'label3d', _text: 'C', size: 'lg' }
+            })
+        );
+
+        // Assert: `size` is the shared articulation name, which a label3d does not take (its size is fontSize)
+        expect(valid.errors.map(formatError)).toEqual([]);
+        expect(found).toEqual([
+            ['SUI-STATE-INVALID', '$.app.children.a.fontSize'],
+            ['SUI-STATE-INVALID', '$.app.children.b.color'],
+            ['SUI-STATE-SHARED', '$.app.children.c.size']
+        ]);
     });
 
     it('should warn for an interactive 3D node without a _label', () => {

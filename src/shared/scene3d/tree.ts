@@ -8,8 +8,8 @@ import type { JsonObject, JsonValue } from '@punyts/stateui-app/core';
  * (`test/composites/scene3d-chunk.browser.test.ts`) checks that they still fit.
  */
 
-/** The 3D node components the renderer draws today, by component name (`label3d` comes with G3.6b) */
-export const NODE3D_KINDS = ['camera', 'light', 'mesh', 'model', 'group3d', 'repeat3d'] as const;
+/** The 3D node components the renderer draws, by component name (`label3d` with G3.6b) */
+export const NODE3D_KINDS = ['camera', 'light', 'mesh', 'model', 'group3d', 'repeat3d', 'label3d'] as const;
 
 export type Node3dKind = (typeof NODE3D_KINDS)[number];
 
@@ -43,6 +43,8 @@ export interface Scene3dSettings {
     readonly fog?: JsonValue;
     /** `none`, `orbit` or `pan` (G3.8b) */
     readonly controls?: JsonValue;
+    /** The colour of a `label3d` with no `color` (G3.6b): the controller passes the `color.text.base` token */
+    readonly labelColor?: JsonValue;
 }
 
 /**
@@ -95,6 +97,8 @@ export interface Scene3dOptions {
     readonly readToken?: (name: string) => string | undefined;
     /** Told a `press` or a `hover` of an interactive node (G3.8) */
     readonly onEvent?: (event: Scene3dEvent) => void;
+    /** Reads the font family of a `label3d` (G3.6b); default the host's computed `font-family` (the page font) */
+    readonly readFont?: () => string | undefined;
 }
 
 /**
@@ -170,7 +174,8 @@ export const NODE3D_PROPERTIES: Readonly<Record<Node3dKind, readonly string[]>> 
         mesh: ['geometry', 'material', 'castShadow', 'receiveShadow'],
         model: ['src', 'animation', 'playing'],
         group3d: [],
-        repeat3d: ['records']
+        repeat3d: ['records'],
+        label3d: ['_text', 'color', 'fontSize']
     };
     const all = {} as Record<Node3dKind, readonly string[]>;
     for (const kind of NODE3D_KINDS) all[kind] = Object.freeze([...new Set([...SHARED_PROPERTIES, ...own[kind]])]);

@@ -8,7 +8,7 @@
         "ambient": "{color.surface.raised}",
         "height": "calc({size.control.md} * 8)"
     },
-    "childComponents": ["camera", "light", "mesh", "model", "group3d", "repeat3d"],
+    "childComponents": ["camera", "light", "mesh", "model", "group3d", "repeat3d", "label3d"],
     "properties": {
         "background": { "type": "string", "validators": { "color": true } },
         "environment": { "type": "string", "values": ["none", "studio", "daylight", "neutral"], "default": "studio" },

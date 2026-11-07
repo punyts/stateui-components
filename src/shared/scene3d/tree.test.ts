@@ -58,6 +58,18 @@ describe('readScene3dTree (G3.5 of the graphics epic 3)', () => {
         expect(nodes[0]?.properties).toEqual({ position: [0, 2, 0], material: { color: '#ff0000' }, visible: false });
     });
 
+    it('should read a label3d with its _text, colour and fontSize, a linked _text through the store (G3.6b)', () => {
+        // Arrange
+        const store: Record<string, JsonValue> = { [`${PATH}.tag._text`]: '12 EUR' };
+
+        // Act
+        const { nodes, unknown } = readScene3dTree({ tag: { component: 'label3d', '<-_text': '$.data.price', color: '#ff0000', fontSize: 0.5 } }, PATH, { read: (path) => store[path] });
+
+        // Assert
+        expect(unknown).toEqual([]);
+        expect(nodes).toEqual([{ kind: 'label3d', key: 'tag', path: `${PATH}.tag`, properties: { _text: '12 EUR', color: '#ff0000', fontSize: 0.5 }, children: [] }]);
+    });
+
     it('should know the Scene3dError of another realm by its name and code', () => {
         // Assert
         expect(isScene3dError(Object.assign(new Error('no'), { name: 'Scene3dError', code: 'no_webgl' }))).toBe(true);

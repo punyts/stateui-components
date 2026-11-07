@@ -19,6 +19,11 @@ declare module 'vitest' {
          * empty string when the workspace has none; the model tests with the real chunk skip then
          */
         model3dFixture: string;
+        /**
+         * The animated model fixture of the sibling `@punyts/stateui-3d` (`../stateui-3d/test/fixtures/box-clips.glb`,
+         * G3.9b: the box with the clips `slide` and `lift`), base64, or an empty string when the workspace has none
+         */
+        clips3dFixture: string;
     }
 }
 
@@ -35,9 +40,9 @@ async function readChunk3d(): Promise<string> {
     }
 }
 
-/** The model fixture of the workspace's `stateui-3d` as base64; empty when there is none */
-async function readModelFixture(): Promise<string> {
-    const path = resolve(root, '..', 'stateui-3d', 'test', 'fixtures', 'box.glb');
+/** A model fixture of the workspace's `stateui-3d` (`box.glb` by default) as base64; empty when there is none */
+async function readModelFixture(name = 'box.glb'): Promise<string> {
+    const path = resolve(root, '..', 'stateui-3d', 'test', 'fixtures', name);
     return existsSync(path) ? (await readFile(path)).toString('base64') : '';
 }
 
@@ -57,4 +62,5 @@ export default async function setup(project: TestProject): Promise<void> {
     }
     project.provide('chunk3dScript', await readChunk3d());
     project.provide('model3dFixture', await readModelFixture());
+    project.provide('clips3dFixture', await readModelFixture('box-clips.glb'));
 }

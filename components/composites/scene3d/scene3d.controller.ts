@@ -23,6 +23,8 @@ const SCENE_PROPERTIES = ['children', 'background', 'environment', 'fog', 'contr
 const BACKGROUND_TOKEN = '{scene3d.background}';
 /** The colour of the ambient light of the `studio` environment */
 const AMBIENT_TOKEN = '{scene3d.ambient}';
+/** The colour of a `label3d` that sets no `color` (G3.6b): the theme's text colour */
+const LABEL_TOKEN = '{color.text.base}';
 /** The active theme and its overlays (`mode`, `brand`, `motion`): a switch gives the tokens other values */
 const THEME_PATHS = ['$.theme.active', '$.theme.active.$all'];
 
@@ -55,6 +57,14 @@ const THEME_PATHS = ['$.theme.active', '$.theme.active.$all'];
  * and its `motion` overlay apply; the controller passes the tree as it is. The element stays `pending` until every
  * tween has arrived. Reduced motion (`--ui-motion-duration-base` parsing to 0) is read on mount and on a theme switch,
  * and makes every change jump.
+ *
+ * `animate` and clips (G3.9b) are played by the scene too, from the tree as it is: a node's `animate` (`spin`, `bob`,
+ * `pulse`; any other name is `SUI-STATE-INVALID` from the `motion3d` partial) and a `model`'s clip named by `animation`
+ * (the file's first when unset) while `playing` is true. Nothing is written to the store, and the element is `ready`
+ * after the first frame, not after the animation (it may loop). A clip name the file does not have is reported once as
+ * `SUI-RUN-3D` at the model's path, naming the clips the file has. With reduced motion neither plays and a clip shows its
+ * first frame; the overlay is read on mount and on a theme switch, as for `transition`. The copies of a `repeat3d` do
+ * not play their own `animate` (the repeat's own moves them all), and a camera's does not play.
  *
  * A failure is reported once as `SUI-RUN-3D` with the scene's path. Its reason is `no_chunk` when nothing answered
  * (the host serves no chunk), the hook's code when it rejected (`load_failed`, `script_error`, `timeout`),
@@ -93,6 +103,11 @@ const THEME_PATHS = ['$.theme.active', '$.theme.active.$all'];
  * 20,000 are cut (`SUI-RUN-CAP`, once); a row property every instance shares (`geometry`, `material` but its
  * colour, the shadow flags) that differs between records is `SUI-RUN-DRAW` naming it, and the first record's is
  * drawn. The records and the store paths the row reads are watched, so a record change redraws
+ *
+ * Labels (G3.6b): a `label3d` draws its `_text` in the page font (the surface's computed `font-family`, read by the
+ * scene) as a sprite that faces the camera (its font `fontSize` scene units), in its `color` or the `color.text.base` token
+ * (passed as the scene's `labelColor`), so a theme switch recolours it. The text is drawn on a canvas, never as markup;
+ * an empty `_text` draws nothing and a very long one is cut off at the texture's width
  *
  * Events (G3.8): the scene casts a ray on pointer events and tells `press` (a click that did not move the camera: a
  * drag to rotate is never a press) and `hover` (entering) of a node with `interactive: true`; the controller raises
@@ -150,7 +165,9 @@ export default function controller({ element, store, basePath }: ControllerConte
             environment: read(`${basePath}.environment`) ?? 'studio',
             // A copy: the store may change the object it holds in place on a later write
             fog: fog === undefined ? undefined : (JSON.parse(JSON.stringify(fog)) as JsonValue),
-            controls: read(`${basePath}.controls`) ?? 'none'
+            controls: read(`${basePath}.controls`) ?? 'none',
+            // G3.6b
+            labelColor: LABEL_TOKEN
         };
     };
 
