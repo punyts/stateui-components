@@ -6,6 +6,11 @@ const host = (element: Element): HTMLElement => element.shadowRoot?.querySelecto
 const fallback = (element: Element): HTMLElement => element.shadowRoot?.querySelector('.fallback') as HTMLElement;
 const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
 
+/** A fake of the renderer's createScene3d that draws nothing (the drawing is tested in scene3d-draw.browser.test.ts) */
+function fakeScene(): { create: () => unknown } {
+    return { create: () => ({ update: () => undefined, drawn: () => Promise.resolve(), dispose: () => undefined }) };
+}
+
 /** Answers `ui-load-3d` on the document with a fake chunk (the dispatcher's `load3d` hook is G3.3) until removed */
 function fakeChunk(answer: () => Promise<unknown>): () => void {
     const listener = (event: Event): void => {
@@ -97,7 +102,7 @@ describe('scene3d view and controller skeleton (G3.4) in Chromium', () => {
     it('should report nothing when the chunk loads', async () => {
         // Arrange
         const spy = vi.spyOn(report, 'error').mockImplementation(() => undefined);
-        remove = fakeChunk(() => Promise.resolve({ version: '0.0.0', createScene3d: () => ({}) }));
+        remove = fakeChunk(() => Promise.resolve({ version: '0.0.0', createScene3d: fakeScene().create }));
 
         // Act
         mountComponent('scene3d');
@@ -112,7 +117,7 @@ describe('scene3d view and controller skeleton (G3.4) in Chromium', () => {
         let asked = 0;
         remove = fakeChunk(() => {
             asked += 1;
-            return Promise.resolve({ version: '0.0.0', createScene3d: () => ({}) });
+            return Promise.resolve({ version: '0.0.0', createScene3d: fakeScene().create });
         });
 
         // Act

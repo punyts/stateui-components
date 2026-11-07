@@ -23,9 +23,15 @@
     white-space: nowrap;
 }
 
+/*
+ * The renderer draws into the surface. Its text colour is never seen (a canvas fills it); it carries the scene3d.ambient
+ * token, with the token's default, so the controller reads the colour of the ambient light from it, as it reads the
+ * background token from the scene's background colour
+ */
 .surface {
     inline-size: 100%;
     block-size: 100%;
+    color: var(--ui-scene3d-ambient);
 }
 
 /* The text shown in place of the scene when the 3D renderer cannot load or WebGL is missing (data-fallback on the host) */

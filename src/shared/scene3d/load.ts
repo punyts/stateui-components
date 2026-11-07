@@ -1,14 +1,16 @@
+import type { CreateScene3d } from './tree.js';
+
 /** The event a `scene3d` raises to ask for the 3D renderer chunk (the dispatcher answers it with `hooks.load3d`, G3.3) */
 export const LOAD_3D_EVENT = 'ui-load-3d';
 
 /**
  * The 3D renderer chunk as the host's `load3d` hook gives it: the value of `globalThis.__stateui3d` once the second
- * classic script has run (`@punyts/stateui-3d`). Its `createScene3d` is typed by the renderer story (G3.5); here it is
- * only known to be there
+ * classic script has run (`@punyts/stateui-3d`). `createScene3d` is typed by structure (`tree.ts`), since the
+ * component library does not depend on that package; `isScene3dChunk` checks only that it is a function
  */
 export interface Scene3dChunk {
     readonly version: string;
-    readonly createScene3d: (...args: never[]) => unknown;
+    readonly createScene3d: CreateScene3d;
 }
 
 /** The detail of a `ui-load-3d` event: the dispatcher calls `respond` with the hook's promise */

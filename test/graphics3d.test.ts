@@ -3,6 +3,7 @@ import { themeTokenLookup, libraryFromCatalog, validateDocument } from '@punyts/
 import { formatError } from '@punyts/stateui-app/build';
 import type { Catalog, RootCatalogEntry, ShapeCatalogEntry } from '@punyts/stateui-app/build';
 import catalogJson from '../.test-build/real/components/catalog.json';
+import { NODE3D_KINDS, NODE3D_PROPERTIES } from '../src/shared/scene3d/tree.js';
 
 const catalog = catalogJson as unknown as Catalog;
 const hasToken = themeTokenLookup(libraryFromCatalog(catalog));
@@ -116,6 +117,22 @@ describe('scene3d and the 3D nodes in the catalog', () => {
         // Assert
         expect(catalog.components.map((entry) => entry.name)).not.toContain('repeat3d');
         expect(catalog.components.map((entry) => entry.name)).not.toContain('label3d');
+    });
+
+    it('should read the nodes the catalog has, and no other (G3.5)', () => {
+        // Assert
+        expect([...NODE3D_KINDS].sort()).toEqual(Object.keys(NODES).sort());
+    });
+
+    it.each(Object.keys(NODES))('should list the properties of %s in NODE3D_PROPERTIES, which the scene reads linked values by (G3.5)', (name) => {
+        // Arrange
+        const entry = catalog.components.find((candidate) => candidate.name === name) as ShapeCatalogEntry;
+        const declared = Object.entries(entry.shape.properties)
+            .filter(([, property]) => property.type !== 'node')
+            .map(([key]) => key);
+
+        // Assert
+        expect([...NODE3D_PROPERTIES[name as keyof typeof NODES]].sort()).toEqual(declared.sort());
     });
 });
 
