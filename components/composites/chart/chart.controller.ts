@@ -3,13 +3,19 @@ import type { ControllerContext } from '@punyts/stateui';
 import { buildScene } from '../shared/chart/chart.js';
 import { formatOnce, readCategories, readKeys, readRows, readSeries, readValues } from '../shared/chart/data.js';
 import { interactiveMarks, primitivePath, sceneToTree } from '../shared/chart/drawingTree.js';
+import { createChartMotion } from '../shared/chart/motion.js';
+import type { ChartMotion } from '../shared/chart/motion.js';
 import { POINT_KEYS, pointAfter, tabStop } from '../shared/chart/navigate.js';
 import { CHART_TYPES, px, seriesClass } from '../shared/chart/scene.js';
-import type { ChartInput, ChartType, Point } from '../shared/chart/scene.js';
+import type { ChartInput, ChartType, Point, Primitive, Sector } from '../shared/chart/scene.js';
 import type { ViewBox } from '../shared/drawing/geometry.js';
 import { createDrawingRenderer, drawingIssueError, isRendererKind } from '../shared/drawing/render.js';
 import type { DrawingIssue, DrawingRenderer, RendererKind, ShapeEvent } from '../shared/drawing/render.js';
 import type { CanvasDrawingRenderer } from '../shared/drawing/canvasRenderer.js';
+import { createScheduler, isReducedMotion } from '../shared/drawing/scheduler.js';
+import type { Scheduler } from '../shared/drawing/scheduler.js';
+import type { ShapeTree } from '../shared/drawing/tree.js';
+import { styleReader, timingOf } from '../shared/drawing/transition.js';
 import '../shared/drawing/canvasRenderer.js';
 import '../shared/drawing/svgRenderer.js';
 import { createDataTable, tableModel } from '../shared/chart/table.js';
@@ -21,6 +27,8 @@ import { isUnrendered } from '../shared/records/viewport.js';
 
 const text = (value: unknown, fallback = ''): string => (typeof value === 'string' && value !== '' ? value : fallback);
 const TIP_ANCHOR = '--chart-point';
+/** The paths of the theme a mode, brand or motion switch writes (as the `drawing` watches them) */
+const THEME_PATHS = ['$.theme.active', '$.theme.active.$all'];
 
 /** The scene's `viewBox` (`0 0 <width> <height>`) as the box the renderer writes back unchanged */
 const viewBoxOf = (value: string): ViewBox => {
@@ -73,7 +81,15 @@ interface LegendItem {
  * `press` through the renderer's event. A browser that gives no canvas context reports one `SUI-RUN-DRAW` and keeps the
  * legend and the data table. Changing `renderer` swaps the renderer and draws again; the legend state stays in
  * `hiddenSeries`. The element carries `data-render="pending"` from a change until the renderer says the drawing is on
- * screen, then `"ready"`, with either renderer
+ * screen, then `"ready"`, with either renderer.
+ *
+ * With `transition` (`{ duration, easing }`, G2.4b of the graphics epic 2) a change of the records tweens the marks'
+ * geometry (bar boxes, line and area points, slice angles) from where they are on screen to the new values, through
+ * the shared scheduler of G1.8 (`createChartMotion` of `src/shared/chart/motion.ts`), in either renderer; a change
+ * during a tween starts from the current geometry. Axes, ticks and gridlines are drawn at once. Any other redraw (the
+ * series, `type`, `stacked`, the hidden series, a resize, a new renderer) jumps. With reduced motion
+ * (`--ui-motion-duration-base` at 0, read on mount and after a theme switch) the marks jump and no frame is asked
+ * for. `data-render` stays `pending` until a tween has arrived. Without `transition` nothing of this runs
  */
 export default function controller({ element, store, basePath }: ControllerContext) {
     const read = (name: string): unknown => store.get<unknown>(`${basePath}.${name}`);
@@ -110,6 +126,13 @@ export default function controller({ element, store, basePath }: ControllerConte
     let legendJson = '';
     /** The record key of each category position (a mark's `data-index`), from the last draw */
     let recordKeys: string[] = [];
+    /** True when the records changed since the last draw, so the draw may tween */
+    let recordsChanged = false;
+    /** The scheduler and the marks' motion, made by the first draw with `transition` and dropped without it */
+    let scheduler: Scheduler | undefined;
+    let motion: ChartMotion | undefined;
+    /** Reduced motion as last read from the theme; undefined until read, and again after a theme switch */
+    let reduced: boolean | undefined;
 
     const part = (selector: string): HTMLElement | null => element.shadowRoot?.querySelector<HTMLElement>(selector) ?? null;
     const rtl = (): boolean => getComputedStyle(element).direction === 'rtl';
@@ -184,11 +207,14 @@ export default function controller({ element, store, basePath }: ControllerConte
         const type: ChartType = CHART_TYPES.find((candidate) => candidate === read('type')) ?? 'bar';
         const stacked = read('stacked') === true;
         const next = `${type}|${stacked}|${specs.map((spec) => `${spec.key}:${spec.field}`).join(',')}`;
-        if (next !== structure) {
+        const restructured = next !== structure;
+        if (restructured) {
             structure = next;
             renderer.update([]);
             stop = undefined;
         }
+        const tween = recordsChanged && !restructured;
+        recordsChanged = false;
         const digits = read('fractionDigits');
         const shareOptions = { format: text(read('format'), 'number'), currency: text(read('currency')), locale: text(store.get<unknown>('$.locale')) };
         const options = typeof digits === 'number' ? { ...shareOptions, fractionDigits: digits } : shareOptions;
@@ -213,12 +239,7 @@ export default function controller({ element, store, basePath }: ControllerConte
         const scene = buildScene(input);
         viewBox = viewBoxOf(scene.viewBox);
         const { shapes } = sceneToTree(scene);
-        if (kind === 'canvas') {
-            renderer.update(interactiveMarks(shapes));
-            //the chart draws inside a frame (the observer's), so the canvas paints now instead of a frame later, and the
-            //proxies are laid out once, at their places
-            if (width > 0 && height > 0) (renderer as CanvasDrawingRenderer).paint();
-        } else renderer.update(shapes);
+        show(moveMarks(shapes, scene.primitives, tween));
         ordered = [...scene.points];
         points = new Map(scene.points.map((point) => [point.id, point]));
         syncStop();
@@ -235,9 +256,73 @@ export default function controller({ element, store, basePath }: ControllerConte
         }
         //a draw before the plot's observer has spoken is at no size, so only a later draw makes the chart ready
         const at = sized ? generation : -1;
-        void renderer.drawn().then(() => {
+        const drawn = renderer.drawn();
+        void (scheduler === undefined ? drawn : drawn.then(() => scheduler?.settled())).then(() => {
             if (!disposed && at === generation) element.setAttribute('data-render', 'ready');
         });
+    };
+
+    /** Hands a tree to the renderer */
+    const show = (shapes: readonly ShapeTree[]): void => {
+        if (renderer === undefined) return;
+        if (kind === 'canvas') {
+            renderer.update(interactiveMarks(shapes));
+            //the chart draws inside a frame (the observer's or the scheduler's), so the canvas paints now instead of a
+            //frame later, and the proxies are laid out once, at their places
+            if (width > 0 && height > 0) (renderer as CanvasDrawingRenderer).paint();
+        } else renderer.update(shapes);
+    };
+
+    /** True while motion is reduced: read on mount and after a theme switch, not on every draw */
+    const reducedMotion = (): boolean => {
+        reduced ??= isReducedMotion(styleReader(element));
+        return reduced;
+    };
+
+    /** Stops the marks' motion and forgets it (`transition` removed, or the chart disposed) */
+    const dropMotion = (): void => {
+        scheduler?.dispose();
+        scheduler = undefined;
+        motion = undefined;
+    };
+
+    /**
+     * The tree to draw now. Without `transition` it is the tree as it is, and no scheduler exists. With it, the marks
+     * a records change (`tween`) moved start from where they are on screen, and every other draw jumps
+     */
+    const moveMarks = (shapes: readonly ShapeTree[], primitives: readonly Primitive[], tween: boolean): readonly ShapeTree[] => {
+        const timing = timingOf(read('transition') as Parameters<typeof timingOf>[0], styleReader(element));
+        if (timing === undefined) {
+            if (scheduler !== undefined) dropMotion();
+            return shapes;
+        }
+        if (scheduler === undefined) {
+            scheduler = createScheduler({
+                requestFrame: (callback) => requestAnimationFrame(callback),
+                cancelFrame: (handle) => cancelAnimationFrame(handle),
+                onFrame: () => {
+                    if (!disposed && motion !== undefined) show(motion.current());
+                }
+            });
+            motion = createChartMotion(scheduler);
+        }
+        scheduler.setReduced(reducedMotion());
+        const sectors = new Map<string, Sector>();
+        for (const primitive of primitives) if (primitive.sector !== undefined) sectors.set(primitivePath(primitive), primitive.sector);
+        return (motion as ChartMotion).apply(shapes, sectors, tween && !scheduler.reduced ? timing : undefined);
+    };
+
+    /** A theme switch may change reduced motion: read again, and a running tween ends at once when it is now reduced */
+    const onTheme = (): void => {
+        reduced = undefined;
+        if (scheduler === undefined || scheduler.idle) return;
+        requestAnimationFrame(() => {
+            if (!disposed) scheduler?.setReduced(reducedMotion());
+        });
+    };
+    const onRecords = (): void => {
+        recordsChanged = true;
+        schedule();
     };
     const schedule = (): void => {
         if (disposed) return;
@@ -258,13 +343,14 @@ export default function controller({ element, store, basePath }: ControllerConte
         .concat('$.locale');
     let watchedRecords = recordPaths();
     const onShape = (): void => {
-        store.off(watchedRecords, schedule);
+        store.off(watchedRecords, onRecords);
         watchedRecords = recordPaths();
-        store.on(watchedRecords, schedule);
+        store.on(watchedRecords, onRecords);
         schedule();
     };
-    store.on(watchedRecords, schedule);
+    store.on(watchedRecords, onRecords);
     store.on(propertyPaths, onShape);
+    store.on(THEME_PATHS, onTheme);
     element.setAttribute('data-render', 'pending');
 
     //the view is drawn once the controller has returned, so the SVG and the observer start in the next microtask
@@ -309,6 +395,7 @@ export default function controller({ element, store, basePath }: ControllerConte
         if (group !== undefined) for (const [type, handler] of Object.entries(kind === 'canvas' ? proxyHandlers : handlers)) group.removeEventListener(type, handler as EventListener);
         if (canvasElement !== undefined) for (const [type, handler] of Object.entries(canvasHandlers)) canvasElement.removeEventListener(type, handler as EventListener);
         //every shape is removed first, so nothing is left in the element the renderer takes away
+        motion?.stop();
         renderer?.update([]);
         renderer?.dispose();
         renderer = undefined;
@@ -471,12 +558,14 @@ export default function controller({ element, store, basePath }: ControllerConte
         dispose: () => {
             disposed = true;
             observer?.disconnect();
-            store.off(watchedRecords, schedule);
+            store.off(watchedRecords, onRecords);
             store.off(propertyPaths, onShape);
+            store.off(THEME_PATHS, onTheme);
             store.off(rendererPath, ensureRenderer);
             popover?.dispose();
             dataTable?.clear();
             dropRenderer();
+            dropMotion();
         }
     };
 }

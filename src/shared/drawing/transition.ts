@@ -154,8 +154,8 @@ export function settleMoves(options: DrawingRendererOptions, transitions: Transi
     };
 }
 
-/** What a shape's `transition` asks for, or undefined when it has none */
-function timingOf(transition: JsonValue | undefined, read: ReadToken): Timing | undefined {
+/** What a shape's `transition` asks for, or undefined when it has none; the chart's `transition` reads the same (G2.4b) */
+export function timingOf(transition: JsonValue | undefined, read: ReadToken): Timing | undefined {
     if (transition === null || typeof transition !== 'object' || Array.isArray(transition)) return undefined;
     const { duration, easing } = transition as Record<string, JsonValue>;
     let ms: number | undefined;
