@@ -6,6 +6,7 @@ import { resolveColor } from '../shared/drawing/paint.js';
 import { readStoredFile } from '../shared/field/files.js';
 import { isReducedMotion } from '../shared/drawing/scheduler.js';
 import { requestScene3dChunk } from '../shared/scene3d/load.js';
+import { Repeat3dFeeder } from '../shared/scene3d/repeat.js';
 import type { Load3dFailure, Scene3dChunk } from '../shared/scene3d/load.js';
 import { isScene3dError, readScene3dTree } from '../shared/scene3d/tree.js';
 import type { ColorResolver, Scene3d, Scene3dIssue, Scene3dSettings, Scene3dStatus } from '../shared/scene3d/tree.js';
@@ -45,6 +46,12 @@ const THEME_PATHS = ['$.theme.active', '$.theme.active.$all'];
  * (`restyle`: the background, the environment, the fog and the nodes' tokens) and read reduced motion again, with no
  * state write; the element is `pending` until that frame is drawn.
  *
+ * A node's `transition` (G3.9) is eased by the scene itself, which resolves the duration and easing names (`fast`,
+ * `standard`, ...) when a tween starts, from the computed style of the `.surface` element it draws into, so the theme
+ * and its `motion` overlay apply; the controller passes the tree as it is. The element stays `pending` until every
+ * tween has arrived. Reduced motion (`--ui-motion-duration-base` parsing to 0) is read on mount and on a theme switch,
+ * and makes every change jump.
+ *
  * A failure is reported once as `SUI-RUN-3D` with the scene's path. Its reason is `no_chunk` when nothing answered
  * (the host serves no chunk), the hook's code when it rejected (`load_failed`, `script_error`, `timeout`),
  * `script_error` when the chunk's global is not the renderer's, `no_webgl` when the browser gives no WebGL context
@@ -68,6 +75,12 @@ const THEME_PATHS = ['$.theme.active', '$.theme.active.$all'];
  * scene hands over the active camera's `position` and `target` (`onCamera`), and the controller writes each once to the
  * camera node, as a 2D drag writes once per axis; a reload reads the view back from state. A camera written by state
  * during a gesture is shown when it ends, and the gesture writes nothing
+ *
+ * Repeats (G3.6): each `repeat3d` is bound to its records with the row binder of the 2D repeats (`Repeat3dFeeder`,
+ * no node per record) before the tree goes to the scene, which draws the copies as one instanced mesh. Records past
+ * 20,000 are cut (`SUI-RUN-CAP`, once); a row property every instance shares (`geometry`, `material` but its
+ * colour, the shadow flags) that differs between records is `SUI-RUN-DRAW` naming it, and the first record's is
+ * drawn. The records and the store paths the row reads are watched, so a record change redraws
  */
 export default function controller({ element, store, basePath }: ControllerContext) {
     const read = (path: string): JsonValue | undefined => store.get<JsonValue | undefined>(path) ?? undefined;
@@ -156,7 +169,7 @@ export default function controller({ element, store, basePath }: ControllerConte
             const what = node.component === '' ? 'it is not a node' : `component "${node.component}" is not a 3D node`;
             fail(`${what}, so it is not drawn`, node.path);
         }
-        scene.update(nodes, settings());
+        scene.update(repeats.expand(nodes), settings());
         readyAfterFrame();
     };
 
@@ -169,6 +182,18 @@ export default function controller({ element, store, basePath }: ControllerConte
         scheduled = true;
         queueMicrotask(draw);
     };
+
+    /**
+     * The `repeat3d` nodes (G3.6): bound to their records on every draw, their copies handed to the scene as the
+     * repeat's `children` (one instanced mesh); their records and template links watched, problems reported once
+     */
+    const repeats = new Repeat3dFeeder({
+        read,
+        resolve: (path) => store.resolve(path),
+        on: (paths) => store.on(paths, request),
+        off: (paths) => store.off(paths, request),
+        report: (error, path) => report.error(error.message, { code: error.code, path })
+    });
 
     /**
      * The canvas lost its WebGL context (G3.1: the first page of a newly started headless Chromium loses its contexts
@@ -273,6 +298,7 @@ export default function controller({ element, store, basePath }: ControllerConte
             disposed = true;
             store.off(watched, request);
             store.off(THEME_PATHS, onTheme);
+            repeats.dispose();
             surfaceOf?.removeEventListener('webglcontextlost', onContextLost, true);
             surfaceOf?.removeEventListener('webglcontextrestored', onContextRestored, true);
             scene?.dispose();

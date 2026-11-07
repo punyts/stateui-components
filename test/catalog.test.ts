@@ -41,10 +41,10 @@ const PART_COMPONENTS = ['tableRow'] as const;
 const SPEC_COMPOSED = ['confirmDialog', 'formDialog', 'masterDetail', 'settingsPage', 'crudTable', 'dashboardGrid'] as const;
 
 /** The 2D shape components of the graphics epic 1 (G1.3) and the 3D nodes of epic 3 (G3.4): shape tier, in atoms and molecules, with no element */
-const SHAPE_NAMES = ['rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'path', 'drawText', 'drawImage', 'drawGroup', 'drawRepeat', 'camera', 'light', 'mesh', 'model', 'group3d'] as const;
+const SHAPE_NAMES = ['rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'path', 'drawText', 'drawImage', 'drawGroup', 'drawRepeat', 'camera', 'light', 'mesh', 'model', 'group3d', 'repeat3d'] as const;
 const elements = catalog.components.filter((entry) => entry.tier !== 'shape');
 /** The shapes in `atoms` and in `molecules`: they need search keys like the other atoms and molecules */
-const SHAPE_MOLECULES = ['drawGroup', 'drawRepeat', 'group3d'] as const;
+const SHAPE_MOLECULES = ['drawGroup', 'drawRepeat', 'group3d', 'repeat3d'] as const;
 const SHAPE_ATOMS = SHAPE_NAMES.filter((name) => !(SHAPE_MOLECULES as readonly string[]).includes(name));
 
 const composedEntries = catalog.components.filter((entry): entry is ComposedCatalogEntry => entry.tier === 'composed');

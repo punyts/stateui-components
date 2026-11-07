@@ -3,5 +3,5 @@
     "category": "graphics",
     "purposes": ["group 3D objects to move them together", "build an assembly of 3D parts", "turn several 3D objects as one"],
     "includes": ["transform3d", "interaction3d", "motion3d"],
-    "childComponents": ["camera", "light", "mesh", "model", "group3d"]
+    "childComponents": ["camera", "light", "mesh", "model", "group3d", "repeat3d"]
 }

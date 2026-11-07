@@ -8,13 +8,14 @@ import { NODE3D_KINDS, NODE3D_PROPERTIES } from '../src/shared/scene3d/tree.js';
 const catalog = catalogJson as unknown as Catalog;
 const hasToken = themeTokenLookup(libraryFromCatalog(catalog));
 
-/** The 3D nodes of release 3A (G3.4 of the graphics epic 3) and the group folders they sit in; `repeat3d` and `label3d` come with their renderers (G3.6, G3.6b) */
+/** The 3D nodes (G3.4 of the graphics epic 3; `repeat3d` with its renderer, G3.6) and the group folders they sit in; `label3d` comes with its renderer (G3.6b) */
 const NODES = {
     camera: 'atom',
     light: 'atom',
     mesh: 'atom',
     model: 'atom',
-    group3d: 'molecule'
+    group3d: 'molecule',
+    repeat3d: 'molecule'
 } as const;
 
 /** The properties every 3D node has: the partials `transform3d`, `interaction3d` and `motion3d` */
@@ -113,9 +114,18 @@ describe('scene3d and the 3D nodes in the catalog', () => {
         expect(shape('group3d').childComponents).toEqual(Object.keys(NODES));
     });
 
-    it('should not yet list repeat3d and label3d, whose renderers come later', () => {
+    it('should hold repeat3d with records and a row slot that takes only a mesh (G3.6)', () => {
+        // Arrange
+        const entry = catalog.components.find((candidate) => candidate.name === 'repeat3d') as ShapeCatalogEntry;
+
         // Assert
-        expect(catalog.components.map((entry) => entry.name)).not.toContain('repeat3d');
+        expect(entry.shape.properties.records?.type).toEqual(['array', 'object']);
+        expect(entry.shape.properties.row?.type).toBe('node');
+        expect(entry.shape.properties.row?.childComponents).toEqual(['mesh']);
+    });
+
+    it('should not yet list label3d, whose renderer comes later', () => {
+        // Assert
         expect(catalog.components.map((entry) => entry.name)).not.toContain('label3d');
     });
 
@@ -275,6 +285,30 @@ describe('a 3D scene document', () => {
             ['SUI-NODE-CHILD', '$.app.children.box'],
             ['SUI-NODE-CHILD', '$.app.children.rig']
         ]);
+    });
+
+    it('should take a repeat3d of a mesh row with $row links in a scene and in a group3d (G3.6)', () => {
+        // Arrange
+        const row = { component: 'mesh', geometry: { kind: 'box' }, '<-position': '$row.at', '<-material': '$row.paint', interactive: true, '<-_label': '$row.name' };
+
+        // Act
+        const result = validate({
+            ...sceneDocument({ crates: { component: 'repeat3d', '<-records': '$.data.crates', row }, rig: { component: 'group3d', children: { dots: { component: 'repeat3d', records: [], row } } } }),
+            data: { crates: [{ id: 'a', at: [0, 0, 0], paint: { color: '#ff0000' }, name: 'Crate A' }] }
+        });
+
+        // Assert
+        expect(result.errors.map(formatError)).toEqual([]);
+    });
+
+    it('should refuse a repeat3d row that is not a mesh, and a repeat3d outside a scene', () => {
+        // Act
+        const inScene = codesAt(sceneDocument({ lamps: { component: 'repeat3d', records: [], row: { component: 'light' } } }));
+        const outside = codesAt({ locale: 'en', app: { component: 'drawing', children: { crates: { component: 'repeat3d', records: [], row: { component: 'mesh' } } } } });
+
+        // Assert
+        expect(inScene).toEqual([['SUI-NODE-CHILD', '$.app.children.lamps.row']]);
+        expect(outside).toEqual([['SUI-NODE-CHILD', '$.app.children.crates']]);
     });
 
     it('should warn for an interactive 3D node without a _label', () => {

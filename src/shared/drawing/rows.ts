@@ -4,18 +4,31 @@ import type { RendererKind } from './render.js';
 import { isShapeKind } from './tree.js';
 import type { ShapeKind, ShapeTree, UnknownShape } from './tree.js';
 
-/** The most records a `drawRepeat` draws per renderer; more is `SUI-RUN-CAP` and the first ones are drawn */
-export const ROW_CAPS: Readonly<Record<RendererKind, number>> = { svg: 2000, canvas: 20000 };
+/** The renderers that draw a repeat's copies: the 2D drawing's (`svg`, `canvas`) and `webgl`, a `scene3d`'s `repeat3d` (G3.6) */
+export type RowRenderer = RendererKind | 'webgl';
+
+/**
+ * The most records a repeat draws per renderer; more is `SUI-RUN-CAP` and the first ones are drawn. A `repeat3d`
+ * draws one instanced mesh of at most 20,000 instances (owner, Nov 2026)
+ */
+export const ROW_CAPS: Readonly<Record<RowRenderer, number>> = { svg: 2000, canvas: 20000, webgl: 20000 };
 
 /** The cap of a renderer (`ROW_CAPS`) */
-export const rowCap = (renderer: RendererKind): number => ROW_CAPS[renderer];
+export const rowCap = (renderer: RowRenderer): number => ROW_CAPS[renderer];
 
 /** What a row binder is made with */
 export interface RowBinderOptions extends ReferenceOptions {
     /** The state path of the `drawRepeat` node; the template is at `<path>.row` and the copies at `<path>.rows.<recordKey>` */
     readonly path: string;
     /** The renderer that draws the copies, for its cap (`ROW_CAPS`) and the `SUI-RUN-CAP` text */
-    readonly renderer: RendererKind;
+    readonly renderer: RowRenderer;
+    /** The component of the repeat, for the `SUI-RUN-CAP` text; `drawRepeat` when absent (`repeat3d` for a scene's, G3.6) */
+    readonly component?: string;
+    /**
+     * True for a component a template node may be; the 2D shapes (`isShapeKind`) when absent. A `repeat3d` passes the 3D
+     * nodes (G3.6). A template node of another component is left out and listed in `unknown`
+     */
+    isKind?(component: string): boolean;
     /** A cap other than the renderer's own (3D, tests) */
     readonly cap?: number;
     /**
@@ -46,7 +59,7 @@ export interface RowCut {
     readonly path: string;
     readonly total: number;
     readonly cap: number;
-    readonly renderer: RendererKind;
+    readonly renderer: RowRenderer;
     /** The `SUI-RUN-CAP` error, its message filled in */
     readonly error: BuildError;
 }
@@ -143,17 +156,20 @@ class TemplateCompiler {
 
     constructor(
         private readonly rowPath: string,
-        private readonly links: ReadonlyMap<string, readonly Link[]>
+        private readonly links: ReadonlyMap<string, readonly Link[]>,
+        private readonly isKind: (component: string) => boolean = isShapeKind
     ) {}
 
     compile(value: JsonValue | undefined, key: string, suffix: string): Compiled | undefined {
         if (value === undefined || value === null) return undefined;
         const component = isObject(value) && typeof value.component === 'string' ? value.component : '';
-        if (!isObject(value) || !isShapeKind(component)) {
+        if (!isObject(value) || !this.isKind(component)) {
             this.unknown.push({ path: `${this.rowPath}${suffix}`, component });
             return undefined;
         }
-        const slots = NODE_SLOTS[component] ?? [];
+        // Another kind than a 2D shape (a 3D node, G3.6) has no node slot; it is carried with the 2D shape types
+        const kind = component as ShapeKind;
+        const slots = NODE_SLOTS[kind] ?? [];
         const written: Record<string, JsonValue> = {};
         for (const [name, raw] of Object.entries(value)) {
             if (!RESERVED.has(name) && !slots.includes(name)) written[name] = raw;
@@ -171,13 +187,13 @@ class TemplateCompiler {
             delete written[link.key];
         }
         const children: Compiled[] = [];
-        if (component === 'drawGroup' && isObject(value.children)) {
+        if (kind === 'drawGroup' && isObject(value.children)) {
             for (const [childKey, child] of Object.entries(value.children)) {
                 const compiled = this.compile(child, childKey, `${suffix}.children.${childKey}`);
                 if (compiled !== undefined) children.push(compiled);
             }
         }
-        const shape: { -readonly [K in keyof Compiled]: Compiled[K] } = { kind: component, key, suffix, written, rowFields, storeLinks, children };
+        const shape: { -readonly [K in keyof Compiled]: Compiled[K] } = { kind, key, suffix, written, rowFields, storeLinks, children };
         for (const slot of slots) {
             const compiled = this.compile(value[slot], slot, `${suffix}.${slot}`);
             if (compiled === undefined) continue;
@@ -215,7 +231,7 @@ export function createRowBinder(row: JsonValue | undefined, options: RowBinderOp
         list.push(link);
         byPath.set(link.statePath, list);
     }
-    const compiler = new TemplateCompiler(rowPath, byPath);
+    const compiler = new TemplateCompiler(rowPath, byPath, options.isKind === undefined ? undefined : (component) => options.isKind?.(component) === true);
     const template = compiler.compile(extracted ? (extracted.tree as unknown as JsonValue) : row, 'row', '');
     const unknown = compiler.unknown;
     const errors = extracted?.errors ?? [];
@@ -296,7 +312,7 @@ export function createRowBinder(row: JsonValue | undefined, options: RowBinderOp
             const binding: { -readonly [K in keyof RowBinding]: RowBinding[K] } = { copies, recordsPath, watch, unknown, errors };
             if (keys.length > cap) {
                 const total = keys.length;
-                const error = buildError('SUI-RUN-CAP', { component: 'drawRepeat', path, actual: total, limit: cap, name: renderer, statePath: path });
+                const error = buildError('SUI-RUN-CAP', { component: options.component ?? 'drawRepeat', path, actual: total, limit: cap, name: renderer, statePath: path });
                 binding.cut = { code: 'SUI-RUN-CAP', path, total, cap, renderer, error };
             }
             return binding;

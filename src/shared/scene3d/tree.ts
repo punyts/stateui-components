@@ -8,8 +8,8 @@ import type { JsonObject, JsonValue } from '@punyts/stateui-app/core';
  * (`test/composites/scene3d-chunk.browser.test.ts`) checks that they still fit.
  */
 
-/** The 3D node components the renderer draws today, by component name (`repeat3d` and `label3d` come with G3.6, G3.6b) */
-export const NODE3D_KINDS = ['camera', 'light', 'mesh', 'model', 'group3d'] as const;
+/** The 3D node components the renderer draws today, by component name (`label3d` comes with G3.6b) */
+export const NODE3D_KINDS = ['camera', 'light', 'mesh', 'model', 'group3d', 'repeat3d'] as const;
 
 export type Node3dKind = (typeof NODE3D_KINDS)[number];
 
@@ -25,8 +25,14 @@ export interface Scene3dTree {
     readonly path: string;
     /** The resolved properties of the node, links followed; the reserved keys and the node slots are not among them */
     readonly properties: Readonly<Record<string, JsonValue>>;
-    /** The nodes of a `group3d`'s `children`, in the order of the map; empty for every other kind */
+    /**
+     * The nodes of a `group3d`'s `children`, in the order of the map. For a `repeat3d`, its copies (`mesh` trees at
+     * `<repeat>.rows.<recordKey>`, keyed by record key) once the feeder has bound them (`expandRepeats3d` of
+     * `repeat.ts`; `readScene3dTree` leaves them empty), drawn as one instanced mesh. Empty for every other kind
+     */
     readonly children: readonly Scene3dTree[];
+    /** The row template of a `repeat3d` (the renderer draws the copies in `children`; the reader leaves it unset) */
+    readonly row?: Scene3dTree;
 }
 
 /** The scene's own properties the renderer takes (`Scene3dSettings` of `@punyts/stateui-3d`) */
@@ -82,11 +88,14 @@ export interface Scene3dOptions {
     /** Reads a stored file's bytes by its id (a `model`'s `src`); rejects with an object whose `code` names the failure */
     readonly readFile?: (id: string, signal: AbortSignal) => Promise<ArrayBuffer>;
     readonly onIssue?: (issue: Scene3dIssue) => void;
+    /** Reads a theme token (`--ui-motion-duration-slow`) for `transition` (G3.9); default the host's computed style */
+    readonly readToken?: (name: string) => string | undefined;
 }
 
 /** A drawn scene (`Scene3d` of `@punyts/stateui-3d`) */
 export interface Scene3d {
     update(tree: readonly Scene3dTree[], settings?: Scene3dSettings): void;
+    /** The interactive node at a point; for an instance of a `repeat3d`, its copy (`key` the record key, G3.6) */
     hit(x: number, y: number): Scene3dTree | undefined;
     boundsOf(path: string): { readonly min: readonly [number, number, number]; readonly max: readonly [number, number, number] } | undefined;
     elementOf(path: string): Element | undefined;
@@ -142,12 +151,20 @@ export const NODE3D_PROPERTIES: Readonly<Record<Node3dKind, readonly string[]>> 
         light: ['kind', 'color', 'intensity', 'target', 'shadows'],
         mesh: ['geometry', 'material', 'castShadow', 'receiveShadow'],
         model: ['src', 'animation', 'playing'],
-        group3d: []
+        group3d: [],
+        repeat3d: ['records']
     };
     const all = {} as Record<Node3dKind, readonly string[]>;
     for (const kind of NODE3D_KINDS) all[kind] = Object.freeze([...new Set([...SHARED_PROPERTIES, ...own[kind]])]);
     return Object.freeze(all);
 })();
+
+/**
+ * The keys of a node the reader leaves out of its properties beside the reserved ones: a `repeat3d`'s `row` template
+ * and its `records` (bound by `expandRepeats3d`, which watches them; copying every record into the tree on each
+ * draw would cost as much as the copies)
+ */
+const NODE_SLOTS: Readonly<Partial<Record<Node3dKind, readonly string[]>>> = { repeat3d: ['row', 'records'] };
 
 /** The keys of a node that are not properties (`RESERVED_KEYS` of `@punyts/stateui-app/core`) */
 const RESERVED = new Set(['component', 'children', 'layout', 'placement', 'theme', 'on']);
@@ -184,8 +201,9 @@ class TreeReader {
             return undefined;
         }
         const properties: Record<string, JsonValue> = {};
+        const slots = NODE_SLOTS[component] ?? [];
         for (const [name, raw] of Object.entries(value)) {
-            if (RESERVED.has(name) || name.startsWith(LINK_PREFIX)) continue;
+            if (RESERVED.has(name) || name.startsWith(LINK_PREFIX) || slots.includes(name)) continue;
             const read = this.options.read?.(`${path}.${name}`);
             properties[name] = copy(read === undefined ? raw : read);
         }
@@ -194,7 +212,7 @@ class TreeReader {
             .filter((name) => name.startsWith(LINK_PREFIX))
             .map((name) => name.slice(LINK_PREFIX.length));
         for (const property of new Set([...linked, ...NODE3D_PROPERTIES[component]])) {
-            if (Object.hasOwn(properties, property) || RESERVED.has(property) || this.options.read === undefined) continue;
+            if (Object.hasOwn(properties, property) || RESERVED.has(property) || slots.includes(property) || this.options.read === undefined) continue;
             const read = this.options.read(`${path}.${property}`);
             if (read !== undefined) properties[property] = copy(read);
         }

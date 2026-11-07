@@ -3,6 +3,11 @@
  * tweens of `transition` (and, from G1.8b, the frame tasks of `animate`), and is idle (no frame asked for) when nothing
  * moves. It has no DOM of its own: the frame and the clock come from its host, so tests drive it with a fake clock.
  * The parsers here read the theme's motion tokens: durations in `ms` and `s` and easings as `cubic-bezier(...)`.
+ *
+ * `@punyts/stateui-3d` has a copy of this module (`src/scheduler.ts`, G3.9 of the graphics epic 3), since it may not
+ * depend on this package. Change both together: `scheduler.test.ts` is the same in both, and the same fixture file,
+ * `test/fixtures/scheduler.fixture.json` in both repositories, is asserted by `test/scheduler.fixture.test.ts` on each
+ * side, so the two give the same values.
  */
 
 /** An easing: progress in time (0 to 1) to progress in value (0 to 1 at the ends) */

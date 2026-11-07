@@ -178,7 +178,7 @@ describe('bindRows', () => {
         const over = bindRows(seat, records, { path: REPEAT, renderer: 'canvas', cap: 20 });
 
         // Assert
-        expect(ROW_CAPS).toEqual({ svg: 2000, canvas: 20000 });
+        expect(ROW_CAPS).toEqual({ svg: 2000, canvas: 20000, webgl: 20000 });
         expect(rowCap('canvas')).toBe(20000);
         expect(exact.copies).toHaveLength(20);
         expect(exact.cut).toBeUndefined();
