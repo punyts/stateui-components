@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createSvgRenderer } from '../drawing/svgRenderer.js';
 import type { ShapeTree } from '../drawing/tree.js';
 import { buildScene } from './chart.js';
-import { primitivePath, sceneToTree, seriesToken } from './drawingTree.js';
+import { interactiveMarks, primitivePath, sceneToTree, seriesToken } from './drawingTree.js';
 import type { ChartInput, ChartType, Scene } from './scene.js';
 
 const input = (type: ChartType, overrides: Partial<ChartInput> = {}): ChartInput => ({
@@ -234,5 +234,27 @@ describe('sceneToTree', () => {
             }
             if (element.tag === 'text') expect(shape.properties._text).toBe(element.text);
         }
+    });
+});
+
+describe('interactiveMarks', () => {
+    it('should make every mark with a data point interactive, named by its label, and leave every other shape as it is', () => {
+        // Arrange
+        const tree = sceneToTree(buildScene(input('line'))).shapes;
+
+        // Act
+        const shapes = flatten(interactiveMarks(tree));
+
+        // Assert
+        const marks = shapes.filter((shape) => shape.attrs?.['data-point'] !== undefined);
+        expect(marks.length).toBe(6);
+        for (const mark of marks) {
+            expect(mark.properties.interactive).toBe(true);
+            expect(mark.properties._label).toBe(mark.attrs?.['aria-label']);
+        }
+        const others = shapes.filter((shape) => shape.attrs?.['data-point'] === undefined);
+        expect(others.length).toBeGreaterThan(0);
+        for (const shape of others) expect(shape.properties.interactive).toBeUndefined();
+        expect(flatten(tree).every((shape) => shape.properties.interactive === undefined)).toBe(true);
     });
 });

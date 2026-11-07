@@ -63,6 +63,27 @@
     overflow: visible;
 }
 
+/* The canvas of renderer: canvas, sized by the plot; a shape with no fill of its own is drawn in the text colour */
+.canvas {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    color: var(--ui-color-text-base);
+}
+
+/* The canvas renderer shows a pointer over a mark; only an interactive chart presses one */
+:host(:not([interactive])) .canvas {
+    cursor: auto !important;
+}
+
+/* A canvas mark's proxy button is invisible; while it has keyboard focus it shows the focus ring around the mark */
+.proxies > button:focus-visible {
+    opacity: 1 !important;
+    background: transparent;
+    outline: var(--ui-border-width-thick) solid var(--ui-color-focus);
+    outline-offset: 0;
+}
+
 .gridline {
     stroke: var(--ui-color-border-base);
     stroke-width: var(--ui-border-width-thin);

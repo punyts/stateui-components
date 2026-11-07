@@ -51,3 +51,20 @@ export function readCategories(rows: readonly Record<string, unknown>[], x: stri
 export function readValues(rows: readonly Record<string, unknown>[], field: string): number[] {
     return rows.map((row) => toNumber(row[field]) ?? 0);
 }
+
+/**
+ * A number formatter that formats each value once and gives the same text again for it: a chart writes a value in its
+ * mark's name, in every tooltip row of its category and in the data table, and `Intl` formatting is the slow part of a
+ * big series. Make one per draw, so a change of locale or format is not mixed with the last one
+ */
+export function formatOnce(format: (value: number) => string): (value: number) => string {
+    const done = new Map<number, string>();
+    return (value) => {
+        let text = done.get(value);
+        if (text === undefined) {
+            text = format(value);
+            done.set(value, text);
+        }
+        return text;
+    };
+}

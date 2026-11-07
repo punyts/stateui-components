@@ -1,5 +1,5 @@
 {
-    "summary": "SVG bar, line, area or donut chart over records; fractionDigits fixes decimals (0 drops currency cents)",
+    "summary": "SVG or canvas bar, line, area or donut chart over records; fractionDigits fixes decimals (0 drops currency cents)",
     "category": "data",
     "purposes": ["draw how a total splits across categories", "plot a trend over time", "compare values as bars or a donut"],
     "events": ["press"],
@@ -19,6 +19,7 @@
             }
         },
         "stacked": { "type": "boolean", "default": false },
+        "renderer": { "type": "string", "values": ["svg", "canvas"], "default": "svg" },
         "interactive": { "type": "boolean", "default": false, "reflect": true },
         "legend": { "type": "string", "values": ["bottom", "end", "none"], "default": "bottom", "reflect": true },
         "hiddenSeries": { "type": "array", "default": [] },

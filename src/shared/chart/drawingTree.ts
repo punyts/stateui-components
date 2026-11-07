@@ -166,3 +166,16 @@ export function sceneToTree(scene: Scene, options: SceneToTreeOptions = {}): Cha
     for (const point of scene.points) data[paths.get(point.id) ?? primitivePath({ id: point.id, layer: 'marks' }, options)] = point;
     return { shapes, data };
 }
+
+/**
+ * The tree for the canvas renderer (G2.3 of the graphics epic 2): each mark (a shape with `data-point`) becomes
+ * `interactive` and is named by its `aria-label` (`_label`), so the canvas renderer gives it a proxy button (which
+ * carries its `role`, `tabindex` and `data-*`) and `hit()` finds it. The other shapes are kept as they are. Pure
+ */
+export function interactiveMarks(shapes: readonly ShapeTree[]): ShapeTree[] {
+    return shapes.map((shape) => {
+        const attrs = shape.attrs;
+        if (attrs?.['data-point'] !== undefined) return { ...shape, properties: { ...shape.properties, interactive: true, _label: attrs['aria-label'] ?? '' } };
+        return shape.children.length === 0 ? shape : { ...shape, children: interactiveMarks(shape.children) };
+    });
+}

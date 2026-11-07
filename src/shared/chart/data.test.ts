@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readCategories, readKeys, readRows, readSeries, readValues } from './data.js';
+import { formatOnce, readCategories, readKeys, readRows, readSeries, readValues } from './data.js';
 
 describe('readRows', () => {
     it('should read an array as it is and a keyed map in key order', () => {
@@ -61,5 +61,23 @@ describe('readCategories and readValues', () => {
     it('should read numbers, with text numbers converted and anything else 0', () => {
         // Assert
         expect(readValues([{ v: 3 }, { v: '4.5' }, { v: 'x' }, {}], 'v')).toEqual([3, 4.5, 0, 0]);
+    });
+});
+
+describe('formatOnce', () => {
+    it('should format each value once and give the same text again', () => {
+        // Arrange
+        const calls: number[] = [];
+        const format = formatOnce((value) => {
+            calls.push(value);
+            return `#${value}`;
+        });
+
+        // Act
+        const texts = [format(1), format(2), format(1), format(2)];
+
+        // Assert
+        expect(texts).toEqual(['#1', '#2', '#1', '#2']);
+        expect(calls).toEqual([1, 2]);
     });
 });
