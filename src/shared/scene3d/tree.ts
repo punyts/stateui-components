@@ -34,15 +34,23 @@ export interface Scene3dSettings {
     readonly background?: JsonValue;
     readonly ambient?: JsonValue;
     readonly environment?: JsonValue;
+    readonly fog?: JsonValue;
 }
 
 /** Resolves a colour value (a literal or a token reference) to a CSS colour, or undefined (`ColorResolver`) */
 export type ColorResolver = (value: JsonValue) => string | undefined;
 
+/**
+ * What a scene tells by itself (`Scene3dStatus` of `@punyts/stateui-3d`): `pending` for a frame it asked for (a resize,
+ * a restored context), `lost` for a lost WebGL context, `failed` when it was not restored within 5 s
+ */
+export type Scene3dStatus = 'pending' | 'lost' | 'failed';
+
 /** What a scene is made with (`Scene3dOptions` of `@punyts/stateui-3d`) */
 export interface Scene3dOptions {
     readonly reducedMotion?: boolean;
     readonly resolveColor?: ColorResolver;
+    readonly onStatus?: (status: Scene3dStatus) => void;
 }
 
 /** A drawn scene (`Scene3d` of `@punyts/stateui-3d`) */
@@ -51,6 +59,8 @@ export interface Scene3d {
     hit(x: number, y: number): Scene3dTree | undefined;
     boundsOf(path: string): { readonly min: readonly [number, number, number]; readonly max: readonly [number, number, number] } | undefined;
     elementOf(path: string): Element | undefined;
+    /** Resolves every colour again and draws (a theme or mode change) */
+    restyle(): void;
     setReducedMotion(reduced: boolean): void;
     readonly reducedMotion: boolean;
     drawn(): Promise<void>;

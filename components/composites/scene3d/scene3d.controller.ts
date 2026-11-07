@@ -7,18 +7,20 @@ import { isReducedMotion } from '../shared/drawing/scheduler.js';
 import { requestScene3dChunk } from '../shared/scene3d/load.js';
 import type { Load3dFailure, Scene3dChunk } from '../shared/scene3d/load.js';
 import { isScene3dError, readScene3dTree } from '../shared/scene3d/tree.js';
-import type { ColorResolver, Scene3d, Scene3dSettings } from '../shared/scene3d/tree.js';
+import type { ColorResolver, Scene3d, Scene3dSettings, Scene3dStatus } from '../shared/scene3d/tree.js';
 
 /** The scene's own properties; a change at or below one of them, or below `children`, redraws the scene */
 const SCENE_PROPERTIES = ['children', 'background', 'environment', 'fog', 'controls'] as const;
 
 /** The token the scene's background is when `background` is unset */
 const BACKGROUND_TOKEN = '{scene3d.background}';
-/** The colour of the ambient light an environment other than `none` adds (the presets themselves are G3.5b) */
+/** The colour of the ambient light of the `studio` environment */
 const AMBIENT_TOKEN = '{scene3d.ambient}';
+/** The active theme and its overlays (`mode`, `brand`, `motion`): a switch gives the tokens other values */
+const THEME_PATHS = ['$.theme.active', '$.theme.active.$all'];
 
 /**
- * The 3D scene (G3.4 and G3.5 of the graphics epic 3). The view holds the host (`role="img"`, labelled by `_title` and
+ * The 3D scene (G3.4, G3.5 and G3.5b of the graphics epic 3). The view holds the host (`role="img"`, labelled by `_title` and
  * described by `_description` when there is one), the surface the renderer draws into and the `_fallback` text, shown
  * while the element carries `data-fallback`.
  *
@@ -30,15 +32,24 @@ const AMBIENT_TOKEN = '{scene3d.ambient}';
  * literals or tokens, are resolved by the paint resolver of the 2D renderers (`resolveColor`) from the surface's
  * computed style (`--ui-…`). It reads the 3D nodes of `children` into the plain node tree (`readScene3dTree`, links
  * followed through the store) and hands it to the scene's `update` with the scene's own properties (`background`, or
- * the `scene3d.background` token when unset; the `scene3d.ambient` token; `environment`), and again on every change at
- * or below `children`, `background`, `environment`, `fog` or `controls`, at most once per microtask. The element is
- * `pending` from each change until the scene says the frame is on screen (`drawn()`), then `ready`.
+ * the `scene3d.background` token when unset; the `scene3d.ambient` token; `environment`, `studio` when unset; `fog`),
+ * and again on every change at or below `children`, `background`, `environment`, `fog` or `controls`, at most once per
+ * microtask. The element is `pending` from each change until the scene says the frame is on screen (`drawn()`), then
+ * `ready`. It is also `pending` from a `webglcontextlost` of the scene's canvas until the frame drawn after its
+ * `webglcontextrestored` (G3.10), so a screenshot never captures the broken canvas of a lost context, and from a frame
+ * the scene asks for by itself (a resize; the scene's `onStatus` `pending`) until that frame is drawn.
+ *
+ * A theme switch (`$.theme.active`, a `mode: "dark"` among them) makes the scene resolve its colours again
+ * (`restyle`: the background, the environment, the fog and the nodes' tokens) and read reduced motion again, with no
+ * state write; the element is `pending` until that frame is drawn.
  *
  * A failure is reported once as `SUI-RUN-3D` with the scene's path. Its reason is `no_chunk` when nothing answered
  * (the host serves no chunk), the hook's code when it rejected (`load_failed`, `script_error`, `timeout`),
- * `script_error` when the chunk's global is not the renderer's, and `no_webgl` when the browser gives no WebGL context
- * (`createScene3d` throws a `Scene3dError`). A node in `children` that is not a 3D node the renderer draws is reported
- * once as `SUI-RUN-3D` at its own path, and the other nodes draw
+ * `script_error` when the chunk's global is not the renderer's, `no_webgl` when the browser gives no WebGL context
+ * (`createScene3d` throws a `Scene3dError`), and `context_lost` when a lost WebGL context is not restored within the
+ * scene's 5 s (its `onStatus` `failed`): `_fallback` shows then, until the context comes back after all. A node in
+ * `children` that is not a 3D node the renderer draws is reported once as `SUI-RUN-3D` at its own path, and the other
+ * nodes draw
  */
 export default function controller({ element, store, basePath }: ControllerContext) {
     const read = (path: string): JsonValue | undefined => store.get<JsonValue | undefined>(path) ?? undefined;
@@ -48,6 +59,9 @@ export default function controller({ element, store, basePath }: ControllerConte
     let disposed = false;
     let scheduled = false;
     let generation = 0;
+    /** True from a `webglcontextlost` of the scene's canvas until its `webglcontextrestored` */
+    let lost = false;
+    let surfaceOf: HTMLElement | undefined;
 
     const fail = (reason: string, path = basePath): void => {
         const error = buildError('SUI-RUN-3D', { component: 'scene3d', path, reason, statePath: path });
@@ -63,17 +77,36 @@ export default function controller({ element, store, basePath }: ControllerConte
     /** The scene's own properties, the default tokens filling in for an unset `background` */
     const settings = (): Scene3dSettings => {
         const background = read(`${basePath}.background`);
+        const fog = read(`${basePath}.fog`);
         return {
             background: background === undefined || background === null || background === '' ? BACKGROUND_TOKEN : background,
             ambient: AMBIENT_TOKEN,
-            environment: read(`${basePath}.environment`) ?? 'studio'
+            environment: read(`${basePath}.environment`) ?? 'studio',
+            // A copy: the store may change the object it holds in place on a later write
+            fog: fog === undefined ? undefined : (JSON.parse(JSON.stringify(fog)) as JsonValue)
         };
+    };
+
+    /** Marks the element `ready` once the scene's next frame is on screen, unless another change came first */
+    const readyAfterFrame = (): void => {
+        const at = generation;
+        void scene?.drawn().then(() => {
+            // A frame while the context is lost draws nothing: the scene stays pending until the one after the restore
+            if (!disposed && at === generation && !lost) element.setAttribute('data-render', 'ready');
+        });
+    };
+
+    /** Something other than a state change of the scene gives another picture: pending until it is drawn */
+    const repaint = (): void => {
+        if (disposed || scene === undefined) return;
+        generation += 1;
+        element.setAttribute('data-render', 'pending');
+        readyAfterFrame();
     };
 
     const draw = (): void => {
         scheduled = false;
         if (disposed || scene === undefined) return;
-        const at = generation;
         const childrenPath = `${basePath}.children`;
         const { nodes, unknown } = readScene3dTree(read(childrenPath), childrenPath, { read });
         for (const node of unknown) {
@@ -84,9 +117,7 @@ export default function controller({ element, store, basePath }: ControllerConte
             fail(`${what}, so it is not drawn`, node.path);
         }
         scene.update(nodes, settings());
-        void scene.drawn().then(() => {
-            if (!disposed && at === generation) element.setAttribute('data-render', 'ready');
-        });
+        readyAfterFrame();
     };
 
     /** Marks the scene pending and draws it in the next microtask; several requests in one task draw once */
@@ -97,6 +128,51 @@ export default function controller({ element, store, basePath }: ControllerConte
         if (scheduled || scene === undefined) return;
         scheduled = true;
         queueMicrotask(draw);
+    };
+
+    /**
+     * The canvas lost its WebGL context (G3.1: the first page of a newly started headless Chromium loses its contexts
+     * once, and a screenshot then shows a broken image): pending until the frame drawn after the restore
+     */
+    const onContextLost = (): void => {
+        lost = true;
+        generation += 1;
+        element.setAttribute('data-render', 'pending');
+    };
+
+    /** The context is back: draw again, and be ready once that frame is on screen; a `_fallback` shown for it goes */
+    const onContextRestored = (): void => {
+        lost = false;
+        element.removeAttribute('data-fallback');
+        request();
+    };
+
+    /**
+     * What the scene tells by itself (G3.5b): `pending` for a frame it asked for (a resize, a restored context), `lost`
+     * as the context event above, and `failed` when the context did not come back within its 5 s: `_fallback` and one
+     * `SUI-RUN-3D` `context_lost`
+     */
+    const onStatus = (status: Scene3dStatus): void => {
+        if (disposed) return;
+        if (status === 'lost') onContextLost();
+        else if (status === 'failed') showFallback('context_lost');
+        else repaint();
+    };
+
+    /** A theme switch: the same tokens resolve to other colours, and the motion overlay may change reduced motion */
+    const onTheme = (): void => {
+        if (disposed || scene === undefined) return;
+        scene.restyle();
+        repaint();
+        // Read once the switch is applied to the page's styles, as the colours are read when the frame is drawn
+        queueMicrotask(() => {
+            if (!disposed) scene?.setReducedMotion(readReducedMotion());
+        });
+    };
+
+    const readReducedMotion = (): boolean => {
+        const style = getComputedStyle(element);
+        return isReducedMotion((name) => style.getPropertyValue(name).trim() || undefined);
     };
 
     /** Makes the scene on the surface with the chunk's renderer, or shows `_fallback` when it cannot draw */
@@ -121,16 +197,19 @@ export default function controller({ element, store, basePath }: ControllerConte
             const resolved = resolveColor(value, (name) => style.getPropertyValue(name).trim() || undefined);
             return resolved.kind === 'color' ? resolved.computed : undefined;
         };
-        const style = getComputedStyle(element);
-        const reducedMotion = isReducedMotion((name) => style.getPropertyValue(name).trim() || undefined);
         try {
-            scene = chunk.createScene3d(surface, { resolveColor: resolve, reducedMotion });
+            scene = chunk.createScene3d(surface, { resolveColor: resolve, reducedMotion: readReducedMotion(), onStatus });
         } catch (error) {
             showFallback(isScene3dError(error) ? error.code : `script_error: ${error instanceof Error ? error.message : String(error)}`);
             return;
         }
         element.removeAttribute('data-fallback');
+        // The context events do not bubble: they are heard on the way down to the renderer's canvas in the surface
+        surfaceOf = surface;
+        surface.addEventListener('webglcontextlost', onContextLost, true);
+        surface.addEventListener('webglcontextrestored', onContextRestored, true);
         store.on(watched, request);
+        store.on(THEME_PATHS, onTheme);
         request();
     };
 
@@ -153,6 +232,9 @@ export default function controller({ element, store, basePath }: ControllerConte
         dispose: () => {
             disposed = true;
             store.off(watched, request);
+            store.off(THEME_PATHS, onTheme);
+            surfaceOf?.removeEventListener('webglcontextlost', onContextLost, true);
+            surfaceOf?.removeEventListener('webglcontextrestored', onContextRestored, true);
             scene?.dispose();
             scene = undefined;
         }
