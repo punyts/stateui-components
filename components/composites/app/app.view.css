@@ -1,0 +1,27 @@
+:host {
+    display: block;
+    min-block-size: 100%;
+}
+
+.app {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    min-block-size: 100%;
+    color: var(--ui-color-text-base);
+    background: var(--ui-color-surface-base);
+    font-family: var(--ui-text-body-family);
+    font-size: var(--ui-text-body-size);
+    line-height: var(--ui-text-body-leading);
+}
+
+/* The mount appends each screen here as a layout item; the app's layout places them */
+.screens {
+    box-sizing: border-box;
+    flex: 1 1 auto;
+    min-inline-size: 0;
+}
+
+.toasts {
+    display: contents;
+}

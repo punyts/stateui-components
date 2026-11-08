@@ -44,8 +44,8 @@ function mount(width: number, node: Record<string, unknown> = {}): Mounted {
     const app = mountApp(host, { locale: 'en', app: { component: 'dashboardGrid', ...node } } as unknown as AppDocument, library);
     if (!app.store) throw new Error(`dashboardGrid did not mount: ${app.errors.map((error) => error.message).join('; ')}`);
     hosts.push({ host, dispose: () => app.dispose(), unregister: () => locale.unregister() });
-    const grid = findByTag(host, 'ui-page');
-    if (!grid) throw new Error('no ui-page was rendered');
+    const grid = findByTag(host, 'ui-panel');
+    if (!grid) throw new Error('no ui-panel was rendered');
     return { host, grid, switchTo: (code) => void locale.switchTo(code) };
 }
 

@@ -25,8 +25,8 @@ export interface MountOptions {
     /** The document's `locales`: the overlay per language the application itself brings (relative to the node), on top of the component overlays */
     locales?: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
     /**
-     * The document's `screens` and `start`: with them the mounted component is the shell, and each screen shows in its
-     * `outlet` node (none by default)
+     * The document's `screens` and `start`: with them mount the `app` component, which places each screen in its layout
+     * (none by default)
      */
     screens?: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
     start?: string;
@@ -50,7 +50,7 @@ export interface MountedComponent {
     setTheme(kind: ThemeKind, name: string): void;
     /** Switches the application to the language `code`; throws when the library has no overlay for it */
     setLocale(code: string): void;
-    /** `MountedApp.navigate`: shows another screen of a shell mounted with `screens`; returns why it cannot, undefined when it moved */
+    /** `MountedApp.navigate`: shows another screen of an app mounted with `screens`; returns why it cannot, undefined when it moved */
     navigate(screen: string, params?: Readonly<Record<string, unknown>>): string | undefined;
     /** Unmounts the application and removes the host; safe to call twice */
     dispose(): void;

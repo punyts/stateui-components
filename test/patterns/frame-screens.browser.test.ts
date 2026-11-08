@@ -56,19 +56,21 @@ interface Mounted {
     store: NonNullable<ReturnType<typeof mountApp>['store']>;
 }
 
-/** Copies the shell with its default params and mounts it, with one stub screen, in a host of the given width */
-async function mountShell(name: string, width: number): Promise<Mounted> {
+/** Copies the frame pattern with its default params as the root of the screen `home`, with a stub in its content, and mounts it in a host of the given width */
+async function mountFrame(name: string, width: number): Promise<Mounted> {
     if (!registered) {
         registerAll();
         registered = true;
     }
     const applied = applyPattern(pattern(name));
     expect(applied.errors).toEqual([]);
+    const root = applied.tree as unknown as { children: { content: { children: Record<string, unknown> } } };
+    root.children.content.children['stub'] = { component: 'text', _text: STUB };
     const document = {
         locale: 'en',
         data: {},
-        app: applied.tree,
-        screens: { home: { root: { component: 'text', _text: STUB } } },
+        app: { component: 'app' },
+        screens: { home: { root } },
         start: 'home'
     } as unknown as AppDocument;
     expect(validateDocument(document, catalog).errors.filter((error) => error.severity !== 'warning')).toEqual([]);
@@ -81,7 +83,7 @@ async function mountShell(name: string, width: number): Promise<Mounted> {
     return { host, store: app.store };
 }
 
-/** The top of the shell's title text and of its menu */
+/** The top of the screen's title text and of its menu */
 function tops(host: HTMLElement, title: string): { title: number; menu: number } {
     const text = deep(host, 'ui-text').find((element) => visibleText(element).includes(title)) as HTMLElement;
     const menu = deep(host, 'ui-nav')[0] as HTMLElement;
@@ -95,17 +97,17 @@ afterEach(() => {
     }
 });
 
-const SHELLS = ['marketing', 'side-navigation', 'top-navigation'] as const;
+const FRAMES = ['marketing', 'side-navigation', 'top-navigation'] as const;
+const MENU = '$.screens.home.children.menu';
 
-describe('shell patterns', () => {
-    it.each(SHELLS)('should show the stub screen in %s and its title in the header', async (name) => {
+describe('frame screen patterns', () => {
+    it.each(FRAMES)('should show the content and the title in %s', async (name) => {
         // Arrange and Act
-        const { host } = await mountShell(name, 1100);
+        const { host } = await mountFrame(name, 1100);
 
         // Assert
         expect(visibleText(host)).toContain(STUB);
-        const header = deep(host, 'header')[0] as HTMLElement;
-        expect(visibleText(header)).toContain(pattern(name).params['title']?.default as string);
+        expect(visibleText(host)).toContain(pattern(name).params['title']?.default as string);
     });
 
     it.each(['marketing', 'top-navigation'] as const)('should put the menu beside the title in %s, and below it at phone width', async (name) => {
@@ -113,8 +115,8 @@ describe('shell patterns', () => {
         const title = pattern(name).params['title']?.default as string;
 
         // Act
-        const wide = tops((await mountShell(name, 1100)).host, title);
-        const phone = tops((await mountShell(name, 375)).host, title);
+        const wide = tops((await mountFrame(name, 1100)).host, title);
+        const phone = tops((await mountFrame(name, 375)).host, title);
 
         // Assert
         expect(Math.abs(wide.menu - wide.title)).toBeLessThan(24);
@@ -123,13 +125,13 @@ describe('shell patterns', () => {
 
     it('should fold the side menu of side-navigation behind a button at phone width', async () => {
         // Arrange and Act
-        const wide = await mountShell('side-navigation', 1100);
-        const phone = await mountShell('side-navigation', 375);
+        const wide = await mountFrame('side-navigation', 1100);
+        const phone = await mountFrame('side-navigation', 375);
 
         // Assert
-        expect(wide.store.get('$.app.compact')).toBe(false);
-        expect(phone.store.get('$.app.compact')).toBe(true);
-        const navOf = (host: HTMLElement): HTMLElement => (deep(host, 'ui-page')[0] as HTMLElement).shadowRoot?.querySelector('.nav') as HTMLElement;
+        expect(wide.store.get(`${MENU}.compact`)).not.toBe(true);
+        expect(phone.store.get(`${MENU}.compact`)).toBe(true);
+        const navOf = (host: HTMLElement): HTMLElement => (deep(host, 'ui-nav')[0] as HTMLElement).shadowRoot?.querySelector('.nav') as HTMLElement;
         expect(getComputedStyle(navOf(wide.host)).display).not.toBe('none');
         expect(getComputedStyle(navOf(phone.host)).display).toBe('none');
         expect(deep(phone.host, 'button').some((button) => button.classList.contains('toggle'))).toBe(true);

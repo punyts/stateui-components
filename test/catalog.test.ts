@@ -31,14 +31,14 @@ const SPEC_MOLECULES = [
 
 /** The 13 composites of Epic 5 (the Epic 8 composites, such as recordGrid, accordion and wizard, are not in this set) */
 const SPEC_COMPOSITES = [
-    'panel', 'toolbar', 'page', 'nav', 'form', 'recordList', 'list', 'modal', 'drawer', 'tabs', 'table', 'menu', 'toastRegion'
+    'panel', 'toolbar', 'app', 'nav', 'form', 'recordList', 'list', 'modal', 'drawer', 'tabs', 'table', 'menu', 'toastRegion'
 ] as const;
 
 /** Root components that are parts of another component, not placed by a minion: the row `table` builds per record */
 const PART_COMPONENTS = ['tableRow'] as const;
 
 /** The six composed components of Epic 5 */
-const SPEC_COMPOSED = ['confirmDialog', 'formDialog', 'masterDetail', 'settingsPage', 'crudTable', 'dashboardGrid'] as const;
+const SPEC_COMPOSED = ['confirmDialog', 'formDialog', 'masterDetail', 'settingsPanel', 'crudTable', 'dashboardGrid'] as const;
 
 /** The 2D shape components of the graphics epic 1 (G1.3) and the 3D nodes of epic 3 (G3.4): shape tier, in atoms and molecules, with no element */
 const SHAPE_NAMES = ['rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'path', 'drawText', 'drawImage', 'drawGroup', 'drawRepeat', 'camera', 'light', 'mesh', 'model', 'group3d', 'repeat3d', 'label3d'] as const;
@@ -59,7 +59,7 @@ const difference = (found: readonly string[], spec: readonly string[]): { missin
 /** Components that joined the library after the first set (Epic 8, plus popover, numberField and segmented); the Epic 4 and 5 counts below stay as the spec fixed them */
 const LATER_ATOMS: readonly string[] = ['segmented', 'markdown'];
 const LATER_MOLECULES: readonly string[] = ['numberField', 'comboboxField', 'multiSelectField', 'breadcrumb', 'pagination', 'sliderField', 'disclosure', 'stepper', 'dateRangeField', 'fileField', 'paintField'];
-const LATER_COMPOSITES: readonly string[] = ['popover', 'accordion', 'splitPane', 'tree', 'chart', 'board', 'calendar', 'recordGrid', 'messageList', 'outlet', 'drawing', 'scene3d'];
+const LATER_COMPOSITES: readonly string[] = ['popover', 'accordion', 'splitPane', 'tree', 'chart', 'board', 'calendar', 'recordGrid', 'messageList', 'drawing', 'scene3d'];
 const LATER_COMPOSED: readonly string[] = ['wizard', 'chatView'];
 
 /** Every component Epic 8 adds; all are built, so none is skipped */

@@ -12,169 +12,18 @@ const itemButton = (nav: Element, key: string): HTMLButtonElement => {
     return node.firstElementChild?.shadowRoot?.querySelector('button') as HTMLButtonElement;
 };
 const item = (label: string): Record<string, unknown> => ({ component: 'menuItem', _label: label, icon: 'check' });
-const wide = (host: HTMLElement): void => {
-    host.style.inlineSize = '1200px';
-};
 
-describe('page in Chromium', () => {
-    afterEach(() => {
-        mountComponent.unmountAll();
-        document.title = '';
-    });
+/** The first element with `tag` below `from`, crossing shadow roots */
+function findDeep(from: ParentNode, tag: string): Element | undefined {
+    for (const candidate of Array.from(from.querySelectorAll('*'))) {
+        if (candidate.localName === tag) return candidate;
+        const inner = candidate.shadowRoot ? findDeep(candidate.shadowRoot, tag) : undefined;
+        if (inner) return inner;
+    }
+    return undefined;
+}
 
-    const slots = {
-        header: text('Head'),
-        nav: text('Navigation'),
-        footer: text('Foot'),
-        children: { a: text('Main') }
-    };
-
-    it('should place the nav beside the main area for navPosition start', () => {
-        // Arrange
-        const mounted = mountComponent('page', slots);
-        wide(mounted.host);
-
-        // Act
-        const nav = box(part(mounted.element, '.nav') as HTMLElement);
-        const main = box(part(mounted.element, '.main') as HTMLElement);
-        const header = box(part(mounted.element, '.header') as HTMLElement);
-
-        // Assert
-        expect(mounted.element.getAttribute('nav-position')).toBe('start');
-        expect(nav.right).toBeLessThanOrEqual(main.left + 1);
-        expect(Math.abs(nav.top - main.top)).toBeLessThan(2);
-        expect(header.bottom).toBeLessThanOrEqual(nav.top + 1);
-    });
-
-    it('should place the nav above the main area for navPosition top', () => {
-        // Arrange
-        const mounted = mountComponent('page', { ...slots, navPosition: 'top' });
-        wide(mounted.host);
-
-        // Act
-        const nav = box(part(mounted.element, '.nav') as HTMLElement);
-        const main = box(part(mounted.element, '.main') as HTMLElement);
-
-        // Assert
-        expect(nav.bottom).toBeLessThanOrEqual(main.top + 1);
-        expect(Math.abs(nav.left - main.left)).toBeLessThan(2);
-    });
-
-    it('should remove the nav from the layout for navPosition none', () => {
-        // Arrange
-        const mounted = mountComponent('page', { ...slots, navPosition: 'none' });
-        wide(mounted.host);
-
-        // Assert
-        expect(part(mounted.element, '.nav')).toBeNull();
-        expect(box(part(mounted.element, '.main') as HTMLElement).left).toBeLessThan(40);
-    });
-
-    it('should follow navPosition written later', () => {
-        // Arrange
-        const mounted = mountComponent('page', slots);
-
-        // Act
-        mounted.store.set('$.app.navPosition', 'none');
-
-        // Assert
-        expect(part(mounted.element, '.nav')).toBeNull();
-    });
-
-    it('should render no header or footer region when the slots are empty', () => {
-        // Arrange
-        const mounted = mountComponent('page', { children: { a: text('Main') } });
-
-        // Assert
-        expect(part(mounted.element, '.header')).toBeNull();
-        expect(part(mounted.element, '.footer')).toBeNull();
-        expect(part(mounted.element, '.nav')).toBeNull();
-    });
-
-    it('should limit the main width to 768 px for maxWidth md and leave it unlimited for none', () => {
-        // Arrange
-        const limited = mountComponent('page', { ...slots, navPosition: 'none', maxWidth: 'md' });
-        const open = mountComponent('page', { ...slots, navPosition: 'none' });
-        wide(limited.host);
-        wide(open.host);
-
-        // Assert
-        expect(box(part(limited.element, '.content') as HTMLElement).width).toBe(768);
-        expect(box(part(open.element, '.content') as HTMLElement).width).toBeGreaterThan(1000);
-    });
-
-    it.each([
-        ['lg', 1024],
-        ['xl', 1280]
-    ] as const)('should limit the main width to the %s breakpoint', (maxWidth, expected) => {
-        // Arrange
-        const mounted = mountComponent('page', { ...slots, navPosition: 'none', maxWidth });
-        mounted.host.style.inlineSize = '1500px';
-
-        // Assert
-        expect(box(part(mounted.element, '.content') as HTMLElement).width).toBe(expected);
-    });
-
-    it('should lay out the children of the main area with layout', () => {
-        // Arrange
-        const mounted = mountComponent('page', {
-            navPosition: 'none',
-            layout: { type: 'row', gap: 'md' },
-            children: { a: text('A'), b: text('B') }
-        });
-        wide(mounted.host);
-
-        // Act
-        const [a, b] = Array.from(root(mounted.element).querySelectorAll('.body > sui-node')).map((node) => box(node.firstElementChild as Element));
-
-        // Assert
-        expect(Math.abs((a as DOMRect).top - (b as DOMRect).top)).toBeLessThan(2);
-        expect((b as DOMRect).left).toBeGreaterThan((a as DOMRect).right - 1);
-    });
-
-    it('should set the document title from _title and follow it', () => {
-        // Arrange
-        document.title = 'Before';
-
-        // Act
-        const mounted = mountComponent('page', { _title: 'Orders' });
-        const first = document.title;
-        mounted.store.set('$.app._title', 'Customers');
-
-        // Assert
-        expect(first).toBe('Orders');
-        expect(document.title).toBe('Customers');
-    });
-
-    it('should restore the document title on dispose and leave it alone for an empty _title', () => {
-        // Arrange
-        document.title = 'Before';
-        const untitled = mountComponent('page', {});
-        const unchanged = document.title;
-        untitled.dispose();
-        const titled = mountComponent('page', { _title: 'Orders' });
-
-        // Act
-        titled.dispose();
-
-        // Assert
-        expect(unchanged).toBe('Before');
-        expect(document.title).toBe('Before');
-    });
-
-    it('should show the German _title from the document overlay', () => {
-        // Arrange
-        const mounted = mountComponent('page', { _title: 'Orders' }, { locales: { de: { _title: 'Bestellungen' } } });
-
-        // Act
-        mounted.setLocale('de');
-
-        // Assert
-        expect(document.title).toBe('Bestellungen');
-    });
-});
-
-describe('page responsive nav in Chromium', () => {
+describe('nav responsive collapse in Chromium', () => {
     afterEach(() => {
         mountComponent.unmountAll();
     });
@@ -182,94 +31,84 @@ describe('page responsive nav in Chromium', () => {
     const frames = async (count: number): Promise<void> => {
         for (let n = 0; n < count; n++) await new Promise((resolve) => requestAnimationFrame(resolve));
     };
-    const nav = { component: 'nav', children: { home: item('Home'), orders: item('Orders') } };
-    const mountAt = async (width: number, extra: Record<string, unknown> = {}) => {
-        const mounted = mountComponent('page', { nav, children: { a: text('Main') }, _title: 'Shop', ...extra });
+    /** A row panel holding a nav and a main text: the width that decides is the panel's layout, set through the host */
+    const mountAt = async (width: number, nav: Record<string, unknown> = {}) => {
+        const mounted = mountComponent('panel', {
+            layout: { type: 'row' },
+            children: {
+                nav: { component: 'nav', collapseBelow: 'md', children: { home: item('Home'), orders: item('Orders') }, ...nav },
+                main: text('Main')
+            }
+        });
         mounted.host.style.inlineSize = `${width}px`;
         await frames(3);
-        return mounted;
+        const element = findDeep(mounted.host, 'ui-nav') as Element;
+        return { ...mounted, nav: element };
     };
     const toggle = (element: Element): HTMLButtonElement => part(element, '.toggle') as HTMLButtonElement;
-    const navBox = (element: Element): DOMRect => box(part(element, '.nav') as HTMLElement);
+    const NAV = '$.app.children.nav';
 
-    it('should show _title in the header on a wide page, in the bar on a narrow one, and not over a header of its own', async () => {
-        // Arrange and Act
-        const wideTitled = await mountAt(1200);
-        const narrowTitled = await mountAt(390);
-        const ownHeader = await mountAt(1200, { header: text('Brand') });
-
-        // Assert
-        expect(part(wideTitled.element, '.header .title')?.textContent).toBe('Shop');
-        expect(part(wideTitled.element, '.bar')).toBeNull();
-        expect(part(narrowTitled.element, '.header')).toBeNull();
-        expect(part(narrowTitled.element, '.bar-title')?.textContent).toBe('Shop');
-        expect(part(ownHeader.element, '.header .title')).toBeNull();
-        expect(part(ownHeader.element, '.header sui-node')).not.toBeNull();
-    });
-
-    it('should collapse a start nav into a bar with a closed menu button below 768 px and give the main area the full width', async () => {
+    it('should collapse into a closed menu button below 768 px for collapseBelow md', async () => {
         // Arrange and Act
         const mounted = await mountAt(390);
 
         // Assert
-        expect(mounted.store.get('$.app.compact')).toBe(true);
-        expect(mounted.element.hasAttribute('compact')).toBe(true);
-        expect(toggle(mounted.element).getAttribute('aria-expanded')).toBe('false');
-        expect(toggle(mounted.element).getAttribute('aria-controls')).toBe('nav');
-        expect(toggle(mounted.element).textContent).toContain('Menu');
-        expect(getComputedStyle(part(mounted.element, '.nav') as HTMLElement).display).toBe('none');
-        const main = box(part(mounted.element, '.main') as HTMLElement);
-        expect(main.width).toBeGreaterThan(350);
+        expect(mounted.store.get(`${NAV}.compact`)).toBe(true);
+        expect(mounted.nav.hasAttribute('compact')).toBe(true);
+        expect(toggle(mounted.nav).getAttribute('aria-expanded')).toBe('false');
+        expect(toggle(mounted.nav).getAttribute('aria-controls')).toBe('nav');
+        expect(toggle(mounted.nav).textContent).toContain('Menu');
+        expect(getComputedStyle(part(mounted.nav, '.nav') as HTMLElement).display).toBe('none');
     });
 
-    it('should keep the nav column and draw no bar at 1000 px', async () => {
+    it('should keep the items and draw no button at 1000 px', async () => {
         // Arrange and Act
         const mounted = await mountAt(1000);
 
         // Assert
-        expect(mounted.store.get('$.app.compact')).toBe(false);
-        expect(part(mounted.element, '.bar')).toBeNull();
-        expect(box(part(mounted.element, '.nav') as HTMLElement).right).toBeLessThanOrEqual(box(part(mounted.element, '.main') as HTMLElement).left + 1);
+        expect(mounted.store.get(`${NAV}.compact`)).toBe(false);
+        expect(part(mounted.nav, '.toggle')).toBeNull();
+        expect(getComputedStyle(part(mounted.nav, '.nav') as HTMLElement).display).not.toBe('none');
     });
 
-    it('should open the nav over the content on the button, and close it on the button again', async () => {
+    it('should open the menu on the button, and close it on the button again', async () => {
         // Arrange
         const mounted = await mountAt(390);
 
         // Act
-        await userEvent.click(toggle(mounted.element));
+        await userEvent.click(toggle(mounted.nav));
         await frames(1);
-        const opened = navBox(mounted.element);
-        const expanded = toggle(mounted.element).getAttribute('aria-expanded');
-        await userEvent.click(toggle(mounted.element));
+        const opened = box(part(mounted.nav, '.nav') as HTMLElement);
+        const expanded = toggle(mounted.nav).getAttribute('aria-expanded');
+        await userEvent.click(toggle(mounted.nav));
         await frames(1);
 
         // Assert
-        expect(mounted.store.get('$.app.navOpen')).toBe(false);
         expect(expanded).toBe('true');
         expect(opened.width).toBeGreaterThan(100);
-        expect(opened.top).toBeGreaterThanOrEqual(box(part(mounted.element, '.bar') as HTMLElement).bottom - 1);
-        expect(getComputedStyle(part(mounted.element, '.nav') as HTMLElement).display).toBe('none');
+        expect(mounted.store.get(`${NAV}.open`)).toBe(false);
+        expect(getComputedStyle(part(mounted.nav, '.nav') as HTMLElement).display).toBe('none');
     });
 
-    it('should close the nav when a nav item is chosen', async () => {
+    it('should close the menu when an item is chosen', async () => {
         // Arrange
         const mounted = await mountAt(390);
-        mounted.store.set('$.app.navOpen', true);
+        mounted.store.set(`${NAV}.open`, true);
         await frames(2);
 
         // Act
-        await userEvent.click(itemButton(part(mounted.element, '.nav > sui-node')?.firstElementChild as Element, 'orders'));
+        await userEvent.click(itemButton(mounted.nav, 'orders'));
         await frames(1);
 
         // Assert
-        expect(mounted.store.get('$.app.navOpen')).toBe(false);
+        expect(mounted.store.get(`${NAV}.open`)).toBe(false);
+        expect(mounted.store.get(`${NAV}.active`)).toBe('orders');
     });
 
-    it('should close the nav on Escape and return focus to the button', async () => {
+    it('should close the menu on Escape and return focus to the button', async () => {
         // Arrange
         const mounted = await mountAt(390);
-        toggle(mounted.element).focus();
+        toggle(mounted.nav).focus();
         await userEvent.keyboard('{Enter}');
         await frames(1);
 
@@ -278,48 +117,48 @@ describe('page responsive nav in Chromium', () => {
         await frames(1);
 
         // Assert
-        expect(mounted.store.get('$.app.navOpen')).toBe(false);
-        expect(root(mounted.element).activeElement).toBe(toggle(mounted.element));
+        expect(mounted.store.get(`${NAV}.open`)).toBe(false);
+        expect(root(mounted.nav).activeElement).toBe(toggle(mounted.nav));
     });
 
-    it('should follow navOpen written from outside', async () => {
+    it('should follow open written from outside', async () => {
         // Arrange
         const mounted = await mountAt(390);
 
         // Act
-        mounted.store.set('$.app.navOpen', true);
+        mounted.store.set(`${NAV}.open`, true);
         await frames(1);
 
         // Assert
-        expect(mounted.element.hasAttribute('nav-open')).toBe(true);
-        expect(toggle(mounted.element).getAttribute('aria-expanded')).toBe('true');
-        expect(getComputedStyle(part(mounted.element, '.nav') as HTMLElement).display).not.toBe('none');
+        expect(mounted.nav.hasAttribute('open')).toBe(true);
+        expect(toggle(mounted.nav).getAttribute('aria-expanded')).toBe('true');
+        expect(getComputedStyle(part(mounted.nav, '.nav') as HTMLElement).display).not.toBe('none');
     });
 
-    it('should use navBreakpoint, and never collapse with 0 or a top nav', async () => {
-        // Arrange
-        const high = await mountAt(900, { navBreakpoint: 1000 });
-        const off = await mountAt(300, { navBreakpoint: 0 });
-        const top = await mountAt(300, { navPosition: 'top' });
+    it('should use the breakpoint collapseBelow names, never collapse for none, and collapse a horizontal nav too', async () => {
+        // Arrange and Act
+        const large = await mountAt(900, { collapseBelow: 'lg' });
+        const never = await mountAt(300, { collapseBelow: 'none' });
+        const horizontal = await mountAt(390, { orientation: 'horizontal' });
 
         // Assert
-        expect(high.store.get('$.app.compact')).toBe(true);
-        expect(off.store.get('$.app.compact')).toBe(false);
-        expect(top.store.get('$.app.compact')).toBe(false);
+        expect(large.store.get(`${NAV}.compact`)).toBe(true);
+        expect(never.store.get(`${NAV}.compact`)).toBe(false);
+        expect(horizontal.store.get(`${NAV}.compact`)).toBe(true);
     });
 
-    it('should leave compact and close the nav when the page grows past the breakpoint', async () => {
+    it('should leave compact and close the menu when the layout grows past the breakpoint', async () => {
         // Arrange
         const mounted = await mountAt(390);
-        mounted.store.set('$.app.navOpen', true);
+        mounted.store.set(`${NAV}.open`, true);
 
         // Act
         mounted.host.style.inlineSize = '1000px';
         await frames(3);
 
         // Assert
-        expect(mounted.store.get('$.app.compact')).toBe(false);
-        expect(mounted.store.get('$.app.navOpen')).toBe(false);
+        expect(mounted.store.get(`${NAV}.compact`)).toBe(false);
+        expect(mounted.store.get(`${NAV}.open`)).toBe(false);
     });
 
     it('should show the German menu label', async () => {
@@ -331,7 +170,7 @@ describe('page responsive nav in Chromium', () => {
         await frames(1);
 
         // Assert
-        expect(toggle(mounted.element).textContent).toContain('Menü');
+        expect(toggle(mounted.nav).textContent).toContain('Menü');
     });
 });
 
@@ -414,32 +253,47 @@ describe('nav in Chromium', () => {
         expect(mounted.store.get('$.app.active')).toBe('home');
     });
 
-    /** Three screens; `orders` needs a `status` */
-    const SCREENS = Object.freeze({
-        home: { root: text('Home screen') },
-        users: { root: text('Users screen') },
-        orders: { params: { status: { type: 'string', required: true } }, root: text('Orders screen') }
-    });
     const screenItems = Object.freeze({
         home: { ...item('Home'), screen: 'home' },
         users: { ...item('Users'), screen: 'users' },
         open: { ...item('Open orders'), screen: 'orders', params: { status: 'open' } }
     });
-    /** A page shell with the nav on top (it never collapses) and an outlet; `element` is the nav */
-    const mountWithScreens = () => {
-        const mounted = mountComponent(
-            'page',
-            { navPosition: 'top', nav: { component: 'nav', orientation: 'horizontal', children: JSON.parse(JSON.stringify(screenItems)) }, children: { main: { component: 'outlet' } } },
-            { screens: JSON.parse(JSON.stringify(SCREENS)), start: 'home' }
-        );
-        return { ...mounted, element: root(mounted.element).querySelector('ui-nav') as Element };
+    /** A screen that places the shared horizontal nav above its text */
+    const screen = (body: string): Record<string, unknown> => ({
+        component: 'panel',
+        children: { nav: { component: 'nav', orientation: 'horizontal', children: JSON.parse(JSON.stringify(screenItems)) as unknown }, body: text(body) }
+    });
+    /** Three screens, each placing the nav; `orders` needs a `status` */
+    const screens = () => ({
+        home: { root: screen('Home screen') },
+        users: { root: screen('Users screen') },
+        orders: { params: { status: { type: 'string', required: true } }, root: screen('Orders screen') }
+    });
+    /** The nav of a screen, by its state path */
+    const navOf = (host: HTMLElement, name: string): Element => {
+        const all: Element[] = [];
+        const walk = (from: ParentNode): void => {
+            for (const candidate of Array.from(from.querySelectorAll('*'))) {
+                if (candidate.localName === 'ui-nav') all.push(candidate);
+                if (candidate.shadowRoot) walk(candidate.shadowRoot);
+            }
+        };
+        walk(host);
+        return all.find((nav) => (nav as { scope?: { basePath?: string } }).scope?.basePath === `$.screens.${name}.children.nav`) as Element;
     };
+    /** An app whose start screen is `home`; `element` is the nav of the home screen */
+    const mountWithScreens = () => {
+        const mounted = mountComponent('app', {}, { screens: screens(), start: 'home' });
+        return { ...mounted, element: navOf(mounted.host, 'home') };
+    };
+    const HOME_NAV = '$.screens.home.children.nav';
+    const USERS_NAV = '$.screens.users.children.nav';
 
     it('should mark the item of the start screen active and navigate when an item with a screen is pressed', async () => {
         // Arrange
         const mounted = mountWithScreens();
         const seen = selects(mounted.element);
-        const atStart = mounted.store.get('$.app.nav.active');
+        const atStart = mounted.store.get(`${HOME_NAV}.active`);
 
         // Act
         await userEvent.click(itemButton(mounted.element, 'users'));
@@ -447,8 +301,8 @@ describe('nav in Chromium', () => {
         // Assert
         expect(atStart).toBe('home');
         expect(mounted.store.get('$.route.screen' as never)).toBe('users');
-        expect(mounted.store.get('$.app.nav.active')).toBe('users');
-        expect(mounted.store.get('$.app.nav.children.users.selected')).toBe(true);
+        expect(mounted.store.get(`${USERS_NAV}.active`)).toBe('users');
+        expect(mounted.store.get(`${USERS_NAV}.children.users.selected`)).toBe(true);
         expect(seen).toEqual(['users']);
     });
 
@@ -463,21 +317,21 @@ describe('nav in Chromium', () => {
 
         // Assert
         expect(pressed).toEqual({ screen: 'orders', status: 'open' });
-        expect(mounted.store.get('$.app.nav.active')).toBe('users');
+        expect(mounted.store.get(`${USERS_NAV}.active`)).toBe('users');
     });
 
     it('should keep the current item when the navigation of a pressed item is refused', async () => {
         // Arrange
         // an item without the required status is refused when the document is checked, so the params go at run time
         const mounted = mountWithScreens();
-        mounted.store.set('$.app.nav.children.open.params', {});
+        mounted.store.set(`${HOME_NAV}.children.open.params`, {});
 
         // Act
         await userEvent.click(itemButton(mounted.element, 'open'));
 
         // Assert
         expect(mounted.store.get('$.route.screen' as never)).toBe('home');
-        expect(mounted.store.get('$.app.nav.active')).toBe('home');
+        expect(mounted.store.get(`${HOME_NAV}.active`)).toBe('home');
     });
 
     it('should give the items the link role inside the nav and label the landmark', () => {

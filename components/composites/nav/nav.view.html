@@ -1,11 +1,18 @@
-<nav class="nav" aria-label="{{ $._label }}">
-    <div class="header" if="{{ $.header }}">
-        <sui-node state=".header"></sui-node>
-    </div>
-    <div class="items" onpress="{{ onPress }}">
-        <sui-node if="{{ $.children }}" repeat="{{ $k,$i,$v in $.children }}" key="{{ $k }}" state="{{ $v }}"></sui-node>
-    </div>
-    <div class="footer" if="{{ $.footer }}">
-        <sui-node state=".footer"></sui-node>
-    </div>
-</nav>
+<div class="frame" onkeydown="{{ onKeyDown }}">
+    <button class="toggle" type="button" if="{{ $.compact }}" aria-expanded="{{ $.open ? 'true' : 'false' }}" aria-controls="nav" onclick="{{ onToggle }}">
+        <ui-icon class="glyph" name="{{ $.open ? 'x' : 'menu-2' }}" size="sm"></ui-icon>
+        <span class="toggle-label">{{ $._menuLabel }}</span>
+    </button>
+    <div class="scrim" if="{{ $.compact &amp;&amp; $.open }}" onclick="{{ onClose }}"></div>
+    <nav class="nav" id="nav" aria-label="{{ $._label }}">
+        <div class="header" if="{{ $.header }}">
+            <sui-node state=".header"></sui-node>
+        </div>
+        <div class="items" onpress="{{ onPress }}">
+            <sui-node if="{{ $.children }}" repeat="{{ $k,$i,$v in $.children }}" key="{{ $k }}" state="{{ $v }}"></sui-node>
+        </div>
+        <div class="footer" if="{{ $.footer }}">
+            <sui-node state=".footer"></sui-node>
+        </div>
+    </nav>
+</div>

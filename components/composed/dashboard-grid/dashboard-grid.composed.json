@@ -1,5 +1,6 @@
 {
-    "component": "page",
+    "component": "panel",
+    "padding": "none",
     "summary": "A grid of headline figures and charts that stacks into one column on a phone",
     "category": "layout",
     "purposes": ["lay out headline figures and charts in a grid", "build an overview dashboard", "arrange cards in columns that stack on a phone"],

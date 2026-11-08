@@ -59,3 +59,73 @@
     --item-text-overflow: hidden;
     --item-extra-display: none;
 }
+
+/* Below collapseBelow (the runtime property compact) the nav is a menu button; the menu shows as a panel under it
+   while open. The width that decides is the one of the layout the nav is placed in, not the nav's own */
+.frame {
+    position: relative;
+}
+
+.toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ui-space-gap-sm);
+    min-block-size: var(--ui-size-control-md);
+    margin: 0;
+    padding: 0 var(--ui-space-inset-sm);
+    color: inherit;
+    background: transparent;
+    border: var(--ui-border-width-thin) solid var(--ui-color-border-base);
+    border-radius: var(--ui-radius-md);
+    cursor: pointer;
+    font: inherit;
+}
+
+/* The button stays above the scrim, so a press on it closes the menu it opened */
+:host([compact]) .toggle {
+    position: relative;
+    z-index: 12;
+}
+
+.toggle:hover {
+    background: var(--ui-color-surface-sunken);
+}
+
+.toggle:focus-visible {
+    outline: 2px solid var(--ui-color-focus);
+    outline-offset: 2px;
+}
+
+.scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    background: transparent;
+}
+
+:host([compact]) .nav {
+    display: none;
+    position: absolute;
+    inset-block-start: 100%;
+    inset-inline-start: 0;
+    z-index: 11;
+    flex-direction: column;
+    align-items: stretch;
+    inline-size: min(20rem, calc(100vw - 2rem));
+    max-inline-size: none;
+    max-block-size: 70dvb;
+    overflow: auto;
+    background: var(--ui-color-surface-base);
+    border: var(--ui-border-width-thin) solid var(--ui-color-border-base);
+    box-shadow: var(--ui-elevation-overlay-shadow);
+}
+
+:host([compact][open]) .nav {
+    display: flex;
+}
+
+:host([compact]) .items {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    overflow-x: visible;
+}

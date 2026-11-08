@@ -50,16 +50,16 @@ async function mount(app: Record<string, unknown> = {}, data: Record<string, unk
     const host = globalThis.document.body.appendChild(globalThis.document.createElement('div'));
     host.style.cssText = 'inline-size: 900px';
     const locale = registerLocaleStep(overlays);
-    const document = { locale: 'en', data, app: { component: 'settingsPage', ...app } } as unknown as AppDocument;
+    const document = { locale: 'en', data, app: { component: 'settingsPanel', ...app } } as unknown as AppDocument;
     const result = mountApp(host, document, library);
-    if (!result.store) throw new Error(`settingsPage did not mount: ${result.errors.map((error) => `${error.code} ${error.message}`).join('; ')}`);
+    if (!result.store) throw new Error(`settingsPanel did not mount: ${result.errors.map((error) => `${error.code} ${error.message}`).join('; ')}`);
     mounted.push({ host, dispose: () => result.dispose(), unregister: () => locale.unregister() });
     await settle();
     return { host, store: result.store, switchTo: (code) => void locale.switchTo(code) };
 }
 
 const hiddenOf = (page: Mounted, section: string): boolean =>
-    page.store.get<boolean | undefined>(`$.app.children.${section}.hidden`) === true;
+    page.store.get<boolean | undefined>(`$.app.children.sections.children.${section}.hidden`) === true;
 const visibleSections = (page: Mounted): string[] => SECTIONS.filter((section) => !hiddenOf(page, section));
 const navButton = (page: Mounted, label: string): HTMLButtonElement =>
     deep(page.host, 'ui-menu-item')
@@ -83,7 +83,7 @@ const type = (input: HTMLInputElement, text: string): void => {
     input.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
 };
 
-describe('settingsPage in Chromium', () => {
+describe('settingsPanel in Chromium', () => {
     afterEach(() => {
         for (const entry of mounted.splice(0)) {
             entry.dispose();
@@ -168,13 +168,13 @@ describe('settingsPage in Chromium', () => {
 
     it('should validate its catalog example and list its exposed paths', () => {
         // Arrange
-        const entry = catalog.components.find((component) => component.name === 'settingsPage') as ComposedCatalogEntry;
+        const entry = catalog.components.find((component) => component.name === 'settingsPanel') as ComposedCatalogEntry;
 
         // Act
         const result = validateDocument({ locale: 'en', app: entry.example }, catalog);
 
         // Assert
         expect(result.errors).toEqual([]);
-        expect(entry.exposes?.map((exposed) => exposed.path)).toEqual(['_title', 'nav.children', 'children']);
+        expect(entry.exposes?.map((exposed) => exposed.path)).toEqual(['_title', 'children.menu.children', 'children.sections.children']);
     });
 });

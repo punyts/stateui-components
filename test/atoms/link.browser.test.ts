@@ -4,6 +4,16 @@ import { mountComponent } from '../harness/mountComponent.js';
 
 const anchor = (element: Element): HTMLAnchorElement => element.shadowRoot?.querySelector('a') as HTMLAnchorElement;
 
+/** The first element named `tag` below `root`, through the shadow roots */
+function findDeep(root: ParentNode, tag: string): Element | undefined {
+    for (const candidate of Array.from(root.querySelectorAll('*'))) {
+        if (candidate.localName === tag) return candidate;
+        const inner = candidate.shadowRoot ? findDeep(candidate.shadowRoot, tag) : undefined;
+        if (inner) return inner;
+    }
+    return undefined;
+}
+
 describe('link in Chromium', () => {
     afterEach(() => {
         mountComponent.unmountAll();
@@ -106,12 +116,18 @@ describe('link in Chromium', () => {
 
     it('should point at its screen and show it on a click, with its params', async () => {
         // Arrange
-        const shell = mountComponent(
-            'page',
-            { children: { link: { component: 'link', _text: 'Order 12', screen: 'order', params: { id: 'o12' } }, main: { component: 'outlet' } } },
-            { screens: { home: { root: { component: 'text', _text: 'Home' } }, order: { params: { id: { type: 'string', required: true } }, root: { component: 'text', _text: 'Order' } } }, start: 'home' }
+        const app = mountComponent(
+            'app',
+            {},
+            {
+                screens: {
+                    home: { root: { component: 'link', _text: 'Order 12', screen: 'order', params: { id: 'o12' } } },
+                    order: { params: { id: { type: 'string', required: true } }, root: { component: 'text', _text: 'Order' } }
+                },
+                start: 'home'
+            }
         );
-        const mounted = { ...shell, element: shell.element.shadowRoot?.querySelector('ui-link') as Element };
+        const mounted = { ...app, element: findDeep(app.host, 'ui-link') as Element };
         const presses: unknown[] = [];
         mounted.element.addEventListener('press', (event) => presses.push((event as CustomEvent).detail));
 

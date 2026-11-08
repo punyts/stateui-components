@@ -1,7 +1,7 @@
 {
-    "summary": "The application navigation: menu items with an active one, header and footer slots; overflow scroll keeps one row",
+    "summary": "The app navigation: menu items with an active one, header and footer slots; a menu button on narrow layouts",
     "category": "navigation",
-    "purposes": ["move between the screens of an app", "show the main menu with the active screen", "switch between sections from a sidebar"],
+    "purposes": ["move between the screens of an app", "show the main menu with the active screen", "collapse the menu behind a button on a phone"],
     "events": ["select"],
     "tokens": {
         "width": "calc({size.control.md} * 6)",
@@ -13,7 +13,11 @@
         "active": { "type": "string", "default": "" },
         "overflow": { "type": "string", "values": ["wrap", "scroll"], "default": "wrap", "reflect": true },
         "collapsed": { "type": "boolean", "default": false, "reflect": true },
+        "collapseBelow": { "type": "string", "values": ["none", "sm", "md", "lg", "xl"], "default": "none", "reflect": true },
+        "open": { "type": "boolean", "default": false, "reflect": true },
+        "compact": { "type": "boolean", "default": false, "reflect": true, "runtime": true },
         "_label": { "type": "string", "kind": "content", "default": "Main navigation" },
+        "_menuLabel": { "type": "string", "kind": "content", "default": "Menu" },
         "header": { "type": "node" },
         "footer": { "type": "node" }
     }

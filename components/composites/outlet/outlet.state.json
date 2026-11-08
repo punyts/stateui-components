@@ -1,8 +1,0 @@
-{
-    "summary": "Where the screens of an app show: the shell holds one; the visible screen appears in it and gets focus on navigation",
-    "category": "navigation",
-    "purposes": ["show the current screen of a multi-screen app", "hold the screens inside the app shell", "swap screens below a shared header and menu"],
-    "properties": {
-        "_label": { "type": "string", "kind": "content", "default": "Current screen" }
-    }
-}

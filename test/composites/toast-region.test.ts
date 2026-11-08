@@ -9,13 +9,16 @@ const check = (value: string): string[] =>
     validateDocument(
         {
             locale: 'en',
-            app: {
-                component: 'page',
-                toasts: { component: 'toastRegion', messages: { saved: { tone: 'success', _text: 'Saved' } } },
-                children: {
-                    save: { component: 'button', _title: 'Save', on: { press: { command: 'show', target: '$.app.toasts', value } } }
+            app: { component: 'app', toasts: { component: 'toastRegion', messages: { saved: { tone: 'success', _text: 'Saved' } } } },
+            screens: {
+                home: {
+                    root: {
+                        component: 'panel',
+                        children: { save: { component: 'button', _title: 'Save', on: { press: { command: 'show', target: '$.app.toasts', value } } } }
+                    }
                 }
-            }
+            },
+            start: 'home'
         },
         catalog
     ).errors.map((error) => error.code);
