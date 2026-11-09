@@ -1,0 +1,42 @@
+{
+    "summary": "A window with a title bar and frame buttons; dragged and resized in an adhoc layout, written on release",
+    "category": "layout",
+    "purposes": ["show an app in a window on a desktop", "drag a floating panel around a surface", "resize a floating panel by its edge", "minimize, maximize or close a window", "stack overlapping windows"],
+    "shared": { "elevation": { "default": "overlay" }, "density": {} },
+    "layout": true,
+    "events": ["activate", "move", "resize", "snapLeft", "snapRight", "minimize", "maximize", "close"],
+    "tokens": {
+        "radius": "{radius.md}",
+        "padding": "{space.inset.sm}",
+        "gap": "{space.gap.sm}",
+        "border": { "width": "{border.width.thin}" }
+    },
+    "properties": {
+        "_title": { "type": "string", "kind": "content", "default": "" },
+        "icon": { "type": "icon", "default": "" },
+        "controls": {
+            "type": "array",
+            "default": ["minimize", "maximize", "close"],
+            "validators": { "eachOf": ["snapLeft", "snapRight", "minimize", "maximize", "close"] }
+        },
+        "movable": { "type": "boolean", "default": true },
+        "resizable": { "type": "boolean", "default": true, "reflect": true },
+        "active": { "type": "boolean", "default": false, "reflect": true },
+        "maximized": { "type": "boolean", "default": false, "reflect": true },
+        "minWidth": { "type": "number", "default": 240, "validators": { "range": { "min": 0 } } },
+        "minHeight": { "type": "number", "default": 160, "validators": { "range": { "min": 0 } } },
+        "_moveLabel": { "type": "string", "kind": "content", "default": "Move window" },
+        "_snapLeftLabel": { "type": "string", "kind": "content", "default": "Snap left" },
+        "_snapRightLabel": { "type": "string", "kind": "content", "default": "Snap right" },
+        "_minimizeLabel": { "type": "string", "kind": "content", "default": "Minimize" },
+        "_maximizeLabel": { "type": "string", "kind": "content", "default": "Maximize" },
+        "_restoreLabel": { "type": "string", "kind": "content", "default": "Restore" },
+        "_closeLabel": { "type": "string", "kind": "content", "default": "Close" },
+        "show": { "type": "object", "default": {}, "runtime": true },
+        "snapLeftGlyph": { "type": "icon", "default": "layout-sidebar", "runtime": true },
+        "snapRightGlyph": { "type": "icon", "default": "layout-sidebar-right", "runtime": true },
+        "minimizeGlyph": { "type": "icon", "default": "minus", "runtime": true },
+        "maximizeGlyph": { "type": "icon", "default": "square", "runtime": true },
+        "closeGlyph": { "type": "icon", "default": "x", "runtime": true }
+    }
+}

@@ -1,0 +1,161 @@
+:host {
+    display: block;
+}
+
+.window {
+    position: relative;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    /* fills the box its placement gives it */
+    block-size: 100%;
+    overflow: hidden;
+    color: var(--ui-color-text-base);
+    background: var(--surface);
+    border: var(--ui-window-border-width) solid var(--ui-color-border-base);
+    border-radius: var(--ui-window-radius);
+    box-shadow: var(--shadow);
+    font-family: var(--ui-text-body-family);
+    font-size: var(--ui-text-body-size);
+    line-height: var(--ui-text-body-leading);
+}
+
+:host([active]) .window {
+    border-color: var(--ui-color-border-strong);
+}
+
+.titlebar {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: var(--ui-window-gap);
+    padding: var(--ui-space-inset-sm) var(--ui-window-padding);
+    background: var(--ui-color-surface-sunken);
+    border-block-end: var(--ui-window-border-width) solid var(--ui-color-border-base);
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+}
+
+:host([active]) .titlebar {
+    background: color-mix(in srgb, var(--ui-color-focus) 14%, var(--ui-color-surface-sunken));
+}
+
+:host([maximized]) .titlebar {
+    cursor: default;
+}
+
+.title {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    overflow: hidden;
+    border-radius: var(--ui-radius-sm);
+    font-family: var(--ui-text-heading-family);
+    font-size: var(--ui-text-label-size);
+    font-weight: var(--ui-text-heading-weight);
+    line-height: var(--ui-text-label-leading);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.title:focus-visible {
+    outline: 2px solid var(--ui-color-focus);
+    outline-offset: 2px;
+}
+
+.controls {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: var(--ui-space-gap-sm);
+}
+
+.control {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 2px;
+    color: inherit;
+    background: transparent;
+    border: 0;
+    border-radius: var(--ui-radius-sm);
+    cursor: pointer;
+}
+
+.control:hover {
+    background: var(--ui-color-surface-base);
+}
+
+.control.close:hover {
+    color: var(--ui-color-text-inverse);
+    background: var(--ui-color-border-strong);
+}
+
+.control:focus-visible {
+    outline: 2px solid var(--ui-color-focus);
+    outline-offset: 1px;
+}
+
+.glyph {
+    display: inline-flex;
+    flex: none;
+    inline-size: var(--ui-size-icon-sm);
+    block-size: var(--ui-size-icon-sm);
+}
+
+.glyph svg {
+    inline-size: 100%;
+    block-size: 100%;
+}
+
+.glyph .outline {
+    stroke-width: var(--ui-icon-stroke);
+}
+
+.body {
+    box-sizing: border-box;
+    flex: 1 1 auto;
+    min-block-size: 0;
+    padding: var(--ui-window-padding);
+    overflow: auto;
+}
+
+.body:not(:has(> sui-node)) {
+    display: none;
+}
+
+.grip {
+    position: absolute;
+    touch-action: none;
+}
+
+/* physical edges: the resize grows the placement's width and height to the right and down in every direction of text */
+.edge-e {
+    top: 0;
+    right: 0;
+    bottom: 12px;
+    inline-size: 6px;
+    cursor: ew-resize;
+}
+
+.edge-s {
+    right: 12px;
+    bottom: 0;
+    left: 0;
+    block-size: 6px;
+    cursor: ns-resize;
+}
+
+.corner {
+    right: 0;
+    bottom: 0;
+    inline-size: 12px;
+    block-size: 12px;
+    cursor: nwse-resize;
+}
+
+:host(:not([resizable])) .grip,
+:host([maximized]) .grip {
+    display: none;
+}

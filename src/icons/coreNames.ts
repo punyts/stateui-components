@@ -21,6 +21,8 @@ export const CORE_ICON_NAMES: readonly string[] = [
     'eraser',
     'grip-vertical',
     'info-circle',
+    'layout-sidebar',
+    'layout-sidebar-right',
     'line',
     'menu-2',
     'minus',
@@ -28,6 +30,7 @@ export const CORE_ICON_NAMES: readonly string[] = [
     'plus',
     'search',
     'square',
+    'squares',
     'trash',
     'upload',
     'x'

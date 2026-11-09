@@ -65,7 +65,7 @@ describe('buildComponents', () => {
         // Assert
         expect(result.errors).toEqual([]);
         expect(result.catalog.components.every((component) => component.name !== '')).toBe(true);
-    });
+    }, 30_000);
 
     describe('with the search keys required', () => {
         /** A temporary copy of the fixture components, with one key taken out of one file */

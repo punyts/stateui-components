@@ -1,0 +1,29 @@
+<section class="window" aria-label="{{ $._title === '' ? null : $._title }}">
+    <div class="titlebar" ondblclick="{{ onTitleDoubleClick }}" onpointerdown="{{ onTitlePointerDown }}" onpointermove="{{ onPointerMove }}" onpointerup="{{ onPointerUp }}" onpointercancel="{{ onPointerCancel }}">
+        <span class="glyph icon" if="{{ $.icon !== '' }}" icon-paths="icon" aria-hidden="true"></span>
+        <div class="title handle" role="button" tabindex="0" aria-roledescription="{{ $._moveLabel }}" aria-label="{{ $._title === '' ? $._moveLabel : $._title }}" aria-disabled="{{ $.movable &amp;&amp; !$.maximized ? null : 'true' }}" onkeydown="{{ onHandleKeyDown }}">{{ $._title }}</div>
+        <div class="controls">
+            <button class="control" type="button" if="{{ $.show.snapLeft }}" data-control="snapLeft" aria-label="{{ $._snapLeftLabel }}" title="{{ $._snapLeftLabel }}" onclick="{{ onControl }}">
+                <span class="glyph" icon-paths="snapLeftGlyph" aria-hidden="true"></span>
+            </button>
+            <button class="control" type="button" if="{{ $.show.snapRight }}" data-control="snapRight" aria-label="{{ $._snapRightLabel }}" title="{{ $._snapRightLabel }}" onclick="{{ onControl }}">
+                <span class="glyph" icon-paths="snapRightGlyph" aria-hidden="true"></span>
+            </button>
+            <button class="control" type="button" if="{{ $.show.minimize }}" data-control="minimize" aria-label="{{ $._minimizeLabel }}" title="{{ $._minimizeLabel }}" onclick="{{ onControl }}">
+                <span class="glyph" icon-paths="minimizeGlyph" aria-hidden="true"></span>
+            </button>
+            <button class="control" type="button" if="{{ $.show.maximize }}" data-control="maximize" aria-label="{{ $.maximized ? $._restoreLabel : $._maximizeLabel }}" title="{{ $.maximized ? $._restoreLabel : $._maximizeLabel }}" onclick="{{ onControl }}">
+                <span class="glyph" icon-paths="maximizeGlyph" aria-hidden="true"></span>
+            </button>
+            <button class="control close" type="button" if="{{ $.show.close }}" data-control="close" aria-label="{{ $._closeLabel }}" title="{{ $._closeLabel }}" onclick="{{ onControl }}">
+                <span class="glyph" icon-paths="closeGlyph" aria-hidden="true"></span>
+            </button>
+        </div>
+    </div>
+    <div class="body" layout-host="">
+        <sui-node if="{{ $.children }}" repeat="{{ $k,$i,$v in $.children }}" key="{{ $k }}" state="{{ $v }}"></sui-node>
+    </div>
+    <div class="grip edge-e" data-edge="e" aria-hidden="true" onpointerdown="{{ onGripPointerDown }}" onpointermove="{{ onPointerMove }}" onpointerup="{{ onPointerUp }}" onpointercancel="{{ onPointerCancel }}"></div>
+    <div class="grip edge-s" data-edge="s" aria-hidden="true" onpointerdown="{{ onGripPointerDown }}" onpointermove="{{ onPointerMove }}" onpointerup="{{ onPointerUp }}" onpointercancel="{{ onPointerCancel }}"></div>
+    <div class="grip corner" data-edge="se" aria-hidden="true" onpointerdown="{{ onGripPointerDown }}" onpointermove="{{ onPointerMove }}" onpointerup="{{ onPointerUp }}" onpointercancel="{{ onPointerCancel }}"></div>
+</section>

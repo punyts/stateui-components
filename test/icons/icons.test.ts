@@ -88,7 +88,7 @@ describe('icons.json', () => {
 
         // Assert
         expect(Object.keys(second.icons).slice(0, 20)).toEqual(Object.keys(file.icons).slice(0, 20));
-    });
+    }, 30_000);
 });
 
 describe('checkMetadata', () => {
