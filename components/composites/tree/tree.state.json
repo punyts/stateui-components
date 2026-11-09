@@ -17,7 +17,7 @@
         "rowHeight": { "type": "string", "values": ["sm", "md", "lg", "xl"], "default": "md" },
         "indent": { "type": "string", "values": ["sm", "md", "lg"], "default": "md", "reflect": true },
         "records": { "type": ["array", "object"] },
-        "row": { "type": "node", "row": true },
+        "row": { "type": "node", "row": true, "default": { "component": "text", "truncate": 1, "<-_text": "$row.label" } },
         "body": {
             "type": "object",
             "default": {
