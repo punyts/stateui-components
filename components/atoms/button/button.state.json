@@ -1,7 +1,7 @@
 {
     "summary": "The actionable atom: a labelled button with an optional icon, five variants and a busy state",
     "category": "forms",
-    "purposes": ["submit a form", "start an action", "save or cancel changes", "open a dialog or menu on press", "show a busy state while work runs"],
+    "purposes": ["submit a form", "start an action", "save or cancel changes", "open a dialog or menu on press", "show a busy state while work runs", "let server logic react to a press"],
     "events": ["press"],
     "commands": ["focus"],
     "shared": { "tone": { "default": "accent" }, "variant": { "default": "solid" }, "size": { "default": "md" } },
@@ -16,6 +16,7 @@
         "disabled": { "type": "boolean", "default": false },
         "busy": { "type": "boolean", "default": false },
         "fill": { "type": "boolean", "default": false, "reflect": true },
+        "clicked": { "type": "boolean", "default": false },
         "_title": { "type": "string", "kind": "content", "default": "Button" }
     }
 }
