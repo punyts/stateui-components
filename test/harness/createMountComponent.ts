@@ -24,6 +24,8 @@ export interface MountOptions {
     data?: Readonly<Record<string, unknown>>;
     /** The document's `locales`: the overlay per language the application itself brings (relative to the node), on top of the component overlays */
     locales?: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
+    /** The document's own `icons`: icons the application carries by name, which win over the core set */
+    icons?: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
     /**
      * The document's `screens` and `start`: with them mount the `app` component, which places each screen in its layout
      * (none by default)
@@ -127,6 +129,7 @@ export function createMountComponent(build: ComponentBuild): MountComponent {
             theme: { active },
             ...(options.data === undefined ? {} : { data: options.data }),
             ...(options.locales === undefined ? {} : { locales: options.locales }),
+            ...(options.icons === undefined ? {} : { icons: options.icons }),
             ...(options.screens === undefined ? {} : { screens: options.screens, start: options.start }),
             app: { component: name, ...nodeState }
         } as unknown as AppDocument;
