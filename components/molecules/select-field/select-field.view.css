@@ -4,6 +4,10 @@
 .control {
     block-size: var(--control-height, var(--ui-size-control-md));
     appearance: none;
+    /* A label wider than the field ends in an ellipsis instead of being cut off */
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
     padding-inline-end: calc(var(--ui-control-padding-inline) * 2 + 0.75rem);
 }
 

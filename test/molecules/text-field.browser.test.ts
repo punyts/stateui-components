@@ -170,7 +170,8 @@ describe('textField in Chromium', () => {
     it('should shrink the spacing with density compact', () => {
         // Arrange
         const mounted = mountComponent('textField', { _help: 'Hint' });
-        const gap = (): number => parseFloat(getComputedStyle(part(mounted.element, '.field')).rowGap);
+        // The space under the label: the field's spaces are margins and padding, not a row gap
+        const gap = (): number => parseFloat(getComputedStyle(part(mounted.element, '.label')).marginBlockEnd);
         const padding = (): number => parseFloat(getComputedStyle(control(mounted.element)).paddingInlineStart);
         const [normalGap, normalPadding] = [gap(), padding()];
 
@@ -313,14 +314,14 @@ describe('textField in Chromium', () => {
     it('should use the label gap token and a node override of it', () => {
         // Arrange
         const mounted = mountComponent('textField');
-        const field = part(mounted.element, '.field');
-        const before = getComputedStyle(field).rowGap;
+        const label = part(mounted.element, '.label');
+        const before = getComputedStyle(label).marginBlockEnd;
 
         // Act
         (mounted.element as HTMLElement).style.setProperty('--ui-field-label-gap', '10px');
 
         // Assert
         expect(before).toBe('4px');
-        expect(getComputedStyle(field).rowGap).toBe('10px');
+        expect(getComputedStyle(label).marginBlockEnd).toBe('10px');
     });
 });

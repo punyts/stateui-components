@@ -227,7 +227,8 @@ describe.each([
     it('should shrink the spacing with density compact', () => {
         // Arrange
         const mounted = mountComponent(name, { _help: 'Hint' });
-        const gap = (): number => parseFloat(getComputedStyle(part(mounted.element, '.field')).rowGap);
+        // The space above the help: the field's spaces are margins and padding, not a row gap
+        const gap = (): number => parseFloat(getComputedStyle(part(mounted.element, '.messages')).paddingBlockStart);
         const normal = gap();
 
         // Act
