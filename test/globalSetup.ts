@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { readdir, readFile, writeFile } from 'node:fs/promises';
+import { dirname, join, resolve } from 'node:path';
 import type { TestProject } from 'vitest/node';
 import { formatError } from '@punyts/stateui-app/build';
 import { buildComponents } from '../scripts/buildComponents.mjs';
@@ -27,6 +27,21 @@ declare module 'vitest' {
     }
 }
 
+const LOCALE_FILE = /\.locale\.[a-zA-Z-]+\.json$/;
+
+/**
+ * Writes every `<name>.locale.<code>.json` of a built library into one `locales.json` beside its `components/` folder,
+ * keyed by file name, so a browser test loads the overlays as one module rather than one per file (see
+ * `test/harness/realLocales.ts`)
+ */
+async function writeLocaleBundle(componentsDir: string): Promise<void> {
+    const files: Record<string, unknown> = {};
+    for (const name of (await readdir(componentsDir)).filter((file) => LOCALE_FILE.test(file)).sort()) {
+        files[name] = JSON.parse(await readFile(join(componentsDir, name), 'utf8'));
+    }
+    await writeFile(join(dirname(componentsDir), 'locales.json'), JSON.stringify(files));
+}
+
 /** The built 3D renderer chunk of the workspace's `stateui-3d`, read through its manifest; empty when there is none */
 async function readChunk3d(): Promise<string> {
     const dir = resolve(root, '..', 'stateui-3d', 'dist', 'runtime-chunk');
@@ -49,6 +64,7 @@ async function readModelFixture(name = 'box.glb'): Promise<string> {
 /**
  * Builds the test fixture library and the package's own `components/` into folders the tests import from, so
  * `npm test` needs no earlier `npm run build`. The fixture output is `.test-build/fixture/`, the real one `.test-build/real/`.
+ * Each build also gets a `locales.json` with all its locale overlays (`writeLocaleBundle`).
  * It also gives the browser tests the built 3D renderer chunk, when the workspace has one (`inject('chunk3dScript')`)
  */
 export default async function setup(project: TestProject): Promise<void> {
@@ -59,6 +75,7 @@ export default async function setup(project: TestProject): Promise<void> {
         const result = await buildComponents(resolve(root, source), resolve(root, out));
         const errors = result.errors.filter((error) => error.severity !== 'warning');
         if (errors.length > 0) throw new Error(`Building ${source} failed:\n${errors.map(formatError).join('\n')}`);
+        await writeLocaleBundle(resolve(root, out));
     }
     project.provide('chunk3dScript', await readChunk3d());
     project.provide('model3dFixture', await readModelFixture());

@@ -6,15 +6,13 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 import catalog from '../.test-build/real/components/catalog.json';
 import { registerAll } from '../.test-build/real/components/index.js';
 import { overlaysFromFiles } from './harness/createMountComponent.js';
-import type { ComponentBuild } from './harness/createMountComponent.js';
 import { mountComponent } from './harness/mountComponent.js';
+import { realLocaleFiles } from './harness/realLocales.js';
 
 const roots = (catalog.components as unknown as RootCatalogEntry[]).filter((entry) => entry.tier === 'root');
 const composed = (catalog.components as unknown as ComposedCatalogEntry[]).filter((entry) => entry.tier === 'composed');
 const library = libraryFromCatalog(catalog as unknown as Catalog);
-const overlays = overlaysFromFiles(
-    import.meta.glob<ComponentBuild['localeFiles'][string]>('../.test-build/real/components/*.locale.*.json', { eager: true, import: 'default' })
-);
+const overlays = overlaysFromFiles(realLocaleFiles);
 
 /** One mounted application of a composed example; `mountComponent` mounts root components only */
 interface MountedExample {

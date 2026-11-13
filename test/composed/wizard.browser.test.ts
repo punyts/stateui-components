@@ -5,13 +5,11 @@ import type { Catalog } from '@punyts/stateui-app/build';
 import catalogJson from '../../.test-build/real/components/catalog.json';
 import { registerAll } from '../../.test-build/real/components/index.js';
 import { overlaysFromFiles } from '../harness/createMountComponent.js';
-import type { ComponentBuild } from '../harness/createMountComponent.js';
+import { realLocaleFiles } from '../harness/realLocales.js';
 
 const catalog = catalogJson as unknown as Catalog;
 const library = libraryFromCatalog(catalog);
-const overlays = overlaysFromFiles(
-    import.meta.glob<ComponentBuild['localeFiles'][string]>('../../.test-build/real/components/*.locale.*.json', { eager: true, import: 'default' })
-);
+const overlays = overlaysFromFiles(realLocaleFiles);
 
 const STEPS = ['details', 'options', 'review'] as const;
 type Step = (typeof STEPS)[number];

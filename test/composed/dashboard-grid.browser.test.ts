@@ -6,13 +6,11 @@ import { validateDocument } from '@punyts/stateui-app/core';
 import catalogJson from '../../.test-build/real/components/catalog.json';
 import { registerAll } from '../../.test-build/real/components/index.js';
 import { overlaysFromFiles } from '../harness/createMountComponent.js';
-import type { ComponentBuild } from '../harness/createMountComponent.js';
+import { realLocaleFiles } from '../harness/realLocales.js';
 
 const catalog = catalogJson as unknown as Catalog;
 const library = libraryFromCatalog(catalog);
-const overlays = overlaysFromFiles(
-    import.meta.glob<ComponentBuild['localeFiles'][string]>('../../.test-build/real/components/*.locale.*.json', { eager: true, import: 'default' })
-);
+const overlays = overlaysFromFiles(realLocaleFiles);
 
 let registered = false;
 const hosts: { dispose(): void; host: HTMLElement; unregister(): void }[] = [];
