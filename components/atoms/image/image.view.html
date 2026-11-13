@@ -1,1 +1,1 @@
-<img if="{{ $.src }}" src="{{ $.src }}" alt="{{ $.decorative ? '' : $._alt }}" />
+<div class="frame" role="{{ $.interactive ? 'button' : null }}" tabindex="{{ $.interactive ? 0 : null }}" aria-label="{{ $.interactive ? $._alt : null }}" onclick="{{ onClick }}" onkeydown="{{ onKeyDown }}"><img if="{{ $.src }}" src="{{ $.src }}" alt="{{ $.decorative || $.interactive ? '' : $._alt }}" /></div>

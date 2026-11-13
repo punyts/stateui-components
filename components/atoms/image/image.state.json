@@ -1,7 +1,8 @@
 {
-    "summary": "A picture from an https URL or inline data, with a fit, an aspect ratio and a corner radius, on the image.fill backdrop",
+    "summary": "A picture from an https URL or inline data, with a fit, a ratio and a corner radius; interactive raises press",
     "category": "content",
-    "purposes": ["show a picture or photo", "display a product photo", "show a thumbnail with a fixed aspect ratio", "crop a picture to fit a frame"],
+    "purposes": ["show a picture or photo", "display a product photo", "show a thumbnail with a fixed aspect ratio", "crop a picture to fit a frame", "make a logo or a picture a button"],
+    "events": ["press"],
     "tokens": { "fill": "{color.surface.sunken}" },
     "properties": {
         "src": { "type": "url", "default": "", "validators": { "pattern": "^(?:data:|https:|$)" } },
@@ -9,6 +10,8 @@
         "decorative": { "type": "boolean", "default": false },
         "fit": { "type": "string", "values": ["cover", "contain"], "default": "cover", "reflect": true },
         "ratio": { "type": "string", "values": ["1:1", "4:3", "16:9", "auto"], "default": "16:9", "reflect": true },
-        "radius": { "type": "string", "values": ["none", "sm", "md", "lg", "full"], "default": "none", "reflect": true }
+        "radius": { "type": "string", "values": ["none", "sm", "md", "lg", "full"], "default": "none", "reflect": true },
+        "backdrop": { "type": "boolean", "default": true, "reflect": true },
+        "interactive": { "type": "boolean", "default": false, "reflect": true }
     }
 }
