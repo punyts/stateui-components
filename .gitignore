@@ -5,5 +5,7 @@ coverage/
 .build-stamp
 test-results/
 __screenshots__/
+# The references of the screenshot tests are kept (npm run test:visual)
+!test/visual/__screenshots__/
 .vitest-attachments/
 .test-build/

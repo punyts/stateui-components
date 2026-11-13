@@ -13,7 +13,7 @@
     color: var(--ui-color-text-base);
     background: var(--surface);
     border: var(--ui-panel-border-width) solid transparent;
-    border-radius: var(--ui-panel-radius);
+    border-radius: var(--corner-radius, var(--ui-panel-radius));
     box-shadow: var(--shadow);
     font-family: var(--ui-text-body-family);
     font-size: var(--ui-text-body-size);
@@ -108,6 +108,7 @@
 
 .body {
     flex: 1 1 auto;
+    min-block-size: 0;
 }
 
 /* :host and [layout-host] outrank the layout sheet, even its collapse rules, so an empty body stays hidden whatever its layout */

@@ -17,7 +17,7 @@
     inline-size: var(--field-width, 100%);
     max-inline-size: 100%;
     font-family: var(--ui-text-body-family);
-    font-size: var(--ui-text-body-size);
+    font-size: calc(var(--ui-field-font-size, var(--ui-text-body-size)) * var(--size-text-scale, 1));
     color: var(--ui-color-text-base);
 }
 

@@ -41,6 +41,7 @@
         "test:cov": "vitest run --coverage",
         "test:browser": "vitest run --config vitest.browser.config.ts",
         "test:perf": "vitest run --config vitest.perf.config.ts",
+        "test:visual": "vitest run --config vitest.visual.config.ts",
         "build:watch": "tsc -b tsconfig.build.json -w",
         "dev": "npm run build:watch"
     },

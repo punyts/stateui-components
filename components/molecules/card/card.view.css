@@ -15,7 +15,7 @@
     color: var(--ui-color-text-base);
     background: var(--surface);
     border: var(--ui-border-width-thin) solid var(--ui-color-border-base);
-    border-radius: var(--ui-card-radius);
+    border-radius: var(--corner-radius, var(--ui-card-radius));
     box-shadow: var(--shadow);
     font-family: var(--ui-text-body-family);
     font-size: var(--ui-text-body-size);

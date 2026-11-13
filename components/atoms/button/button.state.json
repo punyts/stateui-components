@@ -4,8 +4,9 @@
     "purposes": ["submit a form", "start an action", "save or cancel changes", "open a dialog or menu on press", "show a busy state while work runs", "let server logic react to a press"],
     "events": ["press"],
     "commands": ["focus"],
-    "shared": { "tone": { "default": "accent" }, "variant": { "default": "solid" }, "size": { "default": "md" } },
+    "shared": { "corners": {}, "tone": { "default": "accent" }, "variant": { "default": "solid" }, "size": { "default": "md" } },
     "tokens": {
+        "font": { "size": "{text.label.size}", "weight": "{text.label.weight}" },
         "radius": "{radius.md}",
         "padding": { "inline": "{space.inset.md}" },
         "gap": "{space.gap.sm}"

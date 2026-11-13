@@ -4,9 +4,10 @@
     "purposes": ["turn a setting on and off with one button", "toggle bold or italic in an editor", "mute or unmute sound", "switch a view option such as a grid", "mark an item as a favourite"],
     "events": ["change"],
     "commands": ["focus"],
-    "shared": { "tone": { "default": "accent" }, "variant": { "default": "outline" }, "size": { "default": "md" } },
+    "shared": { "corners": {}, "tone": { "default": "accent" }, "variant": { "default": "outline" }, "size": { "default": "md" } },
     "tokenGroup": "button",
     "tokens": {
+        "font": { "size": "{text.label.size}", "weight": "{text.label.weight}" },
         "radius": "{radius.md}",
         "padding": { "inline": "{space.inset.md}" },
         "gap": "{space.gap.sm}"

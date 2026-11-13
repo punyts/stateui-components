@@ -10,8 +10,9 @@ export default defineConfig({
         globals: true,
         globalSetup: ['./test/globalSetup.ts'],
         include: ['src/**/*.browser.test.ts', 'test/**/*.browser.test.ts'],
-        // Timing tests run on their own, one file at a time: vitest.perf.config.ts (npm run test:perf)
-        exclude: ['**/node_modules/**', '**/*.perf.browser.test.ts'],
+        // Timing tests run on their own, one file at a time: vitest.perf.config.ts (npm run test:perf); screenshots too:
+        // vitest.visual.config.ts (npm run test:visual)
+        exclude: ['**/node_modules/**', '**/*.perf.browser.test.ts', '**/*.visual.browser.test.ts'],
         passWithNoTests: false,
         // At most 6 test pages at once (12 by default on this machine): 56 s instead of 48 s, and a commit peak of about
         // 7 GB instead of 10.5 GB above what the machine already uses (test/browserServing.ts)

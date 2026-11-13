@@ -24,6 +24,28 @@ describe('selectField in Chromium', () => {
         mountComponent.unmountAll();
     });
 
+    it('should draw its chevron as a thin v, on the base surface, sunken when soft, clear when ghost, and round its corners as a pill', () => {
+        // Arrange
+        const node = { _label: 'Size', options: { phone: { _label: 'Phone' } }, value: 'phone' };
+        const look = (props: Record<string, unknown>) => {
+            const control = mountComponent('selectField', { ...node, ...props }).element.shadowRoot?.querySelector('select') as HTMLSelectElement;
+            const style = getComputedStyle(control);
+            const box = control.parentElement as Element;
+            return { chevron: getComputedStyle(box, '::after').content === '""' && getComputedStyle(box, '::after').rotate === '45deg', color: style.backgroundColor, radius: parseFloat(style.borderTopLeftRadius) };
+        };
+
+        // Act
+        const outline = look({});
+        const soft = look({ variant: 'soft' });
+        const ghost = look({ variant: 'ghost', corners: 'pill' });
+
+        // Assert
+        expect([outline.chevron, soft.chevron, ghost.chevron]).toEqual([true, true, true]);
+        expect(soft.color).not.toBe(outline.color);
+        expect(ghost.color).toBe('rgba(0, 0, 0, 0)');
+        expect(ghost.radius).toBeGreaterThan(100);
+    });
+
     it('should list $.data.statuses, select the linked value and write the choice back', async () => {
         // Arrange
         const mounted = mountComponent('selectField', { _label: 'Status', '<-options': '$.data.statuses', '<-value': '$.data.current' }, { data: { statuses, current: 'done' } });

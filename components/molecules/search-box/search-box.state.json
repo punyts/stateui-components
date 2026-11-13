@@ -9,7 +9,7 @@
         "border": "{border.width.thin}",
         "padding": { "inline": "{space.inset.sm}" }
     },
-    "shared": { "size": { "default": "md" } },
+    "shared": { "variant": { "default": "outline", "values": ["outline", "soft", "ghost"] }, "corners": {}, "size": { "default": "md" } },
     "events": ["change", "search"],
     "commands": ["focus", "clear"],
     "properties": {

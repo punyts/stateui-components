@@ -1,4 +1,4 @@
-:host { display: block; }
+:host { display: block; font-size: var(--text-size); line-height: var(--text-leading); }
 :host([element=span]) { display: inline; }
 .text {
     margin: 0;
@@ -12,6 +12,10 @@
 :host([tone]) .text { color: var(--tone); }
 :host([align=center]) .text { text-align: center; }
 :host([align=end]) .text { text-align: end; }
+/* `caps`: a small heading over a group, in capitals spaced a little apart */
+:host([caps]) .text { text-transform: uppercase; letter-spacing: 0.05em; }
+/* `muted`: the quieter text colour, for a small heading or a hint */
+:host([muted]) .text { color: var(--ui-color-text-muted); }
 .text[data-clamp] {
     display: -webkit-box;
     -webkit-box-orient: vertical;

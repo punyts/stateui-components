@@ -6,6 +6,7 @@
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
+    block-size: 100%;
     gap: var(--ui-tabs-gap);
     color: var(--ui-color-text-base);
     font-family: var(--ui-text-body-family);
@@ -106,9 +107,13 @@
     border-radius: var(--ui-radius-full);
 }
 
+/* The tabs fill a host of fixed height (a growing child of a column, a placement height), and the open tab scrolls
+   when it holds more than fits; a host of auto height is as tall as the open tab, as before */
 .panels {
     flex: 1 1 auto;
     min-inline-size: 0;
+    min-block-size: 0;
+    overflow-y: auto;
     padding: var(--ui-tabs-padding);
 }
 

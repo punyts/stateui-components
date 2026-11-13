@@ -20,13 +20,14 @@
     padding-block: 0;
     padding-inline: var(--ui-button-padding-inline);
     font-family: var(--ui-text-label-family);
-    font-size: var(--ui-text-label-size);
-    font-weight: var(--ui-text-label-weight);
+    /* The button's own text tokens (a theme can set button.font.size and weight), scaled by its size */
+    font-size: calc(var(--ui-button-font-size) * var(--size-text-scale, 1));
+    font-weight: var(--ui-button-font-weight);
     line-height: var(--ui-text-label-leading);
     color: var(--tone);
     background: var(--tone-soft);
     border: var(--ui-border-width-thin) solid transparent;
-    border-radius: var(--ui-button-radius);
+    border-radius: var(--corner-radius, var(--ui-button-radius));
     cursor: pointer;
     transition:
         background-color var(--ui-motion-duration-fast) var(--ui-motion-easing-standard),
