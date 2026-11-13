@@ -18,10 +18,13 @@ export default function controller({ element, store, basePath }: ControllerConte
         const children = store.get<unknown>(childrenPath);
         return children !== null && typeof children === 'object' ? Object.keys(children) : [];
     };
+    // A tab whose child's placement says `disabled` cannot be chosen: not by a click, a key or the select command
+    const enabled = (key: string): boolean => store.get<unknown>(`${childrenPath}.${key}.placement.disabled`) !== true;
     const resolve = (): string => {
         const all = keys();
         const active = store.get<unknown>(activePath);
-        return typeof active === 'string' && all.includes(active) ? active : (all[0] ?? '');
+        if (typeof active === 'string' && all.includes(active) && enabled(active)) return active;
+        return all.find(enabled) ?? all[0] ?? '';
     };
     let last = resolve();
     store.set(shownPath, last);
@@ -33,10 +36,10 @@ export default function controller({ element, store, basePath }: ControllerConte
         element.dispatchEvent(new CustomEvent('change', { detail: shown, bubbles: true, composed: true }));
     };
     const select = (key: string): void => {
-        if (!keys().includes(key)) return;
+        if (!keys().includes(key) || !enabled(key)) return;
         store.set(activePath, key);
     };
-    const tabs = (): HTMLElement[] => Array.from(element.shadowRoot?.querySelectorAll<HTMLElement>('[role="tab"]') ?? []);
+    const tabs = (): HTMLElement[] => Array.from(element.shadowRoot?.querySelectorAll<HTMLElement>('[role="tab"]:not(:disabled)') ?? []);
     const target = (event: KeyboardEvent, from: HTMLElement[]): HTMLElement | undefined => {
         const index = from.findIndex((tab) => tab === event.target || tab.contains(event.target as Node));
         const vertical = store.get<unknown>(`${basePath}.orientation`) === 'vertical';

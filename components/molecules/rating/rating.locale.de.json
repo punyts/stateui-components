@@ -1,0 +1,10 @@
+{
+    "_label": "Bewertung",
+    "_help": "",
+    "_valueText": "{value} von {max} Sternen",
+    "_empty": "Nicht bewertet",
+    "_errors": {
+        "required": "Bitte eine Bewertung wählen",
+        "max": "Zu viele Sterne"
+    }
+}

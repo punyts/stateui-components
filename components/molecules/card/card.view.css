@@ -59,7 +59,8 @@
     padding-inline: var(--pad);
 }
 
-.body:not(:has(> sui-node)),
+/* :host and [layout-host] outrank the layout sheet, even its collapse rules, so an empty body stays hidden whatever its layout */
+:host .body[layout-host]:not(:has(> sui-node)),
 :host([loading]) .body {
     display: none;
 }

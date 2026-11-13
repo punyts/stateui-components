@@ -9,7 +9,9 @@ export default function controller({ element, store, basePath }: ControllerConte
     const raise = (name: 'change' | 'search'): void => {
         element.dispatchEvent(new CustomEvent(name, { detail: control()?.value ?? '', bubbles: true, composed: true }));
     };
+    // A disabled or read-only box keeps its words: the clear command does nothing, as its button is not shown
     const clear = (): void => {
+        if (store.get<boolean>(`${basePath}.disabled`) || store.get<boolean>(`${basePath}.readonly`)) return;
         store.set(`${basePath}.value`, '');
         control()?.focus();
     };

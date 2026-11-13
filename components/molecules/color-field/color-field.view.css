@@ -1,0 +1,84 @@
+@include "control.css";
+@include "field.css";
+
+.box {
+    flex-wrap: wrap;
+    gap: var(--ui-space-gap-sm);
+}
+
+.picker {
+    box-sizing: border-box;
+    flex: none;
+    inline-size: var(--control-height, var(--ui-size-control-md));
+    block-size: var(--control-height, var(--ui-size-control-md));
+    margin: 0;
+    padding: calc(var(--ui-border-width-thin) * 2);
+    background: var(--ui-color-surface-base);
+    border: var(--ui-control-border) solid var(--ui-color-border-strong);
+    border-radius: var(--ui-control-radius);
+    cursor: pointer;
+}
+
+.picker::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.picker::-webkit-color-swatch {
+    border: 0;
+    border-radius: calc(var(--ui-control-radius) / 2);
+}
+
+.picker::-moz-color-swatch {
+    border: 0;
+    border-radius: calc(var(--ui-control-radius) / 2);
+}
+
+.picker:disabled {
+    background: var(--ui-color-surface-sunken);
+    border-color: var(--ui-color-border-base);
+    cursor: not-allowed;
+}
+
+.picker:disabled::-webkit-color-swatch {
+    opacity: 0.4;
+}
+
+/* The hex text shares the row with the swatch (a bare control is full width); the presets wrap onto their own row */
+.box .control {
+    flex: 1 1 0;
+    inline-size: auto;
+    min-inline-size: 9ch;
+    font-family: var(--ui-text-code-family);
+}
+
+.presets {
+    display: flex;
+    flex: 1 0 100%;
+    flex-wrap: wrap;
+    gap: var(--ui-space-gap-sm);
+}
+
+.preset {
+    --size: calc(var(--control-height, var(--ui-size-control-md)) * 0.75);
+    box-sizing: border-box;
+    flex: none;
+    inline-size: var(--size);
+    block-size: var(--size);
+    margin: 0;
+    padding: 0;
+    background: var(--swatch);
+    border: var(--ui-border-width-thin) solid var(--ui-color-border-strong);
+    border-radius: var(--ui-radius-full);
+    cursor: pointer;
+}
+
+.preset[aria-pressed="true"] {
+    box-shadow:
+        0 0 0 var(--ui-border-width-thick) var(--ui-color-surface-base),
+        0 0 0 calc(var(--ui-border-width-thick) * 2) var(--ui-field-selected-fill);
+}
+
+.preset:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}

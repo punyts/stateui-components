@@ -11,7 +11,8 @@
     "placement": {
         "_tab": { "type": "string", "kind": "content", "default": "" },
         "icon": { "type": "icon", "default": "" },
-        "badge": { "type": ["string", "number"], "default": "" }
+        "badge": { "type": ["string", "number"], "default": "" },
+        "disabled": { "type": "boolean", "default": false }
     },
     "properties": {
         "active": { "type": "string", "default": "" },

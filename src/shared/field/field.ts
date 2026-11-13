@@ -148,7 +148,8 @@ export function fieldDescribedBy(help: unknown, message: unknown): string | null
 /**
  * The part of a field's controller every field has. It keeps two runtime properties in step with the node, because a
  * view binding on an object (`_errors`) does not re-run when only a message inside it changes:
- * - `glyph`: the field's view draws its icon with a `<ui-icon state=".glyph">`, so `icon` is copied to `glyph.name`;
+ * - `glyph`: the field's view draws its icon with a `<ui-icon state=".glyph">`, so `icon` is copied to `glyph.name`
+ *   (only in a field that has `icon`; one without it declares no `glyph`);
  * - `message`: the text of `_errors` for the rule named by `error` (empty when there is none), which the view shows.
  * It also owns the field's validation: the baseline value (taken at mount), the rules, the runtime properties `error`,
  * `touched` and `dirty`, the commands `validate` and `reset` and the `change` event (`detail: { value }`, raised on every
@@ -165,7 +166,9 @@ export function fieldDescribedBy(help: unknown, message: unknown): string | null
 export function createField({ element, store, basePath }: ControllerContext, valueName = 'value', options: FieldOptions = {}): FieldMembers {
     const iconPath = `${basePath}.icon`;
     const syncGlyph = (): void => {
+        // A field without an `icon` property has no glyph to keep
         const icon = store.get<unknown>(iconPath);
+        if (icon === undefined) return;
         store.set(`${basePath}.glyph.name`, typeof icon === 'string' ? icon : '');
     };
     const messagePaths = [`${basePath}.error`, `${basePath}._errors`, `${basePath}._errors.$all`];

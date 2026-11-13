@@ -25,6 +25,15 @@ Shape partials a component's `state.json` merges in with `"includes": ["<name>"]
 ## slider/
 `slider.ts`: the pure parts of `sliderField`: `readScale` (min, max and step from the node), `snapValue`, `readThumbs`, `percentOf`, `limitsOf` (a range's thumbs hold each other), `valueForKey`, `valueAtFraction` and `nearestThumb`. `sliderField` imports it as `../shared/slider/slider.js`.
 
+## avatar/
+`initials.ts`: `initialsOf(name)`, the first letter of the first and of the last word in capitals. `avatar` and `avatarGroup` import it as `../shared/avatar/initials.js`.
+
+## color/
+`color.ts`: the pure parts of `colorField`: `HEX_COLOR`, `isHexColor`, `normalizeHex` (adds the `#`, writes `#abc` out as `#aabbcc`, lower case) and `COLOR_RULE` (`pattern`, the rule the field reports). `colorField` imports it as `../shared/color/color.js`.
+
+## rating/
+`rating.ts`: the pure parts of `rating`: `starsOf` (`max` read as 1 to `MAX_STARS`, else `DEFAULT_STARS`), `ratingOf` (a value rounded into 0 to the stars) and `ratingForKey` (arrows, Home, End and digits; Left and Right swapped in right-to-left text). `rating` imports it as `../shared/rating/rating.js`.
+
 ## steps/
 `steps.ts`: the pure parts of `stepper`: `planSteps` (number, done, current and disabled for every step, with the `linear` rule), `currentStep` and `keysOf`. `stepper` imports it as `../shared/steps/steps.js`.
 

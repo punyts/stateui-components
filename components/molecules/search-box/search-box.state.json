@@ -14,6 +14,8 @@
     "commands": ["focus", "clear"],
     "properties": {
         "value": { "type": "string", "default": "" },
+        "disabled": { "type": "boolean", "default": false },
+        "readonly": { "type": "boolean", "default": false },
         "_placeholder": { "type": "string", "kind": "content", "default": "Search" },
         "_label": { "type": "string", "kind": "content", "default": "Search" },
         "_clearLabel": { "type": "string", "kind": "content", "default": "Clear search" }

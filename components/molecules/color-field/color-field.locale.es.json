@@ -1,0 +1,11 @@
+{
+    "_label": "Color",
+    "_help": "",
+    "_pick": "Abrir el selector de color",
+    "_swatches": "Colores predefinidos",
+    "_swatch": "Usar {color}",
+    "_errors": {
+        "required": "Este campo es obligatorio",
+        "pattern": "Introduzca un color como # y seis dígitos hexadecimales"
+    }
+}

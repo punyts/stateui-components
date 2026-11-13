@@ -22,7 +22,6 @@
         "dirty": { "type": "boolean", "default": false, "runtime": true },
         "locked": { "type": "boolean", "default": false, "runtime": true },
         "message": { "type": "string", "default": "", "runtime": true },
-        "glyph": { "type": "object", "default": { "name": "", "decorative": true }, "runtime": true },
         "_label": { "type": "string", "kind": "content", "default": "Accept" },
         "_help": { "type": "string", "kind": "content", "default": "" },
         "_errors": {

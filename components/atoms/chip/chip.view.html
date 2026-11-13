@@ -1,0 +1,13 @@
+<span class="chip">
+    <button if="{{ $.selectable }}" class="main" type="button" aria-pressed="{{ $.selected ? 'true' : 'false' }}" disabled="{{ $.disabled }}" onclick="{{ onToggle }}" onkeydown="{{ onKeyDown }}">
+        <ui-icon class="glyph" size="sm" name="{{ $.icon }}" if="{{ $.icon }}"></ui-icon>
+        <span class="text">{{ $._text }}</span>
+    </button>
+    <span else="" class="main">
+        <ui-icon class="glyph" size="sm" name="{{ $.icon }}" if="{{ $.icon }}"></ui-icon>
+        <span class="text">{{ $._text }}</span>
+    </span>
+    <button if="{{ $.removable }}" class="remove" type="button" aria-label="{{ removeLabel($._remove, $._text) }}" disabled="{{ $.disabled }}" onclick="{{ onRemove }}" onkeydown="{{ onKeyDown }}">
+        <ui-icon name="x" size="sm"></ui-icon>
+    </button>
+</span>

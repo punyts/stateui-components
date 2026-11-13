@@ -82,14 +82,6 @@
             "default": "",
             "runtime": true
         },
-        "glyph": {
-            "type": "object",
-            "default": {
-                "name": "",
-                "decorative": true
-            },
-            "runtime": true
-        },
         "_label": {
             "type": "string",
             "kind": "content",

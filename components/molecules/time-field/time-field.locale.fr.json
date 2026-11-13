@@ -1,0 +1,9 @@
+{
+    "_label": "Heure",
+    "_help": "",
+    "_errors": {
+        "required": "Ce champ est obligatoire",
+        "min": "Trop tôt",
+        "max": "Trop tard"
+    }
+}

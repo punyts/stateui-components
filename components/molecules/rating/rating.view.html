@@ -1,0 +1,16 @@
+<div class="field" style="--field-width: {{ widthOf($.width) }}">
+    <span class="label" id="label">{{ $._label }}</span>
+    <div class="box">
+        <div id="control" class="stars" role="slider" tabindex="{{ ($.disabled || $.locked) ? -1 : 0 }}" aria-labelledby="label" aria-valuemin="0" aria-valuemax="{{ $.stars }}" aria-valuenow="{{ $.rating }}" aria-valuetext="{{ $.valueText }}" aria-disabled="{{ ($.disabled || $.locked) ? 'true' : null }}" aria-readonly="{{ $.readonly ? 'true' : null }}" aria-required="{{ $.required ? 'true' : null }}" aria-invalid="{{ $.error !== '' ? 'true' : null }}" aria-describedby="{{ describedBy($._help, $.message) }}" data-preview="{{ $.preview &gt; 0 ? '' : null }}" onkeydown="{{ onKeyDown }}" onblur="{{ onBlur }}" onpointermove="{{ onPointerMove }}" onpointerleave="{{ onPointerLeave }}" onclick="{{ onClick }}">
+            <span class="star" repeat="{{ $k,$i for $.stars }}" data-star="{{ $i + 1 }}" data-on="{{ $i &lt; ($.preview &gt; 0 ? $.preview : $.rating) ? '' : null }}" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" focusable="false"><path d="M12 2.5l2.94 5.96 6.56.95-4.75 4.63 1.12 6.54L12 17.5l-5.87 3.08 1.12-6.54L2.5 9.41l6.56-.95z" /></svg>
+            </span>
+        </div>
+    </div>
+    <div class="messages">
+        <p class="help" id="help" if="{{ $._help !== '' }}">{{ $._help }}</p>
+        <div class="alert" role="status" aria-live="polite">
+            <p class="error" id="error" if="{{ $.message !== '' }}">{{ $.message }}</p>
+        </div>
+    </div>
+</div>

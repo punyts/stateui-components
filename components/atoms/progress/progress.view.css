@@ -22,3 +22,50 @@
     from { transform: translateX(-100%); }
     to { transform: translateX(250%); }
 }
+:host([shape=ring]) { display: inline-flex; flex: none; vertical-align: middle; }
+.ring {
+    display: inline-grid;
+    place-items: center;
+    inline-size: calc(var(--icon-size) * 2.5);
+    block-size: calc(var(--icon-size) * 2.5);
+}
+.dial {
+    grid-area: 1 / 1;
+    inline-size: 100%;
+    block-size: 100%;
+    rotate: -90deg;
+}
+.groove,
+.arc {
+    fill: none;
+    stroke-width: 4;
+}
+.groove { stroke: var(--tone-soft); }
+.arc {
+    --fill: {{ $.value <= 0 ? 0 : ($.value >= $.max ? 100 : ($.value * 100) / $.max) }};
+    stroke: var(--tone);
+    stroke-linecap: butt;
+    stroke-dasharray: 100 100;
+    stroke-dashoffset: calc(100 - var(--fill));
+    transition: stroke-dashoffset var(--ui-motion-duration-slow) var(--ui-motion-easing-standard);
+}
+:host([indeterminate]) .arc {
+    stroke-dashoffset: 75;
+    transition: none;
+}
+:host([indeterminate]) .dial {
+    animation: turn calc(var(--ui-motion-duration-slow) * 4) linear infinite;
+}
+@keyframes turn {
+    from { rotate: -90deg; }
+    to { rotate: 270deg; }
+}
+.value {
+    grid-area: 1 / 1;
+    color: var(--ui-color-text-base);
+    font-family: var(--ui-text-caption-family);
+    font-size: calc(var(--icon-size) * 0.55);
+    font-weight: var(--ui-text-label-weight);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}

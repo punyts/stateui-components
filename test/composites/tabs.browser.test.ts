@@ -266,4 +266,23 @@ describe('tabs in Chromium', () => {
         expect(document.activeElement).not.toBe(mounted.element);
         expect(before).not.toBe(mounted.element);
     });
+
+    it('should never choose a disabled tab: not first, not by a click, an arrow key or the command', async () => {
+        // Arrange
+        const children = { one: text('First body', { _tab: 'One', disabled: true }), two: text('Second body', { _tab: 'Two' }), three: text('Third body', { _tab: 'Three', disabled: true }), four: text('Fourth', { _tab: 'Four' }) };
+        const mounted = mountComponent('tabs', { children });
+        const tabs = all(mounted.element, '[role=tab]');
+        expect(selectedKeys(mounted.element)).toEqual(['two']);
+        expect((tabs[0] as HTMLButtonElement).disabled).toBe(true);
+
+        // Act
+        command(mounted.element, 'select', 'three');
+        const afterCommand = selectedKeys(mounted.element);
+        (tabs[1] as HTMLElement).focus();
+        await userEvent.keyboard('{ArrowRight}');
+
+        // Assert
+        expect(afterCommand).toEqual(['two']);
+        expect(selectedKeys(mounted.element)).toEqual(['four']);
+    });
 });

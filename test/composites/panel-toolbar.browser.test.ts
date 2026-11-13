@@ -389,4 +389,43 @@ describe('toolbar in Chromium', () => {
         expect(bar.getAttribute('align')).toBe('end');
         expect(all(bar, '.row ui-button')).toHaveLength(2);
     });
+
+    it('should hide an empty body whatever layout it is given, also when it collapses', () => {
+        // Arrange
+        const layouts = [{ type: 'row' }, { type: 'grid', cols: 3 }, { type: 'region' }, { type: 'row', collapseBelow: 'xl' }];
+        const components: [string, Record<string, unknown>][] = [
+            ['panel', { _title: 'Empty' }],
+            ['card', { _title: 'Empty' }],
+            ['form', {}],
+            ['disclosure', { _title: 'Empty', open: true }],
+            ['window', { _title: 'Empty' }]
+        ];
+
+        // Act
+        const shown = components.flatMap(([component, properties]) =>
+            layouts.map((layout) => {
+                const mounted = mountComponent(component, { ...properties, layout, children: {} });
+                const body = part(mounted.element, '[layout-host]') as HTMLElement;
+                return `${component} ${JSON.stringify(layout)} ${getComputedStyle(body).display}`;
+            })
+        );
+
+        // Assert
+        expect(shown.filter((line) => !line.endsWith(' none'))).toEqual([]);
+    });
+
+    it('should lay out the children of a form by its own layout', () => {
+        // Arrange
+        const mounted = mountComponent('form', {
+            layout: { type: 'row' },
+            children: { a: { component: 'textField', _label: 'A' }, b: { component: 'textField', _label: 'B' } }
+        });
+
+        // Act
+        const [a, b] = all(mounted.element, '[layout-host] > sui-node > *').map(box) as [DOMRect, DOMRect];
+
+        // Assert
+        expect(b.left).toBeGreaterThan(a.left);
+        expect(b.top).toBeCloseTo(a.top, 0);
+    });
 });

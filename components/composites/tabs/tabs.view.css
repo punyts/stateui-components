@@ -52,7 +52,7 @@
     transition: color var(--ui-motion-duration-fast) var(--ui-motion-easing-standard), background-color var(--ui-motion-duration-fast) var(--ui-motion-easing-standard);
 }
 
-.tab:hover {
+.tab:hover:not(:disabled) {
     color: var(--ui-color-text-base);
 }
 
@@ -118,4 +118,10 @@
 
 :host([strip=hidden]) .tablist {
     display: none;
+}
+
+/* A tab that cannot be chosen */
+.tab:disabled {
+    color: var(--ui-color-text-disabled);
+    cursor: not-allowed;
 }

@@ -123,4 +123,22 @@ describe('searchBox in Chromium', () => {
         expect(control(mounted.element).getAttribute('aria-label')).toBe('Suche');
         expect(clearButton(mounted.element)?.getAttribute('aria-label')).toBe('Suche löschen');
     });
+
+    it('should keep its words while disabled or read-only: no clear button, and the clear command does nothing', () => {
+        // Arrange
+        const disabled = mountComponent('searchBox', { value: 'kept', disabled: true });
+        const readonly = mountComponent('searchBox', { value: 'kept', readonly: true });
+
+        // Act
+        (disabled.element as Commanded).commands.clear();
+        (readonly.element as Commanded).commands.clear();
+
+        // Assert
+        expect(control(disabled.element).disabled).toBe(true);
+        expect(control(readonly.element).readOnly).toBe(true);
+        expect(clearButton(disabled.element)).toBeNull();
+        expect(clearButton(readonly.element)).toBeNull();
+        expect(disabled.store.get('$.app.value')).toBe('kept');
+        expect(readonly.store.get('$.app.value')).toBe('kept');
+    });
 });

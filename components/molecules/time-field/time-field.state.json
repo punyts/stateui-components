@@ -1,0 +1,43 @@
+{
+    "summary": "A labelled time field that writes a 24-hour time (HH:MM), with optional earliest and latest times and a step",
+    "category": "forms",
+    "purposes": ["enter a time of day", "pick an opening or closing hour", "book a slot between earliest and latest times", "set a reminder or alarm time"],
+    "events": ["change", "invalid", "valid"],
+    "commands": ["validate", "reset", "focus", "clear"],
+    "tokenGroup": "field",
+    "tokens": {
+        "selected": { "fill": "{color.accent.base}", "on": "{color.accent.on}" },
+        "error": { "color": "{color.danger.base}" },
+        "label": { "gap": "{space.gap.sm}", "width": "calc({size.control.lg} * 3)" },
+        "help": { "size": "{text.caption.size}" }
+    },
+    "shared": { "size": { "default": "md" }, "density": {} },
+    "properties": {
+        "value": { "type": "string", "default": "", "validators": { "pattern": "^(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d)?)?$" } },
+        "min": { "type": "string", "default": "", "validators": { "pattern": "^(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d)?)?$" } },
+        "max": { "type": "string", "default": "", "validators": { "pattern": "^(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d)?)?$" } },
+        "step": { "type": "integer", "default": 60, "validators": { "range": { "min": 1 } } },
+        "disabled": { "type": "boolean", "default": false },
+        "readonly": { "type": "boolean", "default": false },
+        "titlePosition": { "type": "string", "values": ["top", "left", "inner", "hidden"], "default": "top", "reflect": true },
+        "width": { "type": ["string", "integer"], "default": "fill" },
+        "required": { "type": "boolean", "default": false },
+        "error": { "type": "string", "default": "", "runtime": true },
+        "touched": { "type": "boolean", "default": false, "runtime": true },
+        "dirty": { "type": "boolean", "default": false, "runtime": true },
+        "locked": { "type": "boolean", "default": false, "runtime": true },
+        "message": { "type": "string", "default": "", "runtime": true },
+        "_label": { "type": "string", "kind": "content", "default": "Time" },
+        "_help": { "type": "string", "kind": "content", "default": "" },
+        "_errors": {
+            "type": "map",
+            "items": "string",
+            "kind": "content",
+            "default": {
+                "required": "This field is required",
+                "min": "Too early",
+                "max": "Too late"
+            }
+        }
+    }
+}

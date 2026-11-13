@@ -1,0 +1,16 @@
+<div class="field" style="--field-width: {{ widthOf($.width) }}">
+    <label class="label" for="control">{{ $._label }}</label>
+    <div class="box">
+        <input class="picker" type="color" aria-label="{{ $._pick }}" disabled="{{ $.disabled || $.locked || $.readonly }}" value="{{ pickerColor($.value) }}" oninput="{{ onPick }}" onblur="{{ onBlur }}" />
+        <input id="control" class="control" type="text" spellcheck="false" autocomplete="off" maxlength="7" placeholder="#rrggbb" disabled="{{ $.disabled || $.locked }}" readonly="{{ $.readonly }}" aria-required="{{ $.required ? 'true' : null }}" aria-describedby="{{ describedBy($._help, $.message) }}" aria-invalid="{{ $.error !== '' ? 'true' : null }}" value="{{ $.value }}" bind="value" onchange="{{ onCommit }}" onblur="{{ onBlur }}" />
+        <div class="presets" role="group" aria-label="{{ $._swatches }}" if="{{ hasPresets($.presets) }}">
+            <button class="preset" type="button" repeat="{{ $k,$i,$v in $.presets }}" key="{{ $k }}" data-color="{{ $v.color }}" aria-label="{{ $v.label }}" aria-pressed="{{ isCurrent($v.color, $.value) }}" style="--swatch: {{ $v.color }}" disabled="{{ $.disabled || $.locked || $.readonly }}" onclick="{{ onPreset }}"></button>
+        </div>
+    </div>
+    <div class="messages">
+        <p class="help" id="help" if="{{ $._help !== '' }}">{{ $._help }}</p>
+        <div class="alert" role="status" aria-live="polite">
+            <p class="error" id="error" if="{{ $.message !== '' }}">{{ $.message }}</p>
+        </div>
+    </div>
+</div>

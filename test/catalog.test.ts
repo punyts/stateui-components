@@ -56,9 +56,9 @@ const difference = (found: readonly string[], spec: readonly string[]): { missin
     extra: found.filter((name) => !spec.includes(name))
 });
 
-/** Components that joined the library after the first set (Epic 8, plus popover, numberField and segmented); the Epic 4 and 5 counts below stay as the spec fixed them */
-const LATER_ATOMS: readonly string[] = ['segmented', 'markdown'];
-const LATER_MOLECULES: readonly string[] = ['numberField', 'comboboxField', 'multiSelectField', 'breadcrumb', 'pagination', 'sliderField', 'disclosure', 'stepper', 'dateRangeField', 'fileField', 'paintField'];
+/** Components that joined the library after the first set (Epic 8, plus popover, numberField, segmented, chip, timeField, rating, colorField and avatarGroup); the Epic 4 and 5 counts below stay as the spec fixed them */
+const LATER_ATOMS: readonly string[] = ['segmented', 'markdown', 'chip'];
+const LATER_MOLECULES: readonly string[] = ['numberField', 'comboboxField', 'multiSelectField', 'breadcrumb', 'pagination', 'sliderField', 'disclosure', 'stepper', 'dateRangeField', 'fileField', 'paintField', 'timeField', 'rating', 'colorField', 'avatarGroup'];
 const LATER_COMPOSITES: readonly string[] = ['popover', 'accordion', 'splitPane', 'tree', 'chart', 'board', 'calendar', 'recordGrid', 'messageList', 'drawing', 'scene3d', 'window'];
 const LATER_COMPOSED: readonly string[] = ['wizard', 'chatView'];
 
@@ -70,7 +70,7 @@ const EPIC_8_COMPONENTS = [
     'markdown', 'wizard', 'chatView'
 ] as const;
 
-const FIELDS = ['textField', 'textareaField', 'selectField', 'checkField', 'switchField', 'radioField', 'dateField', 'numberField', 'comboboxField', 'multiSelectField', 'sliderField', 'dateRangeField', 'fileField', 'paintField'] as const;
+const FIELDS = ['textField', 'textareaField', 'selectField', 'checkField', 'switchField', 'radioField', 'dateField', 'numberField', 'comboboxField', 'multiSelectField', 'sliderField', 'dateRangeField', 'fileField', 'paintField', 'timeField', 'rating', 'colorField'] as const;
 
 let names: IconNames;
 const isIconName = (name: string): boolean => names.isIconName(name);
