@@ -1,0 +1,20 @@
+{
+    "_label": "Fechas",
+    "_help": "",
+    "_start": "Fecha de inicio",
+    "_end": "Fecha de fin",
+    "_open": "Elegir fechas",
+    "_previous": "Mes anterior",
+    "_next": "Mes siguiente",
+    "_pickStart": "Elegir la fecha de inicio",
+    "_pickEnd": "Elegir la fecha de fin",
+    "_errors": {
+        "required": "Introduce una fecha de inicio y una de fin",
+        "format": "Introduce una fecha válida",
+        "order": "La fecha de fin es anterior a la de inicio",
+        "min": "Demasiado pronto",
+        "max": "Demasiado tarde",
+        "minDays": "El intervalo es demasiado corto",
+        "maxDays": "El intervalo es demasiado largo"
+    }
+}

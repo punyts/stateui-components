@@ -1,0 +1,7 @@
+{
+    "_label": "Activos",
+    "_help": "",
+    "_errors": {
+        "required": "Este campo es obligatorio"
+    }
+}

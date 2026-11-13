@@ -1,0 +1,21 @@
+{
+    "_label": "Archivos",
+    "_help": "",
+    "_choose": "Elegir archivos",
+    "_drop": "Suelta los archivos aquí o",
+    "_remove": "Quitar {name}",
+    "_errors": {
+        "required": "Añade un archivo",
+        "accept": "Este tipo de archivo no se acepta",
+        "maxSize": "El archivo es demasiado grande",
+        "maxFiles": "Demasiados archivos",
+        "too_large": "El archivo es demasiado grande",
+        "unsupported_type": "Este tipo de archivo no es compatible",
+        "quota": "Se alcanzó el límite de almacenamiento de esta app",
+        "not_found": "No se encontró la app",
+        "unauthorized": "No tienes permiso para subir archivos",
+        "offline": "No se pudo enviar el archivo",
+        "cancelled": "La subida se canceló",
+        "internal": "La subida falló"
+    }
+}

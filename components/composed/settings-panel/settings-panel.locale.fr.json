@@ -1,0 +1,81 @@
+{
+    "_title": "Paramètres",
+    "children": {
+        "menu": {
+            "children": {
+                "general": {
+                    "_label": "Général"
+                },
+                "notifications": {
+                    "_label": "Notifications"
+                },
+                "appearance": {
+                    "_label": "Apparence"
+                }
+            }
+        },
+        "sections": {
+            "children": {
+                "general": {
+                    "_title": "Général",
+                    "children": {
+                        "form": {
+                            "children": {
+                                "name": {
+                                    "_label": "Nom d’affichage"
+                                },
+                                "email": {
+                                    "_label": "Adresse e-mail"
+                                }
+                            },
+                            "actions": {
+                                "_title": "Enregistrer"
+                            }
+                        }
+                    }
+                },
+                "notifications": {
+                    "_title": "Notifications",
+                    "children": {
+                        "form": {
+                            "children": {
+                                "email": {
+                                    "_label": "Me prévenir par e-mail en cas d’activité"
+                                },
+                                "digest": {
+                                    "_label": "Heure du récapitulatif"
+                                }
+                            },
+                            "actions": {
+                                "_title": "Enregistrer"
+                            }
+                        }
+                    }
+                },
+                "appearance": {
+                    "_title": "Apparence",
+                    "children": {
+                        "form": {
+                            "children": {
+                                "theme": {
+                                    "_label": "Thème",
+                                    "options": {
+                                        "light": {
+                                            "_label": "Clair"
+                                        },
+                                        "dark": {
+                                            "_label": "Sombre"
+                                        }
+                                    }
+                                }
+                            },
+                            "actions": {
+                                "_title": "Enregistrer"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,92 @@
+{
+    "children": {
+        "stepper": {
+            "steps": {
+                "details": {
+                    "_label": "Detalles"
+                },
+                "options": {
+                    "_label": "Opciones"
+                },
+                "review": {
+                    "_label": "Revisar"
+                }
+            }
+        },
+        "tabs": {
+            "children": {
+                "details": {
+                    "placement": {
+                        "_tab": "Detalles"
+                    },
+                    "children": {
+                        "name": {
+                            "_label": "Nombre"
+                        },
+                        "email": {
+                            "_label": "Correo electrónico"
+                        }
+                    },
+                    "actions": {
+                        "children": {
+                            "next": {
+                                "_title": "Siguiente"
+                            }
+                        }
+                    }
+                },
+                "options": {
+                    "placement": {
+                        "_tab": "Opciones"
+                    },
+                    "children": {
+                        "plan": {
+                            "_label": "Plan",
+                            "options": {
+                                "basic": {
+                                    "_label": "Básico"
+                                },
+                                "pro": {
+                                    "_label": "Pro"
+                                }
+                            }
+                        },
+                        "newsletter": {
+                            "_label": "Enviarme el boletín"
+                        }
+                    },
+                    "actions": {
+                        "children": {
+                            "back": {
+                                "_title": "Atrás"
+                            },
+                            "next": {
+                                "_title": "Siguiente"
+                            }
+                        }
+                    }
+                },
+                "review": {
+                    "placement": {
+                        "_tab": "Revisar"
+                    },
+                    "children": {
+                        "confirm": {
+                            "_label": "Los datos son correctos"
+                        }
+                    },
+                    "actions": {
+                        "children": {
+                            "back": {
+                                "_title": "Atrás"
+                            },
+                            "next": {
+                                "_title": "Finalizar"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

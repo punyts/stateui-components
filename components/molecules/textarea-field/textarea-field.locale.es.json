@@ -1,0 +1,11 @@
+{
+    "_label": "Etiqueta",
+    "_placeholder": "",
+    "_help": "",
+    "_errors": {
+        "required": "Este campo es obligatorio",
+        "minLength": "Demasiado corto",
+        "maxLength": "Demasiado largo",
+        "pattern": "No tiene el formato esperado"
+    }
+}

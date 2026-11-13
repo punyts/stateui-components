@@ -1,0 +1,21 @@
+{
+    "_label": "Fichiers",
+    "_help": "",
+    "_choose": "Choisir des fichiers",
+    "_drop": "Déposez des fichiers ici ou",
+    "_remove": "Supprimer {name}",
+    "_errors": {
+        "required": "Ajoutez un fichier",
+        "accept": "Ce type de fichier n’est pas accepté",
+        "maxSize": "Le fichier est trop volumineux",
+        "maxFiles": "Trop de fichiers",
+        "too_large": "Le fichier est trop volumineux",
+        "unsupported_type": "Ce type de fichier n’est pas pris en charge",
+        "quota": "La limite de stockage de cette application est atteinte",
+        "not_found": "L’application est introuvable",
+        "unauthorized": "Vous n’êtes pas autorisé à téléverser des fichiers",
+        "offline": "Le fichier n’a pas pu être envoyé",
+        "cancelled": "Le téléversement a été annulé",
+        "internal": "Le téléversement a échoué"
+    }
+}

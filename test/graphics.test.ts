@@ -84,7 +84,7 @@ describe('the drawing and the 2D shapes in the catalog', () => {
         expect(Object.keys(entry.shape.properties.viewBox?.validators.fields ?? {})).toEqual(['x', 'y', 'width', 'height']);
         expect(entry.shape.childComponents).toEqual(Object.keys(SHAPES));
         expect((entry.tokens ?? []).map((token) => token.path)).toEqual(['drawing.background', 'drawing.height']);
-        expect(entry.locales).toEqual(['de']);
+        expect(entry.locales).toEqual(['de', 'es', 'fr']);
     });
 
     it.each(Object.entries(SHAPES))('should hold %s as a shape of size %s with the shared paint, transform, interaction and motion properties', (name, size) => {

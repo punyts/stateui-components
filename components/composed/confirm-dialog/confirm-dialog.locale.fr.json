@@ -1,0 +1,16 @@
+{
+    "_title": "Êtes-vous sûr ?",
+    "body": {
+        "_text": "Cette action est irréversible."
+    },
+    "footer": {
+        "children": {
+            "cancel": {
+                "_title": "Annuler"
+            },
+            "confirm": {
+                "_title": "Supprimer"
+            }
+        }
+    }
+}

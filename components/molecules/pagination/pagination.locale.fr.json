@@ -1,0 +1,7 @@
+{
+    "_label": "Pagination",
+    "_previous": "Précédent",
+    "_next": "Suivant",
+    "_page": "Page {page}",
+    "_pageSize": "Lignes par page"
+}

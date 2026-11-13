@@ -1,0 +1,9 @@
+{
+    "_label": "Etiqueta",
+    "_help": "",
+    "_errors": {
+        "required": "Este campo es obligatorio",
+        "min": "Demasiado pronto",
+        "max": "Demasiado tarde"
+    }
+}

@@ -350,7 +350,7 @@ describe('content in en and de', () => {
 
         // Assert
         expect(missing).toEqual([]);
-        expect(catalog.locales).toEqual(['de']);
+        expect(catalog.locales).toEqual(['de', 'es', 'fr']);
     });
 
     it('should give every content property an English text: a default, or a condition or requirement that asks the node for one', () => {

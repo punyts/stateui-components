@@ -1,0 +1,9 @@
+{
+    "_limitExceeded": "Límite superado",
+    "_moveAnnouncements": {
+        "pickedUp": "{name} recogido, posición {position} de {count} en {column}. Usa las teclas de flecha para moverlo, la barra espaciadora para soltarlo y Escape para cancelar.",
+        "moved": "{name} movido a la posición {position} de {count} en {column}.",
+        "dropped": "{name} soltado en la posición {position} de {count} en {column}.",
+        "cancelled": "Movimiento de {name} cancelado."
+    }
+}

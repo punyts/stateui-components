@@ -1,0 +1,26 @@
+{
+    "_label": "Dessin",
+    "_description": "Dessinez à la souris, au stylet ou au doigt : la peinture nécessite un dispositif de pointage.",
+    "_toolbar": "Outils de dessin",
+    "_tools": {
+        "brush": "Pinceau",
+        "eraser": "Gomme",
+        "line": "Ligne",
+        "rect": "Rectangle",
+        "ellipse": "Ellipse",
+        "fill": "Remplir"
+    },
+    "_color": "Couleur {value}",
+    "_size": "Taille {value}",
+    "_undo": "Annuler",
+    "_redo": "Rétablir",
+    "_clear": "Effacer",
+    "_errors": {
+        "required": "Dessinez quelque chose ici",
+        "too_large": "Le dessin est trop volumineux pour être enregistré",
+        "unsupported_type": "Le dessin n’a pas pu être enregistré dans ce format",
+        "quota": "La limite de stockage de cette application est atteinte",
+        "offline": "Le dessin n’a pas pu être enregistré",
+        "internal": "L’enregistrement du dessin a échoué"
+    }
+}

@@ -1,0 +1,15 @@
+{
+    "children": {
+        "composer": {
+            "children": {
+                "input": {
+                    "_label": "Message",
+                    "_placeholder": "Saisissez un message"
+                },
+                "send": {
+                    "_title": "Envoyer"
+                }
+            }
+        }
+    }
+}

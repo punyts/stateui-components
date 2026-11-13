@@ -1,0 +1,7 @@
+{
+    "children": {
+        "revenue": { "_title": "Ingresos", "children": { "stat": { "_label": "Este mes" } } },
+        "orders": { "_title": "Pedidos", "children": { "stat": { "_label": "Este mes" } } },
+        "customers": { "_title": "Clientes", "children": { "stat": { "_label": "Activos" } } }
+    }
+}

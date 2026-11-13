@@ -81,7 +81,7 @@ describe('scene3d and the 3D nodes in the catalog', () => {
         expect(Object.keys(entry.shape.properties.fog?.validators.fields ?? {})).toEqual(['color', 'near', 'far']);
         expect(entry.shape.childComponents).toEqual(Object.keys(NODES));
         expect((entry.tokens ?? []).map((token) => token.path)).toEqual(['scene3d.background', 'scene3d.ambient', 'scene3d.height']);
-        expect(entry.locales).toEqual(['de']);
+        expect(entry.locales).toEqual(['de', 'es', 'fr']);
     });
 
     it.each(Object.entries(NODES))('should hold %s as a shape of size %s with the shared 3D properties and the events press and hover', (name, size) => {

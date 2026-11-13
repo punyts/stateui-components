@@ -1,0 +1,7 @@
+{
+    "_previous": "Précédent",
+    "_next": "Suivant",
+    "_today": "Aujourd’hui",
+    "_more": "+{count}",
+    "_moreLabel": "Autres enregistrements : {count}"
+}

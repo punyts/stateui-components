@@ -1,0 +1,12 @@
+{
+    "_label": "Etiqueta",
+    "_help": "",
+    "_low": "Mínimo",
+    "_high": "Máximo",
+    "_errors": {
+        "required": "Este campo es obligatorio",
+        "min": "Demasiado pequeño",
+        "max": "Demasiado grande",
+        "step": "Paso no válido"
+    }
+}
