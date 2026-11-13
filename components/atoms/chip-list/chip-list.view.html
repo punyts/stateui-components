@@ -1,0 +1,11 @@
+<div class="chips" role="list" aria-label="{{ $._label !== '' ? $._label : null }}">
+    <span class="chip" role="listitem" repeat="{{ $k,$i,$v in $.items }}" key="{{ $k }}">
+        <span class="main">
+            <ui-icon class="glyph" size="sm" name="{{ $v.icon }}" if="{{ $v.icon }}"></ui-icon>
+            <span class="text" title="{{ $v.text }}">{{ $v.text }}</span>
+        </span>
+        <button if="{{ $.removable }}" class="remove" type="button" data-key="{{ $k }}" aria-label="{{ removeLabel($._remove, $v.text) }}" disabled="{{ $.disabled }}" onclick="{{ onRemove }}" onkeydown="{{ onKeyDown }}">
+            <ui-icon name="x" size="sm"></ui-icon>
+        </button>
+    </span>
+</div>
