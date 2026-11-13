@@ -34,6 +34,12 @@ Shape partials a component's `state.json` merges in with `"includes": ["<name>"]
 ## rating/
 `rating.ts`: the pure parts of `rating`: `starsOf` (`max` read as 1 to `MAX_STARS`, else `DEFAULT_STARS`), `ratingOf` (a value rounded into 0 to the stars) and `ratingForKey` (arrows, Home, End and digits; Left and Right swapped in right-to-left text). `rating` imports it as `../shared/rating/rating.js`.
 
+## pin/
+`pin.ts`: the pure parts of `pinField`: `pinLength` (`length` read as 4 to 8, else 6), `pinChars` (the digits of a text, or digits and letters), `typeAt` (characters typed into a box, never past the first empty one), `deleteAt`, `currentBox` (the box that takes the next character) and `boxForKey` (arrows, Home and End; Left and Right swapped in right-to-left text). `pinField` imports it as `../shared/pin/pin.js`.
+
+## palette/
+`palette.ts`: the pure parts of `commandPalette`: `readCommands` (the `commands` map in key order), `commandMatches` (label or keyword holds the query, case- and accent-insensitive, with `labelContains` of `field/combo.ts`) and `groupCommands` (the matches by group, in the order each group first appears). `commandPalette` imports it as `../shared/palette/palette.js`.
+
 ## steps/
 `steps.ts`: the pure parts of `stepper`: `planSteps` (number, done, current and disabled for every step, with the `linear` rule), `currentStep` and `keysOf`. `stepper` imports it as `../shared/steps/steps.js`.
 

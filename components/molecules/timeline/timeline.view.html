@@ -1,0 +1,15 @@
+<ol class="timeline" aria-label="{{ $._label }}" if="{{ hasRows($.rows) }}">
+    <li class="event" repeat="{{ $k,$i,$v in $.rows }}" key="{{ $k }}" data-tone="{{ $v.tone !== '' ? $v.tone : null }}">
+        <span class="marker" aria-hidden="true" data-icon="{{ $v.icon !== '' ? '' : null }}">
+            <ui-icon class="glyph" size="sm" name="{{ $v.icon }}" if="{{ $v.icon !== '' }}"></ui-icon>
+        </span>
+        <div class="content">
+            <div class="head">
+                <span class="title" if="{{ $v.title !== '' }}">{{ $v.title }}</span>
+                <span class="time" if="{{ $v.time !== '' }}">{{ $v.time }}</span>
+            </div>
+            <p class="text" if="{{ $v.text !== '' }}">{{ $v.text }}</p>
+        </div>
+    </li>
+</ol>
+<p class="empty" else="">{{ $._empty }}</p>

@@ -56,10 +56,10 @@ const difference = (found: readonly string[], spec: readonly string[]): { missin
     extra: found.filter((name) => !spec.includes(name))
 });
 
-/** Components that joined the library after the first set (Epic 8, plus popover, numberField, segmented, chip, timeField, rating, colorField and avatarGroup); the Epic 4 and 5 counts below stay as the spec fixed them */
-const LATER_ATOMS: readonly string[] = ['segmented', 'markdown', 'chip'];
-const LATER_MOLECULES: readonly string[] = ['numberField', 'comboboxField', 'multiSelectField', 'breadcrumb', 'pagination', 'sliderField', 'disclosure', 'stepper', 'dateRangeField', 'fileField', 'paintField', 'timeField', 'rating', 'colorField', 'avatarGroup'];
-const LATER_COMPOSITES: readonly string[] = ['popover', 'accordion', 'splitPane', 'tree', 'chart', 'board', 'calendar', 'recordGrid', 'messageList', 'drawing', 'scene3d', 'window'];
+/** Components that joined the library after the first set (Epic 8, plus popover, numberField, segmented, chip, timeField, rating, colorField, avatarGroup, codeBlock, toggleButton, timeline, pinField, carousel and commandPalette); the Epic 4 and 5 counts below stay as the spec fixed them */
+const LATER_ATOMS: readonly string[] = ['segmented', 'markdown', 'chip', 'codeBlock', 'toggleButton'];
+const LATER_MOLECULES: readonly string[] = ['numberField', 'comboboxField', 'multiSelectField', 'breadcrumb', 'pagination', 'sliderField', 'disclosure', 'stepper', 'dateRangeField', 'fileField', 'paintField', 'timeField', 'rating', 'colorField', 'avatarGroup', 'timeline', 'pinField'];
+const LATER_COMPOSITES: readonly string[] = ['popover', 'accordion', 'splitPane', 'tree', 'chart', 'board', 'calendar', 'recordGrid', 'messageList', 'drawing', 'scene3d', 'window', 'carousel', 'commandPalette'];
 const LATER_COMPOSED: readonly string[] = ['wizard', 'chatView'];
 
 /** Every component Epic 8 adds; all are built, so none is skipped */
@@ -70,7 +70,7 @@ const EPIC_8_COMPONENTS = [
     'markdown', 'wizard', 'chatView'
 ] as const;
 
-const FIELDS = ['textField', 'textareaField', 'selectField', 'checkField', 'switchField', 'radioField', 'dateField', 'numberField', 'comboboxField', 'multiSelectField', 'sliderField', 'dateRangeField', 'fileField', 'paintField', 'timeField', 'rating', 'colorField'] as const;
+const FIELDS = ['textField', 'textareaField', 'selectField', 'checkField', 'switchField', 'radioField', 'dateField', 'numberField', 'comboboxField', 'multiSelectField', 'sliderField', 'dateRangeField', 'fileField', 'paintField', 'timeField', 'rating', 'colorField', 'pinField'] as const;
 
 let names: IconNames;
 const isIconName = (name: string): boolean => names.isIconName(name);

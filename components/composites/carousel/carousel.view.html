@@ -1,0 +1,21 @@
+<section class="carousel" aria-roledescription="carousel" aria-label="{{ $._label }}" onkeydown="{{ onKeyDown }}" onpointerenter="{{ onPointerEnter }}" onpointerleave="{{ onPointerLeave }}" onfocusin="{{ onFocusIn }}" onfocusout="{{ onFocusOut }}">
+    <div class="slides" id="slides" aria-live="{{ $.playing ? 'off' : 'polite' }}">
+        <div class="slide" role="group" aria-roledescription="slide" if="{{ $.children }}" repeat="{{ $k,$i,$v in $.children }}" key="{{ $k }}" id="slide-{{ $k }}" aria-label="{{ labelOf($.slides, $k) }}" hidden="{{ $k !== $.shown }}">
+            <sui-node state="{{ $v }}"></sui-node>
+        </div>
+    </div>
+    <div class="controls" if="{{ hasMany($.slides) }}">
+        <button class="control rotate" type="button" if="{{ $.autoplay &gt; 0 }}" aria-label="{{ $.stopped ? $._start : $._stop }}" onclick="{{ onRotate }}">
+            <ui-icon size="sm" name="{{ $.stopped ? 'player-play' : 'player-pause' }}"></ui-icon>
+        </button>
+        <button class="control previous" type="button" aria-controls="slides" aria-label="{{ $._previous }}" disabled="{{ $.atStart }}" onclick="{{ onPrevious }}">
+            <ui-icon class="arrow" size="sm" name="chevron-left"></ui-icon>
+        </button>
+        <div class="dots" role="group" aria-label="{{ $._slides }}">
+            <button class="dot" type="button" repeat="{{ $k,$i,$v in $.slides }}" key="{{ $k }}" data-key="{{ $k }}" aria-controls="slide-{{ $k }}" aria-label="{{ $v.dot }}" aria-current="{{ $k === $.shown ? 'true' : null }}" onclick="{{ onDot }}"></button>
+        </div>
+        <button class="control next" type="button" aria-controls="slides" aria-label="{{ $._next }}" disabled="{{ $.atEnd }}" onclick="{{ onNext }}">
+            <ui-icon class="arrow" size="sm" name="chevron-right"></ui-icon>
+        </button>
+    </div>
+</section>

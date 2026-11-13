@@ -1,0 +1,20 @@
+<dialog class="dialog" overlay="" aria-label="{{ $._title }}">
+    <div class="frame">
+        <div class="search">
+            <ui-icon class="icon" size="sm" name="search"></ui-icon>
+            <input id="query" class="query" type="text" role="combobox" autofocus="" autocomplete="off" spellcheck="false" aria-autocomplete="list" aria-haspopup="listbox" aria-expanded="true" aria-controls="listbox" aria-activedescendant="{{ $.activeId !== '' ? $.activeId : null }}" aria-label="{{ $._search }}" placeholder="{{ $._placeholder }}" value="{{ $.query }}" oninput="{{ onInput }}" onkeydown="{{ onKeyDown }}" />
+        </div>
+        <div id="listbox" class="list" role="listbox" aria-label="{{ $._title }}" onpointerdown="{{ onListDown }}" onpointermove="{{ onPointerMove }}" onclick="{{ onPick }}">
+            <div class="group" role="group" repeat="{{ $gk,$gi,$g in $.results }}" key="{{ $gk }}" aria-labelledby="{{ $g.label !== '' ? $g.id : null }}">
+                <div class="heading" role="presentation" id="{{ $g.id }}" if="{{ $g.label !== '' }}">{{ $g.label }}</div>
+                <div class="option" role="option" repeat="{{ $k,$i,$v in $g.options }}" key="{{ $k }}" id="{{ $v.id }}" data-key="{{ $v.key }}" aria-selected="{{ $v.id === $.activeId ? 'true' : 'false' }}">
+                    <ui-icon class="glyph" size="sm" name="{{ $v.icon }}" if="{{ $v.icon !== '' }}"></ui-icon>
+                    <span class="label">{{ $v.label }}</span>
+                    <kbd class="shortcut" if="{{ $v.shortcut !== '' }}">{{ $v.shortcut }}</kbd>
+                </div>
+            </div>
+        </div>
+        <p class="empty" if="{{ $.found === 0 }}">{{ $._empty }}</p>
+        <p class="status" role="status">{{ $.open ? foundText($.found, $._found, $._empty) : '' }}</p>
+    </div>
+</dialog>

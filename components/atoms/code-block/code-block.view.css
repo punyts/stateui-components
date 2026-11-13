@@ -1,0 +1,120 @@
+:host {
+    display: block;
+}
+
+.block {
+    box-sizing: border-box;
+    margin: 0;
+    color: var(--ui-color-text-base);
+    background: var(--ui-codeblock-fill);
+    border: var(--ui-border-width-thin) solid var(--ui-color-border-base);
+    border-radius: var(--ui-codeblock-radius);
+}
+
+.bar {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space-gap-sm);
+    min-block-size: var(--ui-size-control-sm);
+    padding-block: var(--ui-space-gap-sm);
+    padding-inline: var(--ui-codeblock-padding);
+    border-block-end: var(--ui-border-width-thin) solid var(--ui-color-border-base);
+    font-family: var(--ui-text-caption-family);
+    font-size: var(--ui-text-caption-size);
+    line-height: var(--ui-text-caption-leading);
+}
+
+.language {
+    color: var(--ui-color-text-muted);
+    font-weight: var(--ui-text-label-weight);
+}
+
+.copy {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ui-space-gap-sm);
+    margin: 0;
+    margin-inline-start: auto;
+    padding-block: 0;
+    padding-inline: var(--ui-space-inset-sm);
+    min-block-size: var(--ui-size-control-sm);
+    color: var(--ui-color-text-muted);
+    font: inherit;
+    background: transparent;
+    border: var(--ui-border-width-thin) solid transparent;
+    border-radius: var(--ui-radius-sm);
+    cursor: pointer;
+}
+
+.copy:hover {
+    color: var(--ui-color-text-base);
+    border-color: var(--ui-color-border-base);
+}
+
+.copy[data-copied] {
+    color: var(--ui-codeblock-copied);
+}
+
+/* The live region only speaks; the button already shows the word */
+.status {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.pre {
+    box-sizing: border-box;
+    margin: 0;
+    padding: var(--ui-codeblock-padding);
+    overflow: auto;
+    font-family: var(--ui-text-code-family);
+    font-size: var(--ui-text-code-size);
+    font-weight: var(--ui-text-code-weight);
+    line-height: var(--ui-text-code-leading);
+    white-space: pre;
+    tab-size: 4;
+    border-radius: inherit;
+}
+
+:host([size=sm]) .pre {
+    font-size: var(--ui-text-caption-size);
+}
+
+:host([wrap]) .pre {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.code {
+    font: inherit;
+}
+
+:host([line-numbers]) .code {
+    display: block;
+    counter-reset: line;
+}
+
+/* A wrapped line keeps its continuation clear of the number */
+.line {
+    display: block;
+    min-block-size: 1lh;
+    padding-inline-start: calc(4ch + var(--ui-space-gap-md));
+    text-indent: calc(-4ch - var(--ui-space-gap-md));
+}
+
+.line::before {
+    counter-increment: line;
+    content: counter(line) / "";
+    display: inline-block;
+    inline-size: 4ch;
+    margin-inline-end: var(--ui-space-gap-md);
+    color: var(--ui-color-text-muted);
+    text-align: end;
+    text-indent: 0;
+    user-select: none;
+}
