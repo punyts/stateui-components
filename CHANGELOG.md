@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- **A `card` can be dragged.** With `draggable`, a press that moves past 5 px raises `dragStart`, then `dragMove` as the pointer moves and `dragEnd` when it is let go, each with the pointer's `{ x, y }` in the window (`cancelled: true` on Escape or a cancelled pointer). The card holds the pointer for the whole drag, so a page around a frame of cards learns where the drag goes. A drag is not a press. A native HTML drag was tried first: a test cannot drive one out of a cross-origin frame. Test: `card.browser.test.ts`.
+- **`searchBox` raises `input` with each letter**, with the words so far, as `input` and `textarea` do, so a list can be filtered as the person types (its first purpose). `change` still comes when the box is left, and `search` on Enter. Test: `search-box.browser.test.ts`.
 - **New component `chipList`**: a wrapping row of removable chips from a keyed map of `{ text, icon? }`. A chip's `×`, Delete or Backspace raises `remove` with its key and moves the focus to the next chip; the app drops the entry. `_remove` names the buttons in English, German, French and Spanish. Test: `chip-list.browser.test.ts`.
 - **A one-row `textareaField` centres its line.** Its block padding is now half of what the control height leaves around one line (at least the old gap), so a one-row textarea is exactly the control height of its size, with its text in the middle, as an input is. Before, its text sat at the top and the spare height was below it. A taller textarea gets a pixel more padding, so the fields screenshot reference is taken again. Test: `textarea-field.browser.test.ts`.
 - **A `selectField` label wider than the field ends in an ellipsis** instead of being cut off. Test: `select-field.browser.test.ts`.

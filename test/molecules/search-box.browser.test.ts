@@ -98,6 +98,20 @@ describe('searchBox in Chromium', () => {
         expect(mounted.element.shadowRoot?.activeElement).toBe(control(mounted.element));
     });
 
+    it('should raise input with the value as each letter is typed', async () => {
+        // Arrange
+        const mounted = mountComponent('searchBox', { value: '' });
+        const inputs = record(mounted.element, 'input');
+        const changes = record(mounted.element, 'change');
+
+        // Act
+        await userEvent.type(control(mounted.element), 'abc');
+
+        // Assert
+        expect(inputs).toEqual(['a', 'ab', 'abc']);
+        expect(changes).toEqual([]);
+    });
+
     it('should raise change on blur with the value', async () => {
         // Arrange
         const mounted = mountComponent('searchBox', { value: '' });

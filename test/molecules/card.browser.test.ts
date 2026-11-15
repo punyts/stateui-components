@@ -267,4 +267,82 @@ describe('card in Chromium', () => {
         expect(part(mounted.element, '.actions ui-button')).not.toBeNull();
         expect(seen.count).toBe(1);
     });
+
+    /** Records the drag events of a card, each as its name and where the pointer was */
+    const drags = (element: Element): string[] => {
+        const seen: string[] = [];
+        for (const name of ['dragStart', 'dragMove', 'dragEnd']) {
+            element.addEventListener(name, (event) => {
+                const detail = (event as CustomEvent<{ x: number; y: number; cancelled?: boolean }>).detail;
+                seen.push(`${name} ${Math.round(detail.x)},${Math.round(detail.y)}${detail.cancelled === true ? ' cancelled' : ''}`);
+            });
+        }
+        return seen;
+    };
+    const pointer = (element: Element, type: string, x: number, y: number): void => {
+        surface(element).dispatchEvent(new PointerEvent(type, { bubbles: true, composed: true, pointerId: 1, isPrimary: true, button: 0, clientX: x, clientY: y }));
+    };
+
+    it('should raise dragStart, dragMove and dragEnd with the pointer while draggable, and no press after a drag', () => {
+        // Arrange
+        const mounted = mountComponent('card', { _title: 'button', interactive: true, draggable: true });
+        const seen = drags(mounted.element);
+        const pressed = presses(mounted.element);
+
+        // Act
+        pointer(mounted.element, 'pointerdown', 10, 10);
+        pointer(mounted.element, 'pointermove', 12, 11);
+        pointer(mounted.element, 'pointermove', 40, 30);
+        pointer(mounted.element, 'pointermove', 90, 60);
+        pointer(mounted.element, 'pointerup', 90, 60);
+        surface(mounted.element).click();
+
+        // Assert: under the threshold nothing moves; the click that ends a drag is not a press
+        expect(seen).toEqual(['dragStart 40,30', 'dragMove 40,30', 'dragMove 90,60', 'dragEnd 90,60']);
+        expect(pressed.count).toBe(0);
+    });
+
+    it('should press, not drag, when the pointer stays put, and never drag when not draggable', () => {
+        // Arrange
+        const still = mountComponent('card', { _title: 'still', interactive: true, draggable: true });
+        const plain = mountComponent('card', { _title: 'plain', interactive: true });
+        const stillSeen = drags(still.element);
+        const plainSeen = drags(plain.element);
+        const pressed = presses(still.element);
+
+        // Act
+        pointer(still.element, 'pointerdown', 10, 10);
+        pointer(still.element, 'pointermove', 12, 12);
+        pointer(still.element, 'pointerup', 12, 12);
+        surface(still.element).click();
+        pointer(plain.element, 'pointerdown', 10, 10);
+        pointer(plain.element, 'pointermove', 90, 90);
+        pointer(plain.element, 'pointerup', 90, 90);
+
+        // Assert
+        expect(stillSeen).toEqual([]);
+        expect(pressed.count).toBe(1);
+        expect(plainSeen).toEqual([]);
+    });
+
+    it('should end a drag as cancelled on Escape or when the browser cancels the pointer', () => {
+        // Arrange
+        const escaped = mountComponent('card', { _title: 'escaped', draggable: true });
+        const lost = mountComponent('card', { _title: 'lost', draggable: true });
+        const escapedSeen = drags(escaped.element);
+        const lostSeen = drags(lost.element);
+
+        // Act
+        pointer(escaped.element, 'pointerdown', 0, 0);
+        pointer(escaped.element, 'pointermove', 30, 0);
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+        pointer(escaped.element, 'pointerup', 50, 0);
+        pointer(lost.element, 'pointerdown', 0, 0);
+        pointer(lost.element, 'pointermove', 0, 30);
+        pointer(lost.element, 'pointercancel', 0, 40);
+
+        // Assert
+        expect(escapedSeen).toEqual(['dragStart 30,0', 'dragMove 30,0', 'dragEnd 30,0 cancelled']);
+        expect(lostSeen).toEqual(['dragStart 0,30', 'dragMove 0,30', 'dragEnd 0,40 cancelled']);
+    });
 });

@@ -6,7 +6,7 @@ interface CommandHost {
 
 export default function controller({ element, store, basePath }: ControllerContext) {
     const control = (): HTMLInputElement | null => element.shadowRoot?.querySelector('input') ?? null;
-    const raise = (name: 'change' | 'search'): void => {
+    const raise = (name: 'input' | 'change' | 'search'): void => {
         element.dispatchEvent(new CustomEvent(name, { detail: control()?.value ?? '', bubbles: true, composed: true }));
     };
     // A disabled or read-only box keeps its words: the clear command does nothing, as its button is not shown
@@ -21,8 +21,12 @@ export default function controller({ element, store, basePath }: ControllerConte
         clear
     };
     return {
-        // The native input and search events are not the component's: it raises its own `change` and `search`
-        onInput: (event: Event) => event.stopPropagation(),
+        // The native input and search events are not the component's: it raises its own `input` with each letter (to
+        // filter as the person types), `change` when the box is left and `search` on Enter
+        onInput: (event: Event) => {
+            event.stopPropagation();
+            raise('input');
+        },
         onSearch: (event: Event) => event.stopPropagation(),
         onChange: () => raise('change'),
         onKeydown: (event: KeyboardEvent) => {
