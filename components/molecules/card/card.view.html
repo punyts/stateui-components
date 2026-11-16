@@ -1,4 +1,4 @@
-<div class="surface" role="{{ $.interactive ? 'button' : null }}" tabindex="{{ $.interactive ? 0 : null }}" aria-pressed="{{ $.interactive ? ($.selected ? 'true' : 'false') : null }}" onclick="{{ onClick }}" onkeydown="{{ onKeyDown }}" onpress="{{ onInnerPress }}">
+<div class="surface" role="{{ $.interactive ? 'button' : null }}" tabindex="{{ $.interactive ? 0 : null }}" aria-pressed="{{ $.interactive ? ($.selected ? 'true' : 'false') : null }}" onclick="{{ onClick }}" onkeydown="{{ onKeyDown }}" onpress="{{ onInnerPress }}" onpointerdown="{{ onPointerDown }}" onpointermove="{{ onPointerMove }}" onpointerup="{{ onPointerUp }}" onpointercancel="{{ onPointerCancel }}">
     <div class="media" if="{{ $.media }}">
         <sui-node state=".media"></sui-node>
     </div>

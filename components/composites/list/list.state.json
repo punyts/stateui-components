@@ -1,10 +1,13 @@
 {
     "summary": "A list of records drawn through recordList, with an empty state, selection, a current record and sorting",
+    "category": "data",
+    "purposes": ["show records one per row", "pick one record from a list", "sort a simple list of items"],
     "events": ["select", "activate", "sort"],
     "commands": ["clearSelection", "selectAll"],
     "shared": { "density": {} },
     "properties": {
         "key": { "type": "string", "validators": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" }, "default": "id" },
+        "rowHeight": { "type": "string", "values": ["sm", "md", "lg", "xl"], "default": "md" },
         "divided": { "type": "boolean", "default": false, "reflect": true },
         "selectable": { "type": "string", "values": ["none", "single", "multi"], "default": "none", "reflect": true },
         "sortBy": { "type": "string", "validators": { "pattern": "^$|^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*$" }, "default": "" },
@@ -12,6 +15,7 @@
         "items": { "type": ["array", "object"] },
         "selected": { "type": ["string", "number", "array"] },
         "total": { "type": "integer", "validators": { "range": { "min": 0 } } },
+        "window": { "type": "object" },
         "row": { "type": "node", "row": true },
         "empty": { "type": "node" },
         "_empty": { "type": "string", "kind": "content", "default": "No items" },
@@ -20,7 +24,6 @@
             "type": "object",
             "default": {
                 "component": "recordList",
-                "rowHeight": "md",
                 "overscan": 5,
                 "role": "list",
                 "multiselectable": false,

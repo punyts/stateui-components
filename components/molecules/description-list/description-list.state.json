@@ -1,5 +1,7 @@
 {
     "summary": "Read-only term and value pairs for one record, as a description list",
+    "category": "data",
+    "purposes": ["show read-only labels and values", "review the details of one record", "summarize an order before it is placed", "list properties of an item as terms"],
     "shared": { "density": {} },
     "tokenGroup": "description",
     "tokens": {
@@ -17,6 +19,7 @@
                 "field": { "type": "string" },
                 "format": { "type": "string", "values": ["number", "percent", "currency", "duration"] },
                 "currency": { "type": "string", "validators": { "pattern": "^[A-Z]{3}$" } },
+                "fractionDigits": { "type": "integer", "validators": { "range": { "min": 0, "max": 20 } } },
                 "node": { "type": "node", "row": true }
             },
             "default": {}

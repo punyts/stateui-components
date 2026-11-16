@@ -1,0 +1,26 @@
+{
+    "_label": "Dibujo",
+    "_description": "Dibuja con el ratón, un lápiz o el dedo: para pintar se necesita un puntero.",
+    "_toolbar": "Herramientas de pintura",
+    "_tools": {
+        "brush": "Pincel",
+        "eraser": "Borrador",
+        "line": "Línea",
+        "rect": "Rectángulo",
+        "ellipse": "Elipse",
+        "fill": "Rellenar"
+    },
+    "_color": "Color {value}",
+    "_size": "Tamaño {value}",
+    "_undo": "Deshacer",
+    "_redo": "Rehacer",
+    "_clear": "Borrar",
+    "_errors": {
+        "required": "Dibuja algo aquí",
+        "too_large": "El dibujo es demasiado grande para guardarlo",
+        "unsupported_type": "No se pudo guardar el dibujo en este formato",
+        "quota": "Se alcanzó el límite de almacenamiento de esta app",
+        "offline": "No se pudo guardar el dibujo",
+        "internal": "Error al guardar el dibujo"
+    }
+}

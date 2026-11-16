@@ -1,0 +1,17 @@
+{
+    "summary": "A compact tag with an optional icon, tone and variant; it can be removed with its × button or toggled on and off",
+    "category": "content",
+    "purposes": ["show a removable filter or tag", "toggle a filter on and off", "label a record with a short keyword", "show a chosen value as a compact pill", "pick categories as toggles"],
+    "events": ["change", "remove"],
+    "commands": ["focus"],
+    "shared": { "tone": { "default": "neutral" }, "variant": { "default": "soft" }, "size": { "default": "md" } },
+    "properties": {
+        "icon": { "type": "icon", "default": "" },
+        "removable": { "type": "boolean", "default": false },
+        "selectable": { "type": "boolean", "default": false },
+        "selected": { "type": "boolean", "default": false, "reflect": true },
+        "disabled": { "type": "boolean", "default": false, "reflect": true },
+        "_text": { "type": "string", "kind": "content", "default": "Chip" },
+        "_remove": { "type": "string", "kind": "content", "default": "Remove {text}" }
+    }
+}

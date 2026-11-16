@@ -1,0 +1,9 @@
+{
+    "summary": "A closed shape through a list of [x, y] points in a drawing",
+    "category": "graphics",
+    "purposes": ["draw a triangle or polygon", "outline a room or region on a plan", "draw a closed shape from corner points"],
+    "includes": ["paint", "transform", "interaction", "motion"],
+    "properties": {
+        "points": { "type": "array", "validators": { "points": true } }
+    }
+}

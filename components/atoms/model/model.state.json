@@ -1,0 +1,11 @@
+{
+    "summary": "A 3D model drawn from an uploaded GLB file of the app, with an optional animation clip",
+    "category": "graphics",
+    "purposes": ["show an uploaded GLB model", "display a product model in 3D", "play an animation clip of a 3D model"],
+    "includes": ["transform3d", "interaction3d", "motion3d"],
+    "properties": {
+        "src": { "type": "object", "validators": { "fileRef": { "types": ["model/gltf-binary"] } } },
+        "animation": { "type": "string" },
+        "playing": { "type": "boolean", "default": false }
+    }
+}

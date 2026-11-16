@@ -1,9 +1,12 @@
 {
     "summary": "A labelled field that takes files by picker or drop and keeps their references, with progress, remove and cancel",
+    "category": "forms",
+    "purposes": ["upload a file or attachment", "drop files onto a form", "attach documents with upload progress", "choose a photo to send"],
     "events": ["change", "invalid", "valid"],
     "commands": ["validate", "reset", "focus", "clear"],
     "tokenGroup": "field",
     "tokens": {
+        "font": { "size": "{text.body.size}", "weight": "{text.body.weight}" },
         "selected": { "fill": "{color.accent.base}", "on": "{color.accent.on}" },
         "error": { "color": "{color.danger.base}" },
         "label": { "gap": "{space.gap.sm}", "width": "calc({size.control.lg} * 3)" },

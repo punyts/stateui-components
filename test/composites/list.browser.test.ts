@@ -47,6 +47,31 @@ const mountList = async (
     return mounted;
 };
 
+/**
+ * Fixes the list's viewport at `rows` rows, so the window the viewport observer measures is `{ first: 0, count: rows }`
+ * whatever the number of items (a list otherwise grows to its rows, and adding or removing an item resizes the window and
+ * the pool). Resolves once a ResizeObserver has seen the new height: observers are called in the order they were created,
+ * so by then the record view's own observer has measured it too
+ */
+const pinViewport = async (mounted: MountedComponent, rows: number): Promise<void> => {
+    const root = recordList(mounted)?.shadowRoot;
+    const scroller = root?.querySelector('.list');
+    const probe = root?.querySelector('.probe');
+    if (!scroller || !probe) throw new Error('pinViewport: the recordList has no .list or .probe');
+    const height = rows * probe.getBoundingClientRect().height;
+    await new Promise<void>((resolve) => {
+        const observer = new ResizeObserver((entries) => {
+            if (entries.some((entry) => Math.abs(entry.contentRect.height - height) < 1)) {
+                observer.disconnect();
+                resolve();
+            }
+        });
+        observer.observe(scroller);
+        (mounted.element as HTMLElement).style.blockSize = `${height}px`;
+    });
+    await flush();
+};
+
 describe('list in Chromium', () => {
     afterEach(() => {
         vi.restoreAllMocks();
@@ -62,6 +87,29 @@ describe('list in Chromium', () => {
         expect(shown(mounted, 4)).toEqual(texts(0, 4));
         expect(mounted.store.get<number>('$.app.body.count')).toBe(4);
         expect(emptyText(mounted)).toBeUndefined();
+    });
+
+    it('should show the window of its record view as its own window property', async () => {
+        const mounted = await mountList(lines(40));
+
+        expect(mounted.store.get<unknown>('$.app.window')).toEqual({ first: 0, count: 10 });
+    });
+
+    it('should show paged items that are written after it mounted, as logic writes them', async () => {
+        // Arrange
+        const mounted = mountComponent('list', { row: rowTemplate }, { data: {} });
+        await flush();
+        await frames(3);
+
+        // Act
+        mounted.store.set('$.app.items', { 0: { id: 'l0', description: 'Line 0' }, 1: { id: 'l1', description: 'Line 1' } });
+        mounted.store.set('$.app.total', 2);
+        await flush();
+        await frames(3);
+
+        // Assert
+        expect(mounted.store.get<number>('$.app.body.count')).toBe(2);
+        expect(shown(mounted, 2)).toEqual(texts(0, 2));
     });
 
     it('should draw a line under each row only when divided', async () => {
@@ -98,6 +146,36 @@ describe('list in Chromium', () => {
         expect(reported).toEqual([]);
     });
 
+    it('should warn once with SUI-RUN-CLIPPED when a row is taller than the row height', async () => {
+        // Arrange
+        const warn = vi.spyOn(report, 'warning').mockImplementation(() => undefined);
+        const tall = {
+            component: 'panel',
+            children: { a: rowTemplate, b: rowTemplate, c: rowTemplate, d: rowTemplate }
+        };
+
+        // Act
+        await mountList(lines(3), { row: tall, rowHeight: 'sm' });
+        await frames(3);
+
+        // Assert
+        const clipped = warn.mock.calls.filter((call) => (call[1] as { code?: string } | undefined)?.code === 'SUI-RUN-CLIPPED');
+        expect(clipped).toHaveLength(1);
+        expect(String(clipped[0]?.[0])).toContain('rowHeight');
+    });
+
+    it('should not warn about clipping when the rows fit', async () => {
+        // Arrange
+        const warn = vi.spyOn(report, 'warning').mockImplementation(() => undefined);
+
+        // Act
+        await mountList(lines(3));
+        await frames(3);
+
+        // Assert
+        expect(warn.mock.calls.filter((call) => (call[1] as { code?: string } | undefined)?.code === 'SUI-RUN-CLIPPED')).toEqual([]);
+    });
+
     it('should update only the slot of the record whose linked field changed', async () => {
         // Arrange
         const mounted = await mountList(lines(5));
@@ -131,6 +209,7 @@ describe('list in Chromium', () => {
     it('should re-point the slots when items are added, removed and reordered, with no node per item', async () => {
         // Arrange
         const mounted = await mountList(lines(3));
+        await pinViewport(mounted, 10);
         const slots = slotElements(mounted);
         const array = (): Line[] => mounted.store.get<Line[]>('$.data.order.lines');
 
@@ -210,5 +289,52 @@ describe('list in Chromium', () => {
         // Assert
         const unlinked = unlink.mock.calls.map(([path]) => String(path));
         expect(unlinked).toEqual(expect.arrayContaining(['$.app.body.records', '$.app.body.row', '$.app.body.key', '$.app.body.total']));
+    });
+
+    it('should size its rows from rowHeight: md by default, sm shorter and lg taller', async () => {
+        // Arrange
+        const height = async (rowHeight?: string): Promise<number> => {
+            const mounted = await mountList(lines(2), rowHeight === undefined ? {} : { rowHeight });
+            await frames(2);
+            const slot = slotElements(mounted).find((candidate) => !candidate.hidden) as HTMLElement;
+            return slot.getBoundingClientRect().height;
+        };
+
+        // Act
+        const [md, sm, lg] = [await height(), await height('sm'), await height('lg')];
+
+        // Assert
+        expect(recordList(await mountList(lines(1), { rowHeight: 'lg' }))?.getAttribute('row-height')).toBe('lg');
+        expect(sm).toBeLessThan(md);
+        expect(lg).toBeGreaterThan(md);
+    });
+
+    it('should make xl rows taller than lg, so a two-line row fits', async () => {
+        // Arrange
+        const height = async (rowHeight: string): Promise<number> => {
+            const mounted = await mountList(lines(2), { rowHeight });
+            await frames(2);
+            const slot = slotElements(mounted).find((candidate) => !candidate.hidden) as HTMLElement;
+            return slot.getBoundingClientRect().height;
+        };
+
+        // Act
+        const [lg, xl] = [await height('lg'), await height('xl')];
+
+        // Assert
+        expect(xl).toBeGreaterThan(lg);
+        expect(xl).toBeGreaterThanOrEqual(lg * 1.4);
+    });
+
+    it('should take the row height of a recordlist.row theme override written on the list node', async () => {
+        // Arrange
+        const mounted = await mountList(lines(2), { theme: { recordlist: { row: '80px' } } });
+        await frames(2);
+
+        // Act
+        const slot = slotElements(mounted).find((candidate) => !candidate.hidden) as HTMLElement;
+
+        // Assert
+        expect(slot.getBoundingClientRect().height).toBe(80);
     });
 });

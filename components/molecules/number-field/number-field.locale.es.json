@@ -1,0 +1,14 @@
+{
+    "_label": "Etiqueta",
+    "_placeholder": "",
+    "_help": "",
+    "_decrement": "Disminuir",
+    "_increment": "Aumentar",
+    "_errors": {
+        "required": "Este campo es obligatorio",
+        "min": "Demasiado pequeño",
+        "max": "Demasiado grande",
+        "step": "Paso no válido",
+        "number": "Introduce un número"
+    }
+}

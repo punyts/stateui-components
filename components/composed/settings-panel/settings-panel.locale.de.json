@@ -1,0 +1,42 @@
+{
+    "_title": "Einstellungen",
+    "children": {
+        "menu": {
+            "children": { "general": { "_label": "Allgemein" }, "notifications": { "_label": "Benachrichtigungen" }, "appearance": { "_label": "Darstellung" } }
+        },
+        "sections": {
+            "children": {
+                "general": {
+                    "_title": "Allgemein",
+                    "children": {
+                        "form": {
+                            "children": { "name": { "_label": "Anzeigename" }, "email": { "_label": "E-Mail-Adresse" } },
+                            "actions": { "_title": "Speichern" }
+                        }
+                    }
+                },
+                "notifications": {
+                    "_title": "Benachrichtigungen",
+                    "children": {
+                        "form": {
+                            "children": {
+                                "email": { "_label": "Bei Aktivität per E-Mail benachrichtigen" },
+                                "digest": { "_label": "Zeit der Zusammenfassung" }
+                            },
+                            "actions": { "_title": "Speichern" }
+                        }
+                    }
+                },
+                "appearance": {
+                    "_title": "Darstellung",
+                    "children": {
+                        "form": {
+                            "children": { "theme": { "_label": "Design", "options": { "light": { "_label": "Hell" }, "dark": { "_label": "Dunkel" } } } },
+                            "actions": { "_title": "Speichern" }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

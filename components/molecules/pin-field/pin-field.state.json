@@ -1,0 +1,45 @@
+{
+    "summary": "A labelled one-time code or PIN entered in 4 to 8 boxes, digits only or letters too, optionally masked",
+    "category": "forms",
+    "purposes": ["enter a one-time code from a text message", "confirm sign-in with a verification code", "enter a PIN", "type a code sent by email", "unlock a screen with a passcode"],
+    "events": ["change", "complete", "invalid", "valid"],
+    "commands": ["validate", "reset", "focus", "clear"],
+    "tokenGroup": "field",
+    "tokens": {
+        "font": { "size": "{text.body.size}", "weight": "{text.body.weight}" },
+        "selected": { "fill": "{color.accent.base}", "on": "{color.accent.on}" },
+        "error": { "color": "{color.danger.base}" },
+        "label": { "gap": "{space.gap.sm}", "width": "calc({size.control.lg} * 3)" },
+        "help": { "size": "{text.caption.size}" }
+    },
+    "shared": { "size": { "default": "md" }, "density": {} },
+    "properties": {
+        "value": { "type": "string", "default": "", "validators": { "pattern": "^[0-9A-Za-z]{0,8}$" } },
+        "length": { "type": "integer", "default": 6, "validators": { "range": { "min": 4, "max": 8 } } },
+        "alphanumeric": { "type": "boolean", "default": false },
+        "masked": { "type": "boolean", "default": false },
+        "disabled": { "type": "boolean", "default": false },
+        "readonly": { "type": "boolean", "default": false },
+        "titlePosition": { "type": "string", "values": ["top", "left", "hidden"], "default": "top", "reflect": true },
+        "width": { "type": ["string", "integer"], "default": "auto" },
+        "required": { "type": "boolean", "default": false },
+        "error": { "type": "string", "default": "", "runtime": true },
+        "touched": { "type": "boolean", "default": false, "runtime": true },
+        "dirty": { "type": "boolean", "default": false, "runtime": true },
+        "locked": { "type": "boolean", "default": false, "runtime": true },
+        "message": { "type": "string", "default": "", "runtime": true },
+        "boxes": { "type": "object", "default": {}, "runtime": true },
+        "_label": { "type": "string", "kind": "content", "default": "Code" },
+        "_help": { "type": "string", "kind": "content", "default": "" },
+        "_digit": { "type": "string", "kind": "content", "default": "Digit {index} of {count}" },
+        "_errors": {
+            "type": "map",
+            "items": "string",
+            "kind": "content",
+            "default": {
+                "required": "This field is required",
+                "incomplete": "Enter the whole code"
+            }
+        }
+    }
+}

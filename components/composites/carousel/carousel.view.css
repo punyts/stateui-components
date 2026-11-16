@@ -1,0 +1,115 @@
+:host {
+    display: block;
+}
+
+.carousel {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: var(--ui-carousel-gap);
+    color: var(--ui-color-text-base);
+    font-family: var(--ui-text-body-family);
+    font-size: var(--ui-text-body-size);
+    line-height: var(--ui-text-body-leading);
+}
+
+.slides {
+    min-inline-size: 0;
+}
+
+.slide[hidden] {
+    display: none;
+}
+
+.controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--ui-space-gap-sm);
+}
+
+.control {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--ui-size-control-sm);
+    block-size: var(--ui-size-control-sm);
+    margin: 0;
+    padding: 0;
+    color: var(--ui-color-text-base);
+    background: var(--ui-color-surface-base);
+    border: var(--ui-border-width-thin) solid var(--ui-color-border-strong);
+    border-radius: var(--ui-radius-full);
+    cursor: pointer;
+    transition: background-color var(--ui-motion-duration-fast) var(--ui-motion-easing-standard);
+}
+
+.control:hover:not(:disabled) {
+    background: var(--ui-color-surface-sunken);
+}
+
+.control:disabled {
+    color: var(--ui-color-text-disabled);
+    border-color: var(--ui-color-border-base);
+    cursor: not-allowed;
+}
+
+/* The arrows point the way the slides move, so they turn round in right-to-left text */
+.arrow:dir(rtl) {
+    transform: scaleX(-1);
+}
+
+.dots {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: var(--ui-carousel-dot);
+}
+
+/* The dot is drawn small inside a target big enough to press */
+.dot {
+    position: relative;
+    inline-size: calc(var(--ui-carousel-dot) * 3);
+    block-size: calc(var(--ui-carousel-dot) * 3);
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: var(--ui-radius-full);
+    cursor: pointer;
+}
+
+.dot::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    inline-size: calc(var(--ui-carousel-dot) * 1.5);
+    block-size: calc(var(--ui-carousel-dot) * 1.5);
+    background: var(--ui-color-border-strong);
+    border-radius: var(--ui-radius-full);
+    transition:
+        background-color var(--ui-motion-duration-fast) var(--ui-motion-easing-standard),
+        inline-size var(--ui-motion-duration-fast) var(--ui-motion-easing-standard);
+}
+
+.dot:hover::after {
+    background: var(--ui-color-text-muted);
+}
+
+.dot[aria-current=true]::after {
+    inline-size: calc(var(--ui-carousel-dot) * 2.5);
+    background: var(--ui-carousel-current);
+}
+
+@media (forced-colors: active) {
+    .dot::after {
+        background: ButtonText;
+    }
+
+    .dot[aria-current=true]::after {
+        background: Highlight;
+    }
+}

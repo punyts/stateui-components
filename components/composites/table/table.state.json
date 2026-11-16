@@ -1,5 +1,7 @@
 {
     "summary": "A table over a list of records: keyed columns, a fixed header, a virtual body, sortable columns and row selection",
+    "category": "data",
+    "purposes": ["list transactions in sortable columns", "show records in rows and columns", "select rows of a large data set"],
     "events": ["sort", "select", "activate"],
     "commands": ["delete", "clearSelection", "selectAll"],
     "shared": { "density": {} },
@@ -26,6 +28,7 @@
                 "sortable": { "type": "boolean", "default": false },
                 "format": { "type": "string", "values": ["number", "percent", "currency", "duration"] },
                 "currency": { "type": "string", "validators": { "pattern": "^[A-Z]{3}$" } },
+                "fractionDigits": { "type": "integer", "validators": { "range": { "min": 0, "max": 20 } } },
                 "cell": { "type": "node", "row": true }
             },
             "default": {}
@@ -33,6 +36,7 @@
         "items": { "type": ["array", "object"] },
         "selected": { "type": ["string", "number", "array"] },
         "total": { "type": "integer", "validators": { "range": { "min": 0 } } },
+        "window": { "type": "object" },
         "empty": { "type": "node" },
         "_empty": { "type": "string", "kind": "content", "default": "No records" },
         "current": { "type": "object", "default": {}, "runtime": true, "exposed": true },

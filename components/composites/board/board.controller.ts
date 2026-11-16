@@ -6,6 +6,7 @@ import type { ColumnBox, ColumnSize, Place } from '../shared/drag/drag.js';
 import { toNumber } from '../shared/format/format.js';
 import { buildBoard, planMove } from '../shared/records/board.js';
 import type { RecordViewElement } from '../shared/records/recordView.js';
+import { isUnrendered } from '../shared/records/viewport.js';
 
 /** The properties of the board that a column body reads through a link, by the body's property name */
 const PASSED: Readonly<Record<string, string>> = {
@@ -483,7 +484,7 @@ export default function controller({ element, store, basePath }: ControllerConte
         }
         boardElement = board;
         observer = new ResizeObserver((entries) => {
-            for (const entry of entries) cardPx = entry.contentRect.height;
+            for (const entry of entries) if (!isUnrendered(entry)) cardPx = entry.contentRect.height;
         });
         observer.observe(probe);
         board.addEventListener('pointerdown', onPointerDown);

@@ -1,0 +1,20 @@
+{
+    "_title": "Modifier",
+    "body": {
+        "children": {
+            "name": {
+                "_label": "Nom"
+            }
+        }
+    },
+    "footer": {
+        "children": {
+            "cancel": {
+                "_title": "Annuler"
+            },
+            "save": {
+                "_title": "Enregistrer"
+            }
+        }
+    }
+}

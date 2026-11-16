@@ -1,17 +1,20 @@
 {
     "component": "panel",
-    "layout": { "type": "region" },
+    "summary": "A list of records beside the details of the one that is picked; stacks on a phone",
+    "category": "data",
+    "purposes": ["pick a record and see its details beside the list", "browse an inbox with a reading pane", "show a list and the selected item side by side"],
+    "layout": { "type": "grid", "cols": 3, "collapseBelow": "md" },
     "children": {
         "list": {
             "component": "list",
-            "placement": { "region": "w" },
+            "placement": { "span": 1 },
             "selectable": "single",
             "divided": true,
             "row": { "component": "text", "<-_text": "$row.name" }
         },
         "detail": {
             "component": "panel",
-            "placement": { "region": "center" },
+            "placement": { "span": 2 },
             "_title": "Details",
             "actions": {
                 "component": "button",

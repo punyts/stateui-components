@@ -33,6 +33,24 @@ describe('form in Chromium', () => {
         mountComponent.unmountAll();
     });
 
+    it('should let a toolbar in the actions fill the row, so align end puts its button at the end', async () => {
+        // Arrange
+        const mounted = mountForm(
+            { name: field({ _label: 'Name' }) },
+            { actions: { component: 'toolbar', align: 'end', children: { next: { component: 'button', _title: 'Next' } } } }
+        );
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+
+        // Act
+        const actions = mounted.element.shadowRoot?.querySelector('.actions') as HTMLElement;
+        const toolbar = actions.querySelector('ui-toolbar') as HTMLElement;
+        const button = toolbar.shadowRoot?.querySelector('ui-button') as HTMLElement;
+
+        // Assert
+        expect(toolbar.getBoundingClientRect().width).toBeCloseTo(actions.getBoundingClientRect().width, 0);
+        expect(actions.getBoundingClientRect().right - button.getBoundingClientRect().right).toBeLessThan(24);
+    });
+
     it('should block on a required field: errorCount, status and the summary follow the failed validation', () => {
         // Arrange
         const mounted = mountForm({ name: field({ required: true }), note: field() });

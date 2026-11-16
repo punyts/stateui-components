@@ -1,11 +1,15 @@
 {
     "summary": "One entry of a menu or navigation: an icon, a label, a description and a shortcut hint",
+    "category": "navigation",
+    "purposes": ["list an action in a menu with its shortcut", "show one entry of a side navigation", "describe a choice in a dropdown list"],
     "events": ["press"],
     "properties": {
         "icon": { "type": "icon", "default": "" },
         "disabled": { "type": "boolean", "default": false },
         "selected": { "type": "boolean", "default": false, "reflect": true },
         "shortcut": { "type": "string", "default": "" },
+        "screen": { "type": "string", "default": "" },
+        "params": { "type": "object", "default": {} },
         "_label": { "type": "string", "kind": "content", "default": "Menu item" },
         "_description": { "type": "string", "kind": "content", "default": "" }
     }

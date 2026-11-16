@@ -4,8 +4,24 @@
     --sui-row-h: var(--ui-recordlist-row);
 }
 
+/* `rowHeight` md keeps the token; sm and lg follow the small and large control heights at the same density */
+:host([row-height=sm]) {
+    --sui-row-h: calc(var(--ui-size-control-sm) * var(--ui-density-factor));
+}
+
+:host([row-height=lg]) {
+    --sui-row-h: calc(var(--ui-size-control-lg) * var(--ui-density-factor));
+}
+
+/* xl fits a two-line row: one and a half large control heights */
+:host([row-height=xl]) {
+    --sui-row-h: calc(var(--ui-size-control-lg) * 1.5 * var(--ui-density-factor));
+}
+
+/* At most the viewport height, so a list that grows to its rows still scrolls and renders only the rows in view */
 .list {
     block-size: 100%;
+    max-block-size: 100dvh;
     overflow-y: auto;
     overflow-x: hidden;
     scrollbar-gutter: stable;
@@ -89,9 +105,36 @@
 }
 
 .slot[data-pending] > .pending {
-    padding-inline-start: calc(var(--sui-level, 0) * var(--sui-indent, 0px) + var(--ui-space-inset-md));
+    padding-inline-start: calc(var(--sui-level, 0) * var(--sui-indent, 0px) + var(--sui-twisty, 0px) + var(--ui-space-inset-md));
 }
 
 .pending ui-skeleton {
     inline-size: 100%;
+}
+
+/* A tree row indents by its level and leaves room for the expand glyph, so a leaf lines up with its siblings that have one */
+.slot[role="treeitem"] {
+    --sui-twisty: 1.5rem;
+    padding-inline-start: calc(var(--sui-level, 0) * var(--sui-indent, 0px) + var(--sui-twisty));
+    box-sizing: border-box;
+}
+
+.twisty {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: calc(var(--sui-level, 0) * var(--sui-indent, 0px));
+    inline-size: var(--sui-twisty);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ui-color-text-muted);
+    cursor: pointer;
+}
+
+.list:dir(rtl) .slot[aria-expanded="false"] .twisty ui-icon {
+    transform: scaleX(-1);
+}
+
+.twisty ui-icon {
+    display: flex;
 }

@@ -2,7 +2,7 @@ import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { DEFAULT_LEAVES, KIND_GROUPS, OVERLAY_KINDS, SHIPPED_OVERLAYS, exposedPathResolves, libraryFromCatalog, resolveNode, validateDocument } from '@punyts/stateui-app/core';
+import { COMPONENT_CATEGORIES, DEFAULT_LEAVES, KIND_GROUPS, OVERLAY_KINDS, SHIPPED_OVERLAYS, exposedPathResolves, libraryFromCatalog, resolveNode, validateDocument } from '@punyts/stateui-app/core';
 import type { JsonValue, PropertyShape } from '@punyts/stateui-app/core';
 import { formatError } from '@punyts/stateui-app/build';
 import type { Catalog, ComposedCatalogEntry, RootCatalogEntry } from '@punyts/stateui-app/build';
@@ -31,14 +31,21 @@ const SPEC_MOLECULES = [
 
 /** The 13 composites of Epic 5 (the Epic 8 composites, such as recordGrid, accordion and wizard, are not in this set) */
 const SPEC_COMPOSITES = [
-    'panel', 'toolbar', 'page', 'nav', 'form', 'recordList', 'list', 'modal', 'drawer', 'tabs', 'table', 'menu', 'toastRegion'
+    'panel', 'toolbar', 'app', 'nav', 'form', 'recordList', 'list', 'modal', 'drawer', 'tabs', 'table', 'menu', 'toastRegion'
 ] as const;
 
 /** Root components that are parts of another component, not placed by a minion: the row `table` builds per record */
 const PART_COMPONENTS = ['tableRow'] as const;
 
 /** The six composed components of Epic 5 */
-const SPEC_COMPOSED = ['confirmDialog', 'formDialog', 'masterDetail', 'settingsPage', 'crudTable', 'dashboardGrid'] as const;
+const SPEC_COMPOSED = ['confirmDialog', 'formDialog', 'masterDetail', 'settingsPanel', 'crudTable', 'dashboardGrid'] as const;
+
+/** The 2D shape components of the graphics epic 1 (G1.3) and the 3D nodes of epic 3 (G3.4): shape tier, in atoms and molecules, with no element */
+const SHAPE_NAMES = ['rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'path', 'drawText', 'drawImage', 'drawGroup', 'drawRepeat', 'camera', 'light', 'mesh', 'model', 'group3d', 'repeat3d', 'label3d'] as const;
+const elements = catalog.components.filter((entry) => entry.tier !== 'shape');
+/** The shapes in `atoms` and in `molecules`: they need search keys like the other atoms and molecules */
+const SHAPE_MOLECULES = ['drawGroup', 'drawRepeat', 'group3d', 'repeat3d'] as const;
+const SHAPE_ATOMS = SHAPE_NAMES.filter((name) => !(SHAPE_MOLECULES as readonly string[]).includes(name));
 
 const composedEntries = catalog.components.filter((entry): entry is ComposedCatalogEntry => entry.tier === 'composed');
 const library = libraryFromCatalog(catalog);
@@ -49,10 +56,10 @@ const difference = (found: readonly string[], spec: readonly string[]): { missin
     extra: found.filter((name) => !spec.includes(name))
 });
 
-/** Components that joined the library after the first set (Epic 8, plus popover, numberField and segmented); the Epic 4 and 5 counts below stay as the spec fixed them */
-const LATER_ATOMS: readonly string[] = ['segmented', 'markdown'];
-const LATER_MOLECULES: readonly string[] = ['numberField', 'comboboxField', 'multiSelectField', 'breadcrumb', 'pagination', 'sliderField', 'disclosure', 'stepper', 'dateRangeField', 'fileField'];
-const LATER_COMPOSITES: readonly string[] = ['popover', 'accordion', 'splitPane', 'tree', 'chart', 'board', 'calendar', 'recordGrid', 'messageList'];
+/** Components that joined the library after the first set (Epic 8, plus popover, numberField, segmented, chip, timeField, rating, colorField, avatarGroup, codeBlock, toggleButton, timeline, pinField, carousel and commandPalette); the Epic 4 and 5 counts below stay as the spec fixed them */
+const LATER_ATOMS: readonly string[] = ['segmented', 'markdown', 'chip', 'chipList', 'codeBlock', 'toggleButton'];
+const LATER_MOLECULES: readonly string[] = ['numberField', 'comboboxField', 'multiSelectField', 'breadcrumb', 'pagination', 'sliderField', 'disclosure', 'stepper', 'dateRangeField', 'fileField', 'paintField', 'timeField', 'rating', 'colorField', 'avatarGroup', 'timeline', 'pinField'];
+const LATER_COMPOSITES: readonly string[] = ['popover', 'accordion', 'splitPane', 'tree', 'chart', 'board', 'calendar', 'recordGrid', 'messageList', 'drawing', 'scene3d', 'window', 'carousel', 'commandPalette'];
 const LATER_COMPOSED: readonly string[] = ['wizard', 'chatView'];
 
 /** Every component Epic 8 adds; all are built, so none is skipped */
@@ -63,7 +70,7 @@ const EPIC_8_COMPONENTS = [
     'markdown', 'wizard', 'chatView'
 ] as const;
 
-const FIELDS = ['textField', 'textareaField', 'selectField', 'checkField', 'switchField', 'radioField', 'dateField', 'numberField', 'comboboxField', 'multiSelectField', 'sliderField', 'dateRangeField', 'fileField'] as const;
+const FIELDS = ['textField', 'textareaField', 'selectField', 'checkField', 'switchField', 'radioField', 'dateField', 'numberField', 'comboboxField', 'multiSelectField', 'sliderField', 'dateRangeField', 'fileField', 'paintField', 'timeField', 'rating', 'colorField', 'pinField'] as const;
 
 let names: IconNames;
 const isIconName = (name: string): boolean => names.isIconName(name);
@@ -104,7 +111,7 @@ const sizeOfName = (name: string): string | undefined => catalog.components.find
 describe('the component catalog holds the first library', () => {
     it('should hold exactly the atoms the component spec names (16 and the later ones), each of size atom', () => {
         // Arrange
-        const found = catalog.components.filter((entry) => entry.size === 'atom').map((entry) => entry.name);
+        const found = elements.filter((entry) => entry.size === 'atom').map((entry) => entry.name);
 
         // Assert
         expect({ missing: [...SPEC_ATOMS, ...LATER_ATOMS].filter((name) => !found.includes(name)), extra: found.filter((name) => ![...SPEC_ATOMS, ...LATER_ATOMS].includes(name)) }).toEqual({
@@ -116,7 +123,7 @@ describe('the component catalog holds the first library', () => {
 
     it('should hold exactly the molecules the component spec names (16 and the later ones), each of size molecule', () => {
         // Arrange
-        const found = catalog.components.filter((entry) => entry.size === 'molecule').map((entry) => entry.name);
+        const found = elements.filter((entry) => entry.size === 'molecule').map((entry) => entry.name);
 
         // Assert
         expect({ missing: [...SPEC_MOLECULES, ...LATER_MOLECULES].filter((name) => !found.includes(name)), extra: found.filter((name) => ![...SPEC_MOLECULES, ...LATER_MOLECULES].includes(name)) }).toEqual({
@@ -126,10 +133,20 @@ describe('the component catalog holds the first library', () => {
         expect(found).toHaveLength(16 + LATER_MOLECULES.length);
     });
 
+    it('should hold exactly the 2D shapes as shape components, with no tag and no German overlay', () => {
+        // Arrange
+        const shapes = catalog.components.filter((entry) => entry.tier === 'shape');
+
+        // Assert
+        expect(difference(shapes.map((entry) => entry.name), SHAPE_NAMES)).toEqual({ missing: [], extra: [] });
+        expect(shapes.filter((entry) => 'tag' in entry || entry.locales.length > 0)).toEqual([]);
+        expect(shapes.every((entry) => entry.category === 'graphics')).toBe(true);
+    });
+
     it('should give every spec component its size and no other component the size atom or molecule', () => {
         // Arrange
         const specNames: readonly string[] = [...SPEC_ATOMS, ...SPEC_MOLECULES, ...LATER_ATOMS, ...LATER_MOLECULES];
-        const others = catalog.components.filter((entry) => !specNames.includes(entry.name));
+        const others = elements.filter((entry) => !specNames.includes(entry.name));
 
         // Assert
         expect([...SPEC_ATOMS, ...LATER_ATOMS].map(sizeOfName).every((size) => size === 'atom')).toBe(true);
@@ -181,7 +198,7 @@ describe('the component catalog holds the whole Epic 5 set', () => {
 
     it('should give every root and composed component a German overlay', () => {
         // Arrange
-        const without = catalog.components.filter((entry) => !entry.locales.includes('de')).map((entry) => entry.name);
+        const without = elements.filter((entry) => !entry.locales.includes('de')).map((entry) => entry.name);
 
         // Assert
         expect(without).toEqual([]);
@@ -269,7 +286,8 @@ describe('the recordGrid catalog entry', () => {
         const tokens = (entry.shape.tokens ?? []).map((token) => [token.path, token.group, token.default]);
         expect(tokens).toEqual([
             ['recordgrid.itemmin', 'recordgrid', 'calc({size.control.md} * 6)'],
-            ['recordgrid.itemheight', 'recordgrid', 'calc({size.control.md} * 4)']
+            ['recordgrid.itemheight', 'recordgrid', 'calc({size.control.md} * 4)'],
+            ['recordgrid.gap', 'recordgrid', '{space.gap.md}']
         ]);
         expect(entry.locales).toContain('de');
     });
@@ -332,7 +350,7 @@ describe('content in en and de', () => {
 
         // Assert
         expect(missing).toEqual([]);
-        expect(catalog.locales).toEqual(['de']);
+        expect(catalog.locales).toEqual(['de', 'es', 'fr']);
     });
 
     it('should give every content property an English text: a default, or a condition or requirement that asks the node for one', () => {
@@ -398,7 +416,7 @@ describe('the library build and its styles', () => {
 });
 
 describe('component tokens and icon defaults', () => {
-    it('should default every component token to references or a calc() of references, never a literal', () => {
+    it('should default every component token to references, a calc() of references or an inset of references, never a literal', () => {
         // Arrange
         const offenders: string[] = [];
 
@@ -410,7 +428,9 @@ describe('component tokens and icon defaults', () => {
                 const rest = value.replace(/\{[a-z0-9.]+\}/g, '');
                 const reference = /^\{[a-z0-9.]+\}$/.test(value);
                 const calc = /^calc\(.*\)$/.test(value) && references.length > 0 && /^[\s()+\-*/\d.]*$/.test(rest.replace(/^calc/, ''));
-                if (!reference && !calc) offenders.push(`${entry.name} ${token.path} = ${value}`);
+                // An inset token: two to four space-separated references (`{space.inset.md} {space.inset.lg}`)
+                const inset = /^\{[a-z0-9.]+\}( \{[a-z0-9.]+\}){1,3}$/.test(value);
+                if (!reference && !calc && !inset) offenders.push(`${entry.name} ${token.path} = ${value}`);
             }
         }
 
@@ -419,12 +439,12 @@ describe('component tokens and icon defaults', () => {
         expect(roots.some((entry) => (entry.tokens ?? []).length > 0)).toBe(true);
     });
 
-    it('should name every token group as one lower-case word', () => {
+    it('should name every token group as one lower-case word, digits allowed after the first letter (scene3d)', () => {
         // Arrange
         const groups = new Set(roots.flatMap((entry) => (entry.tokens ?? []).map((token) => token.group)));
 
         // Assert
-        expect([...groups].filter((group) => !/^[a-z]+$/.test(group))).toEqual([]);
+        expect([...groups].filter((group) => !/^[a-z][a-z0-9]*$/.test(group))).toEqual([]);
         expect(groups.size).toBeGreaterThan(5);
     });
 
@@ -534,5 +554,102 @@ describe('the theme section of the catalog', () => {
 
         expect(componentGroups.length).toBeGreaterThan(0);
         for (const group of componentGroups) expect(groups.has(group), group).toBe(false);
+    });
+});
+
+/** The lowercased words of a camelCase component name: `dateRangeField` is date, range, field */
+const nameWords = (name: string): string[] => name.split(/(?=[A-Z])/).map((word) => word.toLowerCase());
+
+/** True when every word of a phrase is a word of the component's own name, so the phrase says nothing the name does not */
+const onlyNameWords = (phrase: string, name: string): boolean => {
+    const words = nameWords(name);
+    return phrase.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean).every((word) => words.includes(word));
+};
+
+describe('the search keys of the atoms', () => {
+    const atoms = catalog.components.filter((entry) => entry.size === 'atom');
+
+    it('should give every atom a category from the list and three to eight purposes', () => {
+        const bad = atoms
+            .filter((entry) => !(COMPONENT_CATEGORIES as readonly string[]).includes(entry.category ?? '') || (entry.purposes?.length ?? 0) < 3 || (entry.purposes?.length ?? 0) > 8)
+            .map((entry) => entry.name);
+
+        expect(atoms.length).toBe(SPEC_ATOMS.length + LATER_ATOMS.length + SHAPE_ATOMS.length);
+        expect(bad).toEqual([]);
+    });
+
+    it('should give no atom a purpose made only of the words of its own name', () => {
+        const bad = atoms.flatMap((entry) => (entry.purposes ?? []).filter((phrase) => onlyNameWords(phrase, entry.name)).map((phrase) => `${entry.name}: ${phrase}`));
+
+        expect(bad).toEqual([]);
+    });
+
+    it('should flag a phrase that only repeats the name', () => {
+        expect(onlyNameWords('Date range', 'dateRangeField')).toBe(true);
+        expect(onlyNameWords('pick a date range', 'dateRangeField')).toBe(false);
+    });
+});
+
+describe('the search keys of the molecules', () => {
+    const molecules = catalog.components.filter((entry) => entry.size === 'molecule');
+
+    it('should give every molecule a category from the list and three to eight purposes', () => {
+        const bad = molecules
+            .filter((entry) => !(COMPONENT_CATEGORIES as readonly string[]).includes(entry.category ?? '') || (entry.purposes?.length ?? 0) < 3 || (entry.purposes?.length ?? 0) > 8)
+            .map((entry) => entry.name);
+
+        expect(molecules.length).toBe(SPEC_MOLECULES.length + LATER_MOLECULES.length + SHAPE_MOLECULES.length);
+        expect(bad).toEqual([]);
+    });
+
+    it('should give no molecule a purpose made only of the words of its own name', () => {
+        const bad = molecules.flatMap((entry) => (entry.purposes ?? []).filter((phrase) => onlyNameWords(phrase, entry.name)).map((phrase) => `${entry.name}: ${phrase}`));
+
+        expect(bad).toEqual([]);
+    });
+
+    it('should put every field in forms and the named molecules in their design categories', () => {
+        const categoryOf = (name: string): string | undefined => molecules.find((entry) => entry.name === name)?.category;
+
+        expect(FIELDS.filter((name) => categoryOf(name) !== 'forms')).toEqual([]);
+        expect(['breadcrumb', 'pagination', 'stepper', 'menuItem'].map(categoryOf)).toEqual(['navigation', 'navigation', 'navigation', 'navigation']);
+        expect(['stat', 'descriptionList'].map(categoryOf)).toEqual(['data', 'data']);
+        expect(['alert', 'toast', 'emptyState'].map(categoryOf)).toEqual(['feedback', 'feedback', 'feedback']);
+        expect(['card', 'avatar'].map(categoryOf)).toEqual(['content', 'content']);
+    });
+
+    it('should keep the phrases the search tests depend on', () => {
+        const purposesOf = (name: string): readonly string[] => molecules.find((entry) => entry.name === name)?.purposes ?? [];
+
+        expect(purposesOf('dateRangeField')).toEqual(expect.arrayContaining(['pick a date range', 'choose start and end dates', 'filter by period']));
+        expect(purposesOf('stepper')).toEqual(expect.arrayContaining(['step through a process', 'show progress through steps']));
+    });
+});
+
+describe('the search keys of the whole catalog', () => {
+    it('should give every entry, composed included, a category from the list and three to eight purposes', () => {
+        const bad = catalog.components
+            .filter((entry) => !(COMPONENT_CATEGORIES as readonly string[]).includes(entry.category ?? '') || (entry.purposes?.length ?? 0) < 3 || (entry.purposes?.length ?? 0) > 8)
+            .map((entry) => entry.name);
+
+        expect(bad).toEqual([]);
+    });
+
+    it('should give every composed entry a summary', () => {
+        expect(composedEntries.filter((entry) => (entry.summary ?? '').trim() === '').map((entry) => entry.name)).toEqual([]);
+    });
+
+    it('should give no composite or composed component a purpose made only of the words of its own name', () => {
+        const bad = catalog.components
+            .filter((entry) => entry.size === 'composite')
+            .flatMap((entry) => (entry.purposes ?? []).filter((phrase) => onlyNameWords(phrase, entry.name)).map((phrase) => `${entry.name}: ${phrase}`));
+
+        expect(bad).toEqual([]);
+    });
+
+    it('should put the composed components the design names in their categories', () => {
+        const categoryOf = (name: string): string | undefined => catalog.components.find((entry) => entry.name === name)?.category;
+
+        expect([categoryOf('dashboardGrid'), categoryOf('confirmDialog'), categoryOf('chatView'), categoryOf('tableRow')]).toEqual(['layout', 'overlays', 'conversation', 'data']);
     });
 });

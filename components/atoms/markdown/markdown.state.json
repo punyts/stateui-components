@@ -1,5 +1,7 @@
 {
     "summary": "Formatted text from Markdown source, rendered safely with the theme typography: no HTML, and links that only raise press",
+    "category": "content",
+    "purposes": ["render formatted text from source", "show rich text with headings and lists", "display help or release notes", "show an assistant reply with formatting"],
     "events": ["press"],
     "tokens": {
         "gap": "{space.gap.md}",

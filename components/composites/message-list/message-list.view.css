@@ -3,6 +3,8 @@
     min-block-size: 0;
     --ui-recordgrid-itemmin: 100000px;
     --ui-recordgrid-itemheight: calc(var(--ui-size-control-md) * 2);
+    /* messages space themselves; no gutter of the grid */
+    --ui-recordgrid-gap: 0px;
 }
 
 .messages {

@@ -1,0 +1,31 @@
+{
+    "summary": "A sign-in form with an email address, a password and a sign-in button",
+    "purposes": ["sign in with an email and password", "log in to an account", "ask for login details"],
+    "tree": {
+        "component": "panel",
+        "_title": "Sign in",
+        "children": {
+            "form": {
+                "component": "form",
+                "children": {
+                    "email": { "component": "textField", "_label": "Email address", "inputType": "email", "pattern": "email", "required": true, "<-value": "$.data.signIn.email" },
+                    "password": { "component": "textField", "_label": "Password", "inputType": "password", "required": true }
+                },
+                "actions": { "component": "button", "_title": "Sign in", "on": { "press": { "command": "submit", "target": "$parent" } } }
+            }
+        }
+    },
+    "slots": {
+        "fields": { "path": "children.form.children", "description": "More fields of the form, such as a remember me switch" },
+        "help": { "path": "children", "description": "Links below the form, such as forgot password or create an account" }
+    },
+    "params": {
+        "title": { "type": "string", "default": "Sign in", "paths": ["_title"], "description": "The heading of the form" },
+        "email": {
+            "type": "path",
+            "default": "$.data.signIn.email",
+            "paths": ["children.form.children.email.<-value"],
+            "description": "Where the email address is read from and written to"
+        }
+    }
+}

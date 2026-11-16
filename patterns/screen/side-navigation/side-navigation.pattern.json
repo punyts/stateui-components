@@ -1,0 +1,46 @@
+{
+    "summary": "A screen with a header, a side menu of screens and the content; the menu folds behind a button on a phone",
+    "purposes": ["app with a menu down the left side", "admin tool with a sidebar of sections", "back office layout with a side menu"],
+    "tree": {
+        "component": "panel",
+        "padding": "none",
+        "layout": { "type": "region", "collapseBelow": "md" },
+        "children": {
+            "header": {
+                "component": "toolbar",
+                "align": "between",
+                "placement": { "region": "n" },
+                "children": {
+                    "title": { "component": "text", "textRole": "title", "_text": "My app" },
+                    "actions": { "component": "toolbar", "align": "end", "children": {} }
+                }
+            },
+            "menu": {
+                "component": "nav",
+                "collapseBelow": "md",
+                "placement": { "region": "w" },
+                "children": { "home": { "component": "menuItem", "_label": "Home", "screen": "home" } }
+            },
+            "content": { "component": "panel", "placement": { "region": "center" }, "children": {} },
+            "footer": {
+                "component": "toolbar",
+                "placement": { "region": "s" },
+                "children": { "note": { "component": "text", "textRole": "caption", "_text": "My app" } }
+            }
+        }
+    },
+    "slots": {
+        "menu": { "path": "children.menu.children", "description": "One menuItem per screen: set its screen to the screen name, its _label and an icon" },
+        "headerActions": { "path": "children.header.children.actions.children", "description": "Buttons at the end of the header, such as the account menu" },
+        "content": { "path": "children.content.children", "description": "The content of this screen" },
+        "footer": { "path": "children.footer.children", "description": "The content of the footer, such as a version line" }
+    },
+    "params": {
+        "title": {
+            "type": "string",
+            "default": "My app",
+            "paths": ["children.header.children.title._text", "children.footer.children.note._text"],
+            "description": "The name of the app in the header"
+        }
+    }
+}

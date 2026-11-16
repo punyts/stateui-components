@@ -1,5 +1,7 @@
 {
     "summary": "Draws only the visible records of a long list through a small pool of recycled row nodes",
+    "category": "data",
+    "purposes": ["scroll a very long list of rows smoothly", "draw thousands of records in a column", "page rows in from a server as you scroll"],
     "events": ["range"],
     "commands": ["scrollTo"],
     "shared": { "density": {} },
@@ -9,7 +11,7 @@
     },
     "properties": {
         "key": { "type": "string", "validators": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" }, "default": "id" },
-        "rowHeight": { "type": "string", "values": ["sm", "md", "lg"], "default": "md", "reflect": true },
+        "rowHeight": { "type": "string", "values": ["sm", "md", "lg", "xl"], "default": "md", "reflect": true },
         "overscan": { "type": "integer", "validators": { "range": { "min": 0, "max": 20 } }, "default": 5 },
         "records": { "type": ["array", "object"] },
         "order": { "type": "array" },
@@ -20,6 +22,7 @@
         "selectable": { "type": "boolean", "default": false },
         "loading": { "type": "boolean", "default": false, "reflect": true },
         "total": { "type": "integer", "validators": { "range": { "min": 0 } } },
+        "window": { "type": "object" },
         "row": { "type": "node", "row": true },
         "empty": { "type": "node" },
         "ariaRowcount": { "type": "integer", "reflect": true },

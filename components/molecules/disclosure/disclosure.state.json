@@ -1,5 +1,7 @@
 {
     "summary": "A titled section that opens and closes, with a summary while closed and an actions slot: hide advanced settings",
+    "category": "layout",
+    "purposes": ["hide advanced settings until asked", "expand a section to see more", "collapse optional details", "show a summary while a section is closed"],
     "layout": true,
     "events": ["toggle"],
     "commands": ["open", "close", "toggle"],

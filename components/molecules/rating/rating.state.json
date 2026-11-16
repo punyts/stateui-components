@@ -1,0 +1,47 @@
+{
+    "summary": "A labelled star rating from 0 to max, set by press or arrow keys, with a hover preview and a read-only display",
+    "category": "forms",
+    "purposes": ["rate a product or service with stars", "collect a score from one to five", "show an average review score", "give feedback on a scale"],
+    "events": ["change", "invalid", "valid"],
+    "commands": ["validate", "reset", "focus", "clear"],
+    "tokenGroup": "field",
+    "tokens": {
+        "font": { "size": "{text.body.size}", "weight": "{text.body.weight}" },
+        "selected": { "fill": "{color.accent.base}", "on": "{color.accent.on}" },
+        "error": { "color": "{color.danger.base}" },
+        "label": { "gap": "{space.gap.sm}", "width": "calc({size.control.lg} * 3)" },
+        "help": { "size": "{text.caption.size}" }
+    },
+    "shared": { "size": { "default": "md" }, "density": {} },
+    "properties": {
+        "value": { "type": "integer", "default": 0, "validators": { "range": { "min": 0, "max": 10 } } },
+        "max": { "type": "integer", "default": 5, "validators": { "range": { "min": 1, "max": 10 } } },
+        "disabled": { "type": "boolean", "default": false },
+        "readonly": { "type": "boolean", "default": false, "reflect": true },
+        "titlePosition": { "type": "string", "values": ["top", "left", "hidden"], "default": "top", "reflect": true },
+        "width": { "type": ["string", "integer"], "default": "auto" },
+        "required": { "type": "boolean", "default": false },
+        "error": { "type": "string", "default": "", "runtime": true },
+        "touched": { "type": "boolean", "default": false, "runtime": true },
+        "dirty": { "type": "boolean", "default": false, "runtime": true },
+        "locked": { "type": "boolean", "default": false, "runtime": true },
+        "message": { "type": "string", "default": "", "runtime": true },
+        "stars": { "type": "integer", "default": 5, "runtime": true },
+        "rating": { "type": "integer", "default": 0, "runtime": true },
+        "preview": { "type": "integer", "default": 0, "runtime": true },
+        "valueText": { "type": "string", "default": "", "runtime": true },
+        "_label": { "type": "string", "kind": "content", "default": "Rating" },
+        "_help": { "type": "string", "kind": "content", "default": "" },
+        "_valueText": { "type": "string", "kind": "content", "default": "{value} of {max} stars" },
+        "_empty": { "type": "string", "kind": "content", "default": "Not rated" },
+        "_errors": {
+            "type": "map",
+            "items": "string",
+            "kind": "content",
+            "default": {
+                "required": "Choose a rating",
+                "max": "Too many stars"
+            }
+        }
+    }
+}

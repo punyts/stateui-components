@@ -49,10 +49,18 @@ export function windowFor(scrollTop: number, viewport: number, rowHeight: number
 }
 
 /**
+ * Whether a resize entry comes from an element that is not rendered: under `display: none` (a hidden section or tab) the content box is
+ * empty. A view keeps its last sizes then, so hiding and showing it again does not unbind and rebind every pooled slot
+ */
+export function isUnrendered(entry: ResizeObserverEntry): boolean {
+    return entry.contentRect.width === 0 && entry.contentRect.height === 0;
+}
+
+/**
  * Follows the scrollbar of a record view. This is the one place a record view reads layout: one passive scroll
  * listener asks for an animation frame and reads `scrollTop` once in it, however many scroll events came before, and a
  * `ResizeObserver` reports the viewport height and the row height from the resize entries, which are not layout reads
- * of their own. Every change is reported as a window
+ * of their own. Every change is reported as a window; a resize to nothing (the view is hidden) is ignored
  */
 export function createViewportObserver(options: ViewportOptions): ViewportObserver {
     const { scroller, probe, onWindow } = options;
@@ -82,6 +90,7 @@ export function createViewportObserver(options: ViewportOptions): ViewportObserv
     };
     const resize = new ResizeObserver((entries) => {
         for (const entry of entries) {
+            if (isUnrendered(entry)) continue;
             if (entry.target === scroller) viewport = entry.contentRect.height;
             else if (entry.target === probe) rowHeight = entry.contentRect.height;
         }

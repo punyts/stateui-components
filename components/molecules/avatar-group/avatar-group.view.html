@@ -1,0 +1,9 @@
+<div class="group" role="group" aria-label="{{ $._label }}">
+    <span class="avatar" repeat="{{ $k,$i,$v in $.shown }}" key="{{ $k }}" role="img" aria-label="{{ $v.name }}">
+        <img if="{{ $v.src }}" src="{{ $v.src }}" alt="" />
+        <span else="" class="initials" aria-hidden="true">{{ $v.initials }}</span>
+    </span>
+    <span class="avatar more" if="{{ $.extra &gt; 0 }}" role="img" aria-label="{{ moreLabel($._more, $.extra) }}">
+        <span class="initials" aria-hidden="true">+{{ $.extra }}</span>
+    </span>
+</div>

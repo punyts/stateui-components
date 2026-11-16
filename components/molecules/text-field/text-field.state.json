@@ -1,15 +1,18 @@
 {
     "summary": "A labelled single-line text field with optional icon, help and error text",
+    "category": "forms",
+    "purposes": ["enter a name or email", "type a single line of text in a form", "collect an address or phone number", "enter a password or code"],
     "events": ["change", "invalid", "valid"],
     "commands": ["validate", "reset", "focus", "clear"],
     "tokenGroup": "field",
     "tokens": {
+        "font": { "size": "{text.body.size}", "weight": "{text.body.weight}" },
         "selected": { "fill": "{color.accent.base}", "on": "{color.accent.on}" },
         "error": { "color": "{color.danger.base}" },
         "label": { "gap": "{space.gap.sm}", "width": "calc({size.control.lg} * 3)" },
         "help": { "size": "{text.caption.size}" }
     },
-    "shared": { "size": { "default": "md" }, "density": {} },
+    "shared": { "variant": { "default": "outline", "values": ["outline", "soft", "ghost"] }, "corners": {}, "size": { "default": "md" }, "density": {} },
     "properties": {
         "value": { "type": "string", "default": "" },
         "inputType": { "type": "string", "values": ["text", "email", "password", "url", "tel", "search"], "default": "text" },
@@ -31,7 +34,7 @@
         "message": { "type": "string", "default": "", "runtime": true },
         "glyph": { "type": "object", "default": { "name": "", "decorative": true }, "runtime": true },
         "_label": { "type": "string", "kind": "content", "default": "Label" },
-        "_placeholder": { "type": "string", "kind": "content", "default": "Type here" },
+        "_placeholder": { "type": "string", "kind": "content", "default": "" },
         "_help": { "type": "string", "kind": "content", "default": "" },
         "_errors": {
             "type": "map",

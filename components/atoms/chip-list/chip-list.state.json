@@ -1,0 +1,59 @@
+{
+    "summary": "A wrapping row of chips from a keyed map, each with a × that raises remove with its key",
+    "category": "content",
+    "purposes": [
+        "show what a request is about as removable chips",
+        "show the active filters, each removable",
+        "list chosen tags from data with a way to drop one",
+        "show a short set of labels from data in one wrapping row"
+    ],
+    "events": [
+        "remove"
+    ],
+    "shared": {
+        "tone": {
+            "default": "neutral"
+        },
+        "variant": {
+            "default": "soft"
+        },
+        "size": {
+            "default": "md"
+        }
+    },
+    "properties": {
+        "items": {
+            "type": "map",
+            "default": {},
+            "items": {
+                "text": {
+                    "type": "string",
+                    "default": ""
+                },
+                "icon": {
+                    "type": "icon",
+                    "default": ""
+                }
+            }
+        },
+        "removable": {
+            "type": "boolean",
+            "default": true
+        },
+        "disabled": {
+            "type": "boolean",
+            "default": false,
+            "reflect": true
+        },
+        "_label": {
+            "type": "string",
+            "kind": "content",
+            "default": ""
+        },
+        "_remove": {
+            "type": "string",
+            "kind": "content",
+            "default": "Remove {text}"
+        }
+    }
+}

@@ -1,5 +1,7 @@
 {
     "summary": "A placeholder block that stands in for text, a picture or an avatar while data loads",
+    "category": "feedback",
+    "purposes": ["hold the place of content while it loads", "show a grey outline before data arrives", "avoid a layout jump while loading"],
     "tokens": { "radius": "{radius.sm}" },
     "properties": {
         "shape": { "type": "string", "values": ["text", "rect", "circle"], "default": "text", "reflect": true },

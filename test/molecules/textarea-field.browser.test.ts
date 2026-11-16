@@ -17,6 +17,16 @@ describe('textareaField in Chromium', () => {
         mountComponent.unmountAll();
     });
 
+    it('should show no placeholder by default', () => {
+        // Arrange
+        const mounted = mountComponent('textareaField');
+
+        // Assert
+        expect(control(mounted.element).placeholder).toBe('');
+        expect(control(mounted.element).getAttribute('placeholder') ?? '').toBe('');
+        expect(mounted.store.get('$.app._placeholder')).toBe('');
+    });
+
     it('should write a multi-line value to $.data through a <-value link', async () => {
         // Arrange
         const mounted = mountComponent('textareaField', { '<-value': '$.data.note' }, { data: { note: '' } });
@@ -37,6 +47,28 @@ describe('textareaField in Chromium', () => {
 
         // Assert
         expect(control(mounted.element).value).toBe('a\nb');
+    });
+
+    it('should be as tall as the control height at one row, with the line in the middle, at each size', async () => {
+        // Arrange
+        const node = { _label: 'Request', titlePosition: 'hidden', rows: 1, autoGrow: true };
+
+        // Act
+        const sizes = await Promise.all(
+            [['sm', 32], ['md', 36], ['lg', 44]].map(async ([size, height]) => {
+                const textarea = control(mountComponent('textareaField', { ...node, size }).element);
+                await settle();
+                const style = getComputedStyle(textarea);
+                return { height, measured: rect(textarea).height, top: parseFloat(style.paddingTop), bottom: parseFloat(style.paddingBottom), line: parseFloat(style.lineHeight) };
+            })
+        );
+
+        // Assert: one row is the control height, and the space above the line is the space below it
+        for (const { height, measured, top, bottom, line } of sizes) {
+            expect(measured).toBeCloseTo(height as number, 0);
+            expect(top).toBeCloseTo(bottom, 1);
+            expect(top * 2 + line).toBeLessThanOrEqual(height as number);
+        }
     });
 
     it('should take rows from the property', () => {

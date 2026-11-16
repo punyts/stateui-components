@@ -2,12 +2,7 @@ import type { Catalog } from '@punyts/stateui-app/build';
 import catalog from '../../.test-build/real/components/catalog.json';
 import { registerAll } from '../../.test-build/real/components/index.js';
 import { createMountComponent } from './createMountComponent.js';
-import type { ComponentBuild } from './createMountComponent.js';
-
-const localeFiles = import.meta.glob<ComponentBuild['localeFiles'][string]>(
-    '../../.test-build/real/components/*.locale.*.json',
-    { eager: true, import: 'default' }
-);
+import { realLocaleFiles } from './realLocales.js';
 
 /**
  * Mounts one component of this library for a component test: `mountComponent('text', { _text: 'Hi' }, { mode: 'dark' })`.
@@ -16,5 +11,5 @@ const localeFiles = import.meta.glob<ComponentBuild['localeFiles'][string]>(
 export const mountComponent = createMountComponent({
     catalog: catalog as unknown as Catalog,
     registerAll,
-    localeFiles
+    localeFiles: realLocaleFiles
 });

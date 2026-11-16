@@ -1,15 +1,18 @@
 {
     "summary": "A labelled number field that reads and shows its value in the locale, with min, max, step and plus and minus buttons",
+    "category": "forms",
+    "purposes": ["raise or lower a quantity", "choose how many of something", "enter an amount, count or price", "set a number with plus and minus buttons"],
     "events": ["change", "invalid", "valid"],
     "commands": ["validate", "reset", "focus", "clear"],
     "tokenGroup": "field",
     "tokens": {
+        "font": { "size": "{text.body.size}", "weight": "{text.body.weight}" },
         "selected": { "fill": "{color.accent.base}", "on": "{color.accent.on}" },
         "error": { "color": "{color.danger.base}" },
         "label": { "gap": "{space.gap.sm}", "width": "calc({size.control.lg} * 3)" },
         "help": { "size": "{text.caption.size}" }
     },
-    "shared": { "size": { "default": "md" }, "density": {} },
+    "shared": { "variant": { "default": "outline", "values": ["outline", "soft", "ghost"] }, "corners": {}, "size": { "default": "md" }, "density": {} },
     "properties": {
         "value": { "type": ["number", "string"], "default": "" },
         "min": { "type": "number" },

@@ -1,0 +1,9 @@
+{
+    "_label": "Código",
+    "_help": "",
+    "_digit": "Dígito {index} de {count}",
+    "_errors": {
+        "required": "Este campo es obligatorio",
+        "incomplete": "Introduzca el código completo"
+    }
+}

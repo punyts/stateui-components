@@ -1,0 +1,38 @@
+{
+    "summary": "A modal search box over a grouped list of commands, filtered as you type; Enter runs the active command",
+    "category": "overlays",
+    "purposes": ["run an action by typing its name", "search the actions of an app", "jump to a page or setting by name", "offer keyboard users every command in one place", "show commands with their shortcuts"],
+    "shared": { "elevation": { "default": "overlay" }, "density": {} },
+    "events": ["run", "open", "close"],
+    "commands": ["open", "close", "toggle"],
+    "tokenGroup": "commandpalette",
+    "tokens": {
+        "radius": "{radius.lg}",
+        "padding": "{space.inset.md}",
+        "gap": "{space.gap.sm}",
+        "active": { "fill": "{color.accent.base}", "on": "{color.accent.on}" }
+    },
+    "properties": {
+        "open": { "type": "boolean", "default": false },
+        "commands": {
+            "type": "map",
+            "default": {},
+            "items": {
+                "_label": { "type": "string", "kind": "content", "default": "" },
+                "icon": { "type": "icon", "default": "" },
+                "group": { "type": "string", "default": "" },
+                "shortcut": { "type": "string", "default": "" },
+                "keywords": { "type": "array", "default": [] }
+            }
+        },
+        "query": { "type": "string", "default": "", "runtime": true },
+        "results": { "type": "object", "default": {}, "runtime": true },
+        "activeId": { "type": "string", "default": "", "runtime": true },
+        "found": { "type": "integer", "default": 0, "runtime": true },
+        "_title": { "type": "string", "kind": "content", "default": "Command palette" },
+        "_search": { "type": "string", "kind": "content", "default": "Search commands" },
+        "_placeholder": { "type": "string", "kind": "content", "default": "Type a command" },
+        "_empty": { "type": "string", "kind": "content", "default": "No matching commands" },
+        "_found": { "type": "string", "kind": "content", "default": "{count} commands" }
+    }
+}

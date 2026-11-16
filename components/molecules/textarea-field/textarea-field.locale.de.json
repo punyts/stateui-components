@@ -1,6 +1,6 @@
 {
     "_label": "Beschriftung",
-    "_placeholder": "Hier eingeben",
+    "_placeholder": "",
     "_help": "",
     "_errors": {
         "required": "Dieses Feld ist erforderlich",

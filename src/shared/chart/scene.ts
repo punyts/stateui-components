@@ -47,6 +47,16 @@ export interface ChartInput {
     readonly texts: ChartTexts;
 }
 
+/** A ring sector: the centre, the outer and inner radii, and the angles (radians, clockwise from the right) a slice spans */
+export interface Sector {
+    readonly cx: number;
+    readonly cy: number;
+    readonly outer: number;
+    readonly inner: number;
+    readonly from: number;
+    readonly to: number;
+}
+
 /** One SVG element of a chart: where it lives, what it is and what it looks like. `id` is stable between draws, so a redraw writes only what changed */
 export interface Primitive {
     readonly id: string;
@@ -55,6 +65,8 @@ export interface Primitive {
     readonly className: string;
     readonly attrs: Readonly<Record<string, string>>;
     readonly text?: string;
+    /** The sector a donut slice's `d` is drawn from, so a `transition` can tween its angles (G2.4b); not drawn as such */
+    readonly sector?: Sector;
 }
 
 /** One line of a tooltip: a series (or slice share) and its value, with the colour class of the series */

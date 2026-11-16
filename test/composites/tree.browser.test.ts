@@ -65,6 +65,19 @@ describe('tree rendering in Chromium', () => {
         expect(slotElements(mounted)[0]?.getAttribute('role')).toBe('treeitem');
     });
 
+    it('should draw each record by its label when the tree has no row template', async () => {
+        // Arrange and Act
+        const mounted = mountComponent('tree', { '<-records': '$.data.nodes' }, { data: { nodes: family() } });
+        (mounted.element as HTMLElement).style.blockSize = '240px';
+        await flush();
+        await frames(3);
+        mounted.store.set(`${BODY}.window`, { first: 0, count: 10 });
+        await flush();
+
+        // Assert
+        expect(shown(mounted)).toEqual([['A', 0], ['B', 0]]);
+    });
+
     it('should show the children of an expanded record after it with their level in --sui-level', async () => {
         // Arrange and Act
         const mounted = await mountTree(family(), { expanded: ['a', 'a2'] });

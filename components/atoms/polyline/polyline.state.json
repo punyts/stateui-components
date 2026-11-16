@@ -1,0 +1,9 @@
+{
+    "summary": "An open line through a list of [x, y] points in a drawing",
+    "category": "graphics",
+    "purposes": ["draw a line through several points", "draw a route or a zigzag", "draw a hand-made line graph"],
+    "includes": ["paint", "transform", "interaction", "motion"],
+    "properties": {
+        "points": { "type": "array", "validators": { "points": true } }
+    }
+}

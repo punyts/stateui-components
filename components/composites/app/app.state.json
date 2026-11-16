@@ -1,0 +1,10 @@
+{
+    "summary": "The root of an app with screens: its layout places the screens, it sets the document title and holds the toasts",
+    "category": "layout",
+    "purposes": ["lay out the screens of an app", "set the document title of an app", "show the toasts of the whole app"],
+    "layout": true,
+    "properties": {
+        "_title": { "type": "string", "kind": "content", "default": "" },
+        "toasts": { "type": "node", "default": { "component": "toastRegion" } }
+    }
+}

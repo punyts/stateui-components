@@ -1,0 +1,27 @@
+{
+    "summary": "Code text in a monospace block with an optional language label, line numbers, wrapping and a copy button",
+    "category": "content",
+    "purposes": ["show a code sample", "show a command to copy and paste", "show a configuration file", "show JSON or log output", "let a reader copy a snippet"],
+    "events": ["copy"],
+    "commands": ["copy"],
+    "tokenGroup": "codeblock",
+    "tokens": {
+        "fill": "{color.surface.sunken}",
+        "radius": "{radius.md}",
+        "padding": "{space.inset.md}",
+        "copied": "{color.success.base}"
+    },
+    "shared": { "size": { "default": "md" } },
+    "properties": {
+        "code": { "type": "string", "default": "" },
+        "language": { "type": "string", "default": "" },
+        "wrap": { "type": "boolean", "default": false, "reflect": true },
+        "lineNumbers": { "type": "boolean", "default": false, "reflect": true },
+        "copyable": { "type": "boolean", "default": true },
+        "lines": { "type": "object", "default": {}, "runtime": true },
+        "copied": { "type": "boolean", "default": false, "runtime": true },
+        "_label": { "type": "string", "kind": "content", "default": "Code" },
+        "_copy": { "type": "string", "kind": "content", "default": "Copy" },
+        "_copied": { "type": "string", "kind": "content", "default": "Copied" }
+    }
+}

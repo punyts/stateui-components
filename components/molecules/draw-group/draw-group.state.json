@@ -1,0 +1,10 @@
+{
+    "summary": "A group of shapes in a drawing that move, paint and clip together",
+    "category": "graphics",
+    "purposes": ["group shapes to move them together", "clip shapes to an outline", "build a reusable symbol from shapes"],
+    "includes": ["paint", "transform", "interaction", "motion"],
+    "childComponents": ["rect", "circle", "ellipse", "line", "polyline", "polygon", "path", "drawText", "drawImage", "drawGroup", "drawRepeat"],
+    "properties": {
+        "clip": { "type": "node", "childComponents": ["rect", "circle", "ellipse", "polygon", "path"] }
+    }
+}

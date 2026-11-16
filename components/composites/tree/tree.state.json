@@ -1,5 +1,7 @@
 {
     "summary": "Hierarchical records drawn through recordList: keyed by parent or children, expandable, indented by level",
+    "category": "data",
+    "purposes": ["browse folders and nested items", "expand and collapse a hierarchy", "show an outline indented by level"],
     "events": ["select", "activate", "expand"],
     "commands": ["expand", "collapse", "expandAll", "collapseAll"],
     "shared": { "density": {} },
@@ -12,14 +14,14 @@
         "expanded": { "type": "array", "default": [] },
         "selectable": { "type": "string", "values": ["none", "single", "multi"], "default": "none", "reflect": true },
         "selected": { "type": ["string", "number", "array"] },
+        "rowHeight": { "type": "string", "values": ["sm", "md", "lg", "xl"], "default": "md" },
         "indent": { "type": "string", "values": ["sm", "md", "lg"], "default": "md", "reflect": true },
         "records": { "type": ["array", "object"] },
-        "row": { "type": "node", "row": true },
+        "row": { "type": "node", "row": true, "default": { "component": "text", "truncate": 1, "<-_text": "$row.label" } },
         "body": {
             "type": "object",
             "default": {
                 "component": "recordList",
-                "rowHeight": "md",
                 "overscan": 5,
                 "role": "tree",
                 "multiselectable": false,

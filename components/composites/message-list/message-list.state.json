@@ -1,5 +1,7 @@
 {
     "summary": "A conversation: messages of measured heights in one column that stays at the newest message, with a button back to it",
+    "category": "conversation",
+    "purposes": ["show a chat history", "stay at the newest message as replies arrive", "scroll back through a conversation"],
     "commands": [
         "scrollToEnd"
     ],

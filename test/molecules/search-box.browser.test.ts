@@ -98,6 +98,20 @@ describe('searchBox in Chromium', () => {
         expect(mounted.element.shadowRoot?.activeElement).toBe(control(mounted.element));
     });
 
+    it('should raise input with the value as each letter is typed', async () => {
+        // Arrange
+        const mounted = mountComponent('searchBox', { value: '' });
+        const inputs = record(mounted.element, 'input');
+        const changes = record(mounted.element, 'change');
+
+        // Act
+        await userEvent.type(control(mounted.element), 'abc');
+
+        // Assert
+        expect(inputs).toEqual(['a', 'ab', 'abc']);
+        expect(changes).toEqual([]);
+    });
+
     it('should raise change on blur with the value', async () => {
         // Arrange
         const mounted = mountComponent('searchBox', { value: '' });
@@ -122,5 +136,23 @@ describe('searchBox in Chromium', () => {
         expect(control(mounted.element).placeholder).toBe('Suchen');
         expect(control(mounted.element).getAttribute('aria-label')).toBe('Suche');
         expect(clearButton(mounted.element)?.getAttribute('aria-label')).toBe('Suche löschen');
+    });
+
+    it('should keep its words while disabled or read-only: no clear button, and the clear command does nothing', () => {
+        // Arrange
+        const disabled = mountComponent('searchBox', { value: 'kept', disabled: true });
+        const readonly = mountComponent('searchBox', { value: 'kept', readonly: true });
+
+        // Act
+        (disabled.element as Commanded).commands.clear();
+        (readonly.element as Commanded).commands.clear();
+
+        // Assert
+        expect(control(disabled.element).disabled).toBe(true);
+        expect(control(readonly.element).readOnly).toBe(true);
+        expect(clearButton(disabled.element)).toBeNull();
+        expect(clearButton(readonly.element)).toBeNull();
+        expect(disabled.store.get('$.app.value')).toBe('kept');
+        expect(readonly.store.get('$.app.value')).toBe('kept');
     });
 });

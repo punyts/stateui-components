@@ -1,0 +1,14 @@
+{
+    "summary": "One shape template drawn once per record ($row links), for scatter plots, seat maps and markers",
+    "category": "graphics",
+    "purposes": ["draw one shape per record", "draw a scatter plot from data", "draw seats or markers from a dataset"],
+    "includes": ["paint", "transform", "interaction", "motion"],
+    "properties": {
+        "records": { "type": ["array", "object"] },
+        "row": {
+            "type": "node",
+            "row": true,
+            "childComponents": ["rect", "circle", "ellipse", "line", "polyline", "polygon", "path", "drawText", "drawImage", "drawGroup"]
+        }
+    }
+}

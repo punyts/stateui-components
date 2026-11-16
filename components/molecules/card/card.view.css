@@ -8,12 +8,14 @@
     display: flex;
     flex-direction: column;
     gap: var(--ui-card-gap);
+    /* fills a stretched grid or row cell, so cards side by side end at one height; an auto height stays auto */
+    block-size: 100%;
     padding-block: var(--pad);
     overflow: hidden;
     color: var(--ui-color-text-base);
     background: var(--surface);
     border: var(--ui-border-width-thin) solid var(--ui-color-border-base);
-    border-radius: var(--ui-card-radius);
+    border-radius: var(--corner-radius, var(--ui-card-radius));
     box-shadow: var(--shadow);
     font-family: var(--ui-text-body-family);
     font-size: var(--ui-text-body-size);
@@ -57,7 +59,8 @@
     padding-inline: var(--pad);
 }
 
-.body:not(:has(> sui-node)),
+/* :host and [layout-host] outrank the layout sheet, even its collapse rules, so an empty body stays hidden whatever its layout */
+:host .body[layout-host]:not(:has(> sui-node)),
 :host([loading]) .body {
     display: none;
 }

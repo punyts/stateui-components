@@ -1,0 +1,34 @@
+{
+    "summary": "Its children shown one slide at a time, with previous and next buttons, dot indicators and optional autoplay",
+    "category": "content",
+    "purposes": ["show featured items one at a time", "page through product photos", "rotate announcements or banners", "walk through onboarding slides", "show testimonials in turn"],
+    "events": ["change"],
+    "commands": ["select", "next", "previous"],
+    "tokens": {
+        "gap": "{space.gap.md}",
+        "dot": "{space.gap.sm}",
+        "current": "{color.accent.base}"
+    },
+    "placement": {
+        "_slide": { "type": "string", "kind": "content", "default": "" }
+    },
+    "properties": {
+        "active": { "type": "string", "default": "" },
+        "loop": { "type": "boolean", "default": false },
+        "autoplay": { "type": "number", "default": 0, "validators": { "range": { "min": 0, "max": 60 } } },
+        "shown": { "type": "string", "default": "", "runtime": true },
+        "slides": { "type": "object", "default": {}, "runtime": true },
+        "atStart": { "type": "boolean", "default": true, "runtime": true },
+        "atEnd": { "type": "boolean", "default": true, "runtime": true },
+        "playing": { "type": "boolean", "default": false, "runtime": true },
+        "stopped": { "type": "boolean", "default": false, "runtime": true },
+        "_label": { "type": "string", "kind": "content", "default": "Carousel" },
+        "_slideLabel": { "type": "string", "kind": "content", "default": "{index} of {count}" },
+        "_goTo": { "type": "string", "kind": "content", "default": "Show slide {index}" },
+        "_previous": { "type": "string", "kind": "content", "default": "Previous slide" },
+        "_next": { "type": "string", "kind": "content", "default": "Next slide" },
+        "_slides": { "type": "string", "kind": "content", "default": "Choose a slide" },
+        "_stop": { "type": "string", "kind": "content", "default": "Stop the slide show" },
+        "_start": { "type": "string", "kind": "content", "default": "Start the slide show" }
+    }
+}

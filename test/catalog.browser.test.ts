@@ -2,19 +2,17 @@ import { report } from '@punyts/core';
 import { libraryFromCatalog, mountApp, registerLocaleStep } from '@punyts/stateui-app';
 import type { AppDocument, BuildError } from '@punyts/stateui-app';
 import type { Catalog, ComposedCatalogEntry, RootCatalogEntry } from '@punyts/stateui-app/build';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import catalog from '../.test-build/real/components/catalog.json';
 import { registerAll } from '../.test-build/real/components/index.js';
 import { overlaysFromFiles } from './harness/createMountComponent.js';
-import type { ComponentBuild } from './harness/createMountComponent.js';
 import { mountComponent } from './harness/mountComponent.js';
+import { realLocaleFiles } from './harness/realLocales.js';
 
 const roots = (catalog.components as unknown as RootCatalogEntry[]).filter((entry) => entry.tier === 'root');
 const composed = (catalog.components as unknown as ComposedCatalogEntry[]).filter((entry) => entry.tier === 'composed');
 const library = libraryFromCatalog(catalog as unknown as Catalog);
-const overlays = overlaysFromFiles(
-    import.meta.glob<ComponentBuild['localeFiles'][string]>('../.test-build/real/components/*.locale.*.json', { eager: true, import: 'default' })
-);
+const overlays = overlaysFromFiles(realLocaleFiles);
 
 /** One mounted application of a composed example; `mountComponent` mounts root components only */
 interface MountedExample {
@@ -58,7 +56,20 @@ function rendered(root: ParentNode, tag: string): boolean {
     return false;
 }
 
+/**
+ * Answers `ui-load-3d` as a host that serves the 3D chunk does, with a renderer that draws nothing: without it the
+ * `scene3d` example shows `_fallback` and reports `SUI-RUN-3D` `no_chunk` (G3.3), which is right for a host without
+ * the chunk but not what an example mounted in a full host does
+ */
+const answerLoad3d = (event: Event): void => {
+    const scene = { update: () => undefined, drawn: () => Promise.resolve(), dispose: () => undefined };
+    (event as CustomEvent<{ respond: (result: Promise<unknown>) => void }>).detail.respond(Promise.resolve({ version: '0.0.0', createScene3d: () => scene }));
+};
+
 describe('the catalog examples in Chromium', () => {
+    beforeAll(() => document.addEventListener('ui-load-3d', answerLoad3d));
+    afterAll(() => document.removeEventListener('ui-load-3d', answerLoad3d));
+
     afterEach(() => {
         mountComponent.unmountAll();
         vi.restoreAllMocks();

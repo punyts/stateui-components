@@ -1,0 +1,14 @@
+{
+    "_label": "Libellé",
+    "_placeholder": "",
+    "_help": "",
+    "_decrement": "Diminuer",
+    "_increment": "Augmenter",
+    "_errors": {
+        "required": "Ce champ est obligatoire",
+        "min": "Trop petit",
+        "max": "Trop grand",
+        "step": "Pas valide",
+        "number": "Saisissez un nombre"
+    }
+}

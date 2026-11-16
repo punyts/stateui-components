@@ -2,7 +2,7 @@ import type { Store } from '@punyts/state';
 import { libraryFromCatalog, mountApp, registerLocaleStep } from '@punyts/stateui-app';
 import type { AppDocument, AppState, ComponentLibrary, ComponentOverlays } from '@punyts/stateui-app';
 import type { Catalog } from '@punyts/stateui-app/build';
-import type { BuildError, TransferFile } from '@punyts/stateui-app';
+import type { BuildError, ReadFile, ReleaseFile, TransferFile } from '@punyts/stateui-app';
 
 /** One line per error: the build's own formatter reads files, so the browser harness cannot import it */
 const formatError = (error: BuildError): string => `${error.code} ${error.message}${error.statePath ? ` (${error.statePath})` : ''}`;
@@ -24,8 +24,20 @@ export interface MountOptions {
     data?: Readonly<Record<string, unknown>>;
     /** The document's `locales`: the overlay per language the application itself brings (relative to the node), on top of the component overlays */
     locales?: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
-    /** The host's hooks: `onEmit` receives the name and payload of an `emit` command, `transferFile` takes the files of a `fileField` (none by default) */
-    hooks?: { onEmit?(name: string, payload: unknown): void; transferFile?: TransferFile };
+    /** The document's own `icons`: icons the application carries by name, which win over the core set */
+    icons?: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
+    /**
+     * The document's `screens` and `start`: with them mount the `app` component, which places each screen in its layout
+     * (none by default)
+     */
+    screens?: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
+    start?: string;
+    /**
+     * The host's hooks: `onEmit` receives the name and payload of an `emit` command, `transferFile` takes the files of a
+     * `fileField` or `paintField`, `releaseFile` takes the files a `paintField` gives back, `readFile` gives the bytes of
+     * a stored file (a `paintField` background) (none by default)
+     */
+    hooks?: { onEmit?(name: string, payload: unknown): void; transferFile?: TransferFile; releaseFile?: ReleaseFile; readFile?: ReadFile };
 }
 
 /** What `mountComponent` gives back */
@@ -40,6 +52,8 @@ export interface MountedComponent {
     setTheme(kind: ThemeKind, name: string): void;
     /** Switches the application to the language `code`; throws when the library has no overlay for it */
     setLocale(code: string): void;
+    /** `MountedApp.navigate`: shows another screen of an app mounted with `screens`; returns why it cannot, undefined when it moved */
+    navigate(screen: string, params?: Readonly<Record<string, unknown>>): string | undefined;
     /** Unmounts the application and removes the host; safe to call twice */
     dispose(): void;
 }
@@ -115,11 +129,13 @@ export function createMountComponent(build: ComponentBuild): MountComponent {
             theme: { active },
             ...(options.data === undefined ? {} : { data: options.data }),
             ...(options.locales === undefined ? {} : { locales: options.locales }),
+            ...(options.icons === undefined ? {} : { icons: options.icons }),
+            ...(options.screens === undefined ? {} : { screens: options.screens, start: options.start }),
             app: { component: name, ...nodeState }
         } as unknown as AppDocument;
         const host = globalThis.document.body.appendChild(globalThis.document.createElement('div'));
         const locale = registerLocaleStep(overlays);
-        const app = mountApp(host, document, library, options.hooks);
+        const app = mountApp(host, document, library, options.hooks, { route: false });
         if (!app.store) {
             locale.unregister();
             host.remove();
@@ -145,6 +161,9 @@ export function createMountComponent(build: ComponentBuild): MountComponent {
             setLocale(code) {
                 const errors = locale.switchTo(code);
                 if (errors.length > 0) throw new Error(`mountComponent: ${errors.map(formatError).join('\n')}`);
+            },
+            navigate(screen, params) {
+                return app.navigate(screen, params as never);
             },
             dispose() {
                 if (disposed) return;

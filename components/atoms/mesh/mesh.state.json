@@ -1,0 +1,39 @@
+{
+    "summary": "A primitive 3D object (box, sphere, cylinder, cone, plane, torus, capsule) with a material",
+    "category": "graphics",
+    "purposes": ["draw a box or sphere in 3D", "place a primitive 3D object", "draw a floor or plane in a 3D scene", "make a pressable 3D hotspot"],
+    "includes": ["transform3d", "interaction3d", "motion3d"],
+    "properties": {
+        "geometry": {
+            "type": "object",
+            "validators": {
+                "fields": {
+                    "kind": { "type": "string", "required": true, "values": ["box", "sphere", "cylinder", "cone", "plane", "torus", "capsule"] },
+                    "width": { "type": "number", "validators": { "range": { "min": 0 } } },
+                    "height": { "type": "number", "validators": { "range": { "min": 0 } } },
+                    "depth": { "type": "number", "validators": { "range": { "min": 0 } } },
+                    "radius": { "type": "number", "validators": { "range": { "min": 0 } } },
+                    "radiusTop": { "type": "number", "validators": { "range": { "min": 0 } } },
+                    "radiusBottom": { "type": "number", "validators": { "range": { "min": 0 } } },
+                    "tube": { "type": "number", "validators": { "range": { "min": 0 } } },
+                    "segments": { "type": "number", "validators": { "range": { "min": 3, "max": 128 } } }
+                }
+            }
+        },
+        "material": {
+            "type": "object",
+            "validators": {
+                "fields": {
+                    "color": { "type": "string", "validators": { "color": true } },
+                    "metalness": { "type": "number", "validators": { "range": { "min": 0, "max": 1 } } },
+                    "roughness": { "type": "number", "validators": { "range": { "min": 0, "max": 1 } } },
+                    "opacity": { "type": "number", "validators": { "range": { "min": 0, "max": 1 } } },
+                    "emissive": { "type": "string", "validators": { "color": true } },
+                    "map": { "type": "object", "validators": { "fileRef": { "types": ["image/png", "image/jpeg", "image/gif", "image/webp"] } } }
+                }
+            }
+        },
+        "castShadow": { "type": "boolean", "default": false },
+        "receiveShadow": { "type": "boolean", "default": false }
+    }
+}

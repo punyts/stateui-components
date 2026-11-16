@@ -1,5 +1,7 @@
 {
     "summary": "A separating line, horizontal or vertical, with an optional label in the line",
+    "category": "content",
+    "purposes": ["separate sections with a line", "split a menu into groups", "label a break between parts", "draw a vertical rule between toolbar items"],
     "shared": {},
     "properties": {
         "orientation": { "type": "string", "values": ["horizontal", "vertical"], "default": "horizontal", "reflect": true },

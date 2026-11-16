@@ -1,0 +1,36 @@
+{
+    "summary": "A vertical list of events in the order given, each a dot or icon on a line with a title, its time as given and text",
+    "category": "data",
+    "purposes": ["show the history of an order or ticket", "list recent activity on a record", "show the milestones of a project", "show an audit trail of changes", "track the steps of a delivery"],
+    "shared": { "tone": { "default": "neutral" }, "size": { "default": "md" } },
+    "tokens": {
+        "gap": "{space.gap.md}",
+        "marker": "{size.icon.md}",
+        "tones": {
+            "neutral": { "fill": "{color.neutral.base}", "soft": "{color.neutral.soft}" },
+            "accent": { "fill": "{color.accent.base}", "soft": "{color.accent.soft}" },
+            "danger": { "fill": "{color.danger.base}", "soft": "{color.danger.soft}" },
+            "warning": { "fill": "{color.warning.base}", "soft": "{color.warning.soft}" },
+            "success": { "fill": "{color.success.base}", "soft": "{color.success.soft}" },
+            "info": { "fill": "{color.info.base}", "soft": "{color.info.soft}" }
+        }
+    },
+    "properties": {
+        "entries": {
+            "type": ["array", "map"],
+            "default": [],
+            "items": {
+                "_title": { "type": "string", "kind": "content", "default": "" },
+                "title": { "type": "string", "default": "" },
+                "time": { "type": "string", "default": "" },
+                "text": { "type": "string", "default": "" },
+                "icon": { "type": "icon", "default": "" },
+                "tone": { "type": "string", "values": ["", "neutral", "accent", "danger", "warning", "success", "info"], "default": "" }
+            }
+        },
+        "appearance": { "type": "string", "values": ["comfortable", "compact"], "default": "comfortable", "reflect": true },
+        "rows": { "type": "object", "default": {}, "runtime": true },
+        "_label": { "type": "string", "kind": "content", "default": "Timeline" },
+        "_empty": { "type": "string", "kind": "content", "default": "Nothing has happened yet" }
+    }
+}

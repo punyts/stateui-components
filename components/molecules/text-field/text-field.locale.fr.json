@@ -1,0 +1,13 @@
+{
+    "_label": "Libellé",
+    "_placeholder": "",
+    "_help": "",
+    "_errors": {
+        "required": "Ce champ est obligatoire",
+        "minLength": "Trop court",
+        "maxLength": "Trop long",
+        "min": "Trop petit",
+        "max": "Trop grand",
+        "pattern": "Format non conforme"
+    }
+}

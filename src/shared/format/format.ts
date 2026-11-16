@@ -12,9 +12,12 @@ export interface FormatOptions {
     currency?: string;
     /** Writes a `+` before a positive value (a `-` is always written), as a change from one value to another is shown */
     signed?: boolean;
+    /** Fixes the digits after the decimal separator (0 to 20) for `number`, `percent` and `currency`; without it a number keeps the locale's own, a percent up to one and a currency its own (usually two). Ignored by `duration` */
+    fractionDigits?: number;
 }
 
 const FALLBACK_LOCALE = 'en';
+const MAX_FRACTION_DIGITS = 20;
 const SECONDS_PER_MINUTE = 60;
 const SECONDS_PER_HOUR = 3600;
 
@@ -36,6 +39,12 @@ function createFormatter(locale: string, options: Intl.NumberFormatOptions): Int
         }
     }
     return undefined;
+}
+
+/** The `Intl` options that fix the fraction digits, or `undefined` when `value` is not an integer from 0 to 20 */
+function fixedDigits(value: number | undefined): { minimumFractionDigits: number; maximumFractionDigits: number } | undefined {
+    if (value === undefined || !Number.isInteger(value) || value < 0 || value > MAX_FRACTION_DIGITS) return undefined;
+    return { minimumFractionDigits: value, maximumFractionDigits: value };
 }
 
 function formatDuration(seconds: number, locale: string, signed: boolean): string {
@@ -65,12 +74,13 @@ export function formatValue(value: unknown, options: FormatOptions = {}): string
     if (amount === undefined) return '';
     const locale = options.locale || FALLBACK_LOCALE;
     const signDisplay = options.signed === true ? 'exceptZero' : 'auto';
+    const digits = fixedDigits(options.fractionDigits);
     if (options.format === 'duration') return formatDuration(amount, locale, options.signed === true);
     const formatter =
         options.format === 'percent'
-            ? createFormatter(locale, { style: 'percent', maximumFractionDigits: 1, signDisplay })
+            ? createFormatter(locale, { style: 'percent', ...(digits ?? { maximumFractionDigits: 1 }), signDisplay })
             : options.format === 'currency' && options.currency
-              ? createFormatter(locale, { style: 'currency', currency: options.currency, signDisplay })
+              ? createFormatter(locale, { style: 'currency', currency: options.currency, ...digits, signDisplay })
               : undefined;
-    return (formatter ?? createFormatter(locale, { signDisplay }))?.format(amount) ?? String(amount);
+    return (formatter ?? createFormatter(locale, { ...digits, signDisplay }))?.format(amount) ?? String(amount);
 }

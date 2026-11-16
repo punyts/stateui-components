@@ -1,9 +1,12 @@
 {
     "summary": "A labelled multi-line text field that can grow with its text, with help and error text",
+    "category": "forms",
+    "purposes": ["write a comment or description in a form", "type a chat message to send", "collect feedback on several lines"],
     "events": ["change", "invalid", "valid", "send"],
     "commands": ["validate", "reset", "focus", "clear", "send"],
     "tokenGroup": "field",
     "tokens": {
+        "font": { "size": "{text.body.size}", "weight": "{text.body.weight}" },
         "selected": { "fill": "{color.accent.base}", "on": "{color.accent.on}" },
         "error": { "color": "{color.danger.base}" },
         "label": {
@@ -15,6 +18,8 @@
         }
     },
     "shared": {
+        "variant": { "default": "outline", "values": ["outline", "soft", "ghost"] },
+        "corners": {},
         "size": {
             "default": "md"
         },
@@ -115,14 +120,6 @@
             "default": "",
             "runtime": true
         },
-        "glyph": {
-            "type": "object",
-            "default": {
-                "name": "",
-                "decorative": true
-            },
-            "runtime": true
-        },
         "_label": {
             "type": "string",
             "kind": "content",
@@ -131,7 +128,7 @@
         "_placeholder": {
             "type": "string",
             "kind": "content",
-            "default": "Type here"
+            "default": ""
         },
         "_help": {
             "type": "string",

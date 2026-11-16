@@ -20,7 +20,8 @@
     border-radius: var(--ui-form-summary-radius);
 }
 
-.body:not(:has(> sui-node)) {
+/* :host and [layout-host] outrank the layout sheet, even its collapse rules, so an empty body stays hidden whatever its layout */
+:host .body[layout-host]:not(:has(> sui-node)) {
     display: none;
 }
 
@@ -28,4 +29,10 @@
     display: flex;
     align-items: center;
     gap: var(--ui-space-gap-sm);
+}
+
+/* A toolbar or panel in the actions fills the row, so its own alignment (a toolbar's align: end) places the buttons */
+.actions > sui-node > :is(ui-toolbar, ui-panel) {
+    flex: 1 1 auto;
+    min-inline-size: 0;
 }

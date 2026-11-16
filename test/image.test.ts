@@ -4,7 +4,8 @@ import { describe, expect, it } from 'vitest';
 import { parseShape, validateNode } from '@punyts/stateui-app/core';
 
 const file = resolve(import.meta.dirname, '../components/atoms/image/image.state.json');
-const parsed = parseShape(readFileSync(file, 'utf8'), file);
+// The build passes library-relative paths with forward slashes; an absolute Windows path would not name the component
+const parsed = parseShape(readFileSync(file, 'utf8'), 'components/atoms/image/image.state.json');
 const shape = parsed.shape;
 if (!shape) throw new Error(`image shape did not parse: ${JSON.stringify(parsed.errors)}`);
 
@@ -46,7 +47,15 @@ describe('image shape', () => {
         expect(result).toEqual(['SUI-STATE-CONDITION']);
     });
 
-    it.each(['http://example.com/a.png', 'https://example.com/a.png', '//example.com/a.png', 'javascript:alert(1)', '#top', 'images/a.png'])(
+    it('should accept an https picture', () => {
+        // Act
+        const result = codes({ component: 'image', src: 'https://example.com/a.png', _alt: 'A lamp' });
+
+        // Assert
+        expect(result).toEqual([]);
+    });
+
+    it.each(['http://example.com/a.png', '//example.com/a.png', 'javascript:alert(1)', '#top', 'images/a.png'])(
         'should report SUI-STATE-INVALID for the src %s',
         (src) => {
             // Act

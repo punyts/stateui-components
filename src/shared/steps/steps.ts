@@ -17,10 +17,14 @@ export function keysOf(value: unknown): string[] {
     return value.filter((item): item is string | number => typeof item === 'string' || typeof item === 'number').map(String);
 }
 
-/** The active key: `active` when it names a step, otherwise the first step (empty without steps) */
+/**
+ * The active key: `active` when it names a step; the first step (empty without steps) when `active` is empty or unset;
+ * empty (no current step) when `active` is a value that names no step, such as the `Cancelled` status of an order
+ */
 export function currentStep(keys: readonly string[], active: unknown): string {
     const wanted = typeof active === 'string' || typeof active === 'number' ? String(active) : '';
-    return keys.includes(wanted) ? wanted : (keys[0] ?? '');
+    if (wanted === '') return keys[0] ?? '';
+    return keys.includes(wanted) ? wanted : '';
 }
 
 /**

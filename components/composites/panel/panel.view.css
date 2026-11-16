@@ -7,15 +7,31 @@
     display: flex;
     flex-direction: column;
     gap: var(--ui-panel-gap);
+    /* fills a stretched grid or row cell, so panels side by side end at one height; an auto height stays auto */
+    block-size: 100%;
     padding: var(--ui-panel-padding);
     color: var(--ui-color-text-base);
     background: var(--surface);
-    border: var(--ui-border-width-thin) solid transparent;
-    border-radius: var(--ui-panel-radius);
+    border: var(--ui-panel-border-width) solid transparent;
+    border-radius: var(--corner-radius, var(--ui-panel-radius));
     box-shadow: var(--shadow);
     font-family: var(--ui-text-body-family);
     font-size: var(--ui-text-body-size);
     line-height: var(--ui-text-body-leading);
+}
+
+/* md keeps the panel.padding token (one to four lengths); none, sm and lg are fixed steps, so a layout-only panel
+   drops its padding without a theme override that would reach the panels inside it */
+:host([padding=none]) .panel {
+    padding: 0px;
+}
+
+:host([padding=sm]) .panel {
+    padding: var(--ui-space-inset-sm);
+}
+
+:host([padding=lg]) .panel {
+    padding: var(--ui-space-inset-lg);
 }
 
 :host([bordered]) .panel {
@@ -81,6 +97,21 @@
     display: none;
 }
 
-.body:not(:has(> sui-node)) {
+/* The content takes the height a panel has below its header, so a layout in a panel of fixed height (a desktop surface
+   of windows, a window) fills it; a panel of auto height is as tall as its content, as before */
+.content {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-block-size: 0;
+}
+
+.body {
+    flex: 1 1 auto;
+    min-block-size: 0;
+}
+
+/* :host and [layout-host] outrank the layout sheet, even its collapse rules, so an empty body stays hidden whatever its layout */
+:host .body[layout-host]:not(:has(> sui-node)) {
     display: none;
 }

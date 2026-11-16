@@ -1,0 +1,42 @@
+{
+    "_title": "Ajustes",
+    "children": {
+        "menu": {
+            "children": { "general": { "_label": "General" }, "notifications": { "_label": "Notificaciones" }, "appearance": { "_label": "Apariencia" } }
+        },
+        "sections": {
+            "children": {
+                "general": {
+                    "_title": "General",
+                    "children": {
+                        "form": {
+                            "children": { "name": { "_label": "Nombre visible" }, "email": { "_label": "Correo electrónico" } },
+                            "actions": { "_title": "Guardar" }
+                        }
+                    }
+                },
+                "notifications": {
+                    "_title": "Notificaciones",
+                    "children": {
+                        "form": {
+                            "children": {
+                                "email": { "_label": "Avisarme por correo de la actividad" },
+                                "digest": { "_label": "Hora del resumen" }
+                            },
+                            "actions": { "_title": "Guardar" }
+                        }
+                    }
+                },
+                "appearance": {
+                    "_title": "Apariencia",
+                    "children": {
+                        "form": {
+                            "children": { "theme": { "_label": "Tema", "options": { "light": { "_label": "Claro" }, "dark": { "_label": "Oscuro" } } } },
+                            "actions": { "_title": "Guardar" }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

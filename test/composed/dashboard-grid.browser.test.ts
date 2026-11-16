@@ -6,13 +6,11 @@ import { validateDocument } from '@punyts/stateui-app/core';
 import catalogJson from '../../.test-build/real/components/catalog.json';
 import { registerAll } from '../../.test-build/real/components/index.js';
 import { overlaysFromFiles } from '../harness/createMountComponent.js';
-import type { ComponentBuild } from '../harness/createMountComponent.js';
+import { realLocaleFiles } from '../harness/realLocales.js';
 
 const catalog = catalogJson as unknown as Catalog;
 const library = libraryFromCatalog(catalog);
-const overlays = overlaysFromFiles(
-    import.meta.glob<ComponentBuild['localeFiles'][string]>('../../.test-build/real/components/*.locale.*.json', { eager: true, import: 'default' })
-);
+const overlays = overlaysFromFiles(realLocaleFiles);
 
 let registered = false;
 const hosts: { dispose(): void; host: HTMLElement; unregister(): void }[] = [];
@@ -44,8 +42,8 @@ function mount(width: number, node: Record<string, unknown> = {}): Mounted {
     const app = mountApp(host, { locale: 'en', app: { component: 'dashboardGrid', ...node } } as unknown as AppDocument, library);
     if (!app.store) throw new Error(`dashboardGrid did not mount: ${app.errors.map((error) => error.message).join('; ')}`);
     hosts.push({ host, dispose: () => app.dispose(), unregister: () => locale.unregister() });
-    const grid = findByTag(host, 'ui-page');
-    if (!grid) throw new Error('no ui-page was rendered');
+    const grid = findByTag(host, 'ui-panel');
+    if (!grid) throw new Error('no ui-panel was rendered');
     return { host, grid, switchTo: (code) => void locale.switchTo(code) };
 }
 

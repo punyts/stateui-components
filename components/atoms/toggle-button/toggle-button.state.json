@@ -1,0 +1,23 @@
+{
+    "summary": "A button that stays pressed or not (aria-pressed), with an icon and label like button; a press flips pressed",
+    "category": "forms",
+    "purposes": ["turn a setting on and off with one button", "toggle bold or italic in an editor", "mute or unmute sound", "switch a view option such as a grid", "mark an item as a favourite"],
+    "events": ["change"],
+    "commands": ["focus"],
+    "shared": { "corners": {}, "tone": { "default": "accent" }, "variant": { "default": "outline" }, "size": { "default": "md" } },
+    "tokenGroup": "button",
+    "tokens": {
+        "font": { "size": "{text.label.size}", "weight": "{text.label.weight}" },
+        "radius": "{radius.md}",
+        "padding": { "inline": "{space.inset.md}" },
+        "gap": "{space.gap.sm}"
+    },
+    "properties": {
+        "pressed": { "type": "boolean", "default": false, "reflect": true },
+        "icon": { "type": "icon", "default": "" },
+        "iconPosition": { "type": "string", "values": ["start", "end", "only"], "default": "start", "reflect": true },
+        "disabled": { "type": "boolean", "default": false },
+        "fill": { "type": "boolean", "default": false, "reflect": true },
+        "_text": { "type": "string", "kind": "content", "default": "Toggle" }
+    }
+}

@@ -12,6 +12,7 @@ const PASSED: Readonly<Record<string, string>> = {
     records: 'records',
     row: 'row',
     key: 'key',
+    rowHeight: 'rowHeight',
     selected: 'selected'
 };
 
@@ -25,12 +26,12 @@ interface CommandHost {
 
 /**
  * The body of the tree is a `recordList` node held in the runtime property `body` and drawn with `<sui-node>`, like the
- * list. Its `records`, `row`, `key` and `selected` are store aliases of the tree's own, so the slot pool, the `$row` links and
+ * list. Its `records`, `row`, `key`, `rowHeight` and `selected` are store aliases of the tree's own, so the slot pool, the `$row` links and
  * the recycling are the record view's. The tree turns the records into the rows to show (`flattenTree`, in
  * `src/shared/records/tree.ts`): `expanded` lists the keys whose children are shown, and the result is written as the
  * body's `order` (a runtime property aliased as `order`), so opening or closing a record changes the order and nothing else:
  * the slots are pointed at other records, not rebuilt. The depth of each record is the custom property `--sui-level` on
- * its slot, which a row template uses in CSS with `--sui-indent` (the `indent` space). A cycle of parent keys hides its
+ * its slot, which the record list turns into the row's indent (with `--sui-indent`, the `indent` space) and its expand glyph. A cycle of parent keys hides its
  * records and is reported once as `SUI-RUN-BINDING`.
  *
  * The body has the role `tree`, and the pool gives each slot `aria-level`, `aria-expanded`, `aria-setsize`, `aria-posinset`

@@ -1,0 +1,13 @@
+{
+    "actions": { "children": { "add": { "_title": "Añadir" } } },
+    "children": {
+        "table": {
+            "columns": {
+                "name": { "_title": "Nombre" },
+                "actions": { "_title": "Acciones", "cell": { "_title": "Eliminar" } }
+            }
+        },
+        "form": { "_title": "Editar registro" },
+        "confirm": { "_title": "¿Eliminar el registro?" }
+    }
+}

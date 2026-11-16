@@ -1,0 +1,30 @@
+{
+    "actions": {
+        "children": {
+            "add": {
+                "_title": "Ajouter"
+            }
+        }
+    },
+    "children": {
+        "table": {
+            "columns": {
+                "name": {
+                    "_title": "Nom"
+                },
+                "actions": {
+                    "_title": "Actions",
+                    "cell": {
+                        "_title": "Supprimer"
+                    }
+                }
+            }
+        },
+        "form": {
+            "_title": "Modifier l’enregistrement"
+        },
+        "confirm": {
+            "_title": "Supprimer l’enregistrement ?"
+        }
+    }
+}

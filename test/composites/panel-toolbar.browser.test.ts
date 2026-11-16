@@ -81,6 +81,17 @@ describe('panel in Chromium', () => {
         expect(padding('compact')).toBeLessThan(padding('spacious'));
     });
 
+    it('should drop the padding with padding none and step it with sm and lg', () => {
+        // Arrange
+        const padding = (value: string): number =>
+            parseFloat(getComputedStyle(part(mountComponent('panel', { padding: value }).element, '.panel') as HTMLElement).paddingTop);
+
+        // Assert
+        expect(padding('none')).toBe(0);
+        expect(padding('sm')).toBeLessThan(padding('md'));
+        expect(padding('lg')).toBeGreaterThan(padding('md'));
+    });
+
     it('should lay the children out as a column, a row, a grid, a region and ad hoc through layout and placement', () => {
         // Arrange
         const place = (layout: Record<string, unknown>, placed: Record<string, Record<string, unknown>>): DOMRect[] => {
@@ -377,5 +388,44 @@ describe('toolbar in Chromium', () => {
         // Assert
         expect(bar.getAttribute('align')).toBe('end');
         expect(all(bar, '.row ui-button')).toHaveLength(2);
+    });
+
+    it('should hide an empty body whatever layout it is given, also when it collapses', () => {
+        // Arrange
+        const layouts = [{ type: 'row' }, { type: 'grid', cols: 3 }, { type: 'region' }, { type: 'row', collapseBelow: 'xl' }];
+        const components: [string, Record<string, unknown>][] = [
+            ['panel', { _title: 'Empty' }],
+            ['card', { _title: 'Empty' }],
+            ['form', {}],
+            ['disclosure', { _title: 'Empty', open: true }],
+            ['window', { _title: 'Empty' }]
+        ];
+
+        // Act
+        const shown = components.flatMap(([component, properties]) =>
+            layouts.map((layout) => {
+                const mounted = mountComponent(component, { ...properties, layout, children: {} });
+                const body = part(mounted.element, '[layout-host]') as HTMLElement;
+                return `${component} ${JSON.stringify(layout)} ${getComputedStyle(body).display}`;
+            })
+        );
+
+        // Assert
+        expect(shown.filter((line) => !line.endsWith(' none'))).toEqual([]);
+    });
+
+    it('should lay out the children of a form by its own layout', () => {
+        // Arrange
+        const mounted = mountComponent('form', {
+            layout: { type: 'row' },
+            children: { a: { component: 'textField', _label: 'A' }, b: { component: 'textField', _label: 'B' } }
+        });
+
+        // Act
+        const [a, b] = all(mounted.element, '[layout-host] > sui-node > *').map(box) as [DOMRect, DOMRect];
+
+        // Assert
+        expect(b.left).toBeGreaterThan(a.left);
+        expect(b.top).toBeCloseTo(a.top, 0);
     });
 });

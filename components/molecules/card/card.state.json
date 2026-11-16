@@ -1,8 +1,10 @@
 {
-    "summary": "A surface with media, header, body and footer slots; interactive raises press; loading shows skeletons",
-    "shared": { "elevation": { "default": "raised" }, "density": {} },
+    "summary": "A surface with media, header, body and footer slots; interactive raises press; draggable is a drag source",
+    "category": "content",
+    "purposes": ["show one item as a box with a picture", "present a product with its name and price", "group a title, body and actions on a surface", "make a clickable tile for a record"],
+    "shared": { "corners": {}, "elevation": { "default": "raised" }, "density": {} },
     "layout": true,
-    "events": ["press"],
+    "events": ["press", "dragStart", "dragMove", "dragEnd"],
     "tokens": {
         "selected": { "fill": "{color.accent.soft}", "border": "{color.accent.base}" },
         "radius": "{radius.md}",
@@ -12,6 +14,7 @@
     "properties": {
         "interactive": { "type": "boolean", "default": false, "reflect": true },
         "selected": { "type": "boolean", "default": false, "reflect": true },
+        "draggable": { "type": "boolean", "default": false, "reflect": true },
         "loading": { "type": "boolean", "default": false, "reflect": true },
         "padding": { "type": "string", "values": ["md", "none", "sm", "lg"], "default": "md", "reflect": true },
         "_title": { "type": "string", "kind": "content", "default": "" },

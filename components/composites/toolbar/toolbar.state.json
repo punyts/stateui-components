@@ -1,5 +1,7 @@
 {
     "summary": "A row of controls laid out by the toolbar itself, with alignment and optional wrapping",
+    "category": "layout",
+    "purposes": ["line up buttons and controls in a row", "hold the actions above a table", "align controls at the end of a dialog"],
     "shared": { "density": {} },
     "tokens": {
         "gap": "{space.gap.md}",

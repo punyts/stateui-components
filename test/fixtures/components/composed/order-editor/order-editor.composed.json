@@ -1,5 +1,8 @@
 {
     "component": "modal",
+    "summary": "A test fixture: a dialog that edits an order",
+    "category": "overlays",
+    "purposes": ["edit an order in a themed dialog", "test a composed fixture", "check a composed overlay"],
     "_title": "Edit order",
     "theme": { "color": { "accent": { "base": "#2f6f4f" } } },
     "on": { "close": { "command": "reset", "target": ".body.children.form" } },

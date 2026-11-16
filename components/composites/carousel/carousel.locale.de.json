@@ -1,0 +1,10 @@
+{
+    "_label": "Karussell",
+    "_slideLabel": "{index} von {count}",
+    "_goTo": "Folie {index} zeigen",
+    "_previous": "Vorherige Folie",
+    "_next": "Nächste Folie",
+    "_slides": "Folie wählen",
+    "_stop": "Diashow anhalten",
+    "_start": "Diashow starten"
+}

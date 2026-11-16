@@ -1,0 +1,9 @@
+{
+    "_label": "Code",
+    "_help": "",
+    "_digit": "Chiffre {index} sur {count}",
+    "_errors": {
+        "required": "Ce champ est obligatoire",
+        "incomplete": "Saisissez le code complet"
+    }
+}

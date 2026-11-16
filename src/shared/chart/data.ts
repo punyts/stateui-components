@@ -15,6 +15,15 @@ export function readRows(records: unknown): Record<string, unknown>[] {
     return values.filter(isRecord);
 }
 
+/**
+ * The key of each record `readRows` keeps, in the same order: an array's index as a string (the index in the array, so a
+ * left-out entry does not shift the keys after it), a keyed map's key. A chart's `press` names a mark's record by it
+ */
+export function readKeys(records: unknown): string[] {
+    const entries: [string, unknown][] = Array.isArray(records) ? (records as unknown[]).map((value, at) => [String(at), value]) : isRecord(records) ? Object.entries(records) : [];
+    return entries.filter(([, value]) => isRecord(value)).map(([key]) => key);
+}
+
 /** The series in key order. An entry with no `field` reads the field named like its key; a label defaults to the key */
 export function readSeries(series: unknown): SeriesSpec[] {
     if (!isRecord(series)) return [];
@@ -41,4 +50,21 @@ export function readCategories(rows: readonly Record<string, unknown>[], x: stri
 /** The numbers a series reads from the records; a value that is not a number counts as 0 */
 export function readValues(rows: readonly Record<string, unknown>[], field: string): number[] {
     return rows.map((row) => toNumber(row[field]) ?? 0);
+}
+
+/**
+ * A number formatter that formats each value once and gives the same text again for it: a chart writes a value in its
+ * mark's name, in every tooltip row of its category and in the data table, and `Intl` formatting is the slow part of a
+ * big series. Make one per draw, so a change of locale or format is not mixed with the last one
+ */
+export function formatOnce(format: (value: number) => string): (value: number) => string {
+    const done = new Map<number, string>();
+    return (value) => {
+        let text = done.get(value);
+        if (text === undefined) {
+            text = format(value);
+            done.set(value, text);
+        }
+        return text;
+    };
 }

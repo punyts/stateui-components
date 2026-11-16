@@ -1,5 +1,7 @@
 {
     "summary": "A small status label or count, as a soft, solid, outline or ghost pill, or a dot",
+    "category": "feedback",
+    "purposes": ["show a count next to a link or icon", "show the number of items in a cart", "mark a status with a small pill", "flag new or unread items", "tag a record with a short label"],
     "shared": { "tone": { "default": "neutral" }, "variant": { "default": "soft" }, "size": { "default": "md" } },
     "properties": {
         "icon": { "type": "icon", "default": "" },

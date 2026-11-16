@@ -7,6 +7,7 @@ import fixtureCatalog from '../../.test-build/fixture/components/catalog.json';
 import { registerAll } from '../../.test-build/real/components/index.js';
 import { overlaysFromFiles } from './createMountComponent.js';
 import type { ComponentBuild } from './createMountComponent.js';
+import { realLocaleFiles } from './realLocales.js';
 
 /** The composed components of the fixture library that the order editor tests add to the real library */
 const FIXTURE_COMPOSED = ['orderEditor'];
@@ -29,15 +30,11 @@ export const orderEditorCatalog: Catalog = {
 /** The merged catalog as `mountApp` takes it */
 export const orderEditorLibrary: ComponentLibrary = libraryFromCatalog(orderEditorCatalog);
 
-const realLocales = import.meta.glob<ComponentBuild['localeFiles'][string]>('../../.test-build/real/components/*.locale.*.json', {
-    eager: true,
-    import: 'default'
-});
 const fixtureLocales = import.meta.glob<ComponentBuild['localeFiles'][string]>('../../.test-build/fixture/components/orderEditor.locale.*.json', {
     eager: true,
     import: 'default'
 });
-const overlays = overlaysFromFiles({ ...realLocales, ...fixtureLocales });
+const overlays = overlaysFromFiles({ ...realLocaleFiles, ...fixtureLocales });
 
 /** A status option as `selectField` reads it with the default `optionValue` and `optionLabel` */
 export interface Status {

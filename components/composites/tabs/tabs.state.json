@@ -1,15 +1,18 @@
 {
     "summary": "Children shown one at a time under tabs whose label, icon and badge come from each child's placement",
+    "category": "navigation",
+    "purposes": ["switch between views under tabs", "split a page into tabbed sections", "show one of several panels at a time"],
     "events": ["change"],
     "commands": ["select"],
     "tokens": {
         "gap": "{space.gap.sm}",
-        "padding": "{space.inset.md}"
+        "padding": "{space.inset.md} {space.inset.md}"
     },
     "placement": {
         "_tab": { "type": "string", "kind": "content", "default": "" },
         "icon": { "type": "icon", "default": "" },
-        "badge": { "type": ["string", "number"], "default": "" }
+        "badge": { "type": ["string", "number"], "default": "" },
+        "disabled": { "type": "boolean", "default": false }
     },
     "properties": {
         "active": { "type": "string", "default": "" },

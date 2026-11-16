@@ -1,0 +1,10 @@
+{
+    "_label": "Note",
+    "_help": "",
+    "_valueText": "{value} sur {max} étoiles",
+    "_empty": "Pas de note",
+    "_errors": {
+        "required": "Choisissez une note",
+        "max": "Trop d’étoiles"
+    }
+}

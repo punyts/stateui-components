@@ -1,0 +1,4 @@
+<button class="button" type="button" aria-pressed="{{ $.pressed ? 'true' : 'false' }}" aria-label="{{ $.iconPosition === 'only' ? $._text : null }}" title="{{ $.iconPosition === 'only' ? $._text : null }}" disabled="{{ $.disabled }}" onclick="{{ onClick }}">
+    <span class="glyph" icon-paths="icon" aria-hidden="true" if="{{ $.icon !== '' }}"></span>
+    <span class="label" if="{{ $.iconPosition !== 'only' }}">{{ $._text }}</span>
+</button>

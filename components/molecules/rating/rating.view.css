@@ -1,0 +1,62 @@
+@include "field.css";
+
+.stars {
+    --star: calc(var(--control-height, var(--ui-size-control-md)) * 0.75);
+    display: inline-flex;
+    align-items: center;
+    gap: calc(var(--star) / 8);
+    min-block-size: var(--control-height, var(--ui-size-control-md));
+    border-radius: var(--ui-radius-sm);
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.star {
+    display: inline-flex;
+    flex: none;
+    inline-size: var(--star);
+    block-size: var(--star);
+}
+
+.star svg {
+    inline-size: 100%;
+    block-size: 100%;
+    fill: transparent;
+    stroke: var(--ui-color-border-strong);
+    stroke-width: 1.5;
+    stroke-linejoin: round;
+    transition:
+        fill var(--ui-motion-duration-fast) var(--ui-motion-easing-standard),
+        stroke var(--ui-motion-duration-fast) var(--ui-motion-easing-standard);
+}
+
+.star[data-on] svg {
+    fill: var(--ui-field-selected-fill);
+    stroke: var(--ui-field-selected-fill);
+}
+
+/* The preview is lighter than a chosen rating, so the pointer never looks like it has already set one */
+.stars[data-preview] .star[data-on] svg {
+    opacity: 0.6;
+}
+
+.stars[aria-invalid="true"] .star svg {
+    stroke: var(--ui-field-error-color);
+}
+
+:host([readonly]) .stars {
+    cursor: default;
+}
+
+.stars[aria-disabled="true"] {
+    cursor: not-allowed;
+}
+
+.stars[aria-disabled="true"] .star svg {
+    stroke: var(--ui-color-border-base);
+}
+
+.stars[aria-disabled="true"] .star[data-on] svg {
+    fill: var(--ui-color-text-disabled);
+    stroke: var(--ui-color-text-disabled);
+}

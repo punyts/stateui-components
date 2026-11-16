@@ -183,13 +183,14 @@
     overflow: hidden;
 }
 
-.heads,
-.body {
+/* Only the schedule: the month view's weekday row is also .heads, and --sui-gutter is set on .schedule only */
+.schedule > .heads,
+.schedule > .body {
     display: grid;
     grid-template-columns: var(--sui-gutter) repeat(var(--sui-days, 7), minmax(0, 1fr));
 }
 
-.heads {
+.schedule > .heads {
     border-block-end: var(--ui-border-width-thin) solid var(--ui-color-border-base);
     background: var(--ui-color-surface-sunken);
 }

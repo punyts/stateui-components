@@ -1,5 +1,7 @@
 {
     "summary": "A form that finds its fields, validates them together, and submits, resets and commits their values",
+    "category": "forms",
+    "purposes": ["collect and check details before going on", "submit several fields together", "validate input and show errors", "reset or save a group of fields"],
     "shared": { "density": {} },
     "layout": true,
     "events": ["invalid", "changed", "submitted"],

@@ -32,6 +32,19 @@ interface IconScope {
     subscribe(variables: string[], listener: () => void): { dispose(): void };
 }
 
+/** The `ui-icon` element of each icon scope: the view is instantiated detached, so the mixin cannot find its host by walking up */
+const HOSTS = new WeakMap<object, Element>();
+
+/**
+ * The attribute-given icon: an icon that shares its parent's scope (no `state` attribute) and carries a `name`
+ * attribute is `<ui-icon name="chevron-left">`, so the attribute is its name and `filled` its flag; the parent's own
+ * `name` or `filled` property is not the icon's. Undefined when the icon has its own state or no `name` attribute
+ */
+function attributeHost(host: Element | undefined): Element | undefined {
+    if (!host || host.hasAttribute('state') || !host.hasAttribute('name')) return undefined;
+    return host;
+}
+
 function isPath(value: unknown): value is IconPath {
     if (typeof value === 'string') return true;
     return typeof value === 'object' && value !== null && typeof (value as StyledPath).d === 'string';
@@ -109,9 +122,10 @@ function drawInto(element: Element, attributes: Record<string, unknown>, scope: 
     const given = attributes['icon-paths'];
     const nameKey = typeof given === 'string' && given !== '' ? given : 'name';
     let reported = '';
+    const fixed = nameKey === 'name' ? attributeHost(HOSTS.get(scope)) : undefined;
     const draw = (): void => {
         element.replaceChildren();
-        const name = store.get(`${basePath}.${nameKey}`);
+        const name = fixed ? fixed.getAttribute('name') : store.get(`${basePath}.${nameKey}`);
         if (typeof name !== 'string' || name === '') {
             reported = '';
             return;
@@ -125,14 +139,18 @@ function drawInto(element: Element, attributes: Record<string, unknown>, scope: 
             return;
         }
         reported = '';
-        const filled = store.get(`${basePath}.filled`) === true && icon.filled !== undefined;
+        const wantsFilled = fixed ? fixed.hasAttribute('filled') && fixed.getAttribute('filled') !== 'false' : store.get(`${basePath}.filled`) === true;
+        const filled = wantsFilled && icon.filled !== undefined;
         element.append(drawIcon(element.ownerDocument, filled ? (icon.filled as readonly IconPath[]) : icon.outline, filled));
     };
-    const subscription = scope.subscribe([`$.${nameKey}`, '$.filled'], draw);
+    const subscription = fixed ? undefined : scope.subscribe([`$.${nameKey}`, '$.filled'], draw);
+    const observer = fixed ? new MutationObserver(draw) : undefined;
+    if (fixed) observer?.observe(fixed, { attributes: true, attributeFilter: ['name', 'filled'] });
     store.on(RUNTIME_ICONS, draw);
     draw();
     return () => {
-        subscription.dispose();
+        subscription?.dispose();
+        observer?.disconnect();
         store.off(RUNTIME_ICONS, draw);
     };
 }
@@ -143,4 +161,6 @@ try {
     if (!String(error).includes('already registered')) throw error;
 }
 
-export default function icon(): void {}
+export default function icon(context: { element: Element; scope: object }): void {
+    HOSTS.set(context.scope, context.element);
+}

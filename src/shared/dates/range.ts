@@ -7,7 +7,7 @@ export interface RangeValue {
 }
 
 /** The rules of a date range, in the order they are checked; `format` (text that is not a date) is the field's own and comes before them */
-export const RANGE_RULES = ['required', 'min', 'max', 'minDays', 'maxDays'] as const;
+export const RANGE_RULES = ['required', 'order', 'min', 'max', 'minDays', 'maxDays'] as const;
 
 export type RangeRule = (typeof RANGE_RULES)[number];
 
@@ -45,8 +45,8 @@ export function rangeDays(range: RangeValue): number | undefined {
 }
 
 /**
- * The name of the first rule a range fails, or an empty string. `required` needs both dates. The other rules judge what is
- * there: a date before `min` or after `max` (on either side) fails `min` or `max`, and a complete range shorter than
+ * The name of the first rule a range fails, or an empty string. `required` needs both dates, and `order` an end that is not
+ * before the start. The other rules judge what is there: a date before `min` or after `max` (on either side) fails `min` or `max`, and a complete range shorter than
  * `minDays` or longer than `maxDays` days (both ends counted) fails those. An empty range fails only `required`
  */
 export function failingRangeRule(range: RangeValue, settings: RangeSettings): RangeRule | '' {
@@ -55,9 +55,10 @@ export function failingRangeRule(range: RangeValue, settings: RangeSettings): Ra
         if (settings.required) return 'required';
         if (dates.length === 0) return '';
     }
+    if (isComplete(range) && range.end < range.start) return 'order';
     if (settings.min !== '' && dates.some((date) => date < settings.min)) return 'min';
     if (settings.max !== '' && dates.some((date) => date > settings.max)) return 'max';
-    const days = rangeDays(orderRange(range));
+    const days = rangeDays(range);
     if (days === undefined) return '';
     if (settings.minDays > 0 && days < settings.minDays) return 'minDays';
     if (settings.maxDays > 0 && days > settings.maxDays) return 'maxDays';

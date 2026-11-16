@@ -1,0 +1,11 @@
+{
+    "summary": "A text label in a 3D scene: _text in the page font at a 3D position, always facing the camera",
+    "category": "graphics",
+    "purposes": ["label a part of a 3D model", "show a name or price tag in a 3D scene", "annotate a point in a 3D scene"],
+    "includes": ["transform3d", "interaction3d", "motion3d"],
+    "properties": {
+        "_text": { "type": "string", "kind": "content", "default": "" },
+        "color": { "type": "string", "validators": { "color": true } },
+        "fontSize": { "type": "number", "validators": { "range": { "min": 0, "max": 1000 } }, "default": 0.3 }
+    }
+}

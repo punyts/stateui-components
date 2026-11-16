@@ -36,6 +36,31 @@ describe('image in Chromium', () => {
         expect(img?.getAttribute('alt')).toBe('Company logo');
     });
 
+    it('should be a button named by its alt that raises press on a click, Enter and Space only while interactive', () => {
+        // Arrange
+        const mounted = mountComponent('image', { src: RED, _alt: 'All your apps', interactive: true, backdrop: false });
+        const presses: Event[] = [];
+        mounted.element.addEventListener('press', (event) => presses.push(event));
+        const frame = mounted.element.shadowRoot?.querySelector('.frame') as HTMLElement;
+
+        // Act
+        frame.click();
+        frame.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+        frame.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+        frame.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true }));
+        mounted.store.set('$.app.interactive', false);
+        frame.click();
+
+        // Assert
+        expect(presses).toHaveLength(3);
+        expect(frame.getAttribute('role')).toBeNull();
+        mounted.store.set('$.app.interactive', true);
+        expect(frame.getAttribute('role')).toBe('button');
+        expect(frame.getAttribute('aria-label')).toBe('All your apps');
+        expect(imgOf(mounted.element)?.getAttribute('alt')).toBe('');
+        expect(getComputedStyle(mounted.element).backgroundColor).toBe('rgba(0, 0, 0, 0)');
+    });
+
     it('should draw an empty alt when the image is decorative', () => {
         // Act
         const mounted = mountComponent('image', { src: RED, _alt: 'Ignored', decorative: true });

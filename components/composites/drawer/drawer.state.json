@@ -1,5 +1,7 @@
 {
     "summary": "A panel that slides in from an edge on a native dialog element, with header, body and footer slots",
+    "category": "overlays",
+    "purposes": ["slide a panel in from the side of the screen", "show a cart or details without leaving the page", "open a side sheet of filters"],
     "shared": { "elevation": { "default": "overlay" }, "density": {} },
     "events": ["open", "close"],
     "commands": ["open", "close", "toggle"],

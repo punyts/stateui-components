@@ -24,6 +24,53 @@ describe('selectField in Chromium', () => {
         mountComponent.unmountAll();
     });
 
+    it('should draw its chevron as a thin v, on the base surface, sunken when soft, clear when ghost, and round its corners as a pill', () => {
+        // Arrange
+        const node = { _label: 'Size', options: { phone: { _label: 'Phone' } }, value: 'phone' };
+        const look = (props: Record<string, unknown>) => {
+            const control = mountComponent('selectField', { ...node, ...props }).element.shadowRoot?.querySelector('select') as HTMLSelectElement;
+            const style = getComputedStyle(control);
+            const box = control.parentElement as Element;
+            return { chevron: getComputedStyle(box, '::after').content === '""' && getComputedStyle(box, '::after').rotate === '45deg', color: style.backgroundColor, radius: parseFloat(style.borderTopLeftRadius) };
+        };
+
+        // Act
+        const outline = look({});
+        const soft = look({ variant: 'soft' });
+        const ghost = look({ variant: 'ghost', corners: 'pill' });
+
+        // Assert
+        expect([outline.chevron, soft.chevron, ghost.chevron]).toEqual([true, true, true]);
+        expect(soft.color).not.toBe(outline.color);
+        expect(ghost.color).toBe('rgba(0, 0, 0, 0)');
+        expect(ghost.radius).toBeGreaterThan(100);
+    });
+
+    it('should be as tall as its control with no help or error, and keep the label gap above the box and above a help', () => {
+        // Arrange
+        const node = { _label: 'Size', size: 'sm', options: { phone: { _label: 'Phone' } }, value: 'phone' };
+        const rect = (element: Element, selector: string): DOMRect => (element.shadowRoot?.querySelector(selector) as Element).getBoundingClientRect();
+
+        // Act
+        const bare = mountComponent('selectField', { ...node, titlePosition: 'hidden' }).element;
+        const helped = mountComponent('selectField', { ...node, titlePosition: 'hidden', _help: 'The frame size' }).element;
+        const titled = mountComponent('selectField', node).element;
+
+        // Assert: a field with no message lines up with a button of its size; the spaces are there only for what shows
+        expect(bare.getBoundingClientRect().height).toBeCloseTo(rect(bare, 'select').height, 1);
+        expect(rect(bare, 'select').height).toBeCloseTo(32, 1);
+        expect(rect(helped, '.help').top - rect(helped, 'select').bottom).toBeGreaterThan(0);
+        expect(rect(titled, 'select').top - rect(titled, '.label').bottom).toBeGreaterThan(0);
+    });
+
+    it('should end a label wider than the field in an ellipsis', () => {
+        // Act
+        const select = control(mountComponent('selectField', { _label: 'Model', titlePosition: 'hidden', width: 8, options: { haiku: { _label: 'Haiku 5.5 · fastest, lowest cost' } }, value: 'haiku' }).element);
+
+        // Assert
+        expect(getComputedStyle(select).textOverflow).toBe('ellipsis');
+    });
+
     it('should list $.data.statuses, select the linked value and write the choice back', async () => {
         // Arrange
         const mounted = mountComponent('selectField', { _label: 'Status', '<-options': '$.data.statuses', '<-value': '$.data.current' }, { data: { statuses, current: 'done' } });

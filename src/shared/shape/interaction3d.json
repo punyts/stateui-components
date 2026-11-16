@@ -1,0 +1,7 @@
+{
+    "properties": {
+        "interactive": { "type": "boolean", "default": false },
+        "_label": { "type": "string", "kind": "content", "default": "" }
+    },
+    "events": ["press", "hover"]
+}

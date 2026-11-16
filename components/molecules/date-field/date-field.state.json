@@ -1,9 +1,12 @@
 {
     "summary": "A labelled date field that writes an ISO date (YYYY-MM-DD), with optional earliest and latest dates",
+    "category": "forms",
+    "purposes": ["enter a single date", "pick a birthday or due date", "set a deadline with earliest and latest dates"],
     "events": ["change", "invalid", "valid"],
     "commands": ["validate", "reset", "focus", "clear"],
     "tokenGroup": "field",
     "tokens": {
+        "font": { "size": "{text.body.size}", "weight": "{text.body.weight}" },
         "selected": { "fill": "{color.accent.base}", "on": "{color.accent.on}" },
         "error": { "color": "{color.danger.base}" },
         "label": {
@@ -15,6 +18,8 @@
         }
     },
     "shared": {
+        "variant": { "default": "outline", "values": ["outline", "soft", "ghost"] },
+        "corners": {},
         "size": {
             "default": "md"
         },
@@ -78,14 +83,6 @@
         "message": {
             "type": "string",
             "default": "",
-            "runtime": true
-        },
-        "glyph": {
-            "type": "object",
-            "default": {
-                "name": "",
-                "decorative": true
-            },
             "runtime": true
         },
         "_label": {

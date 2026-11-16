@@ -9,14 +9,14 @@ const check = (children: Record<string, unknown>): string[] =>
     validateDocument({ locale: 'en', app: { component: 'tabs', children } }, catalog).errors.map((error) => error.code);
 
 describe('tabs placement shape', () => {
-    it('should declare _tab, icon and badge and no layout', () => {
+    it('should declare _tab, icon, badge and disabled and no layout', () => {
         // Arrange
         const entry = catalog.components.find((candidate) => candidate.name === 'tabs');
 
         // Assert
         expect(entry?.tier).toBe('root');
         const shape = entry as { layout?: boolean; placement?: Record<string, unknown> };
-        expect(Object.keys(shape.placement ?? {})).toEqual(['_tab', 'icon', 'badge']);
+        expect(Object.keys(shape.placement ?? {})).toEqual(['_tab', 'icon', 'badge', 'disabled']);
         expect(shape.layout).not.toBe(true);
     });
 

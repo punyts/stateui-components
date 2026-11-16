@@ -1,0 +1,14 @@
+{
+    "summary": "One mesh template drawn once per record ($row links) as a single instanced mesh, up to 20,000 records",
+    "category": "graphics",
+    "purposes": ["draw one 3D mesh per record", "draw a 3D scatter of points from data", "draw many boxes from a dataset in 3D"],
+    "includes": ["transform3d", "interaction3d", "motion3d"],
+    "properties": {
+        "records": { "type": ["array", "object"] },
+        "row": {
+            "type": "node",
+            "row": true,
+            "childComponents": ["mesh"]
+        }
+    }
+}

@@ -1,0 +1,41 @@
+{
+    "summary": "A screen with the title, a menu of screens and actions in a header bar over the content",
+    "purposes": ["app with a menu bar along the top", "website header with links to pages", "horizontal menu above the content"],
+    "tree": {
+        "component": "panel",
+        "padding": "none",
+        "layout": { "type": "column" },
+        "children": {
+            "header": {
+                "component": "panel",
+                "layout": { "type": "grid", "cols": 3, "collapseBelow": "md" },
+                "children": {
+                    "title": { "component": "text", "textRole": "title", "_text": "My app" },
+                    "menu": {
+                        "component": "nav",
+                        "orientation": "horizontal",
+                        "collapseBelow": "md",
+                        "children": { "home": { "component": "menuItem", "_label": "Home", "screen": "home" } }
+                    },
+                    "actions": { "component": "toolbar", "align": "end", "children": {} }
+                }
+            },
+            "content": { "component": "panel", "placement": { "grow": 1 }, "children": {} },
+            "footer": { "component": "toolbar", "children": { "note": { "component": "text", "textRole": "caption", "_text": "My app" } } }
+        }
+    },
+    "slots": {
+        "menu": { "path": "children.header.children.menu.children", "description": "One menuItem per screen: set its screen to the screen name and its _label" },
+        "headerActions": { "path": "children.header.children.actions.children", "description": "Buttons at the end of the header, such as sign in or the bag" },
+        "content": { "path": "children.content.children", "description": "The content of this screen" },
+        "footer": { "path": "children.footer.children", "description": "The content of the footer, such as a copyright line or links" }
+    },
+    "params": {
+        "title": {
+            "type": "string",
+            "default": "My app",
+            "paths": ["children.header.children.title._text", "children.footer.children.note._text"],
+            "description": "The name of the app in the header"
+        }
+    }
+}

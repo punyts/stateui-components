@@ -1,0 +1,11 @@
+<figure class="block" oncopy="{{ onNativeCopy }}">
+    <figcaption class="bar" if="{{ ($.language !== '') || $.copyable }}">
+        <span class="language" if="{{ $.language !== '' }}">{{ $.language }}</span>
+        <button class="copy" type="button" if="{{ $.copyable }}" data-copied="{{ $.copied ? '' : null }}" onclick="{{ onCopy }}">
+            <ui-icon class="glyph" size="sm" name="{{ $.copied ? 'check' : 'copy' }}"></ui-icon>
+            <span class="label">{{ $.copied ? $._copied : $._copy }}</span>
+        </button>
+        <span class="status" role="status">{{ $.copied ? $._copied : '' }}</span>
+    </figcaption>
+    <pre class="pre" tabindex="0" role="region" aria-label="{{ regionLabel($.language, $._label) }}"><code class="code" if="{{ $.lineNumbers }}"><span class="line" repeat="{{ $k,$i,$v in $.lines }}" key="{{ $k }}">{{ $v.text }}</span></code><code class="code" else="">{{ $.code }}</code></pre>
+</figure>

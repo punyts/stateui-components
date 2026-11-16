@@ -59,6 +59,18 @@ describe('descriptionList in Chromium', () => {
         expect(values(mounted.element)).toEqual(['Ada', `1.234,50${NBSP}€`, `25${NBSP}%`, '2:05']);
     });
 
+    it('should take fractionDigits per item', async () => {
+        // Arrange
+        const priced = { total: { _term: 'Total', field: 'total', format: 'currency', currency: 'EUR', fractionDigits: 0 } };
+        const mounted = mountComponent('descriptionList', { items: priced, '<-record': '$.data.k1' }, { data: { k1: records.k1 } });
+
+        // Act
+        await flush();
+
+        // Assert
+        expect(values(mounted.element)).toEqual(['€1,235']);
+    });
+
     it('should show the empty text for a missing, null or empty value and honour _empty', async () => {
         // Arrange
         const withRecord = { name: { _term: 'Name', field: 'name' }, none: { _term: 'None', field: 'nothing' }, blank: { _term: 'Blank', field: 'blank' } };

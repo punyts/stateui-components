@@ -1,5 +1,5 @@
 import { attrs, emptyScene, markAttrs, px, seriesClass } from './scene.js';
-import type { ChartInput, Point, Primitive, Scene } from './scene.js';
+import type { ChartInput, Point, Primitive, Scene, Sector } from './scene.js';
 
 const MARGIN = 8;
 const MIN_RADIUS = 10;
@@ -14,7 +14,7 @@ const LABEL_DROP = 1.1;
 const polar = (cx: number, cy: number, radius: number, angle: number): [number, number] => [cx + radius * Math.cos(angle), cy + radius * Math.sin(angle)];
 
 /** The path of a ring sector from `from` to `to` (radians, clockwise from the right), between two radii */
-function sectorPath(cx: number, cy: number, outer: number, inner: number, from: number, to: number): string {
+export function sectorPath({ cx, cy, outer, inner, from, to }: Sector): string {
     if (to - from >= FULL_TURN - WHOLE_EPSILON) {
         const middle = from + Math.PI;
         const [ox0, oy0] = polar(cx, cy, outer, from);
@@ -61,12 +61,14 @@ export function buildDonut(input: ChartInput): Scene {
         const colour = seriesClass(slice.at);
         const share = slice.value / total;
         const label = `${slice.label}: ${format(slice.value)} (${percent(share)})`;
+        const sector: Sector = { cx, cy, outer, inner, from: angle, to: angle + sweep };
         primitives.push({
             id,
             layer: 'marks',
             tag: 'path',
             className: `slice ${colour}`,
-            attrs: { d: sectorPath(cx, cy, outer, inner, angle, angle + sweep), 'data-series': entry?.key ?? '', 'data-index': String(slice.at), ...markAttrs(id, label) }
+            attrs: { d: sectorPath(sector), 'data-series': entry?.key ?? '', 'data-index': String(slice.at), ...markAttrs(id, label) },
+            sector
         });
         points.push({
             id,

@@ -1,5 +1,7 @@
 {
     "summary": "A named icon drawn from path data: outline or filled, in a tone and a size",
+    "category": "content",
+    "purposes": ["show a symbol beside text", "draw a pictogram for an action", "mark a state with a glyph", "decorate a heading or list item"],
     "shared": { "tone": {}, "size": { "default": "md" } },
     "properties": {
         "name": { "type": "icon", "default": "" },

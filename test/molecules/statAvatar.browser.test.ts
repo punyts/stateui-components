@@ -47,6 +47,20 @@ describe('stat in Chromium', () => {
         expect(shown(de.element)).toBe(`1.234,50${NBSP}€`);
     });
 
+    it('should drop the cents with fractionDigits 0 and follow a change to it', async () => {
+        // Arrange
+        const mounted = mountComponent('stat', { value: 1299, format: 'currency', currency: 'USD', fractionDigits: 0 });
+        const whole = shown(mounted.element);
+
+        // Act
+        mounted.store.set('$.app.fractionDigits', 2);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        // Assert
+        expect(whole).toBe('$1,299');
+        expect(shown(mounted.element)).toBe('$1,299.00');
+    });
+
     it('should format a duration as m:ss and h:mm:ss in en and de', () => {
         // Arrange
         const minutes = mountComponent('stat', { value: 125, format: 'duration' });

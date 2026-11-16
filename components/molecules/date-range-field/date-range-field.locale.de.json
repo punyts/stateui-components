@@ -11,6 +11,7 @@
     "_errors": {
         "required": "Start- und Enddatum eingeben",
         "format": "Ein gültiges Datum eingeben",
+        "order": "Das Enddatum liegt vor dem Startdatum",
         "min": "Zu früh",
         "max": "Zu spät",
         "minDays": "Der Zeitraum ist zu kurz",

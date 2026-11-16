@@ -1,0 +1,10 @@
+{
+    "_label": "Carrousel",
+    "_slideLabel": "{index} sur {count}",
+    "_goTo": "Afficher la diapositive {index}",
+    "_previous": "Diapositive précédente",
+    "_next": "Diapositive suivante",
+    "_slides": "Choisir une diapositive",
+    "_stop": "Arrêter le diaporama",
+    "_start": "Lancer le diaporama"
+}

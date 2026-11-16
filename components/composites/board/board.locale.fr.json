@@ -1,0 +1,9 @@
+{
+    "_limitExceeded": "Limite dépassée",
+    "_moveAnnouncements": {
+        "pickedUp": "{name} saisi, position {position} sur {count} dans {column}. Utilisez les touches fléchées pour le déplacer, la barre d’espace pour le déposer et Échap pour annuler.",
+        "moved": "{name} déplacé à la position {position} sur {count} dans {column}.",
+        "dropped": "{name} déposé à la position {position} sur {count} dans {column}.",
+        "cancelled": "Déplacement de {name} annulé."
+    }
+}

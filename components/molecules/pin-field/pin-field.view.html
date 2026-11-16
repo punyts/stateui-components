@@ -1,0 +1,14 @@
+<div class="field" style="--field-width: {{ widthOf($.width) }}">
+    <label class="label" id="label">{{ $._label }}</label>
+    <div class="box">
+        <div id="control" class="cells" role="group" aria-labelledby="label" aria-describedby="{{ describedBy($._help, $.message) }}">
+            <input class="cell" repeat="{{ $k,$i,$v in $.boxes }}" key="{{ $k }}" data-index="{{ $i }}" type="{{ $.masked ? 'password' : 'text' }}" inputmode="{{ $.alphanumeric ? 'text' : 'numeric' }}" autocomplete="{{ $k === 'b0' ? 'one-time-code' : 'off' }}" autocapitalize="off" spellcheck="false" aria-label="{{ $v.label }}" aria-required="{{ $.required ? 'true' : null }}" aria-invalid="{{ $.error !== '' ? 'true' : null }}" tabindex="{{ $v.tab }}" disabled="{{ $.disabled || $.locked }}" readonly="{{ $.readonly }}" value="{{ $v.char }}" oninput="{{ onInput }}" onkeydown="{{ onKeyDown }}" onpaste="{{ onPaste }}" onfocus="{{ onFocusBox }}" onblur="{{ onBlur }}" />
+        </div>
+    </div>
+    <div class="messages">
+        <p class="help" id="help" if="{{ $._help !== '' }}">{{ $._help }}</p>
+        <div class="alert" role="status" aria-live="polite">
+            <p class="error" id="error" if="{{ $.message !== '' }}">{{ $.message }}</p>
+        </div>
+    </div>
+</div>

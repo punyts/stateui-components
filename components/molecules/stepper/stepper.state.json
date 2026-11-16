@@ -1,5 +1,7 @@
 {
     "summary": "A step indicator for multi-step flows: numbered or checked steps, with later steps blocked while linear",
+    "category": "navigation",
+    "purposes": ["step through a process", "show progress through steps", "show which step of a booking or checkout the user is on"],
     "events": ["select"],
     "commands": ["complete"],
     "commandValues": { "complete": "steps" },

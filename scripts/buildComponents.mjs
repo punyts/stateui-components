@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, resolve } from 'node:path';
 import ts from 'typescript';
@@ -6,6 +7,9 @@ import { buildCoreIcons, coreIconsModule, coreIconsTypes } from './core-icons.ts
 
 /** The shared CSS partials a component's `view.css` pulls in with `@include "<name>.css";` */
 const SHARED_CSS_DIR = resolve(import.meta.dirname, '../src/shared/css');
+
+/** The shared shape partials a component's `state.json` merges in with `"includes": ["<name>"]` */
+const SHARED_SHAPE_DIR = resolve(import.meta.dirname, '../src/shared/shape');
 
 /** The shared base controllers and helpers (every `.ts` file under `src/shared/`) a controller imports as `../shared/<folder>/<file>.js` */
 const SHARED_SRC_DIR = resolve(import.meta.dirname, '../src/shared');
@@ -67,7 +71,17 @@ export declare function register(window: { readonly customElements: CustomElemen
  * @returns {Promise<import('@punyts/stateui-app/build').BuildResult>}
  */
 export async function buildComponents(sourceDir, outDir) {
-    const result = await buildLibrary(resolve(sourceDir), resolve(outDir), { cssTransforms: [], cssChecks: [], sharedCssDir: SHARED_CSS_DIR });
+    const patternsDir = resolve(sourceDir, '../patterns');
+    const presetsDir = resolve(sourceDir, '../presets');
+    const result = await buildLibrary(resolve(sourceDir), resolve(outDir), {
+        cssTransforms: [],
+        cssChecks: [],
+        sharedCssDir: SHARED_CSS_DIR,
+        sharedShapeDir: SHARED_SHAPE_DIR,
+        requireSearchKeys: true,
+        ...(existsSync(patternsDir) ? { patternsDir } : {}),
+        ...(existsSync(presetsDir) ? { presetsDir } : {})
+    });
     const registerDir = dirname(resolve(outDir));
     await mkdir(registerDir, { recursive: true });
     await writeFile(join(registerDir, 'register.js'), REGISTER_JS);

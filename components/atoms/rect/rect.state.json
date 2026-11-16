@@ -1,0 +1,13 @@
+{
+    "summary": "A rectangle in a drawing, with optional rounded corners",
+    "category": "graphics",
+    "purposes": ["draw a rectangle or box", "draw a bar or block in a diagram", "draw a seat or table on a floor plan"],
+    "includes": ["paint", "transform", "interaction", "motion"],
+    "properties": {
+        "x": { "type": "number", "default": 0 },
+        "y": { "type": "number", "default": 0 },
+        "width": { "type": "number", "validators": { "range": { "min": 0 } } },
+        "height": { "type": "number", "validators": { "range": { "min": 0 } } },
+        "radius": { "type": "number", "validators": { "range": { "min": 0 } }, "default": 0 }
+    }
+}

@@ -1,0 +1,12 @@
+{
+    "_label": "Libellé",
+    "_help": "",
+    "_low": "Minimum",
+    "_high": "Maximum",
+    "_errors": {
+        "required": "Ce champ est obligatoire",
+        "min": "Trop petit",
+        "max": "Trop grand",
+        "step": "Pas valide"
+    }
+}

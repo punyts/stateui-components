@@ -1,0 +1,10 @@
+{
+    "_title": "¿Estás seguro?",
+    "body": { "_text": "Esta acción no se puede deshacer." },
+    "footer": {
+        "children": {
+            "cancel": { "_title": "Cancelar" },
+            "confirm": { "_title": "Eliminar" }
+        }
+    }
+}

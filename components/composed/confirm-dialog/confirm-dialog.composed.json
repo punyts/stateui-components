@@ -1,5 +1,8 @@
 {
     "component": "modal",
+    "summary": "A small dialog that asks the user to confirm or cancel before an action goes ahead",
+    "category": "overlays",
+    "purposes": ["ask the user to confirm before deleting", "confirm before a cancellation goes ahead", "warn before an action that cannot be undone"],
     "width": "sm",
     "_title": "Are you sure?",
     "body": { "component": "text", "_text": "This cannot be undone." },

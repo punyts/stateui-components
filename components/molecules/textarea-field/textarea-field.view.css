@@ -7,7 +7,8 @@
 
 .control {
     display: block;
-    padding-block: var(--ui-space-gap-sm);
+    /* One row fills the control height with its line in the middle, as an input does; more rows keep that padding */
+    padding-block: max(var(--ui-space-gap-sm), calc((var(--control-height, var(--ui-size-control-md)) - 1lh - 2 * var(--ui-control-border)) / 2));
     resize: vertical;
 }
 

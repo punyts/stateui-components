@@ -1,9 +1,13 @@
 {
     "summary": "Text in a typographic role, as a span, a paragraph or a heading",
+    "category": "content",
+    "purposes": ["show a heading or title", "write a paragraph of text", "show a caption or hint", "cut long text with an ellipsis"],
     "shared": { "tone": {}, "textRole": { "default": "body" } },
     "properties": {
         "_text": { "type": "string", "kind": "content", "default": "Sample text" },
         "align": { "type": "string", "values": ["start", "center", "end"], "default": "start", "reflect": true },
+        "caps": { "type": "boolean", "default": false, "reflect": true },
+        "muted": { "type": "boolean", "default": false, "reflect": true },
         "truncate": { "type": "integer", "default": 0, "validators": { "range": { "min": 0, "max": 20 } } },
         "element": {
             "type": "string",

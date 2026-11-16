@@ -1,0 +1,7 @@
+{
+    "_label": "Accepter",
+    "_help": "",
+    "_errors": {
+        "required": "Ce champ est obligatoire"
+    }
+}

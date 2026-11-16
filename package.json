@@ -31,7 +31,7 @@
         "LICENSE-tabler-icons"
     ],
     "scripts": {
-        "clean": "bash ../../bin/clean.sh .",
+        "clean": "node -e \"const fs=require('fs');for(const f of ['dist','.build-stamp',...fs.readdirSync('.').filter((n)=>n.endsWith('.tsbuildinfo'))])fs.rmSync(f,{recursive:true,force:true})\"",
         "typecheck": "tsc -p tsconfig.build.json --noEmit && tsc -p tsconfig.test.json --noEmit",
         "build": "tsc -b tsconfig.build.json && node scripts/build.mjs && npm run build:icons",
         "build:icons": "node scripts/build-icons.ts",
@@ -40,6 +40,8 @@
         "test:watch": "vitest --watch",
         "test:cov": "vitest run --coverage",
         "test:browser": "vitest run --config vitest.browser.config.ts",
+        "test:perf": "vitest run --config vitest.perf.config.ts",
+        "test:visual": "vitest run --config vitest.visual.config.ts",
         "build:watch": "tsc -b tsconfig.build.json -w",
         "dev": "npm run build:watch"
     },
@@ -53,6 +55,7 @@
     },
     "devDependencies": {
         "@punyts/state": "^1.2.0",
+        "@punyts/state-sync": "^0.8.0",
         "@tabler/icons": "3.50.0",
         "@vitest/browser-playwright": "^4.1.10",
         "happy-dom": "^21.0.4",

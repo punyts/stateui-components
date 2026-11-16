@@ -1,5 +1,7 @@
 {
     "summary": "One row of a table: the cells the table builds from its columns for each visible record",
+    "category": "data",
+    "purposes": ["draw the cells of one table record", "hold the cells a table builds per row", "render a single line of tabular data"],
     "properties": {
         "cells": {
             "type": "map",
@@ -7,6 +9,7 @@
                 "align": { "type": "string", "values": ["start", "center", "end"], "default": "start" },
                 "format": { "type": "string", "values": ["number", "percent", "currency", "duration"] },
                 "currency": { "type": "string", "validators": { "pattern": "^[A-Z]{3}$" } },
+                "fractionDigits": { "type": "integer", "validators": { "range": { "min": 0, "max": 20 } } },
                 "value": { "type": "any" },
                 "text": { "type": "string", "default": "" },
                 "content": { "type": "object" }

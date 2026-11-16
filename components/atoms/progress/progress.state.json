@@ -1,10 +1,15 @@
 {
-    "summary": "A bar that shows how far a task has got, or that it is running with no known end",
+    "summary": "A bar or ring that shows how far a task has got, or that it is running with no known end",
+    "category": "feedback",
+    "purposes": ["show how far a task has got", "show how much of a budget is used as a bar", "track an upload or download", "show a quota or limit filling up", "show work running with no known end", "show a percentage in a compact circle"],
     "shared": { "tone": { "default": "accent" }, "size": { "default": "md" } },
     "properties": {
         "_label": { "type": "string", "kind": "content", "default": "Progress" },
         "value": { "type": "number", "default": 0, "validators": { "range": { "min": 0 } } },
         "max": { "type": "number", "default": 100, "validators": { "range": { "min": 1 } } },
-        "indeterminate": { "type": "boolean", "default": false, "reflect": true }
+        "indeterminate": { "type": "boolean", "default": false, "reflect": true },
+        "shape": { "type": "string", "values": ["bar", "ring"], "default": "bar", "reflect": true },
+        "showValue": { "type": "boolean", "default": false },
+        "valueText": { "type": "string", "default": "", "runtime": true }
     }
 }

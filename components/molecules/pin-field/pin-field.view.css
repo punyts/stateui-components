@@ -1,0 +1,54 @@
+@include "field.css";
+
+.cells {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: var(--ui-space-gap-sm);
+}
+
+/* One box per character: square, the character centred, the field's control look */
+.cell {
+    box-sizing: border-box;
+    flex: none;
+    inline-size: var(--control-height, var(--ui-size-control-md));
+    block-size: var(--control-height, var(--ui-size-control-md));
+    margin: 0;
+    padding: 0;
+    color: var(--ui-color-text-base);
+    font-family: var(--ui-text-code-family);
+    font-size: var(--ui-text-title-size);
+    line-height: 1;
+    text-align: center;
+    background: var(--ui-color-surface-base);
+    border: var(--ui-control-border) solid var(--ui-color-border-strong);
+    border-radius: var(--ui-control-radius);
+    caret-color: var(--ui-color-focus);
+    transition: border-color var(--ui-motion-duration-fast) var(--ui-motion-easing-standard);
+}
+
+:host([size=sm]) .cell {
+    font-size: var(--ui-text-body-size);
+}
+
+.cell:hover:not(:disabled) {
+    border-color: var(--ui-color-text-muted);
+}
+
+.cell:focus-visible {
+    border-color: var(--ui-color-focus);
+}
+
+.cell[aria-invalid=true] {
+    border-color: var(--ui-field-error-color);
+}
+
+.cell:read-only {
+    background: var(--ui-color-surface-sunken);
+}
+
+.cell:disabled {
+    color: var(--ui-color-text-disabled);
+    background: var(--ui-color-surface-sunken);
+    border-color: var(--ui-color-border-base);
+    cursor: not-allowed;
+}

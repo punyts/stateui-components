@@ -146,7 +146,9 @@ describe.each(['modal', 'drawer'])('%s in Chromium', (name) => {
             }
         });
         const dialog = findByTag(root(mounted.element), `ui-${name}`) as Element;
-        const button = findByTag(root(mounted.element), 'ui-button') as HTMLElement;
+        // The native button, not the host: the panel body stacks its children as a column, which stretches the
+        // button's host across the panel while the button keeps its own width
+        const button = part<HTMLButtonElement>(findByTag(root(mounted.element), 'ui-button') as Element, 'button');
         const seen = counts(dialog);
 
         // Act
@@ -287,6 +289,21 @@ describe.each(['modal', 'drawer'])('%s in Chromium', (name) => {
         expect(mounted.store.get('$.app.body.value')).toBe('changed');
     });
 
+    it('should let a panel in the footer fill the footer instead of collapsing to nothing', async () => {
+        // Arrange
+        const mounted = mountComponent(name, { _title: 'Cart', footer: { component: 'panel', children: { total: text('Subtotal (2 items): $40.00') } } });
+
+        // Act
+        command(mounted.element, 'open');
+        await frame();
+
+        // Assert
+        const footer = part(mounted.element, '.footer');
+        const panel = findByTag(footer, 'ui-panel') as HTMLElement;
+        expect(panel.getBoundingClientRect().width).toBeCloseTo(footer.getBoundingClientRect().width, 0);
+        expect(findByTag(panel.shadowRoot ?? panel, 'ui-text')!.getBoundingClientRect().height).toBeLessThan(40);
+    });
+
     it('should render a header slot in place of the title', () => {
         // Arrange
         const mounted = mountComponent(name, { _title: 'Plain', header: text('Custom'), body: text('Body') });
@@ -350,6 +367,23 @@ describe('modal widths in Chromium', () => {
         expect(sm).toBeLessThan(md);
         expect(md).toBeLessThan(lg);
         expect(full).toBeGreaterThan(lg);
+    });
+
+    it('should centre the open modal in the viewport', async () => {
+        // Arrange
+        await page.viewport(1200, 800);
+        const mounted = mountComponent('modal', { open: true, _title: 'Centred', body: text('Body') });
+        await frame();
+        await settle();
+
+        // Act
+        const rect = dialogOf(mounted.element).getBoundingClientRect();
+
+        // Assert: equal space on both sides, horizontally and vertically, and not stretched to the full height
+        expect(rect.left).toBeGreaterThan(100);
+        expect(Math.abs(rect.left - (1200 - rect.right))).toBeLessThanOrEqual(1);
+        expect(Math.abs(rect.top - (800 - rect.bottom))).toBeLessThanOrEqual(1);
+        expect(rect.height).toBeLessThan(400);
     });
 });
 

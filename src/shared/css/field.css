@@ -12,12 +12,14 @@
         "label"
         "box"
         "messages";
-    row-gap: var(--ui-field-label-gap);
+    /* The spaces between the rows are margins, not a row gap: a gap would stay under the box when the field has no
+       help and no error, making it taller than its control, so it would not line up with a button of its size */
+    row-gap: 0;
     box-sizing: border-box;
     inline-size: var(--field-width, 100%);
     max-inline-size: 100%;
     font-family: var(--ui-text-body-family);
-    font-size: var(--ui-text-body-size);
+    font-size: calc(var(--ui-field-font-size, var(--ui-text-body-size)) * var(--size-text-scale, 1));
     color: var(--ui-color-text-base);
 }
 
@@ -27,6 +29,7 @@
     font-size: var(--ui-text-label-size);
     font-weight: var(--ui-text-label-weight);
     line-height: var(--ui-text-label-leading);
+    margin-block-end: var(--ui-field-label-gap);
 }
 
 .box {
@@ -65,6 +68,11 @@
     display: none;
 }
 
+/* The space above the help and error, only when there is one; the polite live region stays in place either way */
+.messages:has(.help, .error) {
+    padding-block-start: var(--ui-field-label-gap);
+}
+
 .help,
 .error {
     margin: 0;
@@ -87,6 +95,7 @@
 }
 
 :host([title-position="left"]) .label {
+    margin-block-end: 0;
     display: flex;
     align-items: center;
     min-block-size: var(--control-height, var(--ui-size-control-md));
@@ -104,6 +113,7 @@
     align-self: start;
     justify-self: start;
     margin-block-start: var(--ui-field-label-gap);
+    margin-block-end: 0;
     margin-inline-start: var(--ui-control-padding-inline);
     font-size: var(--ui-text-caption-size);
     color: var(--ui-color-text-muted);

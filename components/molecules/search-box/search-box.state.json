@@ -1,5 +1,7 @@
 {
     "summary": "A search input with a search icon and a clear button, for filtering lists",
+    "category": "forms",
+    "purposes": ["type a word to find items by name", "filter a list as you type", "search records with a clear button"],
     "tokenGroup": "control",
     "tokens": {
         "selected": { "fill": "{color.accent.base}", "on": "{color.accent.on}" },
@@ -7,11 +9,13 @@
         "border": "{border.width.thin}",
         "padding": { "inline": "{space.inset.sm}" }
     },
-    "shared": { "size": { "default": "md" } },
-    "events": ["change", "search"],
+    "shared": { "variant": { "default": "outline", "values": ["outline", "soft", "ghost"] }, "corners": {}, "size": { "default": "md" } },
+    "events": ["input", "change", "search"],
     "commands": ["focus", "clear"],
     "properties": {
         "value": { "type": "string", "default": "" },
+        "disabled": { "type": "boolean", "default": false },
+        "readonly": { "type": "boolean", "default": false },
         "_placeholder": { "type": "string", "kind": "content", "default": "Search" },
         "_label": { "type": "string", "kind": "content", "default": "Search" },
         "_clearLabel": { "type": "string", "kind": "content", "default": "Clear search" }

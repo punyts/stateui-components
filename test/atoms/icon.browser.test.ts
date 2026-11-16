@@ -119,6 +119,27 @@ describe('icon in Chromium', () => {
         expect(pathData(mounted.element)).toEqual(['M0 0h24']);
     });
 
+    it("should draw an icon the document carries of its own, styled paths included, over a core icon of the same name", () => {
+        // Arrange
+        const errors = vi.spyOn(report, 'error').mockImplementation(() => undefined);
+        const icons = {
+            prefs: { outline: ['M4 12a8 8 0 1 0 16 0a8 8 0 1 0 -16 0', { d: 'M12 4a8 8 0 0 0 0 16z', fill: true }] },
+            plus: { outline: ['M12 5v14M5 12h14'] }
+        };
+
+        // Act
+        const own = mountComponent('icon', { name: 'prefs' }, { icons });
+        const shadowing = mountComponent('icon', { name: 'plus' }, { icons });
+
+        // Assert
+        expect(pathData(own.element)).toEqual(['M4 12a8 8 0 1 0 16 0a8 8 0 1 0 -16 0', 'M12 4a8 8 0 0 0 0 16z']);
+        expect(own.element.shadowRoot?.querySelectorAll('path')[1]?.getAttribute('fill')).toBe('currentColor');
+        expect(svg(own.element)?.getAttribute('class')).toBe('outline');
+        expect(pathData(shadowing.element)).toEqual(['M12 5v14M5 12h14']);
+        expect(pathData(shadowing.element)).not.toEqual(dataOf('plus'));
+        expect(errors).not.toHaveBeenCalled();
+    });
+
     it('should draw nothing and report SUI-RUN-ICON once for an unknown name', () => {
         // Arrange
         const errors = vi.spyOn(report, 'error').mockImplementation(() => undefined);

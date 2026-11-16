@@ -1,0 +1,45 @@
+{
+    "summary": "A vector or canvas drawing of shape nodes (rect, circle, path, drawText...) with theme colours and gradients",
+    "category": "graphics",
+    "purposes": ["draw a diagram from shapes", "show a seat map or floor plan", "draw custom graphics and icons in the page", "place pressable shapes on a picture"],
+    "tokenGroup": "drawing",
+    "tokens": {
+        "background": "{color.surface.base}",
+        "height": "calc({size.control.md} * 6)"
+    },
+    "childComponents": ["rect", "circle", "ellipse", "line", "polyline", "polygon", "path", "drawText", "drawImage", "drawGroup", "drawRepeat"],
+    "properties": {
+        "renderer": { "type": "string", "values": ["svg", "canvas"], "default": "svg", "reflect": true },
+        "viewBox": {
+            "type": "object",
+            "validators": {
+                "fields": {
+                    "x": { "type": "number", "required": true },
+                    "y": { "type": "number", "required": true },
+                    "width": { "type": "number", "required": true, "validators": { "range": { "min": 0 } } },
+                    "height": { "type": "number", "required": true, "validators": { "range": { "min": 0 } } }
+                }
+            }
+        },
+        "fit": { "type": "string", "values": ["contain", "cover", "stretch"], "default": "contain" },
+        "paints": {
+            "type": "map",
+            "default": {},
+            "items": {
+                "kind": { "type": "string", "values": ["linear", "radial"], "default": "linear" },
+                "stops": {
+                    "type": "map",
+                    "default": {},
+                    "items": {
+                        "offset": { "type": "number", "validators": { "range": { "min": 0, "max": 1 } }, "default": 0 },
+                        "color": { "type": "string", "validators": { "color": true } }
+                    }
+                },
+                "angle": { "type": "number" },
+                "center": { "type": "array", "validators": { "vector": 2 } }
+            }
+        },
+        "_title": { "type": "string", "kind": "content", "default": "Drawing" },
+        "_description": { "type": "string", "kind": "content", "default": "" }
+    }
+}

@@ -1,0 +1,7 @@
+{
+    "_label": "Libellé",
+    "_help": "",
+    "_errors": {
+        "required": "Ce champ est obligatoire"
+    }
+}

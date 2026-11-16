@@ -6,13 +6,11 @@ import { validateDocument } from '@punyts/stateui-app/core';
 import catalogJson from '../../.test-build/real/components/catalog.json';
 import { registerAll } from '../../.test-build/real/components/index.js';
 import { overlaysFromFiles } from '../harness/createMountComponent.js';
-import type { ComponentBuild } from '../harness/createMountComponent.js';
+import { realLocaleFiles } from '../harness/realLocales.js';
 
 const catalog = catalogJson as unknown as Catalog;
 const library = libraryFromCatalog(catalog);
-const overlays = overlaysFromFiles(
-    import.meta.glob<ComponentBuild['localeFiles'][string]>('../../.test-build/real/components/*.locale.*.json', { eager: true, import: 'default' })
-);
+const overlays = overlaysFromFiles(realLocaleFiles);
 
 const CURRENT = '$.runtime.nodes.app.children.list.current';
 
@@ -241,5 +239,62 @@ describe('masterDetail in Chromium', () => {
             'children.list.selected',
             'children.detail.children'
         ]);
+    });
+});
+
+describe('the masterDetail master pane width in Chromium', () => {
+    afterEach(() => {
+        for (const entry of mounted.splice(0)) {
+            entry.dispose();
+            entry.unregister();
+            entry.host.remove();
+        }
+    });
+
+    /** Mounts the catalog example of masterDetail in a container of the given width, with the people in the list */
+    async function mountExample(width: number): Promise<HTMLElement> {
+        if (!registered) {
+            registerAll();
+            registered = true;
+        }
+        const entry = (catalog.components as unknown as ComposedCatalogEntry[]).find((candidate) => candidate.name === 'masterDetail');
+        const host = globalThis.document.body.appendChild(globalThis.document.createElement('div'));
+        host.style.cssText = `inline-size: ${width}px; block-size: 400px`;
+        const locale = registerLocaleStep(overlays);
+        const example = structuredClone(entry?.example) as { children?: Record<string, Record<string, unknown>> };
+        example.children = { ...example.children, list: { ...example.children?.list, '<-items': '$.data.people' } };
+        const app = mountApp(host, { locale: 'en', data: { people: structuredClone(people) }, app: example } as unknown as AppDocument, library);
+        mounted.push({ host, dispose: () => app.dispose(), unregister: () => locale.unregister() });
+        await settle();
+        return host;
+    }
+
+    const masterWidth = (host: HTMLElement): number => (deep(host, 'ui-list')[0] as HTMLElement).getBoundingClientRect().width;
+
+    it('should give the master pane a usable width in a 1000 px container', async () => {
+        // Act
+        const host = await mountExample(1000);
+
+        // Assert
+        expect(masterWidth(host)).toBeGreaterThanOrEqual(200);
+    });
+
+    it('should leave the detail pane the rest of the width beside the master', async () => {
+        // Act
+        const host = await mountExample(1000);
+        const detail = (deep(host, 'ui-panel').find((panel) => panel.getAttribute('_title') !== null || panel.shadowRoot?.textContent?.includes('Details')) as HTMLElement).getBoundingClientRect();
+
+        // Assert
+        expect(detail.left).toBeGreaterThanOrEqual((deep(host, 'ui-list')[0] as HTMLElement).getBoundingClientRect().right);
+        expect(detail.width).toBeGreaterThan(masterWidth(host));
+    });
+
+    it('should stack the master over the detail at the full width below the breakpoint', async () => {
+        // Act
+        const host = await mountExample(600);
+        const list = (deep(host, 'ui-list')[0] as HTMLElement).getBoundingClientRect();
+
+        // Assert
+        expect(list.width).toBeGreaterThanOrEqual(500);
     });
 });

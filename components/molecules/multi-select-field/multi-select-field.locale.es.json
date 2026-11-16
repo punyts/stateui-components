@@ -1,0 +1,14 @@
+{
+    "_label": "Etiqueta",
+    "_placeholder": "",
+    "_help": "",
+    "_remove": "Quitar {label}",
+    "_more": "Sigue escribiendo para acotar los resultados",
+    "_loading": "Buscando",
+    "_empty": "Sin coincidencias",
+    "_errors": {
+        "required": "Este campo es obligatorio",
+        "minSelected": "Elige más opciones",
+        "maxSelected": "Demasiadas opciones elegidas"
+    }
+}

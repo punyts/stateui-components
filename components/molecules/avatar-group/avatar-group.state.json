@@ -1,0 +1,22 @@
+{
+    "summary": "A row of overlapping avatars, pictures or initials, with at most max shown and a +N avatar for the rest",
+    "category": "content",
+    "purposes": ["show who is assigned to a task", "show the members of a team", "show who is viewing a document", "show participants of a meeting or chat"],
+    "shared": { "size": { "default": "md" } },
+    "properties": {
+        "people": {
+            "type": ["array", "map"],
+            "default": [],
+            "items": {
+                "name": { "type": "string", "default": "" },
+                "src": { "type": "url", "default": "", "validators": { "pattern": "^(?:data:|https:|$)" } }
+            }
+        },
+        "max": { "type": "integer", "default": 4, "validators": { "range": { "min": 1 } } },
+        "shape": { "type": "string", "values": ["circle", "square"], "default": "circle", "reflect": true },
+        "shown": { "type": "object", "default": {}, "runtime": true },
+        "extra": { "type": "integer", "default": 0, "runtime": true },
+        "_label": { "type": "string", "kind": "content", "default": "People" },
+        "_more": { "type": "string", "kind": "content", "default": "{count} more" }
+    }
+}

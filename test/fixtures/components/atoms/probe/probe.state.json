@@ -1,5 +1,7 @@
 {
     "summary": "A test fixture: one line of text that follows the tone and the theme",
+    "category": "content",
+    "purposes": ["probe the build with one line of text", "follow the tone of a theme", "test a German overlay"],
     "events": ["press"],
     "shared": { "tone": { "default": "accent" } },
     "properties": {

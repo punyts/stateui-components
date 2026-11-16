@@ -1,0 +1,132 @@
+:host {
+    display: block;
+}
+
+.timeline {
+    --marker: var(--ui-timeline-marker);
+    --dot: calc(var(--marker) / 2);
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    color: var(--ui-color-text-base);
+    font-family: var(--ui-text-body-family);
+    font-size: var(--ui-text-body-size);
+    line-height: var(--ui-text-body-leading);
+}
+
+:host([size=sm]) .timeline {
+    --marker: var(--ui-size-icon-sm);
+    font-size: var(--ui-text-caption-size);
+}
+
+:host([size=lg]) .timeline {
+    --marker: var(--ui-size-icon-lg);
+}
+
+/* Each event paints its marker in its own tone, or else in the timeline's (`--tone` from the shared sheet) */
+.event {
+    --event: var(--tone);
+    --event-soft: var(--tone-soft);
+    position: relative;
+    display: grid;
+    grid-template-columns: var(--marker) minmax(0, 1fr);
+    column-gap: var(--ui-space-gap-md);
+    padding-block-end: var(--ui-timeline-gap);
+}
+
+.event:last-child {
+    padding-block-end: 0;
+}
+
+.event[data-tone=neutral] { --event: var(--ui-timeline-tones-neutral-fill); --event-soft: var(--ui-timeline-tones-neutral-soft); }
+.event[data-tone=accent] { --event: var(--ui-timeline-tones-accent-fill); --event-soft: var(--ui-timeline-tones-accent-soft); }
+.event[data-tone=danger] { --event: var(--ui-timeline-tones-danger-fill); --event-soft: var(--ui-timeline-tones-danger-soft); }
+.event[data-tone=warning] { --event: var(--ui-timeline-tones-warning-fill); --event-soft: var(--ui-timeline-tones-warning-soft); }
+.event[data-tone=success] { --event: var(--ui-timeline-tones-success-fill); --event-soft: var(--ui-timeline-tones-success-soft); }
+.event[data-tone=info] { --event: var(--ui-timeline-tones-info-fill); --event-soft: var(--ui-timeline-tones-info-soft); }
+
+/* The line runs from below this event's marker to the next event; the last event has none */
+.event:not(:last-child)::before {
+    content: "";
+    position: absolute;
+    inset-block: var(--marker) 0;
+    inset-inline-start: calc(var(--marker) / 2 - var(--ui-border-width-thin) / 2);
+    inline-size: var(--ui-border-width-thin);
+    background: var(--ui-color-border-base);
+}
+
+.marker {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--marker);
+    block-size: var(--marker);
+}
+
+.marker:not([data-icon])::after {
+    content: "";
+    inline-size: var(--dot);
+    block-size: var(--dot);
+    background: var(--event);
+    border-radius: var(--ui-radius-full);
+}
+
+.marker[data-icon] {
+    color: var(--event);
+    background: var(--event-soft);
+    border-radius: var(--ui-radius-full);
+}
+
+.content {
+    min-inline-size: 0;
+}
+
+.head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: var(--ui-space-gap-sm);
+    min-block-size: var(--marker);
+}
+
+.title {
+    font-family: var(--ui-text-label-family);
+    font-weight: var(--ui-text-label-weight);
+}
+
+.time {
+    color: var(--ui-color-text-muted);
+    font-size: var(--ui-text-caption-size);
+    line-height: var(--ui-text-caption-leading);
+}
+
+.text {
+    margin: 0;
+    margin-block-start: var(--ui-space-gap-sm);
+    color: var(--ui-color-text-muted);
+}
+
+/* Compact: smaller gaps, the text right under the title */
+:host([appearance=compact]) .event {
+    padding-block-end: var(--ui-space-gap-sm);
+}
+
+:host([appearance=compact]) .event:last-child {
+    padding-block-end: 0;
+}
+
+:host([appearance=compact]) .text {
+    margin-block-start: 0;
+    font-size: var(--ui-text-caption-size);
+}
+
+.empty {
+    margin: 0;
+    color: var(--ui-color-text-muted);
+    font-family: var(--ui-text-body-family);
+    font-size: var(--ui-text-body-size);
+}

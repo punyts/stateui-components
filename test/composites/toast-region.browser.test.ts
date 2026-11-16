@@ -245,9 +245,9 @@ describe('toastRegion in Chromium', () => {
         expect(items(mounted.element)).toHaveLength(0);
     });
 
-    it('should be in every page as the default toasts slot', async () => {
+    it('should be in every app as the default toasts slot', async () => {
         // Arrange
-        const mounted = mountComponent('page', { children: {} });
+        const mounted = mountComponent('app');
         await flush();
 
         // Act

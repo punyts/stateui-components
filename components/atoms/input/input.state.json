@@ -1,5 +1,7 @@
 {
     "summary": "A bare single-line input with no visible label, for toolbars and table cells",
+    "category": "forms",
+    "purposes": ["type a value inside a table cell", "enter text in a toolbar", "edit a number in place", "type into a compact unlabelled box"],
     "tokenGroup": "control",
     "tokens": {
         "selected": { "fill": "{color.accent.base}", "on": "{color.accent.on}" },
@@ -7,7 +9,7 @@
         "border": "{border.width.thin}",
         "padding": { "inline": "{space.inset.sm}" }
     },
-    "shared": { "size": { "default": "md" } },
+    "shared": { "variant": { "default": "outline", "values": ["outline", "soft", "ghost"] }, "corners": {}, "size": { "default": "md" } },
     "events": ["change", "input"],
     "commands": ["focus", "clear"],
     "properties": {
@@ -20,7 +22,7 @@
         "max": { "type": ["string", "number"] },
         "step": { "type": ["string", "number"] },
         "maxLength": { "type": "integer", "validators": { "range": { "min": 0 } } },
-        "_placeholder": { "type": "string", "kind": "content", "default": "Type here" },
+        "_placeholder": { "type": "string", "kind": "content", "default": "" },
         "_label": { "type": "string", "kind": "content", "default": "Input" }
     }
 }

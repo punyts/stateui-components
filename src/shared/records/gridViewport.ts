@@ -1,3 +1,5 @@
+import { isUnrendered } from './viewport.js';
+
 /** What the observer of a grid's viewport has read: the scroll offset, the size of the scrolling element's content and the two token sizes */
 export interface GridMeasure {
     /** The scroll offset in pixels */
@@ -68,7 +70,7 @@ export function bandOffset(top: number, height: number, scrollTop: number, viewp
 /**
  * Follows the scrollbar and the size of a record grid. As in `createViewportObserver`, this is the one place a grid reads layout: one
  * passive scroll listener asks for an animation frame and reads `scrollTop` once in it, and a `ResizeObserver` reports the content size
- * of the scroller and the size of the probe from its entries
+ * of the scroller and the size of the probe from its entries; a resize to nothing (the grid is hidden) is ignored
  */
 export function createGridViewport(options: GridViewportOptions): GridViewport {
     const { scroller, probe, onChange } = options;
@@ -97,6 +99,7 @@ export function createGridViewport(options: GridViewportOptions): GridViewport {
     };
     const resize = new ResizeObserver((entries) => {
         for (const entry of entries) {
+            if (isUnrendered(entry)) continue;
             if (entry.target === scroller) {
                 state.width = entry.contentRect.width;
                 state.height = entry.contentRect.height;

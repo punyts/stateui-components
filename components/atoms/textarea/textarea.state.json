@@ -1,5 +1,7 @@
 {
     "summary": "A bare multi-line text area with no visible label, optionally growing with its text",
+    "category": "forms",
+    "purposes": ["write a longer note or comment", "type a message on several lines", "edit a description in place"],
     "tokenGroup": "control",
     "tokens": {
         "selected": { "fill": "{color.accent.base}", "on": "{color.accent.on}" },
@@ -7,7 +9,7 @@
         "border": "{border.width.thin}",
         "padding": { "inline": "{space.inset.sm}" }
     },
-    "shared": { "size": { "default": "md" } },
+    "shared": { "variant": { "default": "outline", "values": ["outline", "soft", "ghost"] }, "corners": {}, "size": { "default": "md" } },
     "events": ["change", "input"],
     "commands": ["focus", "clear"],
     "properties": {
@@ -18,7 +20,7 @@
         "readonly": { "type": "boolean", "default": false },
         "required": { "type": "boolean", "default": false },
         "maxLength": { "type": "integer", "validators": { "range": { "min": 0 } } },
-        "_placeholder": { "type": "string", "kind": "content", "default": "Type here" },
+        "_placeholder": { "type": "string", "kind": "content", "default": "" },
         "_label": { "type": "string", "kind": "content", "default": "Text area" }
     }
 }

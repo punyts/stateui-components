@@ -1,0 +1,11 @@
+{
+    "_label": "Libellé",
+    "_placeholder": "",
+    "_help": "",
+    "_more": "Continuez à saisir pour affiner les résultats",
+    "_loading": "Recherche en cours",
+    "_empty": "Aucun résultat",
+    "_errors": {
+        "required": "Ce champ est obligatoire"
+    }
+}

@@ -17,6 +17,16 @@ describe('input in Chromium', () => {
         mountComponent.unmountAll();
     });
 
+    it('should show no placeholder by default', () => {
+        // Arrange
+        const mounted = mountComponent('input');
+
+        // Assert
+        expect(control(mounted.element).placeholder).toBe('');
+        expect(control(mounted.element).getAttribute('placeholder') ?? '').toBe('');
+        expect(mounted.store.get('$.app._placeholder')).toBe('');
+    });
+
     it('should render the properties and follow a state write', () => {
         // Arrange
         const mounted = mountComponent('input', { value: 'Jo', inputType: 'email', required: true, maxLength: 20 });
@@ -190,7 +200,7 @@ describe('input in Chromium', () => {
         expect(getComputedStyle(control(mounted.element)).backgroundColor).not.toBe(light);
     });
 
-    it('should show the German placeholder and label after switching language', () => {
+    it('should show the German label and no placeholder after switching language', () => {
         // Arrange
         const mounted = mountComponent('input');
 
@@ -198,7 +208,7 @@ describe('input in Chromium', () => {
         mounted.setLocale('de');
 
         // Assert
-        expect(control(mounted.element).placeholder).toBe('Hier eingeben');
+        expect(control(mounted.element).placeholder).toBe('');
         expect(control(mounted.element).getAttribute('aria-label')).toBe('Eingabe');
     });
 

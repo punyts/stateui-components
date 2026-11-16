@@ -1,5 +1,8 @@
 {
     "component": "modal",
+    "summary": "A dialog holding a form, with save and cancel, that closes when the form is submitted",
+    "category": "forms",
+    "purposes": ["add a new record in a dialog with a save button", "edit an item in a popup form", "collect a few fields without leaving the page"],
     "_title": "Edit",
     "body": {
         "component": "form",

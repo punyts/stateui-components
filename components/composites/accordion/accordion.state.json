@@ -1,5 +1,7 @@
 {
     "summary": "A stack of disclosures with one or many open: an FAQ or a settings list",
+    "category": "layout",
+    "purposes": ["answer frequently asked questions", "stack collapsible sections", "group settings into folding sections"],
     "shared": { "density": {} },
     "childComponents": ["disclosure"],
     "events": ["change"],

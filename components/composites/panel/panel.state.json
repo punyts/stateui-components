@@ -1,18 +1,22 @@
 {
-    "summary": "A titled region that groups children, with a header action slot and an optional collapse control",
-    "shared": { "elevation": { "default": "flat" }, "density": {} },
+    "summary": "Flat box; bordered or elevation raised makes a card; padding none for a layout-only box; header, actions, collapse",
+    "category": "layout",
+    "purposes": ["group content in a box with a header", "lay out children in a row, column or grid", "make a bordered or raised section", "place sections side by side in columns", "split a screen into a sidebar and a main area"],
+    "shared": { "corners": {}, "elevation": { "default": "flat" }, "density": {} },
     "layout": true,
     "events": ["toggle"],
     "commands": ["expand", "collapse", "toggle"],
     "tokens": {
         "radius": "{radius.md}",
-        "padding": "{space.inset.md}",
-        "gap": "{space.gap.md}"
+        "padding": "{space.inset.md} {space.inset.md}",
+        "gap": "{space.gap.md}",
+        "border": { "width": "{border.width.thin}" }
     },
     "properties": {
         "collapsible": { "type": "boolean", "default": false, "reflect": true },
         "collapsed": { "type": "boolean", "default": false, "reflect": true },
         "bordered": { "type": "boolean", "default": false, "reflect": true },
+        "padding": { "type": "string", "values": ["md", "none", "sm", "lg"], "default": "md", "reflect": true },
         "_title": { "type": "string", "kind": "content", "default": "" },
         "_description": { "type": "string", "kind": "content", "default": "" },
         "_toggleLabel": { "type": "string", "kind": "content", "default": "Toggle section" },

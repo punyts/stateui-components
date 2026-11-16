@@ -4,7 +4,7 @@ import { addMonths, isIsoDate, todayIso } from '../shared/dates/isoDate.js';
 import { formatDate, parseDate } from '../shared/dates/localeDates.js';
 import { buildPicker, firstOfMonth, monthsFor } from '../shared/dates/picker.js';
 import type { PickerMonth } from '../shared/dates/picker.js';
-import { failingRangeRule, orderRange, pickDay, readRange } from '../shared/dates/range.js';
+import { failingRangeRule, pickDay, readRange } from '../shared/dates/range.js';
 import type { RangeSettings, RangeValue } from '../shared/dates/range.js';
 import { firstDayOf } from '../shared/dates/weekStart.js';
 import { createField } from '../shared/field/field.js';
@@ -25,8 +25,8 @@ const isCount = (value: unknown): value is number => typeof value === 'number' &
  * show the dates in the form `$.locale` writes them (`03/14/2026` for `en`, `14.03.2026` for `de`); typing a date that parses
  * with the locale (`src/shared/dates/`, any digits and separators, a four-digit year) writes that side of `value` at once,
  * empty text empties it, and text that does not parse is kept as typed, writes nothing and fails the field's own rule
- * `format`. When an input is committed (Enter or leaving it) the two dates are put in order (a start after the end swaps
- * them) and shown in the locale's form. The runtime `startText` and `endText` are what the inputs show; they are never
+ * `format`. When an input is committed (Enter or leaving it) the dates are shown in the locale's form; a typed end before the
+ * start is kept as typed and fails the rule `order` (it is never swapped, so the user sees what they typed and fixes it). The runtime `startText` and `endText` are what the inputs show; they are never
  * rewritten while the user types a date that means the same as `value`.
  *
  * The button, and the Down arrow in an input, open a popup in the top layer (the shared popover code) with two months side by
@@ -280,12 +280,10 @@ export default function controller(context: ControllerContext) {
         onCommit: (event: Event) => {
             event.stopPropagation();
             const now = range();
-            const ordered = orderRange(now);
-            if (ordered.start !== now.start || ordered.end !== now.end) writeValue(ordered);
-            const bad = invalid.start || invalid.end;
+            const bad = invalid.start || invalid.end || failingRangeRule(now, settings()) === 'order';
             for (const side of SIDES) {
                 if (invalid[side]) continue;
-                setText(side, ordered[side] === '' ? '' : formatDate(ordered[side], locale()));
+                setText(side, now[side] === '' ? '' : formatDate(now[side], locale()));
             }
             if (isOpen()) drawPicker();
             if (bad || read('error') === FORMAT_RULE) field.validate();

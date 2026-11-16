@@ -163,6 +163,8 @@ describe('recordGrid slot pool across and down in Chromium', () => {
             expect(textOf(slot)).toBe(`Card ${position}`);
         }
         const view = scroller(mounted).getBoundingClientRect();
+        // The recordgrid.gap token separates the columns, and each slot's bottom padding is that gap
+        const gap = parseFloat(getComputedStyle(visible[0] as HTMLElement).paddingBlockEnd);
         const onScreen = visible.filter((slot) => slot.getBoundingClientRect().bottom > view.top && slot.getBoundingClientRect().top < view.bottom);
         expect(onScreen.length).toBeGreaterThanOrEqual(columns * 4);
         const first = onScreen.map((slot) => custom(slot, '--sui-row') * columns + custom(slot, '--sui-col')).sort((a, b) => a - b)[0] as number;
@@ -171,7 +173,7 @@ describe('recordGrid slot pool across and down in Chromium', () => {
             const box = slot.getBoundingClientRect();
             const position = custom(slot, '--sui-row') * columns + custom(slot, '--sui-col');
             expect(box.top - view.top).toBeCloseTo(Math.floor(position / columns) * ITEM_HEIGHT - scroller(mounted).scrollTop, 0);
-            expect(box.left - view.left).toBeCloseTo((position % columns) * (scroller(mounted).clientWidth / columns), 0);
+            expect(box.left - view.left).toBeCloseTo((position % columns) * ((scroller(mounted).clientWidth + gap) / columns), 0);
         }
     });
 

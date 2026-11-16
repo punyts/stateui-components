@@ -129,7 +129,7 @@ describe('dateRangeField typed dates in Chromium', () => {
         expect(rangeOf(mounted)).toEqual({ start: '2026-03-02', end: '' });
     });
 
-    it('should put a reversed typed range in order when the input is committed', async () => {
+    it('should keep a reversed typed range as typed and report the order rule when the input is committed', async () => {
         // Arrange
         const mounted = mountField({}, { start: '', end: '' });
         await settle();
@@ -139,8 +139,10 @@ describe('dateRangeField typed dates in Chromium', () => {
         await typeInto(endInput(mounted), '03/14/2026');
 
         // Assert
-        expect(rangeOf(mounted)).toEqual({ start: '2026-03-14', end: '2026-03-20' });
-        expect([startInput(mounted).value, endInput(mounted).value]).toEqual(['03/14/2026', '03/20/2026']);
+        expect(rangeOf(mounted)).toEqual({ start: '2026-03-20', end: '2026-03-14' });
+        expect([startInput(mounted).value, endInput(mounted).value]).toEqual(['03/20/2026', '03/14/2026']);
+        expect(get(mounted, 'error')).toBe('order');
+        expect(messageOf(mounted)).toBe('The end date is before the start date');
     });
 
     it('should keep text that is not a date, write nothing and report the format rule, then clear it when fixed', async () => {
@@ -559,7 +561,7 @@ describe('dateRangeField rules in Chromium', () => {
         expect(await check(fits)).toBe('');
     });
 
-    it('should check the rules in order: required, then min and max, then minDays and maxDays', async () => {
+    it('should check the rules in order: required, order, then min and max, then minDays and maxDays', async () => {
         // Arrange
         const mounted = mountField({ min: '2026-03-05', minDays: 5 }, { start: '2026-03-02', end: '2026-03-03' });
 

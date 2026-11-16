@@ -1,5 +1,7 @@
 {
     "summary": "Toasts shown from named messages with one command, stacked at a corner, with a queue beyond max",
+    "category": "feedback",
+    "purposes": ["stack notifications in a corner", "queue short messages for the user", "raise a named notice with one command"],
     "tokenGroup": "toastregion",
     "tokens": {
         "gap": "{space.gap.sm}",

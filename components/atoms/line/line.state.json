@@ -1,0 +1,9 @@
+{
+    "summary": "A straight line in a drawing between two [x, y] points",
+    "category": "graphics",
+    "purposes": ["draw a straight line between two points", "connect two shapes with a line", "draw an axis or guide line"],
+    "includes": ["paint", "transform", "interaction", "motion"],
+    "properties": {
+        "points": { "type": "array", "validators": { "points": true, "length": { "min": 2, "max": 2 } } }
+    }
+}

@@ -1,0 +1,28 @@
+{
+    "children": {
+        "revenue": {
+            "_title": "Chiffre d’affaires",
+            "children": {
+                "stat": {
+                    "_label": "Ce mois-ci"
+                }
+            }
+        },
+        "orders": {
+            "_title": "Commandes",
+            "children": {
+                "stat": {
+                    "_label": "Ce mois-ci"
+                }
+            }
+        },
+        "customers": {
+            "_title": "Clients",
+            "children": {
+                "stat": {
+                    "_label": "Actif"
+                }
+            }
+        }
+    }
+}

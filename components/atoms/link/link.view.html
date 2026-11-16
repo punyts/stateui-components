@@ -1,1 +1,1 @@
-<a class="link" href="{{ $.href }}" onclick="{{ activate }}">{{ $._text }}</a>
+<a class="link" href="{{ $.screen !== '' ? '#/' + $.screen : $.href }}" onclick="{{ activate }}">{{ $._text }}</a>

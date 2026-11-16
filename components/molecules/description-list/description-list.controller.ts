@@ -90,7 +90,9 @@ export default function controller({ store, basePath }: ControllerContext) {
         if (value === undefined || value === null || value === '' || typeof value === 'object') return empty;
         const format = text(item['format']);
         if (format === '') return String(value);
-        return formatValue(value, { format, currency: text(item['currency']), locale: text(read('$.locale')) }) || empty;
+        const digits = item['fractionDigits'];
+        const options = { format, currency: text(item['currency']), locale: text(read('$.locale')), ...(typeof digits === 'number' ? { fractionDigits: digits } : {}) };
+        return formatValue(value, options) || empty;
     };
 
     const refresh = (): void => {
