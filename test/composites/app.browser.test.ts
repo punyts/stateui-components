@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mountComponent } from '../harness/mountComponent.js';
 
 const root = (element: Element): ShadowRoot => element.shadowRoot as ShadowRoot;
@@ -43,9 +43,12 @@ describe('app in Chromium', () => {
         // Arrange
         const mounted = mountComponent('app', {}, { screens: screens(), start: 'home' });
         const focusedAtStart = root(mounted.element).activeElement;
+        // The test page has no focus; a screen switch moves focus only when the document has it
+        const hasFocus = vi.spyOn(document, 'hasFocus').mockReturnValue(true);
 
         // Act
         const moved = mounted.navigate('cart');
+        hasFocus.mockRestore();
 
         // Assert
         expect(moved).toBeUndefined();

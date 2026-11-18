@@ -11,6 +11,12 @@ export type AlignedPlacement = (typeof ALIGNED_PLACEMENTS)[number];
 /** Every value `createPopover` takes as a placement */
 export type AnyPlacement = Placement | AlignedPlacement;
 
+/**
+ * The event a popover raises on itself as it opens and closes (`detail.open`). It bubbles out of every shadow root, so a
+ * page that clips the frame it runs in (an editor laid over the app) can hear of a popover drawn outside its panels
+ */
+export const POPOVER_TOGGLE_EVENT = 'ui-popover-toggle';
+
 /** Why a popover closed itself: the Escape key, or a press outside it and its trigger */
 export type PopoverDismissReason = 'escape' | 'outside';
 
@@ -135,6 +141,7 @@ export function createPopover(options: PopoverOptions): PopoverHandle {
     function open(): void {
         if (disposed || !element.isConnected || isOpen()) return;
         element.showPopover();
+        announce(true);
         if (listening) return;
         listening = true;
         document.addEventListener('keydown', onKeyDown, true);
@@ -142,7 +149,12 @@ export function createPopover(options: PopoverOptions): PopoverHandle {
     }
     function close(): void {
         unlisten();
-        if (isOpen()) element.hidePopover();
+        if (!isOpen()) return;
+        element.hidePopover();
+        announce(false);
+    }
+    function announce(open: boolean): void {
+        element.dispatchEvent(new CustomEvent(POPOVER_TOGGLE_EVENT, { bubbles: true, composed: true, detail: { open } }));
     }
 
     return {

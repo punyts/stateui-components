@@ -1,6 +1,6 @@
 import { userEvent } from 'vitest/browser';
 import { afterEach, describe, expect, it } from 'vitest';
-import { createPopover } from './popover.js';
+import { POPOVER_TOGGLE_EVENT, createPopover } from './popover.js';
 import type { Placement, PopoverDismissReason } from './popover.js';
 
 /** A plain page with an anchor and a popover and no component: the popover code works on any elements */
@@ -39,6 +39,33 @@ describe('createPopover in Chromium', () => {
         expect(element.getAttribute('popover')).toBe('manual');
         expect(opened).toBe(true);
         expect(popover.isOpen()).toBe(false);
+    });
+
+    it('should announce opening and closing out of a shadow root, once each', () => {
+        // Arrange
+        const host = document.createElement('div');
+        document.body.append(host);
+        const element = document.createElement('div');
+        host.attachShadow({ mode: 'open' }).append(element);
+        const heard: [boolean, EventTarget | undefined][] = [];
+        const listener = (event: Event): void => {
+            heard.push([(event as CustomEvent<{ open: boolean }>).detail.open, event.composedPath()[0]]);
+        };
+        document.addEventListener(POPOVER_TOGGLE_EVENT, listener);
+        const popover = createPopover({ element });
+
+        // Act
+        popover.open();
+        popover.open();
+        popover.close();
+        popover.close();
+
+        // Assert
+        document.removeEventListener(POPOVER_TOGGLE_EVENT, listener);
+        expect(heard).toEqual([
+            [true, element],
+            [false, element]
+        ]);
     });
 
     it('should keep an existing popover attribute', () => {
