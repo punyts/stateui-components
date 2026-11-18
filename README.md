@@ -548,7 +548,7 @@ npm test            # node tests (happy-dom)
 npm run test:browser  # Chromium tests
 ```
 
-Both test configs build the fixture library and `components/` into `.test-build/` first, so tests need no earlier build.
+Both test configs build the fixture library and `components/` into `.test-build/` first (`npm run build:test`, `scripts/build-test.ts`), so tests need no earlier build. `npm run typecheck` runs that build too, since the tests import its output.
 
 Build `@punyts/state`, `@punyts/expression`, `@punyts/stateui` and `@punyts/stateui-app` first.
 
