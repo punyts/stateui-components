@@ -33,3 +33,6 @@ export { safeHref } from './shared/markdown/links.js';
 export { DEFAULT_MAX_LENGTH, parseMarkdown } from './shared/markdown/markdown.js';
 export type { MarkdownOptions, MarkdownProfile, ParsedMarkdown } from './shared/markdown/markdown.js';
 export type { MarkdownAlign, MarkdownNode, MarkdownType } from './shared/markdown/nodes.js';
+export { COMPONENT_FUNCTIONS } from './functions.js';
+export { layoutTree } from './shared/diagram/layoutTree.js';
+export type { LayoutTreeInput, LayoutTreeOptions, LayoutTreeOutput, PlacedEdge, PlacedNode, TreeLinkIn, TreeNodeIn } from './shared/diagram/layoutTree.js';

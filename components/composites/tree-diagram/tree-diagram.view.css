@@ -1,0 +1,108 @@
+:host {
+    display: block;
+    overflow: auto;
+}
+
+.diagram {
+    position: relative;
+    min-inline-size: 100%;
+}
+
+.edges {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    overflow: visible;
+    pointer-events: none;
+}
+
+.edges path {
+    fill: none;
+    stroke: var(--ui-treediagram-edge);
+    stroke-width: var(--ui-border-width-thin);
+}
+
+.edges path.link {
+    stroke: var(--ui-treediagram-link);
+    stroke-dasharray: 4 4;
+    opacity: 0.35;
+}
+
+.edges path.link[data-lit] {
+    opacity: 1;
+    stroke-width: var(--ui-border-width-thick);
+}
+
+.card {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space-gap-sm);
+    visibility: hidden;
+}
+
+.card[data-placed] {
+    visibility: visible;
+}
+
+.card[data-left] {
+    flex-direction: row-reverse;
+}
+
+.open {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+    max-inline-size: 16rem;
+    padding: var(--ui-treediagram-padding);
+    border: var(--ui-border-width-thin) solid var(--ui-color-border-base);
+    border-radius: var(--ui-treediagram-radius);
+    background: var(--ui-color-surface-raised);
+    color: var(--ui-color-text-base);
+    font-family: var(--ui-text-body-family);
+    font-size: var(--ui-text-body-size);
+    line-height: var(--ui-text-body-leading);
+    text-align: start;
+    cursor: pointer;
+}
+
+.card[data-selected] .open {
+    border-color: var(--ui-treediagram-selected-border);
+    background: var(--ui-treediagram-selected-fill);
+}
+
+.open:focus-visible,
+.add:focus-visible {
+    outline: var(--ui-border-width-thick) solid var(--ui-color-focus);
+    outline-offset: var(--ui-border-width-thin);
+}
+
+.label {
+    font-weight: var(--ui-text-label-weight);
+}
+
+.note {
+    color: var(--ui-color-text-muted);
+    font-size: var(--ui-text-label-size);
+}
+
+.add {
+    inline-size: var(--ui-size-control-sm);
+    block-size: var(--ui-size-control-sm);
+    padding: 0;
+    border: var(--ui-border-width-thin) solid var(--ui-color-border-base);
+    border-radius: var(--ui-radius-full);
+    background: var(--ui-color-surface-base);
+    color: var(--ui-color-text-muted);
+    font-family: var(--ui-text-label-family);
+    line-height: 1;
+    cursor: pointer;
+}
+
+.add:hover {
+    color: var(--ui-color-text-base);
+    border-color: var(--ui-color-border-strong);
+}

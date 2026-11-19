@@ -1,0 +1,12 @@
+<div class="diagram" role="group" aria-label="{{ $._label }}" style="inline-size: {{ $.width }}px; block-size: {{ $.height }}px" onclick="{{ onClick }}" ondblclick="{{ onDoubleClick }}" onkeydown="{{ onKeyDown }}">
+    <svg class="edges" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false" width="{{ $.width }}" height="{{ $.height }}">
+        <path repeat="{{ $ek,$ei,$ev in $.edges }}" key="{{ $ek }}" d="{{ $ev.path }}" class="{{ $ev.kind === 'tree' ? 'tree' : 'link' }}" data-from="{{ $ev.from }}" data-to="{{ $ev.to }}" data-lit="{{ $ev.lit ? '' : null }}" />
+    </svg>
+    <div class="card" repeat="{{ $k,$i,$v in $.cards }}" key="{{ $k }}" data-id="{{ $v.id }}" data-left="{{ $v.side &lt; 0 ? '' : null }}" data-placed="{{ $v.placed ? '' : null }}" data-selected="{{ $v.selected ? '' : null }}" style="transform: translate({{ $v.x }}px, {{ $v.y }}px)">
+        <button class="open" type="button" data-id="{{ $v.id }}" aria-pressed="{{ $v.selected ? 'true' : 'false' }}">
+            <b class="label">{{ $v.label }}</b>
+            <small class="note" if="{{ $v.note }}">{{ $v.note }}</small>
+        </button>
+        <button class="add" type="button" if="{{ $.addable }}" data-id="{{ $v.id }}" aria-label="{{ $v.addLabel }}">+</button>
+    </div>
+</div>

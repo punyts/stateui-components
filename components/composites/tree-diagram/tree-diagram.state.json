@@ -1,0 +1,33 @@
+{
+    "summary": "Cards in columns from a root, joined by curved edges and links across; a card is selected, opened or added to",
+    "category": "graphics",
+    "purposes": ["draw a mind map from one root", "map how the parts of a system link up", "show a hierarchy as cards joined by lines", "lay out an org chart sideways"],
+    "tokenGroup": "treediagram",
+    "events": ["select", "open", "add"],
+    "tokens": {
+        "edge": "{color.border.strong}",
+        "link": "{color.accent.base}",
+        "selected": { "fill": "{color.accent.soft}", "border": "{color.accent.base}" },
+        "radius": "{radius.md}",
+        "padding": "{space.inset.sm}"
+    },
+    "properties": {
+        "nodes": { "type": ["array", "object"] },
+        "links": { "type": "array", "default": [] },
+        "key": { "type": "string", "validators": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" }, "default": "id" },
+        "parentField": { "type": "string", "validators": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" }, "default": "parent" },
+        "labelField": { "type": "string", "validators": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" }, "default": "label" },
+        "noteField": { "type": "string", "validators": { "pattern": "^$|^[A-Za-z_][A-Za-z0-9_]*$" }, "default": "note" },
+        "selected": { "type": "string", "default": "" },
+        "twoSided": { "type": "boolean", "default": false },
+        "addable": { "type": "boolean", "default": false },
+        "columns": { "type": "integer", "validators": { "range": { "min": 0 } }, "default": 0 },
+        "spacing": { "type": "string", "values": ["sm", "md", "lg"], "default": "md" },
+        "_label": { "type": "string", "kind": "content", "default": "Diagram" },
+        "_add": { "type": "string", "kind": "content", "default": "Add to {label}" },
+        "cards": { "type": "object", "default": {}, "runtime": true },
+        "edges": { "type": "object", "default": {}, "runtime": true },
+        "width": { "type": "number", "default": 0, "runtime": true },
+        "height": { "type": "number", "default": 0, "runtime": true }
+    }
+}
