@@ -59,6 +59,19 @@ describe('tooltip in Chromium', () => {
         expect(isOpen(mounted.element)).toBe(false);
     });
 
+    it('should hold its trigger in the middle of a height it is given', () => {
+        // Arrange
+        const mounted = mountComponent('tooltip', { _text: 'Saves', trigger });
+
+        // Act
+        mounted.element.style.height = '80px';
+        const host = mounted.element.getBoundingClientRect();
+        const button = nativeOf(mounted.element).getBoundingClientRect();
+
+        // Assert
+        expect(Math.abs(button.top + button.height / 2 - (host.top + host.height / 2))).toBeLessThan(1);
+    });
+
     it('should show after the delay on pointer hover and hide on pointer leave', async () => {
         // Arrange
         const mounted = mountComponent('tooltip', { _text: 'Saves', delay: 200, trigger });

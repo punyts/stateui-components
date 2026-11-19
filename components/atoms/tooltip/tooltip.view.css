@@ -1,5 +1,7 @@
+/* A tooltip given a height (a row placement) holds its trigger in the middle of it */
 :host {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
     vertical-align: middle;
 }
 

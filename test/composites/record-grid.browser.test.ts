@@ -81,6 +81,18 @@ describe('recordGrid slot pool across and down in Chromium', () => {
         expect(shadow(mounted).querySelector('.rows')?.getBoundingClientRect().height).toBeCloseTo(rows * ITEM_HEIGHT, 0);
     });
 
+    it('should stretch a short item to the item height, so every tile is one size', async () => {
+        // Arrange and Act
+        const mounted = await mountGrid(4, 700, 400, { row: { component: 'card', '<-_title': '$row.name' } });
+
+        // Assert
+        const slot = shownSlots(mounted)[0] as HTMLElement;
+        const card = slot.firstElementChild?.firstElementChild as HTMLElement;
+        const gap = parseFloat(getComputedStyle(slot).paddingBlockEnd);
+        expect(card.getBoundingClientRect().height).toBeCloseTo(slot.getBoundingClientRect().height - gap, 0);
+        expect(card.getBoundingClientRect().height).toBeGreaterThan(60);
+    });
+
     it('should keep the pool size bounded at every width, down to a pool of 200 slots', async () => {
         // Arrange
         const mounted = await mountGrid(10_000, 400, 400);

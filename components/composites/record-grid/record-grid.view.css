@@ -40,6 +40,8 @@
     padding-block-end: var(--gap);
     box-sizing: border-box;
     transform: translateY(var(--sui-offset, 0px));
+    /* One cell, so a short item (a card) stretches to the item height and the tiles of a grid are one size */
+    display: grid;
 }
 
 .slot[hidden] {
