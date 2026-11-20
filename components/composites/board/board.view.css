@@ -35,6 +35,13 @@
     background: var(--ui-color-surface-sunken);
 }
 
+/* A bare board is its cards alone: no heads, and the columns have no fill or padding of their own */
+.board[data-bare] .column {
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+}
+
 .column[data-gone] {
     position: absolute;
     visibility: hidden;

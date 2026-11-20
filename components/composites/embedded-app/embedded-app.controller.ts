@@ -34,7 +34,8 @@ interface Opening {
  * frame shows `_label`. A change of `app` or `live` mounts again, and a change of `appScreen` moves the app there.
  *
  * A preview (`live` false) is inert: it takes no input, and a press or Enter on it raises `press`, a right press or the
- * context-menu key `menu`, both with `{ app, screen }`. A live app takes its own input. The app inside raises
+ * context-menu key `menu`, both with `{ app, screen }`. A live app takes its own input: its frame is marked
+ * `data-own-gestures="all"`, so a `viewport` around it neither pans on a drag nor scrolls on a wheel over it. The app inside raises
  * `navigated` with `{ screen }` when it moves to another screen itself, and `emit` with `{ name, payload }` for each of
  * its emits. Its state is its own: nothing of it is in this app's store
  */

@@ -118,6 +118,20 @@ describe('embeddedApp in Chromium', () => {
         expect(textOf(holder(refused))).toBe('');
     });
 
+    it('should mark a live app as taking its own gestures, and a preview not', async () => {
+        // Arrange
+        const apps = shopHost();
+
+        // Act
+        const live = mountComponent('embeddedApp', { app: 'shop', live: true }, { apps });
+        const preview = mountComponent('embeddedApp', { app: 'shop' }, { apps });
+        await flush();
+
+        // Assert
+        expect(frame(live).getAttribute('data-own-gestures')).toBe('all');
+        expect(frame(preview).hasAttribute('data-own-gestures')).toBe(false);
+    });
+
     it('should dispose the app when active turns false, and mount it again when it turns true', async () => {
         // Arrange
         const apps = shopHost();

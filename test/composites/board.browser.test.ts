@@ -70,6 +70,18 @@ describe('board in Chromium', () => {
         mountComponent.unmountAll();
     });
 
+    it('should draw a bare board as its cards alone: no column heads, fill or padding', async () => {
+        // Act
+        const mounted = await mountBoard(cards(), { bare: true });
+
+        // Assert
+        const column = columnOf(mounted, 'todo');
+        expect(column.querySelector('.head')).toBeNull();
+        expect(getComputedStyle(column).paddingTop).toBe('0px');
+        expect(getComputedStyle(column).backgroundColor).toBe('rgba(0, 0, 0, 0)');
+        expect(shown(mounted, 'todo')).toEqual(['B', 'A', 'E']);
+    });
+
     it('should draw a column per key of columns, each with a recordList body', async () => {
         // Arrange and Act
         const mounted = await mountBoard();

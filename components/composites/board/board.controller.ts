@@ -89,7 +89,11 @@ const bodyNode = (): Record<string, unknown> => ({
  * (a warning), because the data is not known to the static validator. The header of a column shows its title (the content
  * `_title` of the column), the number of cards, and the limit when `limit` is above 0, in a `badge` (so the tone colours are the
  * shared articulation's, not this board's); past the limit the badge has `tone="warning"`, the header is `data-tone="warning"` and
- * carries the content `_limitExceeded` as hidden text
+ * carries the content `_limitExceeded` as hidden text.
+ *
+ * With `movable` false no card is picked up, by the pointer or the keyboard; while it is true a column's cards are marked
+ * `data-own-gestures="drag"`, so a `viewport` around the board leaves their drags to it. `bare` draws the columns as their
+ * cards alone: no heads, no fill or padding
  */
 export default function controller({ element, store, basePath }: ControllerContext) {
     const runtime = runtimePath(basePath);
@@ -242,6 +246,7 @@ export default function controller({ element, store, basePath }: ControllerConte
     store.on(columnPaths, schedule);
     //---- moving cards, by pointer and by keyboard (the model is recorded in the README: "Decision: drag and drop")
     const orderField = (): string => text('orderField', '');
+    const movable = (): boolean => store.get<unknown>(`${basePath}.movable`) !== false;
     const columnField = (): string => text('columnField', 'column');
     const part = (selector: string): HTMLElement | null => element.shadowRoot?.querySelector<HTMLElement>(selector) ?? null;
     let boardElement: HTMLElement | null = null;
@@ -411,7 +416,7 @@ export default function controller({ element, store, basePath }: ControllerConte
     };
 
     const onPointerDown = (event: PointerEvent): void => {
-        if (held !== undefined || event.button !== 0) return;
+        if (held !== undefined || event.button !== 0 || !movable()) return;
         const card = cardAt(event);
         if (card?.pressable !== true) return;
         press = { pointer: event.pointerId, x: event.clientX, y: event.clientY, key: card.key, column: card.column, index: card.index, slot: card.slot };
@@ -460,7 +465,7 @@ export default function controller({ element, store, basePath }: ControllerConte
             }
             return;
         }
-        if (event.key !== ' ') return;
+        if (event.key !== ' ' || !movable()) return;
         const card = cardAt(event);
         if (card === undefined || event.composedPath()[0] !== card.slot) return;
         consume();

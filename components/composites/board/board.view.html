@@ -1,14 +1,14 @@
-<div class="board">
+<div class="board" data-bare="{{ $.bare === true ? '' : null }}">
     <span class="probe" aria-hidden="true"></span>
     <section class="column" role="group" repeat="{{ $k,$i,$v in $.cols }}" key="{{ $k }}" data-key="{{ $v.key }}" data-gone="{{ $v.gone ? '' : null }}" style="order: {{ $v.position }}" aria-label="{{ $v.title }}">
-        <header class="head" data-tone="{{ $v.over ? 'warning' : null }}">
+        <header class="head" if="{{ $.bare !== true }}" data-tone="{{ $v.over ? 'warning' : null }}">
             <h3 class="title">{{ $v.title }}</h3>
             <span class="count">
                 <sui-node repeat="{{ $ck,$ci,$cv in $v.badge }}" key="{{ $ck }}" state="{{ $cv }}"></sui-node>
             </span>
             <span class="hidden" if="{{ $v.over }}">{{ $._limitExceeded }}</span>
         </header>
-        <div class="body">
+        <div class="body" data-own-gestures="{{ $.movable !== false ? 'drag' : null }}">
             <sui-node if="{{ $v.ready }}" repeat="{{ $bk,$bi,$bv in $v.body }}" key="{{ $bk }}" state="{{ $bv }}"></sui-node>
             <div class="drop" aria-hidden="true" if="{{ $v.drop &gt;= 0 }}" style="--sui-drop-index: {{ $v.drop }}; --sui-drop-scroll: {{ $v.dropScroll }}px"></div>
         </div>

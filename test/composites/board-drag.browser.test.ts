@@ -368,6 +368,30 @@ describe('board keyboard move in Chromium', () => {
         expect(dropOf(mounted, 'doing')).toBeNull();
     });
 
+    it('should pick no card up by the pointer or Space while movable is false, and mark the column bodies only while it is true', async () => {
+        // Arrange
+        const mounted = await mountBoard(cards(), { '<-movable': '$.data.movable' }, { data: { cards: cards(), movable: false } });
+        const marked = (): (string | null)[] => ['todo', 'doing', 'done'].map((key) => bodyOf(mounted, key).getAttribute('data-own-gestures'));
+        const fixed = marked();
+
+        // Act
+        const at = await dragTo(mounted, slotFor(mounted, 'todo', 'Card A'), 'doing', 1);
+        const dragging = boardOf(mounted).hasAttribute('data-dragging');
+        await release(mounted, at);
+        await focusCard(mounted, 'todo', 'Card B');
+        await userEvent.keyboard(' ');
+        const said = live(mounted);
+        mounted.store.set('$.data.movable', true);
+        await settle();
+
+        // Assert
+        expect(dragging).toBe(false);
+        expect(said).toBe('');
+        expect(mounted.store.get('$.data.cards.0.status')).toBe('todo');
+        expect(fixed).toEqual([null, null, null]);
+        expect(marked()).toEqual(['drag', 'drag', 'drag']);
+    });
+
     it('should keep the focus on the card after the drop', async () => {
         // Arrange
         const mounted = await mountBoard();

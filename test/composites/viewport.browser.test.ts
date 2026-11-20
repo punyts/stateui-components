@@ -105,6 +105,34 @@ describe('viewport in Chromium', () => {
         expect((100 - (y as number)) / (zoom as number)).toBeCloseTo(140, 1);
     });
 
+    it('should leave a drag inside content marked data-own-gestures to it, and the wheel too when marked all', async () => {
+        // Arrange
+        const mounted = await mountViewport();
+        const world = root(mounted).querySelector('.world') as HTMLElement;
+        const own = world.appendChild(document.createElement('div'));
+        own.style.cssText = 'position: absolute; inset: 0';
+        own.setAttribute('data-own-gestures', 'drag');
+        const wheel = (): void => void own.dispatchEvent(new WheelEvent('wheel', { deltaY: 40, clientX: 10, clientY: 10, bubbles: true, composed: true, cancelable: true }));
+
+        // Act
+        pointer(own, 'pointerdown', 100, 100);
+        pointer(own, 'pointermove', 150, 130);
+        pointer(own, 'pointerup', 150, 130);
+        await settle();
+        const afterDrag = viewOf(mounted);
+        wheel();
+        await settle();
+        const afterWheel = viewOf(mounted);
+        own.setAttribute('data-own-gestures', 'all');
+        wheel();
+        await settle();
+
+        // Assert
+        expect(afterDrag).toEqual([0, 0, 1]);
+        expect(afterWheel).toEqual([0, -40, 1]);
+        expect(viewOf(mounted)).toEqual([0, -40, 1]);
+    });
+
     it('should fit the content into the area the inset leaves free, at most at zoom 1', async () => {
         // Arrange
         const mounted = await mountViewport({ inset: { right: 400 } });

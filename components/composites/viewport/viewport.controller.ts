@@ -42,6 +42,13 @@ const MARGIN = 24;
 const NUDGE = 40;
 /** Elements a press acts on itself, so it never starts a pan */
 const FIELDS = 'input, select, textarea, [contenteditable]';
+/**
+ * Content that takes the pointer itself, marked by its component: `data-own-gestures="drag"` keeps presses and drags (a
+ * card a `board` moves), `"all"` the wheel as well (a live `embeddedApp`, whose app scrolls)
+ */
+const OWN_DRAGS = '[data-own-gestures]';
+const OWN_WHEEL = '[data-own-gestures="all"]';
+const inside = (event: Event, selector: string): boolean => event.composedPath().some((target) => target instanceof Element && target.matches(selector));
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 const finite = (value: unknown, fallback: number): number => (typeof value === 'number' && Number.isFinite(value) ? value : fallback);
@@ -62,7 +69,8 @@ function boxOf(value: unknown, payload: unknown): Box | undefined {
  * the view, and any write to them moves it. A drag pans (it starts once the pointer has moved a few pixels, so a press
  * on the content still reaches it, and the click that ends a drag does not); a wheel pans, and with Ctrl (a trackpad's
  * pinch) zooms around the pointer; two fingers pinch and pan. With the viewport focused the arrows pan, + and - zoom and
- * 0 resets. A drag selects no text and drags nothing out of the content. While a gesture runs the view is written at most once a frame, and `change` ({ x, y, zoom }) is raised when
+ * 0 resets. Content that takes the pointer itself is left alone: a press inside an element marked `data-own-gestures`
+ * never pans, and with `data-own-gestures="all"` neither does the wheel. A drag selects no text and drags nothing out of the content. While a gesture runs the view is written at most once a frame, and `change` ({ x, y, zoom }) is raised when
  * it ends, and after each command. A press on the empty area, not the content, that does not pan raises `press`.
  *
  * `inset` ({ top, right, bottom, left } in pixels) is the part of the viewport something covers, such as a floating
@@ -224,7 +232,7 @@ export default function controller({ element, store, basePath }: ControllerConte
     return {
         onPointerDown: (event: PointerEvent) => {
             if (read('pannable') === false || (event.pointerType === 'mouse' && event.button !== 0)) return;
-            if (event.composedPath().some((target) => target instanceof Element && target.matches(FIELDS))) return;
+            if (inside(event, FIELDS) || inside(event, OWN_DRAGS)) return;
             const at = local(event);
             if (gesture === undefined) {
                 const target = event.composedPath()[0];
@@ -281,7 +289,7 @@ export default function controller({ element, store, basePath }: ControllerConte
             raise();
         },
         onWheel: (event: WheelEvent) => {
-            if (read('pannable') === false) return;
+            if (read('pannable') === false || inside(event, OWN_WHEEL)) return;
             event.preventDefault();
             const scale = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 400 : 1;
             const from = current();
