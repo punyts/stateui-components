@@ -1,0 +1,37 @@
+:host {
+    display: block;
+    block-size: var(--ui-viewport-height);
+}
+
+.viewport {
+    position: relative;
+    block-size: 100%;
+    overflow: hidden;
+    background-color: var(--ui-viewport-fill);
+    touch-action: none;
+}
+
+:host([grid]) .viewport {
+    background-image: radial-gradient(circle, var(--ui-viewport-dot) var(--ui-border-width-thick), transparent var(--ui-border-width-thick));
+    background-size: calc(var(--ui-viewport-grid) * var(--sui-viewport-zoom)) calc(var(--ui-viewport-grid) * var(--sui-viewport-zoom));
+    background-position: var(--sui-viewport-x) var(--sui-viewport-y);
+}
+
+.viewport[data-pannable] {
+    cursor: grab;
+}
+
+.viewport[data-panning] {
+    cursor: grabbing;
+}
+
+/* The content keeps its own size: the layouts inside it hold no inline-size containment, which would size it to 0 */
+.world {
+    --layout-contain: normal;
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    inline-size: max-content;
+    transform: translate(var(--sui-viewport-x), var(--sui-viewport-y)) scale(var(--sui-viewport-zoom));
+    transform-origin: 0 0;
+}

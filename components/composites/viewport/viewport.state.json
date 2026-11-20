@@ -1,0 +1,26 @@
+{
+    "summary": "A pannable, zoomable area around one node; its offset and zoom are state, moved by drag, wheel, pinch and commands",
+    "category": "layout",
+    "purposes": ["pan and zoom a large diagram", "move around a canvas by dragging", "zoom a board with the wheel or a pinch", "fit a drawing into the visible area", "bring a part of a big map into view"],
+    "tokenGroup": "viewport",
+    "events": ["change", "press"],
+    "commands": ["zoomIn", "zoomOut", "zoomReset", "fit", "lookAt"],
+    "tokens": {
+        "fill": "{color.surface.sunken}",
+        "dot": "{color.border.base}",
+        "grid": "{size.control.md}",
+        "height": "calc({size.control.md} * 10)"
+    },
+    "properties": {
+        "content": { "type": "node" },
+        "x": { "type": "number", "default": 0 },
+        "y": { "type": "number", "default": 0 },
+        "zoom": { "type": "number", "default": 1, "validators": { "range": { "min": 0.01, "max": 100 } } },
+        "minZoom": { "type": "number", "default": 0.1, "validators": { "range": { "min": 0.01, "max": 100 } } },
+        "maxZoom": { "type": "number", "default": 4, "validators": { "range": { "min": 0.01, "max": 100 } } },
+        "inset": { "type": "object", "default": {} },
+        "grid": { "type": "boolean", "default": false, "reflect": true },
+        "pannable": { "type": "boolean", "default": true },
+        "_label": { "type": "string", "kind": "content", "default": "Canvas" }
+    }
+}

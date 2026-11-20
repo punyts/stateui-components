@@ -143,7 +143,7 @@ function contentOf(value: unknown): Entry {
 }
 
 /** The store refuses to alias a path that holds data, so a property a link takes the place of is removed from the tree */
-function removeLinked(tree: Entry, nodePath: string, links: readonly Link[]): void {
+export function removeLinked(tree: Entry, nodePath: string, links: readonly Link[]): void {
     for (const link of links) {
         let holder: unknown = tree;
         for (const segment of link.statePath.slice(nodePath.length).split('.').filter(Boolean)) {

@@ -24,10 +24,24 @@ const NODES = {
 const root = (mounted: MountedComponent): ShadowRoot => mounted.element.shadowRoot as ShadowRoot;
 const cardOf = (mounted: MountedComponent, id: string): HTMLElement => root(mounted).querySelector<HTMLElement>(`.card[data-id="${id}"]`) as HTMLElement;
 const boxOf = (mounted: MountedComponent, id: string): DOMRect => cardOf(mounted, id).getBoundingClientRect();
+/** The text of a card, through the shadow roots of the components it draws */
+const deepText = (node: Node): string => {
+    const own = node instanceof Element && node.shadowRoot ? deepText(node.shadowRoot) : '';
+    return own + Array.from(node.childNodes).map((child) => (child.nodeType === Node.TEXT_NODE ? (child.textContent ?? '') : deepText(child))).join('');
+};
+/** The first element matching a selector in a card, through the shadow roots */
+const deepFind = (node: Element | ShadowRoot, selector: string): Element | undefined => {
+    for (const child of Array.from(node.querySelectorAll('*'))) {
+        if (child.matches(selector)) return child;
+        const inner = child.shadowRoot ? deepFind(child.shadowRoot, selector) : undefined;
+        if (inner !== undefined) return inner;
+    }
+    return undefined;
+};
 const pathsOf = (mounted: MountedComponent): SVGPathElement[] => Array.from(root(mounted).querySelectorAll<SVGPathElement>('.edges path'));
 
 const mountDiagram = async (extra: Record<string, unknown> = {}, nodes: unknown = NODES): Promise<MountedComponent> => {
-    const mounted = mountComponent('treeDiagram', { '<-nodes': '$.data.nodes', noteField: 'note', ...extra }, { data: { nodes } });
+    const mounted = mountComponent('treeDiagram', { '<-nodes': '$.data.nodes', ...extra }, { data: { nodes } });
     await settle();
     return mounted;
 };
@@ -48,7 +62,7 @@ describe('treeDiagram in Chromium', () => {
         expect(orders.left).toBeGreaterThan(data.right);
         expect(Math.abs(orders.left - stock.left)).toBeLessThan(1);
         expect(Math.abs((data.top + data.bottom) / 2 - (orders.top + stock.bottom) / 2)).toBeLessThan(1);
-        expect(cardOf(mounted, 'data').textContent).toContain('2 datasets');
+        expect(deepText(cardOf(mounted, 'data'))).toContain('2 datasets');
         expect(root(mounted).querySelectorAll('.card:not([data-placed])')).toHaveLength(0);
     });
 
@@ -64,43 +78,102 @@ describe('treeDiagram in Chromium', () => {
         expect(link.getAttribute('d')).toMatch(/^M[\d.]+,[\d.]+ C/);
     });
 
-    it('should select a card on a press, light its links, and let it go on a second press', async () => {
+    it('should select a card on a press, give its box, light its links, and let it go on a second press', async () => {
         // Arrange
         const mounted = await mountDiagram({ links: [{ from: 'orders', to: 'screens' }] });
-        const selects: unknown[] = [];
+        const selects: { id: string; box: { x: number; y: number; width: number; height: number } }[] = [];
         mounted.element.addEventListener('select', (event) => selects.push((event as CustomEvent).detail));
-        const open = (): HTMLButtonElement => cardOf(mounted, 'orders').querySelector('.open') as HTMLButtonElement;
 
         // Act
-        open().click();
+        cardOf(mounted, 'orders').click();
         await settle();
         const lit = pathsOf(mounted).find((path) => path.classList.contains('link'))?.hasAttribute('data-lit');
-        const chosen = cardOf(mounted, 'orders').hasAttribute('data-selected');
-        open().click();
+        const chosen = cardOf(mounted, 'orders').getAttribute('aria-selected');
+        cardOf(mounted, 'orders').click();
         await settle();
 
         // Assert
-        expect(selects).toEqual([{ id: 'orders' }, { id: '' }]);
+        expect(selects.map((detail) => detail.id)).toEqual(['orders', '']);
+        const box = selects[0]!.box;
+        expect(box.width).toBe(cardOf(mounted, 'orders').offsetWidth);
+        expect(box.x).toBeGreaterThan(0);
         expect(lit).toBe(true);
-        expect(chosen).toBe(true);
+        expect(chosen).toBe('true');
         expect(mounted.store.get('$.app.selected')).toBe('');
         expect(cardOf(mounted, 'orders').hasAttribute('data-selected')).toBe(false);
     });
 
-    it('should raise open on Enter and add from the + of an addable diagram', async () => {
+    it('should draw each card with the consumer template, whose controls act on the record and do not select', async () => {
         // Arrange
-        const mounted = await mountDiagram({ addable: true });
-        const raised: [string, unknown][] = [];
-        for (const name of ['open', 'add']) mounted.element.addEventListener(name, (event) => raised.push([name, (event as CustomEvent).detail]));
-        const card = cardOf(mounted, 'stock');
+        const emitted: [string, unknown][] = [];
+        const card = {
+            component: 'card',
+            padding: 'sm',
+            children: {
+                name: { component: 'text', '<-_text': '$row.label' },
+                add: { component: 'button', size: 'sm', _title: 'Add', on: { press: { command: 'emit', target: 'node.add', value: '$row.label' } } }
+            }
+        };
+        const mounted = mountComponent('treeDiagram', { '<-nodes': '$.data.nodes', card }, { data: { nodes: NODES }, hooks: { onEmit: (name, payload) => emitted.push([name, payload]) } });
+        await settle();
 
         // Act
-        (card.querySelector('.open') as HTMLElement).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true }));
-        (card.querySelector('.add') as HTMLButtonElement).click();
+        const stock = cardOf(mounted, 'stock');
+        const button = deepFind(stock, 'button') as HTMLButtonElement;
+        button.click();
+        await settle();
+        mounted.store.set('$.data.nodes.stock.label', 'Inventory');
+        await settle();
 
         // Assert
-        expect(raised).toEqual([['open', { id: 'stock' }], ['add', { id: 'stock' }]]);
-        expect(card.querySelector('.add')?.getAttribute('aria-label')).toBe('Add to Stock');
+        expect(emitted).toEqual([['node.add', 'Stock']]);
+        expect(mounted.store.get('$.app.selected')).toBe('');
+        expect(deepText(cardOf(mounted, 'stock'))).toContain('Inventory');
+        expect(deepText(cardOf(mounted, 'app'))).toContain('Shop');
+    });
+
+    it('should raise open on Enter and a double press, and move the focus along the tree with the arrows', async () => {
+        // Arrange
+        const mounted = await mountDiagram();
+        const opened: unknown[] = [];
+        mounted.element.addEventListener('open', (event) => opened.push((event as CustomEvent).detail.id));
+        const key = (id: string, name: string): void => {
+            cardOf(mounted, id).dispatchEvent(new KeyboardEvent('keydown', { key: name, bubbles: true, composed: true }));
+        };
+
+        // Act
+        key('stock', 'Enter');
+        cardOf(mounted, 'data').dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+        key('app', 'ArrowRight');
+        const first = root(mounted).activeElement?.getAttribute('data-id');
+        key('data', 'ArrowRight');
+        const second = root(mounted).activeElement?.getAttribute('data-id');
+        key('orders', 'ArrowLeft');
+        const back = root(mounted).activeElement?.getAttribute('data-id');
+        await settle();
+
+        // Assert
+        expect(opened).toEqual(['stock', 'data']);
+        expect([first, second, back]).toEqual(['data', 'orders', 'data']);
+        expect(root(mounted).querySelectorAll('.card[tabindex="0"]')).toHaveLength(1);
+        expect(cardOf(mounted, 'orders').getAttribute('aria-level')).toBe('3');
+    });
+
+    it('should wrap the leaves that wrap into a block, and show every link when linksShown is always', async () => {
+        // Arrange
+        const nodes = { app: { label: 'Shop' }, a: { label: 'A', parent: 'app', wrap: true }, b: { label: 'B', parent: 'app', wrap: true }, c: { label: 'C', parent: 'app', wrap: true } };
+
+        // Act
+        const mounted = await mountDiagram({ leafBlock: 400, linksShown: 'always', links: [{ from: 'a', to: 'c', kind: 'uses', label: 'A uses C' }] }, nodes);
+
+        // Assert
+        expect(Math.abs(boxOf(mounted, 'a').top - boxOf(mounted, 'b').top)).toBeLessThan(1);
+        expect(boxOf(mounted, 'b').left).toBeGreaterThan(boxOf(mounted, 'a').right);
+        const link = pathsOf(mounted).find((path) => path.classList.contains('link')) as SVGPathElement;
+        expect(link.hasAttribute('data-lit')).toBe(true);
+        expect(link.dataset['kind']).toBe('uses');
+        expect(link.querySelector('title')?.textContent).toBe('A uses C');
+        expect(pathsOf(mounted).filter((path) => path.classList.contains('tree'))).toHaveLength(1);
     });
 
     it('should put the branches on both sides when twoSided, and lay out again when a record is added', async () => {
@@ -128,5 +201,28 @@ describe('treeDiagram in Chromium', () => {
         expect(cardOf(mounted, 'a').hasAttribute('data-placed')).toBe(true);
         expect(cardOf(mounted, 'b').hasAttribute('data-placed')).toBe(false);
         expect(warning.mock.calls.filter(([message]) => String(message).startsWith('treeDiagram'))).toHaveLength(1);
+    });
+
+    it('should raise layout with its size once the cards are placed, and let the selection go on a press between the cards', async () => {
+        // Arrange
+        const layouts: { width: number; height: number }[] = [];
+        const mounted = mountComponent('treeDiagram', { '<-nodes': '$.data.nodes' }, { data: { nodes: NODES } });
+        mounted.element.addEventListener('layout', (event) => layouts.push((event as CustomEvent).detail));
+        await settle();
+        const selects: string[] = [];
+        mounted.element.addEventListener('select', (event) => selects.push((event as CustomEvent).detail.id));
+        cardOf(mounted, 'orders').click();
+        await settle();
+
+        // Act
+        (root(mounted).querySelector('.diagram') as HTMLElement).click();
+        await settle();
+
+        // Assert
+        expect(layouts.length).toBeGreaterThan(0);
+        expect(layouts.at(-1)).toEqual({ width: mounted.store.get('$.app.width'), height: mounted.store.get('$.app.height') });
+        expect(layouts.at(-1)!.width).toBeGreaterThan(0);
+        expect(selects).toEqual(['orders', '']);
+        expect(mounted.store.get('$.app.selected')).toBe('');
     });
 });

@@ -64,7 +64,7 @@ describe('tooltip in Chromium', () => {
         const mounted = mountComponent('tooltip', { _text: 'Saves', trigger });
 
         // Act
-        mounted.element.style.height = '80px';
+        (mounted.element as HTMLElement).style.height = '80px';
         const host = mounted.element.getBoundingClientRect();
         const button = nativeOf(mounted.element).getBoundingClientRect();
 

@@ -93,4 +93,27 @@ describe('layoutTree', () => {
         expect(empty).toEqual({ nodes: [], edges: [], width: 0, height: 0 });
         expect(odd.nodes).toEqual([{ id: 'a', x: 0, y: 0, side: 1 }]);
     });
+    it('should wrap the leaves of a card that wrap into one block of rows, with one edge to it, mirrored on the left side', () => {
+        // Arrange
+        const leaf = (id: string, parent: string) => ({ id, parent, width: 50, height: 20, wrap: true });
+        const nodes = [card('app', null), card('right', 'app'), leaf('r1', 'right'), leaf('r2', 'right'), leaf('r3', 'right'), card('left', 'app'), leaf('l1', 'left'), leaf('l2', 'left'), card('single', 'left'), leaf('alone', 'single')];
+
+        // Act
+        const output = layoutTree({ nodes, options: { leafBlock: 115, twoSided: true, rowGap: 10, columnGap: 72 } });
+
+        // Assert
+        const [r1, r2, r3] = ['r1', 'r2', 'r3'].map((id) => at(output, id));
+        expect(r2!.x).toBe(r1!.x + 60);
+        expect(r2!.y).toBe(r1!.y);
+        expect([r3!.x, r3!.y]).toEqual([r1!.x, r1!.y + 30]);
+        expect(at(output, 'r1').x).toBe(at(output, 'right').x + 100 + 72);
+        const [l1, l2] = ['l1', 'l2'].map((id) => at(output, id));
+        expect(l1!.side).toBe(-1);
+        expect(l1!.x).toBe(l2!.x + 60);
+        expect(l1!.x + 50).toBe(at(output, 'left').x - 72);
+        const tree = output.edges.filter((edge) => edge.kind === 'tree').map((edge) => edge.from + '>' + edge.to);
+        expect(tree).toEqual(expect.arrayContaining(['right>r1', 'left>l1', 'single>alone']));
+        expect(tree).not.toContain('right>r2');
+        expect(tree).not.toContain('left>l2');
+    });
 });

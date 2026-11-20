@@ -1,0 +1,5 @@
+<div class="viewport" role="group" tabindex="0" aria-label="{{ $._label }}" data-pannable="{{ $.pannable === false ? null : '' }}" style="--sui-viewport-x: {{ $.x }}px; --sui-viewport-y: {{ $.y }}px; --sui-viewport-zoom: {{ $.zoom }}" onpointerdown="{{ onPointerDown }}" onpointermove="{{ onPointerMove }}" onpointerup="{{ onPointerUp }}" onpointercancel="{{ onPointerUp }}" onwheel="{{ onWheel }}" onkeydown="{{ onKeyDown }}">
+    <div class="world">
+        <sui-node state=".content" if="{{ $.content }}"></sui-node>
+    </div>
+</div>

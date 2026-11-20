@@ -4,12 +4,16 @@
  * card its place and each edge its path, so the component (or an app's compute) needs no DOM to know where things go
  */
 
-/** A card of the tree: its parent's id (`null` or absent for a root) and its measured size */
+/**
+ * A card of the tree: its parent's id (`null` or absent for a root) and its measured size. `wrap` lets a card without
+ * children share a block with its siblings that also wrap (see `leafBlock`)
+ */
 export interface TreeNodeIn {
     readonly id: string;
     readonly parent?: string | null;
     readonly width: number;
     readonly height: number;
+    readonly wrap?: boolean;
 }
 
 /** A link across the tree, from one card to another; `kind` is passed on to the edge */
@@ -33,6 +37,13 @@ export interface LayoutTreeOptions {
      * beside its parent. Default 0: every level stands in a column
      */
     readonly columns?: number;
+    /**
+     * The width in pixels of a block of leaves: the children of one card that wrap and have no children of their own,
+     * when there are two or more, stand in rows inside that width (`rowGap` apart both ways) instead of one column. The
+     * block stands where its first card would, and one edge runs from the parent to the block, its `to` the first card.
+     * Default 0: no blocks
+     */
+    readonly leafBlock?: number;
 }
 
 export interface LayoutTreeInput {
@@ -78,6 +89,9 @@ interface Item {
     side: 1 | -1;
     /** The root put above several roots: it has no size and draws no edges */
     readonly virtual: boolean;
+    readonly wrap: boolean;
+    /** A block of leaves: the cards it holds, each with its place inside the block (from the block's leading corner) */
+    readonly members?: { item: Item; dx: number; dy: number }[];
 }
 
 const ROOT_ID = '\u0000root';
@@ -104,7 +118,7 @@ function treeOf(nodes: readonly TreeNodeIn[]): Item {
     const items = new Map<string, Item>();
     for (const node of nodes) {
         if (typeof node.id !== 'string' || items.has(node.id)) continue;
-        items.set(node.id, { id: node.id, w: finite(node.width, 0), h: finite(node.height, 0), children: [], parent: undefined, x: 0, y: 0, depth: 0, side: 1, virtual: false });
+        items.set(node.id, { id: node.id, w: finite(node.width, 0), h: finite(node.height, 0), children: [], parent: undefined, x: 0, y: 0, depth: 0, side: 1, virtual: false, wrap: node.wrap === true });
     }
     const roots: Item[] = [];
     for (const node of nodes) {
@@ -119,9 +133,53 @@ function treeOf(nodes: readonly TreeNodeIn[]): Item {
         parent.children.push(item);
     }
     if (roots.length === 1) return roots[0] as Item;
-    const root: Item = { id: ROOT_ID, w: 0, h: 0, children: roots, parent: undefined, x: 0, y: 0, depth: 0, side: 1, virtual: true };
+    const root: Item = { id: ROOT_ID, w: 0, h: 0, children: roots, parent: undefined, x: 0, y: 0, depth: 0, side: 1, virtual: true, wrap: false };
     for (const item of roots) item.parent = root;
     return root;
+}
+
+/**
+ * Puts the children of each card that wrap and have none of their own, two or more, into one block in the place of the
+ * first: rows of cards inside `width`, `gap` apart. The block is an item of its own, with the cards as its members
+ */
+function block(item: Item, width: number, gap: number): void {
+    for (const child of item.children) block(child, width, gap);
+    const leaves = item.children.filter((child) => child.wrap && child.children.length === 0);
+    if (leaves.length < 2) return;
+    const members: { item: Item; dx: number; dy: number }[] = [];
+    let x = 0;
+    let y = 0;
+    let row = 0;
+    let w = 0;
+    for (const leaf of leaves) {
+        if (x > 0 && x + leaf.w > width) {
+            y += row + gap;
+            x = 0;
+            row = 0;
+        }
+        members.push({ item: leaf, dx: x, dy: y });
+        w = Math.max(w, x + leaf.w);
+        x += leaf.w + gap;
+        row = Math.max(row, leaf.h);
+    }
+    const first = leaves[0] as Item;
+    const made: Item = { id: first.id, w, h: y + row, children: [], parent: item, x: 0, y: 0, depth: 0, side: 1, virtual: false, wrap: false, members };
+    const at = item.children.indexOf(first);
+    item.children.splice(0, item.children.length, ...item.children.slice(0, at), made, ...item.children.slice(at).filter((child) => !leaves.includes(child)));
+}
+
+/** The cards of a list of items: a block gives its members, each placed inside it (mirrored on the left side) */
+function cardsOf(items: readonly Item[]): Item[] {
+    return items.flatMap((item) => {
+        if (item.members === undefined) return [item];
+        for (const { item: member, dx, dy } of item.members) {
+            member.x = item.side < 0 ? item.x + item.w - dx - member.w : item.x + dx;
+            member.y = item.y + dy;
+            member.side = item.side;
+            member.depth = item.depth;
+        }
+        return item.members.map((member) => member.item);
+    });
 }
 
 /** Places every card of the tree: each subtree stacked down, a parent across from the middle of its children */
@@ -231,22 +289,26 @@ export function layoutTree(input: LayoutTreeInput): LayoutTreeOutput {
         groupGap: finite(given.groupGap, 28),
         columnGap: finite(given.columnGap, 72),
         twoSided: given.twoSided === true,
-        columns: Math.floor(finite(given.columns, 0))
+        columns: Math.floor(finite(given.columns, 0)),
+        leafBlock: finite(given.leafBlock, 0)
     };
     const nodes = Array.isArray(input.nodes) ? input.nodes : [];
     if (nodes.length === 0) return { nodes: [], edges: [], width: 0, height: 0 };
     const root = treeOf(nodes);
+    if (options.leafBlock > 0) block(root, options.leafBlock, options.rowGap);
     place(root, options);
-    const all = itemsOf(root).filter((item) => !item.virtual);
-    const minX = Math.min(...all.map((item) => item.x));
-    const minY = Math.min(...all.map((item) => item.y));
+    const items = itemsOf(root).filter((item) => !item.virtual);
+    const minX = Math.min(...items.map((item) => item.x));
+    const minY = Math.min(...items.map((item) => item.y));
     for (const item of itemsOf(root)) {
         item.x -= minX;
         item.y -= minY;
     }
+    const all = cardsOf(items);
     const byId = new Map(all.map((item) => [item.id, item]));
     const edges: PlacedEdge[] = [];
-    for (const item of all) {
+    // A block's members draw no edge of their own: the block's edge, to its first card, stands for them
+    for (const item of items) {
         if (item.parent === undefined || item.parent.virtual) continue;
         const parent = item.parent;
         const path = item.side < 0 ? curve(parent.x, parent.y + parent.h / 2, item.x + item.w, item.y + item.h / 2) : curve(parent.x + parent.w, parent.y + parent.h / 2, item.x, item.y + item.h / 2);
@@ -264,7 +326,7 @@ export function layoutTree(input: LayoutTreeInput): LayoutTreeOutput {
             return item === undefined || item.id !== node.id ? [] : [{ id: item.id, x: round(item.x), y: round(item.y), side: item.side }];
         }).filter((node, index, list) => list.findIndex((other) => other.id === node.id) === index),
         edges,
-        width: round(Math.max(...all.map((item) => item.x + item.w))),
-        height: round(Math.max(...all.map((item) => item.y + item.h)))
+        width: round(Math.max(...items.map((item) => item.x + item.w))),
+        height: round(Math.max(...items.map((item) => item.y + item.h)))
     };
 }
