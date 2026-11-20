@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **`embeddedApp` takes `fill`.** With `fill` the frame takes the size its node is given (its placement) instead of
+  `width` by `height`, so an app can fill a floating panel. Magnetic's editor places its side panel this way. Test:
+  `test/composites/embedded-app.browser.test.ts` ("should take the size its node is given with fill, and width by height
+  without").
 - **`panel` takes `passThrough`.** The panel's own area draws no surface and a press on it reaches what lies under it;
   its children take theirs as usual. Magnetic's editor floats its panels over the canvas with it. Test:
   `test/composites/panel-toolbar.browser.test.ts` ("should let a press on its own area through with passThrough, draw no

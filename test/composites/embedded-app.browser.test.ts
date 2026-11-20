@@ -118,6 +118,27 @@ describe('embeddedApp in Chromium', () => {
         expect(textOf(holder(refused))).toBe('');
     });
 
+    it('should take the size its node is given with fill, and width by height without', async () => {
+        // Arrange
+        const apps = shopHost();
+
+        // Act
+        const filled = mountComponent('embeddedApp', { app: 'shop', live: true, fill: true, width: 800, height: 600 }, { apps });
+        const sized = mountComponent('embeddedApp', { app: 'shop', live: true, width: 320, height: 240 }, { apps });
+        const box = document.createElement('div');
+        box.style.cssText = 'width: 300px; height: 200px;';
+        filled.element.before(box);
+        box.append(filled.element);
+        await flush();
+
+        // Assert
+        expect(filled.element.hasAttribute('fill')).toBe(true);
+        expect(frame(filled).getBoundingClientRect().width).toBeCloseTo(300, 0);
+        expect(frame(filled).getBoundingClientRect().height).toBeCloseTo(200, 0);
+        expect(frame(sized).clientWidth).toBe(320);
+        expect(frame(sized).clientHeight).toBe(240);
+    });
+
     it('should mark a live app as taking its own gestures, and a preview not', async () => {
         // Arrange
         const apps = shopHost();

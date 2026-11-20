@@ -13,6 +13,18 @@
     border-radius: var(--ui-embed-radius);
 }
 
+/* With fill the app takes the size its node is given, not width by height */
+:host([fill]) {
+    inline-size: 100%;
+    block-size: 100%;
+}
+
+:host([fill]) .frame {
+    box-sizing: border-box;
+    inline-size: 100%;
+    block-size: 100%;
+}
+
 :host(:not([live])) .frame {
     cursor: pointer;
 }

@@ -500,7 +500,7 @@ Neither field is `required` here, because either one signs; whoever handles the 
 ## Layout: `embeddedApp`
 
 - Another StateUI app inside a node, in the same page: no frame. `app` names it as the page's app host knows it (never a
-  URL), `appScreen` is the screen it opens on and moves to, `width` and `height` are its own size in pixels. `live`
+  URL), `appScreen` is the screen it opens on and moves to, `width` and `height` are its own size in pixels; with `fill` it takes the size its node is given instead. `live`
   is the app itself, synced and taking input; false is a preview, which is `inert`. `active` false disposes the app,
   and the frame shows `_label`.
 - It asks for the app with the bubbling, composed `ui-app-open` event, which the `mountApp` of the page answers through

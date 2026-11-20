@@ -29,7 +29,7 @@ interface Opening {
 
 /**
  * Shows another app inside the node. While `active` holds and `app` names one, it asks the page's app host for it by
- * name with the bubbling, composed `ui-app-open` event and mounts the answer in its frame, at `width` by `height`; the
+ * name with the bubbling, composed `ui-app-open` event and mounts the answer in its frame, at `width` by `height`, or with `fill` at the size its node is given; the
  * host attribute `mounted` is set while one shows. Without a host, while the host refuses, or while not active, the
  * frame shows `_label`. A change of `app` or `live` mounts again, and a change of `appScreen` moves the app there.
  *
