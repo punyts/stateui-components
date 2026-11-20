@@ -81,6 +81,40 @@ describe('panel in Chromium', () => {
         expect(padding('compact')).toBeLessThan(padding('spacious'));
     });
 
+    it('should let a press on its own area through with passThrough, draw no surface there, and give its children theirs', () => {
+        // Arrange
+        const under = document.createElement('button');
+        under.style.cssText = 'position: fixed; inset: 0; z-index: 0;';
+        document.body.append(under);
+        const mounted = mountComponent('panel', { passThrough: true, padding: 'none', children: { inner: { component: 'button', _title: 'Inner' } } });
+        const element = mounted.element as HTMLElement;
+        element.style.cssText = 'position: fixed; inset: 0; z-index: 1;';
+        const button = part(element, '.body > sui-node > ui-button') as HTMLElement;
+        const inner = box(button);
+        /** The element hit at a point, down through the shadow roots */
+        const deepest = (x: number, y: number): Element | null => {
+            let found = document.elementFromPoint(x, y);
+            while (found?.shadowRoot) {
+                const next = found.shadowRoot.elementFromPoint(x, y);
+                if (next === null || next === found) break;
+                found = next;
+            }
+            return found;
+        };
+
+        // Act
+        const empty = document.elementFromPoint(innerWidth - 5, innerHeight - 5);
+        const child = deepest(inner.left + inner.width / 2, inner.top + inner.height / 2);
+        const surface = getComputedStyle(part(element, '.panel') as HTMLElement);
+        under.remove();
+
+        // Assert
+        expect(empty).toBe(under);
+        expect(surface.backgroundColor).toBe('rgba(0, 0, 0, 0)');
+        expect(surface.boxShadow).toBe('none');
+        expect(child === button || button.shadowRoot?.contains(child)).toBe(true);
+    });
+
     it('should drop the padding with padding none and step it with sm and lg', () => {
         // Arrange
         const padding = (value: string): number =>

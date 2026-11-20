@@ -16,6 +16,7 @@
         "collapsible": { "type": "boolean", "default": false, "reflect": true },
         "collapsed": { "type": "boolean", "default": false, "reflect": true },
         "bordered": { "type": "boolean", "default": false, "reflect": true },
+        "passThrough": { "type": "boolean", "default": false, "reflect": true },
         "padding": { "type": "string", "values": ["md", "none", "sm", "lg"], "default": "md", "reflect": true },
         "_title": { "type": "string", "kind": "content", "default": "" },
         "_description": { "type": "string", "kind": "content", "default": "" },

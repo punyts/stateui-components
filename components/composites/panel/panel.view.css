@@ -34,6 +34,21 @@
     padding: var(--ui-space-inset-lg);
 }
 
+/* passThrough: a press on the panel's own area reaches what lies under it; its children take theirs as usual */
+:host([pass-through]) {
+    pointer-events: none;
+}
+
+:host([pass-through]) .body > sui-node {
+    pointer-events: auto;
+}
+
+:host([pass-through]) .panel {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+}
+
 :host([bordered]) .panel {
     border-color: var(--ui-color-border-base);
 }

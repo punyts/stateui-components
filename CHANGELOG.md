@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+
+- **`panel` takes `passThrough`.** The panel's own area draws no surface and a press on it reaches what lies under it;
+  its children take theirs as usual. Magnetic's editor floats its panels over the canvas with it. Test:
+  `test/composites/panel-toolbar.browser.test.ts` ("should let a press on its own area through with passThrough, draw no
+  surface there, and give its children theirs").
+- **`app` takes `seeThrough`.** The app draws no surface of its own, so an app mounted over another shows it between its
+  screens (Magnetic's editor over the canvas). Test: `test/composites/app.browser.test.ts` ("should draw its surface, and
+  none with seeThrough").
 - **A board taller than the window draws every card.** Fix: a column's `recordList` stopped at the window's height (`max-block-size: 100dvh`), so in a board with a set height (`--ui-board-height`, as on Magnetic's canvas) the cards below were cut off, unseen and not pressable. The list's cap is now `--sui-list-max` (default `100dvh`), which the board's column body sets to `none`. Test: `test/composites/board.browser.test.ts` ("should fill a column taller than the window with its list, so no card below the window is cut off").
 - **`board` can hold its cards still and draw them bare: `movable` and `bare`.** With `movable` false (default true) no card is picked up by the pointer or by Space, and the column bodies are not marked as taking their own drags, so a `viewport` around the board pans over them. With `bare` true the board is its cards alone: no column heads, and the columns have no fill, padding or corners (Magnetic's screens board). Tests: `test/composites/board-drag.browser.test.ts` ("should pick no card up by the pointer or Space while movable is false, and mark the column bodies only while it is true"), `test/composites/board.browser.test.ts` ("should draw a bare board as its cards alone: no column heads, fill or padding").
 - **`viewport` leaves content that takes its own gestures alone: `data-own-gestures`.** A press inside an element marked `data-own-gestures` (any value) never starts a pan, and with `data-own-gestures="all"` neither does the wheel. A movable `board`'s column bodies are marked, and a live `embeddedApp`'s frame is marked `all`, so a drag moves a card and the live app takes the wheel. Tests: `test/composites/viewport.browser.test.ts` ("should leave a drag inside content marked data-own-gestures to it, and the wheel too when marked all"), `test/composites/embedded-app.browser.test.ts` ("should mark a live app as taking its own gestures, and a preview not").

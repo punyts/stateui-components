@@ -98,4 +98,20 @@ describe('app in Chromium', () => {
         // Assert
         expect(getComputedStyle(layoutHost(mounted.element)).display).toBe('flex');
     });
+
+    it('should draw its surface, and none with seeThrough', () => {
+        // Arrange
+        const surface = (seeThrough: boolean): string => {
+            const mounted = mountComponent('app', { seeThrough }, { screens: screens(), start: 'home' });
+            return getComputedStyle(root(mounted.element).querySelector('.app') as HTMLElement).backgroundColor;
+        };
+
+        // Act
+        const drawn = surface(false);
+        const clear = surface(true);
+
+        // Assert
+        expect(drawn).not.toBe('rgba(0, 0, 0, 0)');
+        expect(clear).toBe('rgba(0, 0, 0, 0)');
+    });
 });

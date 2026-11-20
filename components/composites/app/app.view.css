@@ -15,6 +15,11 @@
     line-height: var(--ui-text-body-leading);
 }
 
+/* seeThrough: the app draws no surface of its own, so what lies under it shows between its screens */
+:host([see-through]) .app {
+    background: transparent;
+}
+
 /* The mount appends each screen here as a layout item; the app's layout places them */
 .screens {
     box-sizing: border-box;

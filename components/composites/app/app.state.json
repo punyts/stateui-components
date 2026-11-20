@@ -5,6 +5,7 @@
     "layout": true,
     "properties": {
         "_title": { "type": "string", "kind": "content", "default": "" },
+        "seeThrough": { "type": "boolean", "default": false, "reflect": true },
         "toasts": { "type": "node", "default": { "component": "toastRegion" } }
     }
 }
