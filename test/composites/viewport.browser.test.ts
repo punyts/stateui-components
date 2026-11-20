@@ -187,6 +187,41 @@ describe('viewport in Chromium', () => {
         expect(card.left).toBeGreaterThanOrEqual(area.left);
     });
 
+    it('should scale the grid’s dots with the zoom, and thin them out when zoomed far out', async () => {
+        // Arrange
+        const mounted = await mountViewport({ grid: true });
+        const spacing = (): number => parseFloat(getComputedStyle(surface(mounted)).backgroundSize);
+        const radius = (): number => parseFloat(/\)\s+([\d.]+)px/.exec(getComputedStyle(surface(mounted)).backgroundImage)?.[1] ?? 'NaN');
+        const atOne = { spacing: spacing(), radius: radius() };
+
+        // Act
+        mounted.store.set('$.data.view.zoom', 2);
+        await settle();
+        const atTwo = { spacing: spacing(), radius: radius() };
+        mounted.store.set('$.data.view.zoom', 0.25);
+        await settle();
+        const atQuarter = spacing();
+
+        // Assert
+        expect(atTwo.spacing).toBeCloseTo(atOne.spacing * 2, 1);
+        expect(atTwo.radius).toBeGreaterThan(atOne.radius);
+        expect(atQuarter).toBeCloseTo(atOne.spacing, 1);
+    });
+
+    it('should select no text and start no native drag while a drag pans', async () => {
+        // Arrange
+        const mounted = await mountViewport();
+        const drag = new DragEvent('dragstart', { bubbles: true, composed: true, cancelable: true });
+        const text = root(mounted).querySelector('.world') as HTMLElement;
+
+        // Act
+        text.dispatchEvent(drag);
+
+        // Assert
+        expect(getComputedStyle(surface(mounted)).userSelect).toBe('none');
+        expect(drag.defaultPrevented).toBe(true);
+    });
+
     it('should raise press for a press on the empty area that does not pan, and not for one on the content', async () => {
         // Arrange
         const mounted = await mountViewport();

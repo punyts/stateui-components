@@ -62,7 +62,7 @@ function boxOf(value: unknown, payload: unknown): Box | undefined {
  * the view, and any write to them moves it. A drag pans (it starts once the pointer has moved a few pixels, so a press
  * on the content still reaches it, and the click that ends a drag does not); a wheel pans, and with Ctrl (a trackpad's
  * pinch) zooms around the pointer; two fingers pinch and pan. With the viewport focused the arrows pan, + and - zoom and
- * 0 resets. While a gesture runs the view is written at most once a frame, and `change` ({ x, y, zoom }) is raised when
+ * 0 resets. A drag selects no text and drags nothing out of the content. While a gesture runs the view is written at most once a frame, and `change` ({ x, y, zoom }) is raised when
  * it ends, and after each command. A press on the empty area, not the content, that does not pan raises `press`.
  *
  * `inset` ({ top, right, bottom, left } in pixels) is the part of the viewport something covers, such as a floating
@@ -196,6 +196,12 @@ export default function controller({ element, store, basePath }: ControllerConte
     };
     element.addEventListener('click', onClickCapture, true);
 
+    /** A drag pans: it never drags a link, an image or a picture out of the content */
+    const onDragStart = (event: Event): void => {
+        if (read('pannable') !== false) event.preventDefault();
+    };
+    element.addEventListener('dragstart', onDragStart, true);
+
     const local = (event: PointerEvent | WheelEvent): { x: number; y: number } => {
         const rect = area().rect;
         return { x: event.clientX - rect.left, y: event.clientY - rect.top };
@@ -313,6 +319,7 @@ export default function controller({ element, store, basePath }: ControllerConte
             if (frame !== 0) cancelAnimationFrame(frame);
             clearTimeout(wheelEnd);
             element.removeEventListener('click', onClickCapture, true);
+            element.removeEventListener('dragstart', onDragStart, true);
             delete host.commands;
         }
     };

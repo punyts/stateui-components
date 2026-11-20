@@ -177,30 +177,37 @@ export default function controller({ element, store, basePath }: ControllerConte
     const cardElements = (): HTMLElement[] => Array.from(element.shadowRoot?.querySelectorAll<HTMLElement>('.card') ?? []);
     const cardElement = (id: string): HTMLElement | undefined => cardElements().find((card) => card.dataset['id'] === id);
 
-    const removeCard = (id: string): void => {
-        const base = cardBase(id);
-        store.unlink(`${base}.node.main.row`);
+    /** Takes a card's links away; its entry goes with the map */
+    const unlinkCard = (id: string): void => {
+        store.unlink(`${cardBase(id)}.node.main.row`);
         disposeLinks(store, links.get(id) ?? []);
         links.delete(id);
-        store.delete(base);
     };
 
     /**
-     * Writes a card: its entry with the template copy not yet drawn (`ready: false`), then the copy's `row` link to the
-     * record and its own links, and only then `ready`, so the copy starts with its data
+     * Writes the cards in one write of the map, each with its template copy not yet drawn (`ready: false`), then each
+     * copy's `row` link to its record and its own links, and only then `ready`, so a copy starts with its data. One write
+     * of the map, not one per card: each write to it runs the view's repeat over every card drawn
      */
-    const addCard = (card: Card): void => {
-        const base = cardBase(card.id);
-        const nodePath = `${base}.node.main`;
-        const rewritten = resolveRowLinks(JSON.parse(templateJson) as Node, `${nodePath}.row`, { path: nodePath });
-        const tree = rewritten.tree as unknown as Record<string, unknown>;
-        removeLinked(tree, nodePath, rewritten.links);
-        const { record: _record, wrap: _wrap, ...shown } = card;
-        store.set(base, { ...shown, ready: false, node: { main: tree } });
-        store.link(`${nodePath}.row`, card.record, { allowMissing: true });
-        for (const error of applyLinks(store, rewritten.links)) report.error(error.message, { code: error.code, path: basePath });
-        links.set(card.id, rewritten.links);
-        store.set(`${base}.ready`, true);
+    const addCards = (next: Map<string, Card>): void => {
+        const written: Record<string, unknown> = {};
+        const made: [Card, string, Link[]][] = [];
+        for (const card of next.values()) {
+            const nodePath = `${cardBase(card.id)}.node.main`;
+            const rewritten = resolveRowLinks(JSON.parse(templateJson) as Node, `${nodePath}.row`, { path: nodePath });
+            const tree = rewritten.tree as unknown as Record<string, unknown>;
+            removeLinked(tree, nodePath, rewritten.links);
+            const { record: _record, wrap: _wrap, ...shown } = card;
+            written[nameOf(card.id)] = { ...shown, ready: false, node: { main: tree } };
+            made.push([card, nodePath, rewritten.links]);
+        }
+        store.set(cardsPath, written);
+        for (const [card, nodePath, cardLinks] of made) {
+            store.link(`${nodePath}.row`, card.record, { allowMissing: true });
+            for (const error of applyLinks(store, cardLinks)) report.error(error.message, { code: error.code, path: basePath });
+            links.set(card.id, cardLinks);
+        }
+        for (const card of next.values()) store.set(`${cardBase(card.id)}.ready`, true);
     };
 
     /** Writes the cards: every card again when the ids, their order or the template changed, else each changed field */
@@ -208,9 +215,9 @@ export default function controller({ element, store, basePath }: ControllerConte
         const json = template();
         const same = json === templateJson && next.size === cards.size && [...next.keys()].every((id, at) => [...cards.keys()][at] === id);
         if (!same) {
-            for (const id of cards.keys()) removeCard(id);
+            for (const id of cards.keys()) unlinkCard(id);
             templateJson = json;
-            for (const card of next.values()) addCard(card);
+            addCards(next);
         } else {
             for (const [id, card] of next) {
                 const before = cards.get(id) as Card;
@@ -430,7 +437,8 @@ export default function controller({ element, store, basePath }: ControllerConte
             store.off(optionPaths, schedule);
             store.off([cardPath], schedule);
             store.off([selectedPath], onSelected);
-            for (const id of cards.keys()) removeCard(id);
+            for (const id of cards.keys()) unlinkCard(id);
+            store.set(cardsPath, {});
             store.unlink(`${basePath}.cards`);
         }
     };

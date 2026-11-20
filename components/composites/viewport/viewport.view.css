@@ -11,14 +11,20 @@
     touch-action: none;
 }
 
+/* The dots scale with the content, and thin out by four each way while they would stand closer than half a step */
 :host([grid]) .viewport {
-    background-image: radial-gradient(circle, var(--ui-viewport-dot) var(--ui-border-width-thick), transparent var(--ui-border-width-thick));
-    background-size: calc(var(--ui-viewport-grid) * var(--sui-viewport-zoom)) calc(var(--ui-viewport-grid) * var(--sui-viewport-zoom));
+    --sui-viewport-step: calc(var(--ui-viewport-grid) * var(--sui-viewport-zoom) * var(--sui-viewport-fold));
+    --sui-viewport-radius: clamp(0.75px, calc(var(--ui-border-width-thick) * var(--sui-viewport-zoom)), calc(var(--ui-border-width-thick) * 2));
+    background-image: radial-gradient(circle, var(--ui-viewport-dot) var(--sui-viewport-radius), transparent calc(var(--sui-viewport-radius) + 0.5px));
+    background-size: var(--sui-viewport-step) var(--sui-viewport-step);
     background-position: var(--sui-viewport-x) var(--sui-viewport-y);
 }
 
+/* A drag pans: it selects no text, on the canvas or on the content */
 .viewport[data-pannable] {
     cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .viewport[data-panning] {
