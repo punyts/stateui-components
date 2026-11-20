@@ -1,0 +1,4 @@
+<div class="frame" role="{{ $.live === true ? 'group' : 'button' }}" tabindex="{{ $.live === true ? null : '0' }}" aria-label="{{ $._label }}" style="--sui-embedded-app-width: {{ $.width }}px; --sui-embedded-app-height: {{ $.height }}px" onclick="{{ onClick }}" onkeydown="{{ onKeyDown }}" oncontextmenu="{{ onContextMenu }}">
+    <div class="app"></div>
+    <span class="label">{{ $._label }}</span>
+</div>

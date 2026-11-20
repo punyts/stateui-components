@@ -1,6 +1,6 @@
 import type { Store } from '@punyts/state';
 import { libraryFromCatalog, mountApp, registerLocaleStep } from '@punyts/stateui-app';
-import type { AppDocument, AppState, ComponentLibrary, ComponentOverlays } from '@punyts/stateui-app';
+import type { AppDocument, AppHost, AppState, ComponentLibrary, ComponentOverlays } from '@punyts/stateui-app';
 import type { Catalog } from '@punyts/stateui-app/build';
 import type { BuildError, ReadFile, ReleaseFile, TransferFile } from '@punyts/stateui-app';
 
@@ -38,6 +38,8 @@ export interface MountOptions {
      * a stored file (a `paintField` background) (none by default)
      */
     hooks?: { onEmit?(name: string, payload: unknown): void; transferFile?: TransferFile; releaseFile?: ReleaseFile; readFile?: ReadFile };
+    /** The page's app host, which an `embeddedApp` asks for apps by name (none by default) */
+    apps?: AppHost;
 }
 
 /** What `mountComponent` gives back */
@@ -135,7 +137,7 @@ export function createMountComponent(build: ComponentBuild): MountComponent {
         } as unknown as AppDocument;
         const host = globalThis.document.body.appendChild(globalThis.document.createElement('div'));
         const locale = registerLocaleStep(overlays);
-        const app = mountApp(host, document, library, options.hooks, { route: false });
+        const app = mountApp(host, document, library, options.hooks, { route: false, ...(options.apps === undefined ? {} : { apps: options.apps }) });
         if (!app.store) {
             locale.unregister();
             host.remove();

@@ -1,0 +1,22 @@
+{
+    "summary": "Another app inside a node, asked for by name from the page: live and taking input, or a preview of it",
+    "category": "layout",
+    "purposes": ["show another app inside a page", "preview a screen of an app", "place a live app on a board", "embed an app by its name"],
+    "tokenGroup": "embed",
+    "events": ["press", "menu", "navigated", "emit"],
+    "tokens": {
+        "fill": "{color.surface.base}",
+        "border": "{color.border.base}",
+        "radius": "{radius.md}",
+        "label": "{color.text.muted}"
+    },
+    "properties": {
+        "app": { "type": "string", "default": "" },
+        "appScreen": { "type": "string", "default": "" },
+        "width": { "type": "number", "default": 800, "validators": { "range": { "min": 1, "max": 10000 } } },
+        "height": { "type": "number", "default": 600, "validators": { "range": { "min": 1, "max": 10000 } } },
+        "live": { "type": "boolean", "default": false, "reflect": true },
+        "active": { "type": "boolean", "default": true },
+        "_label": { "type": "string", "kind": "content", "default": "App" }
+    }
+}

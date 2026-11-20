@@ -497,6 +497,22 @@ Neither field is `required` here, because either one signs; whoever handles the 
 - Gestures: a drag pans once it has moved 4 px, so a press on the content still reaches it, and the click that ends a drag does not; the wheel pans (Shift turns it sideways), and with Ctrl or a trackpad pinch it zooms around the pointer; two fingers pinch and pan. With the viewport focused the arrows pan by 40 px, + and - zoom and 0 resets. While a gesture runs the view is written at most once a frame; `change` (`{ x, y, zoom }`) is raised when it ends and after each command. A press on the empty area (the viewport or the world, not the content) that does not pan raises `press` (`{}`), where a page lets its selection go.
 - Commands: `zoomIn` and `zoomOut` (a step of 1.25 around the middle of the free area), `zoomReset` (zoom 1), `fit` (a number value: the margin, default 24; the whole content at most at zoom 1) and `lookAt` (a box `{ x, y, width, height }` of the content, the value or the `box` of the event's payload, brought into view moving as little as it can). A `treeDiagram` inside runs `{ "command": "lookAt", "target": "$parent" }` on `select` to bring the chosen card into view. The content is measured at its own size and sets `--layout-contain: normal`. Tests: `viewport.browser.test.ts`.
 
+## Layout: `embeddedApp`
+
+- Another StateUI app inside a node, in the same page: no frame. `app` names it as the page's app host knows it (never a
+  URL), `appScreen` is the screen it opens on and moves to, `width` and `height` are its own size in pixels. `live`
+  is the app itself, synced and taking input; false is a preview, which is `inert`. `active` false disposes the app,
+  and the frame shows `_label`.
+- It asks for the app with the bubbling, composed `ui-app-open` event, which the `mountApp` of the page answers through
+  its `apps` host (`@punyts/stateui-app`). Without a host, or when the host refuses, the frame shows `_label`. The
+  property is `appScreen`, not `screen`: a `screen` property names a screen of the page's own app (`link`,
+  `menuItem`).
+- Events: `press` (a press, Enter or Space on a preview) and `menu` (a right press, the context-menu key, Shift+F10),
+  both with `{ app, screen }`; `navigated` with `{ screen }` when the live app moves itself; `emit` with
+  `{ name, payload }` for each emit of the app inside. The app inside keeps its own store; the page reaches it only
+  through these properties and events. Tests: `test/composites/embedded-app.browser.test.ts`.
+- The `app` root component leaves the document title alone in an app mounted this way (`$.runtime.embedded`).
+
 ## Graphics: `drawing` and the 2D shapes (G1.3)
 - **Overview.** A `drawing` node (category `graphics`) holds shape nodes in its `children`; shapes are accepted nowhere else (`drawGroup` and `drawRepeat` hold shapes in turn). The drawing reads the shape nodes into a shape tree (`src/shared/drawing/`, see `src/shared/README.md`) and hands it to a renderer: SVG by default, or a canvas. A shape value is a literal, a theme token (`"fill": "{color.accent.base}"`, recoloured on a theme or mode switch) or a link (`"<-cx": "$.data.chart.x"`); in a `drawRepeat` row, `$row` links read the record, as in a list row. A shape with `interactive: true` and a `_label` is pressable and focusable, and its `on` entries run on `press` and `hover` like a button's; with `draggable` a person drags it (or moves it with the arrow keys) and its new `x` and `y` are written on release, followed by `dragEnd`; in a `drawRepeat` the drag writes the record. A shape with `transition` eases to a changed value instead of jumping, unless the theme's motion is reduced. The checks (`SUI-STATE-PAINT`, `SUI-STATE-TOKEN`, `SUI-STATE-LABEL`) and the run-time reports (`SUI-RUN-DRAW`, `SUI-RUN-CAP`) are in the stateui-app README; how an agent checks a drawing (`ui_screenshot`, `ui_tree` with `rendered: true`, `ui_interact` on a shape path, `drag` by `+dx,+dy`) is in the stateui-mcp README. The parts below: the `drawing` component, the SVG renderer, `drawRepeat`, the canvas renderer, events in SVG and in canvas, drag and keyboard move, the shapes and their properties, transitions and reduced motion, and the checks. A seat map, where pressing a seat records it:
 

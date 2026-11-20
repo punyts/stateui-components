@@ -1,0 +1,49 @@
+:host {
+    display: block;
+    inline-size: max-content;
+}
+
+.frame {
+    position: relative;
+    inline-size: var(--sui-embedded-app-width);
+    block-size: var(--sui-embedded-app-height);
+    overflow: hidden;
+    background-color: var(--ui-embed-fill);
+    border: var(--ui-border-width-thin) solid var(--ui-embed-border);
+    border-radius: var(--ui-embed-radius);
+}
+
+:host(:not([live])) .frame {
+    cursor: pointer;
+}
+
+.frame:focus-visible {
+    outline: 2px solid var(--ui-color-focus);
+    outline-offset: 2px;
+}
+
+.app {
+    block-size: 100%;
+}
+
+/* Until an app is mounted, and while none is, the frame shows its name */
+:host(:not([mounted])) .app {
+    display: none;
+}
+
+.label {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: var(--ui-space-inset-md);
+    color: var(--ui-embed-label);
+    font-family: var(--ui-text-title-family);
+    font-size: var(--ui-text-title-size);
+    line-height: var(--ui-text-title-leading);
+    text-align: center;
+}
+
+:host([mounted]) .label {
+    display: none;
+}

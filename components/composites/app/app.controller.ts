@@ -2,10 +2,12 @@ import type { ControllerContext } from '@punyts/stateui';
 
 /**
  * Sets the document title from `_title` and follows it. An empty `_title` leaves the title the document had when the
- * app attached, and dispose puts that title back. The screens are not the app's children: the mount appends each one to
+ * app attached, and dispose puts that title back. An app embedded in another's component (`$.runtime.embedded`) leaves
+ * the title to the page around it. The screens are not the app's children: the mount appends each one to
  * the layout host, so the app's `layout` places them by the screen root's `placement`
  */
 export default function controller({ element, store, basePath }: ControllerContext) {
+    if (store.get<unknown>('$.runtime.embedded') === true) return {};
     const page = element.ownerDocument;
     const titlePath = `${basePath}._title`;
     const original = page.title;
