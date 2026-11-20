@@ -92,6 +92,8 @@
 .body {
     position: relative;
     --ui-recordlist-row: var(--sui-card-h);
+    /* The column's height is the board's: its list fills it, however tall, rather than stopping at the window's */
+    --sui-list-max: none;
     block-size: var(--ui-board-height);
     min-block-size: 0;
 }

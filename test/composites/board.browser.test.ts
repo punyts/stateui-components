@@ -263,6 +263,20 @@ describe('board in Chromium', () => {
         expect(error).not.toHaveBeenCalled();
     });
 
+    it('should fill a column taller than the window with its list, so no card below the window is cut off', async () => {
+        // Arrange: a board three cards of 1000px tall, as an editor's canvas sizes one
+        const tall = { theme: { board: { card: '1000px', height: '3000px' } } };
+
+        // Act
+        const mounted = await mountBoard(cards(), tall);
+
+        // Assert
+        const list = listOf(columnOf(mounted, 'todo')).shadowRoot?.querySelector('.list') as HTMLElement;
+        expect(window.innerHeight).toBeLessThan(3000);
+        expect(list.offsetHeight).toBe(3000);
+        expect(shown(mounted, 'todo')).toEqual(['B', 'A', 'E']);
+    });
+
     it('should size the cards by cardHeight', async () => {
         // Arrange
         const heights: number[] = [];
