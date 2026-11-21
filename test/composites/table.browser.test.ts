@@ -408,6 +408,51 @@ describe('table height in Chromium', () => {
             expect(edited(mounted)).toEqual(['o34']);
         });
 
+        /** The positions of the rows shown, in document order: what Tab and a screen reader follow */
+        const documentOrder = (mounted: MountedComponent): number[] =>
+            Array.from(body(mounted).shadowRoot?.querySelectorAll<HTMLElement>('.slot') ?? []).filter((slot) => !slot.hidden).map(positionOf);
+        const ascending = (positions: number[]): number[] => [...positions].sort((a, b) => a - b);
+
+        it('should keep the rows in the document in the order shown, and the focus in its input, when the pool grows and scrolls', async () => {
+            // Arrange
+            const mounted = await mountTable({ columns: EDITABLE }, { orders: orders(60) }, 300);
+            await scrollTo(mounted, 30);
+            const input = inputOf(slotAt(mounted, 34));
+            input.focus();
+            await settle();
+
+            // Act
+            await scrollTo(mounted, 32.8);
+            const grown = documentOrder(mounted);
+            await scrollTo(mounted, 50);
+            await scrollTo(mounted, 27.8);
+            const back = documentOrder(mounted);
+
+            // Assert
+            expect(grown).toEqual(ascending(grown));
+            expect(back).toEqual(ascending(back));
+            expect(cellNode(cells(slotAt(mounted, 34))[0])?.shadowRoot?.activeElement).toBe(input);
+        });
+
+        it('should put the rows in the document in the order shown when a sort moves every record', async () => {
+            // Arrange
+            const mounted = await mountTable({ columns: { ...EDITABLE, total: { _title: 'Total', field: 'total', sortable: true } } }, { orders: orders(8) }, 300);
+            const input = inputOf(slotAt(mounted, 7));
+            input.focus();
+            await settle();
+
+            // Act
+            mounted.store.set('$.app.sortDir', 'desc');
+            mounted.store.set('$.app.sortBy', 'total');
+            await settle();
+
+            // Assert
+            expect(input.getAttribute('aria-label')).toBe('o7');
+            expect(inputOf(slotAt(mounted, 0))).toBe(input);
+            expect(documentOrder(mounted)).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
+            expect(cellNode(cells(slotAt(mounted, 0))[0])?.shadowRoot?.activeElement).toBe(input);
+        });
+
         it('should keep its record when the list scrolls it out of view and back', async () => {
             // Arrange
             const mounted = await mountTable({ columns: EDITABLE }, { orders: orders(60) }, 300);

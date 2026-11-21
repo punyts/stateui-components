@@ -258,7 +258,9 @@ describe('board in Chromium', () => {
         // Assert
         expect(columnElements(mounted).map((column) => column.dataset['key'])).toEqual(['todo', 'done', 'later']);
         expect(columnElements(mounted).map((column) => getComputedStyle(column).order)).toEqual(['0', '1', '2']);
-        expect(slotsOf(columnOf(mounted, 'todo'))).toEqual(before);
+        const after = slotsOf(columnOf(mounted, 'todo'));
+        expect(after).toHaveLength(before.length);
+        expect(after.every((slot) => before.includes(slot))).toBe(true);
         expect(shown(mounted, 'todo')).toEqual(['B', 'A', 'E']);
         expect(error).not.toHaveBeenCalled();
     });
@@ -319,7 +321,9 @@ describe('board in Chromium', () => {
         await settle();
 
         // Assert
-        expect(slotsOf(columnOf(mounted, 'todo'))).toEqual(before);
+        const after = slotsOf(columnOf(mounted, 'todo'));
+        expect(after).toHaveLength(before.length);
+        expect(after.every((slot) => before.includes(slot))).toBe(true);
     });
 
     it('should draw empty columns for no records', async () => {

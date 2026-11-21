@@ -228,7 +228,7 @@ describe('list in Chromium', () => {
         expect(shown(mounted, 3)).toEqual(['New', 'Line 2', 'Line 1']);
 
         expect(slotElements(mounted)).toHaveLength(slots.length);
-        expect(slotElements(mounted).every((slot, i) => slot === slots[i])).toBe(true);
+        expect(slotElements(mounted).every((slot) => slots.includes(slot))).toBe(true);
         expect(Object.keys(mounted.store.get<Record<string, unknown>>(`${BODY}.slots`))).toHaveLength(slots.length);
     });
 

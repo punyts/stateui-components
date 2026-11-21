@@ -124,6 +124,9 @@ interface Assigned {
 
 const NO_META: ShownMeta = { level: 0, expanded: -1, setsize: 0, posinset: 0, label: '' };
 
+/** The `slotOrder` of a slot that shows no position: after every shown slot */
+export const UNSHOWN_ORDER = Number.MAX_SAFE_INTEGER;
+
 const isEntry = (value: unknown): value is Entry => value !== null && typeof value === 'object' && !Array.isArray(value);
 
 /** The template with the value of every `_` property blanked: equal structures differ only in content, such as a translation */
@@ -169,8 +172,9 @@ export function removeLinked(tree: Entry, nodePath: string, links: readonly Link
  * `p % N`, or the next free one. So a window move recycles only the slots whose record left the window, and a focused
  * element in a slot stays with its record.
  *
- * Recycling is one store link: `slots.<i>.row` is re-pointed at the record, and one write of `slots.<i>.slotIndex` gives
- * the position. The template's `$row.x` links are rewritten once per slot to fixed `allowMissing` aliases under
+ * Recycling is one store link: `slots.<i>.row` is re-pointed at the record, and a write of `slots.<i>.slotIndex` gives
+ * the position. `slotOrder` is the same position, or `UNSHOWN_ORDER` for a slot that shows none: the views repeat the
+ * slots sorted by it, so the document holds the rows in the order shown and the empty slots after them. The template's `$row.x` links are rewritten once per slot to fixed `allowMissing` aliases under
  * `slots.<i>.row.x`, so they follow whatever `row` points at, a missing field reads as `undefined`, and a slot with no
  * record points at the shared empty record. Nothing is created or listened to when the window moves.
  *
@@ -218,6 +222,7 @@ export function createSlotPool(options: SlotPoolOptions): SlotPool {
         const path = slotPath(i);
         const { tree, links } = rewrite(templateJson, path);
         tree['slotIndex'] = -1;
+        tree['slotOrder'] = UNSHOWN_ORDER;
         tree['slotSelected'] = false;
         tree['slotTab'] = false;
         tree['slotPending'] = false;
@@ -259,6 +264,7 @@ export function createSlotPool(options: SlotPoolOptions): SlotPool {
     const place = (slot: Slot, position: number): void => {
         if (slot.position === position) return;
         slot.position = position;
+        store.set(`${slot.path}.slotOrder`, position >= 0 ? position : UNSHOWN_ORDER);
         store.set(`${slot.path}.slotIndex`, position);
     };
 
