@@ -2,6 +2,7 @@ import { report } from '@punyts/core';
 import type { ControllerContext } from '@punyts/stateui';
 import { runtimePath } from '@punyts/stateui-app/core';
 import { MOVE_KEYS, announce, columnAt, dropIndex, passedThreshold, placeAfterKey } from '../shared/drag/drag.js';
+import { leaveToViewport } from '../shared/gestures/gestures.js';
 import type { ColumnBox, ColumnSize, Place } from '../shared/drag/drag.js';
 import { toNumber } from '../shared/format/format.js';
 import { buildBoard, planMove } from '../shared/records/board.js';
@@ -415,10 +416,22 @@ export default function controller({ element, store, basePath }: ControllerConte
         moveDrag(event);
     };
 
+    /** Whether a press is in the room its card's row leaves under the card (`board.gap`), in the row's scale on the screen */
+    const inGap = (event: PointerEvent, slot: HTMLElement): boolean => {
+        const gap = part('.gap-probe')?.offsetHeight ?? 0;
+        if (gap <= 0 || slot.offsetHeight <= 0) return false;
+        const box = slot.getBoundingClientRect();
+        return event.clientY > box.bottom - gap * (box.height / slot.offsetHeight);
+    };
     const onPointerDown = (event: PointerEvent): void => {
         if (held !== undefined || event.button !== 0 || !movable()) return;
         const card = cardAt(event);
-        if (card?.pressable !== true) return;
+        // A press on no card, or under one, moves nothing: a viewport around the board pans
+        if (card === undefined || inGap(event, card.slot)) {
+            leaveToViewport(event);
+            return;
+        }
+        if (!card.pressable) return;
         press = { pointer: event.pointerId, x: event.clientX, y: event.clientY, key: card.key, column: card.column, index: card.index, slot: card.slot };
     };
     const onPointerMove = (event: PointerEvent): void => {

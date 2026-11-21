@@ -1,4 +1,5 @@
 import type { ControllerContext } from '@punyts/stateui';
+import { isLeftToViewport } from '../shared/gestures/gestures.js';
 
 interface CommandHost {
     commands?: Record<string, (value: unknown, payload: unknown) => void>;
@@ -44,7 +45,8 @@ const NUDGE = 40;
 const FIELDS = 'input, select, textarea, [contenteditable]';
 /**
  * Content that takes the pointer itself, marked by its component: `data-own-gestures="drag"` keeps presses and drags (a
- * card a `board` moves), `"all"` the wheel as well (a live `embeddedApp`, whose app scrolls)
+ * card a `board` moves), `"all"` the wheel as well (a live `embeddedApp`, whose app scrolls). Marked content may leave
+ * one press to the viewport (`leaveToViewport`), such as a board's press on no card
  */
 const OWN_DRAGS = '[data-own-gestures]';
 const OWN_WHEEL = '[data-own-gestures="all"]';
@@ -239,7 +241,7 @@ export default function controller({ element, store, basePath }: ControllerConte
     return {
         onPointerDown: (event: PointerEvent) => {
             if (read('pannable') === false || (event.pointerType === 'mouse' && event.button !== 0)) return;
-            if (inside(event, FIELDS) || inside(event, OWN_DRAGS)) return;
+            if (inside(event, FIELDS) || (inside(event, OWN_DRAGS) && !isLeftToViewport(event))) return;
             const at = local(event);
             if (gesture === undefined) {
                 const target = event.composedPath()[0];

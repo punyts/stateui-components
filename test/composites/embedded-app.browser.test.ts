@@ -139,6 +139,39 @@ describe('embeddedApp in Chromium', () => {
         expect(frame(sized).clientHeight).toBe(240);
     });
 
+    it('should scroll an app taller than its screen inside the screen, and leave a filled app to size itself', async () => {
+        // Arrange
+        const apps = shopHost();
+
+        // Act
+        const mounted = mountComponent('embeddedApp', { app: 'shop', live: true, width: 320, height: 40 }, { apps });
+        await flush();
+        const filled = mountComponent('embeddedApp', { app: 'shop', live: true, fill: true }, { apps });
+        await flush();
+        const holder = frame(mounted).querySelector('.app') as HTMLElement;
+
+        // Assert
+        expect(getComputedStyle(frame(filled).querySelector('.app') as HTMLElement).overflowY).toBe('visible');
+        expect(getComputedStyle(holder).overflowY).toBe('auto');
+        expect(holder.scrollHeight).toBeGreaterThan(holder.clientHeight);
+        expect(holder.clientHeight).toBe(40);
+        expect(getComputedStyle(holder).scrollbarColor).not.toBe('auto');
+    });
+
+    it('should fill its screen with an app shorter than the screen', async () => {
+        // Arrange
+        const apps = shopHost();
+
+        // Act
+        const mounted = mountComponent('embeddedApp', { app: 'shop', live: true, width: 320, height: 2000 }, { apps });
+        await flush();
+        const app = findAll(frame(mounted), 'ui-app')[0] as HTMLElement;
+        const surface = app.shadowRoot?.querySelector('.app') as HTMLElement;
+
+        // Assert
+        expect(surface.getBoundingClientRect().height).toBeCloseTo(2000, 0);
+    });
+
     it('should mark a live app as taking its own gestures, and a preview not', async () => {
         // Arrange
         const apps = shopHost();

@@ -169,6 +169,24 @@ describe('board pointer drag in Chromium', () => {
         expect(slot.style.opacity).toBe('');
     });
 
+    it('should leave the gap of the board out of the placeholder', async () => {
+        // Arrange: rows of 120px, each a card and 40px under it
+        const mounted = await mountBoard(cards(), { theme: { board: { card: '120px', gap: '40px' } } });
+        const slot = slotFor(mounted, 'todo', 'Card A');
+
+        // Act
+        await dragTo(mounted, slot, 'doing', 1);
+        await frames(2);
+
+        // Assert: one row down, as tall as the card
+        const box = dropOf(mounted, 'doing')?.getBoundingClientRect() as DOMRect;
+        const body = bodyOf(mounted, 'doing').getBoundingClientRect();
+        expect(box.top).toBeCloseTo(body.top + 120, 0);
+        expect(box.height).toBeCloseTo(80, 0);
+        pointer('pointerup', boardOf(mounted), 0, 0);
+        await settle();
+    });
+
     it('should move the placeholder with the pointer and read no layout while it moves', async () => {
         // Arrange
         const mounted = await mountBoard();

@@ -38,6 +38,13 @@
     block-size: 100%;
 }
 
+/* An app taller than its screen scrolls inside it, as it would in a window of that size; with fill the app sizes
+   itself to its node */
+:host(:not([fill])) .app {
+    overflow: auto;
+    scrollbar-color: var(--ui-embed-scrollbar) transparent;
+}
+
 /* Until an app is mounted, and while none is, the frame shows its name */
 :host(:not([mounted])) .app {
     display: none;
