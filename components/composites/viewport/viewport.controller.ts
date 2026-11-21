@@ -48,7 +48,6 @@ const FIELDS = 'input, select, textarea, [contenteditable]';
  */
 const OWN_DRAGS = '[data-own-gestures]';
 const OWN_WHEEL = '[data-own-gestures="all"]';
-const inside = (event: Event, selector: string): boolean => event.composedPath().some((target) => target instanceof Element && target.matches(selector));
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 const finite = (value: unknown, fallback: number): number => (typeof value === 'number' && Number.isFinite(value) ? value : fallback);
@@ -82,6 +81,14 @@ function boxOf(value: unknown, payload: unknown): Box | undefined {
 export default function controller({ element, store, basePath }: ControllerContext) {
     const read = (name: string): unknown => store.get<unknown>(`${basePath}.${name}`);
     const part = (selector: string): HTMLElement | null => element.shadowRoot?.querySelector<HTMLElement>(selector) ?? null;
+    /** Whether the event's target is in content of this viewport that matches `selector`: what holds the viewport itself (a live `embeddedApp` its page runs in) does not count */
+    const inside = (event: Event, selector: string): boolean => {
+        for (const target of event.composedPath()) {
+            if (target === element) return false;
+            if (target instanceof Element && target.matches(selector)) return true;
+        }
+        return false;
+    };
     const limits = (): { min: number; max: number } => {
         const min = Math.max(0.01, finite(read('minZoom'), 0.1));
         return { min, max: Math.max(min, finite(read('maxZoom'), 4)) };

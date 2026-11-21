@@ -133,6 +133,32 @@ describe('viewport in Chromium', () => {
         expect(viewOf(mounted)).toEqual([0, -40, 1]);
     });
 
+    it('should pan and wheel inside a page that a live embeddedApp holds: only its own content counts as marked', async () => {
+        // Arrange: what holds the viewport is marked as a live embeddedApp's frame is
+        const mounted = await mountViewport();
+        const holder = mounted.element.parentElement as HTMLElement;
+        holder.setAttribute('data-own-gestures', 'all');
+        const area = surface(mounted);
+        const rect = area.getBoundingClientRect();
+
+        try {
+            // Act
+            pointer(area, 'pointerdown', 100, 100);
+            pointer(area, 'pointermove', 150, 130);
+            pointer(area, 'pointerup', 150, 130);
+            await settle();
+            const afterDrag = viewOf(mounted);
+            area.dispatchEvent(new WheelEvent('wheel', { deltaY: 40, clientX: rect.left + 10, clientY: rect.top + 10, bubbles: true, composed: true, cancelable: true }));
+            await settle();
+
+            // Assert
+            expect(afterDrag).toEqual([50, 30, 1]);
+            expect(viewOf(mounted)).toEqual([50, -10, 1]);
+        } finally {
+            holder.removeAttribute('data-own-gestures');
+        }
+    });
+
     it('should fit the content into the area the inset leaves free, at most at zoom 1', async () => {
         // Arrange
         const mounted = await mountViewport({ inset: { right: 400 } });
