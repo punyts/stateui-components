@@ -221,7 +221,8 @@ export function createSlotPool(options: SlotPoolOptions): SlotPool {
         return { tree, links: rewritten.links };
     };
 
-    const createSlot = (i: number): Slot => {
+    /** The node of slot `i` as it starts, showing no position, and the links its `$row` fields take */
+    const slotTree = (i: number): { path: string; tree: Entry; links: Link[] } => {
         const path = slotPath(i);
         const { tree, links } = rewrite(templateJson, path);
         tree['slotIndex'] = -1;
@@ -235,12 +236,40 @@ export function createSlotPool(options: SlotPoolOptions): SlotPool {
         tree['slotSetsize'] = NO_META.setsize;
         tree['slotPosinset'] = NO_META.posinset;
         tree['slotLabel'] = NO_META.label;
-        store.set(path, tree);
+        return { path, tree, links };
+    };
+
+    /** Points a slot node already in the store at the empty record and makes its links */
+    const linkSlot = (path: string, links: Link[]): Slot => {
         store.link(rowLink(path), RUNTIME_PATHS.empty);
         for (const error of applyLinks(store, links)) {
             report.error(error.message, { code: error.code, path });
         }
         return { path, links, position: -1, key: undefined, target: RUNTIME_PATHS.empty, selected: false, tab: false, pending: false, offset: 0, shown: NO_META };
+    };
+
+    const createSlot = (i: number): Slot => {
+        const { path, tree, links } = slotTree(i);
+        store.set(path, tree);
+        return linkSlot(path, links);
+    };
+
+    /**
+     * Makes the pool `wanted` slots in one write of the slots object. Adding slots one at a time makes the view's repeat
+     * reconcile every slot for each one; one replace makes it reconcile once, keeping the element of each slot whose
+     * index stays. The slots that were there lose their links first and show their positions again in the refresh
+     */
+    const rebuildAll = (wanted: number): void => {
+        for (const slot of slots) {
+            store.unlink(rowLink(slot.path));
+            disposeLinks(store, slot.links);
+        }
+        const made = Array.from({ length: wanted }, (_, i) => slotTree(i));
+        const all: Entry = {};
+        for (const [i, { tree }] of made.entries()) all[String(i)] = tree;
+        store.replace(slotsPath, all);
+        slots = made.map(({ path, links }) => linkSlot(path, links));
+        dirty = true;
     };
 
     const destroySlot = (slot: Slot): void => {
@@ -411,6 +440,10 @@ export function createSlotPool(options: SlotPoolOptions): SlotPool {
         if (wanted !== slots.length) {
             if (isReported(CATEGORY)) report(CATEGORY, 'Resized the slot pool of %s from %s to %s', [nodePath, slots.length, wanted]);
             ensure(slotsPath);
+            //a pool that starts or more than doubles is made in one write; a pinned record keeps its slot, so not then
+            if (wanted > slots.length && pinKey === undefined && wanted >= slots.length * 2) {
+                rebuildAll(wanted);
+            }
             while (slots.length > wanted) destroySlot(slots.pop() as Slot);
             while (slots.length < wanted) slots.push(createSlot(slots.length));
         }

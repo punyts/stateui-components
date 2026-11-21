@@ -85,6 +85,26 @@ describe('createSlotPool', () => {
         expect([30, 31, 32, 33, 34, 35, 36].map((position) => pool.keyOfSlot(pool.slotAt(position) as number))).toEqual(['r30', 'r31', 'r32', 'r33', 'r34', 'r35', 'r36']);
     });
 
+    it('should make a pool that more than doubles in one write of the slots, so the view hears one change', async () => {
+        // Arrange
+        const { store, pool } = setup(100);
+        store.set(`${RUNTIME}.window`, { first: 0, count: 4 });
+        await flush();
+        const heard: string[] = [];
+        store.on('$.app.slots', (_path, _value, _old, action) => heard.push(action));
+
+        // Act
+        store.set(`${RUNTIME}.window.count`, 40);
+        await flush();
+
+        // Assert
+        expect(pool.size()).toBe(42);
+        expect(heard).toEqual(['replace']);
+        expect(rowName(store, 0)).toBe('Name 0');
+        expect(rowName(store, 39)).toBe('Name 39');
+        expect(store.get(`${RUNTIME}.slots.39.slotIndex`)).toBe(39);
+    });
+
     it('should hide a slot that has no record', async () => {
         // Arrange
         const { store } = setup(2);
