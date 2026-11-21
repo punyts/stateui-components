@@ -67,6 +67,24 @@ describe('createSlotPool', () => {
         expect(rowName(store, 15 % 6)).toBe('Name 15');
     });
 
+    it('should keep each record in the slot that shows it when the pool grows by one', async () => {
+        // Arrange
+        const { store, pool } = setup(100);
+        store.set(`${RUNTIME}.window`, { first: 30, count: 4 });
+        await flush();
+        const before = Array.from({ length: pool.size() }, (_v, i) => pool.keyOfSlot(i));
+
+        // Act
+        store.set(`${RUNTIME}.window`, { first: 31, count: 5 });
+        await flush();
+
+        // Assert
+        expect(pool.size()).toBe(7);
+        for (const key of ['r30', 'r31', 'r32', 'r33', 'r34']) expect(pool.slotOfKey(key)).toBe(before.indexOf(key));
+        expect(pool.slotOfKey('r29')).toBeUndefined();
+        expect([30, 31, 32, 33, 34, 35, 36].map((position) => pool.keyOfSlot(pool.slotAt(position) as number))).toEqual(['r30', 'r31', 'r32', 'r33', 'r34', 'r35', 'r36']);
+    });
+
     it('should hide a slot that has no record', async () => {
         // Arrange
         const { store } = setup(2);

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
+import { userEvent } from 'vitest/browser';
 import { mountComponent } from '../harness/mountComponent.js';
 import type { MountedComponent } from '../harness/createMountComponent.js';
 import { formatValue } from '../../src/shared/format/format.js';
@@ -367,6 +368,66 @@ describe('table height in Chromium', () => {
 
         // Assert
         expect(scroller(mounted).getBoundingClientRect().height).toBeCloseTo(300 - header.getBoundingClientRect().height, 0);
+    });
+
+    describe('a focused input in a row', () => {
+        const EDITABLE = Object.freeze({ customer: { _title: 'Customer', cell: { component: 'input', '<-value': '$row.customer', '<-_label': '$row.id' } } });
+        const inputOf = (slot: HTMLElement): HTMLInputElement => cellNode(cells(slot)[0])?.shadowRoot?.querySelector('input') as HTMLInputElement;
+        const slotAt = (mounted: MountedComponent, position: number): HTMLElement => rows(mounted).find((slot) => positionOf(slot) === position) as HTMLElement;
+        const scrollTo = async (mounted: MountedComponent, rowsFromTop: number): Promise<void> => {
+            scroller(mounted).scrollTop = rowsFromTop * rowHeight(mounted);
+            await settle();
+            await settle();
+        };
+        const edited = (mounted: MountedComponent): string[] =>
+            mounted.store
+                .get<Order[]>('$.data.orders')
+                .filter((order) => order.customer.endsWith('edited'))
+                .map((order) => order.id);
+
+        it('should keep its record when the list scrolls by a part of a row and the pool grows, and the typed value lands in that record', async () => {
+            // Arrange
+            const mounted = await mountTable({ columns: EDITABLE }, { orders: orders(60) }, 300);
+            await scrollTo(mounted, 30);
+            const before = body(mounted).shadowRoot?.querySelectorAll('.slot').length;
+            const input = inputOf(slotAt(mounted, 34));
+            input.focus();
+            await settle();
+
+            // Act
+            await scrollTo(mounted, 32.8);
+            const after = body(mounted).shadowRoot?.querySelectorAll('.slot').length;
+            await userEvent.keyboard('{End} edited');
+            input.blur();
+            await settle();
+
+            // Assert
+            expect(after).not.toBe(before);
+            expect(input.getAttribute('aria-label')).toBe('o34');
+            expect(input.value).toBe('Customer 34 edited');
+            expect(edited(mounted)).toEqual(['o34']);
+        });
+
+        it('should keep its record when the list scrolls it out of view and back', async () => {
+            // Arrange
+            const mounted = await mountTable({ columns: EDITABLE }, { orders: orders(60) }, 300);
+            await scrollTo(mounted, 30);
+            const input = inputOf(slotAt(mounted, 31));
+            input.focus();
+            await settle();
+
+            // Act
+            await scrollTo(mounted, 50);
+            await scrollTo(mounted, 27.8);
+            await userEvent.keyboard('{End} edited');
+            input.blur();
+            await settle();
+
+            // Assert
+            expect(input.getAttribute('aria-label')).toBe('o31');
+            expect(input.value).toBe('Customer 31 edited');
+            expect(edited(mounted)).toEqual(['o31']);
+        });
     });
 
     it('should stop growing at the viewport height and render only the rows in view', async () => {

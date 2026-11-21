@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Fix: a record keeps its slot when the window's row count changes.** The slot pool showed position `p` in slot `p % N`, and N grows by one when the scroll offset is not a whole row, so such a scroll rebound every slot to another record: an input focused in a `table` row (Magnetic's Theme view) then showed another row, and what was typed was lost or written into that row. A record now keeps the slot that shows it while it stays in the pool's range, also across a resize of the pool or a move of the record; only positions no slot shows take a slot. Tests: `test/composites/table.browser.test.ts` ("should keep its record when the list scrolls by a part of a row and the pool grows, and the typed value lands in that record", "should keep its record when the list scrolls it out of view and back"), `src/shared/records/slotPool.test.ts` ("should keep each record in the slot that shows it when the pool grows by one").
 - **`embeddedApp` takes `fill`.** With `fill` the frame takes the size its node is given (its placement) instead of
   `width` by `height`, so an app can fill a floating panel. Magnetic's editor places its side panel this way. Test:
   `test/composites/embedded-app.browser.test.ts` ("should take the size its node is given with fill, and width by height

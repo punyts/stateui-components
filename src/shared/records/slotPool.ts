@@ -114,6 +114,14 @@ interface ShownMeta {
     label: string;
 }
 
+/** A position of the window and the slot that shows it; `key` is the position's key when `read` says it was read */
+interface Assigned {
+    position: number;
+    slot: Slot;
+    read: boolean;
+    key: string | undefined;
+}
+
 const NO_META: ShownMeta = { level: 0, expanded: -1, setsize: 0, posinset: 0, label: '' };
 
 const isEntry = (value: unknown): value is Entry => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -155,8 +163,11 @@ export function removeLinked(tree: Entry, nodePath: string, links: readonly Link
 
 /**
  * The slot pool of a record view. It builds N slot nodes from the `row` template under the node's runtime branch
- * (`slots.<i>`), N being the visible rows of `window` plus the overscan on both sides (at most `MAX_SLOTS`), and shows
- * the record of position `p` in slot `p % N`, so a window move recycles only the slots whose position changed.
+ * (`slots.<i>`), N being the visible rows of `window` plus the overscan on both sides (at most `MAX_SLOTS`). A record
+ * keeps the slot that already shows it while its position stays in the window, also when N changes (a scroll offset
+ * that is not a whole row shows one row more) or the record moves; a position whose record no slot shows takes slot
+ * `p % N`, or the next free one. So a window move recycles only the slots whose record left the window, and a focused
+ * element in a slot stays with its record.
  *
  * Recycling is one store link: `slots.<i>.row` is re-pointed at the record, and one write of `slots.<i>.slotIndex` gives
  * the position. The template's `$row.x` links are rewritten once per slot to fixed `allowMissing` aliases under
@@ -331,6 +342,57 @@ export function createSlotPool(options: SlotPoolOptions): SlotPool {
         dirty = true;
     };
 
+    /**
+     * Which slot of `ring` shows each of the `span` positions from `start`. A slot that shows the record a position
+     * holds keeps it, wherever that position falls in the ring, so a resized pool or a moved record does not rebind the
+     * slot (and the element in it that has focus) to another record. The other positions take slot `position % span`
+     * when it is free, and otherwise the next free slot. Unless every position may have changed (`dirty`), a slot that
+     * already shows its position keeps it unread, so only the keys of positions new to the window are read
+     */
+    const assign = (ring: readonly Slot[], start: number, span: number, total: number): Assigned[] => {
+        const end = Math.min(start + span, total);
+        const chosen = new Map<number, Slot>();
+        const keys = new Map<number, string | undefined>();
+        const taken = new Set<Slot>();
+        if (!dirty) {
+            for (const slot of ring) {
+                if (slot.position < start || slot.position >= end || chosen.has(slot.position)) continue;
+                chosen.set(slot.position, slot);
+                taken.add(slot);
+            }
+        }
+        const byKey = new Map<string, Slot>();
+        for (const slot of ring) {
+            if (!taken.has(slot) && slot.key !== undefined && slot.position >= 0) byKey.set(slot.key, slot);
+        }
+        for (let position = start; position < end; position++) {
+            if (chosen.has(position)) continue;
+            const key = index.keyAt(position);
+            keys.set(position, key);
+            const slot = key === undefined ? undefined : byKey.get(key);
+            if (slot === undefined || taken.has(slot)) continue;
+            chosen.set(position, slot);
+            taken.add(slot);
+        }
+        let next = 0;
+        const out: Assigned[] = [];
+        for (let position = start; position < start + span; position++) {
+            let slot = chosen.get(position);
+            if (slot === undefined) {
+                const preferred = ring[position % span] as Slot;
+                if (!taken.has(preferred)) {
+                    slot = preferred;
+                } else {
+                    while (taken.has(ring[next] as Slot)) next++;
+                    slot = ring[next] as Slot;
+                }
+                taken.add(slot);
+            }
+            out.push(keys.has(position) ? { position, slot, read: true, key: keys.get(position) } : { position, slot, read: false, key: undefined });
+        }
+        return out;
+    };
+
     const refresh = (): void => {
         if (disposed) return;
         if (templateDirty) syncTemplate();
@@ -375,8 +437,7 @@ export function createSlotPool(options: SlotPoolOptions): SlotPool {
             mark(held);
             markMeta(held);
         }
-        for (let position = start; span > 0 && position < start + span; position++) {
-            const slot = ring[position % span] as Slot;
+        for (const { position, slot, read, key: readKey } of assign(ring, start, span, total)) {
             if (position >= total) {
                 point(slot, RUNTIME_PATHS.empty);
                 slot.key = undefined;
@@ -387,7 +448,7 @@ export function createSlotPool(options: SlotPoolOptions): SlotPool {
                 continue;
             }
             if (!dirty && slot.position === position) continue;
-            const key = index.keyAt(position);
+            const key = read ? readKey : index.keyAt(position);
             const target = key === undefined ? undefined : index.pathOf(key);
             slot.key = key;
             if (reload && target !== undefined && slot.target === target) {
