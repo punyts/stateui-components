@@ -1,3 +1,4 @@
+import { isReported, report } from '@punyts/core';
 import type { ControllerContext } from '@punyts/stateui';
 import { runtimePath } from '@punyts/stateui-app/core';
 import type { RecordViewElement } from '../shared/records/recordView.js';
@@ -8,6 +9,9 @@ const PASSED: Readonly<Record<string, string>> = {
     row: 'row',
     key: 'key'
 };
+
+/** The category of the conversation's reports: a message that came while the view was away, a scroll to the newest */
+const CATEGORY = 'stateui-components.conversation';
 
 interface CommandHost {
     commands?: Record<string, (value?: unknown) => void>;
@@ -84,7 +88,9 @@ export default function controller({ element, store, basePath }: ControllerConte
             const next = signature();
             if (next === seen) return;
             seen = next;
-            if (!atEnd()) setIfChanged(unreadPath, true);
+            if (atEnd() || store.get<unknown>(unreadPath) === true) return;
+            if (isReported(CATEGORY)) report(CATEGORY, 'Marked %s unread: a message came while the view was away from the end (%s messages)', [basePath, lastRecord(store.get<unknown>(recordsPath)).count]);
+            setIfChanged(unreadPath, true);
         });
     };
 
@@ -95,6 +101,7 @@ export default function controller({ element, store, basePath }: ControllerConte
     syncEnd();
 
     const scrollToEnd = (): void => {
+        report(CATEGORY, 'Scrolled %s to the newest message', [basePath]);
         setIfChanged(unreadPath, false);
         body()?.commands?.scrollToEnd?.();
     };

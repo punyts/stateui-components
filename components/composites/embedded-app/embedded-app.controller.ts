@@ -1,7 +1,11 @@
+import { report } from '@punyts/core';
 import type { ControllerContext } from '@punyts/stateui';
 
 /** The event that asks the page's app host for an app (the `mountApp` of `@punyts/stateui-app` answers it) */
 const APP_OPEN_EVENT = 'ui-app-open';
+
+/** The category of the embedded apps' reports: an app asked for, mounted, refused, moved and unmounted */
+const CATEGORY = 'stateui-components.embed';
 
 /** An app mounted inside this component, as the answer to `ui-app-open` gives it */
 interface EmbeddedApp {
@@ -23,6 +27,11 @@ interface AppOpenRequest {
 /** One ask for an app: what was asked, and the app once it has come */
 interface Opening {
     readonly key: string;
+    /** The app's name and whether it is live, for the reports */
+    readonly name: string;
+    readonly live: boolean;
+    /** When the ask went out (`performance.now()`), for the time the mount took */
+    readonly asked: number;
     screen: string;
     app?: EmbeddedApp;
 }
@@ -56,6 +65,7 @@ export default function controller({ element, store, basePath }: ControllerConte
     let scheduled = false;
 
     const close = (): void => {
+        if (opening?.app !== undefined) report(CATEGORY, 'Unmounted app %s from %s', [opening.name, basePath]);
         opening?.app?.dispose();
         opening = undefined;
         element.removeAttribute('mounted');
@@ -65,7 +75,10 @@ export default function controller({ element, store, basePath }: ControllerConte
     const follow = (current: Opening): void => {
         const screen = text('appScreen');
         if (current.app === undefined || screen === '' || screen === current.screen) return;
-        if (current.app.navigate(screen) === undefined) current.screen = screen;
+        if (current.app.navigate(screen) === undefined) {
+            current.screen = screen;
+            report(CATEGORY, 'Moved app %s of %s to screen %s', [current.name, basePath, screen]);
+        }
     };
 
     const open = (): void => {
@@ -86,7 +99,8 @@ export default function controller({ element, store, basePath }: ControllerConte
         close();
         holder.inert = !isLive;
         const screen = text('appScreen');
-        const current: Opening = { key, screen };
+        const current: Opening = { key, name: app, live: isLive, asked: performance.now(), screen };
+        report(CATEGORY, 'Asked for app %s in %s: %s, %s', [app, basePath, isLive ? 'live' : 'preview', read('fill') === true ? 'fill' : 'fixed size']);
         opening = current;
         const request: AppOpenRequest = {
             app,
@@ -102,14 +116,17 @@ export default function controller({ element, store, basePath }: ControllerConte
                 result.then(
                     (embedded) => {
                         if (opening !== current) {
+                            report(CATEGORY, 'Dropped app %s of %s: another was asked for meanwhile', [current.name, basePath]);
                             embedded.dispose();
                             return;
                         }
                         current.app = embedded;
                         element.setAttribute('mounted', '');
+                        report(CATEGORY, 'Mounted app %s in %s: %s, in %s ms', [current.name, basePath, current.live ? 'live' : 'preview', Math.round((performance.now() - current.asked) * 10) / 10]);
                         follow(current);
                     },
                     () => {
+                        report(CATEGORY, 'The host refused app %s for %s', [current.name, basePath]);
                         if (opening === current) element.removeAttribute('mounted');
                     }
                 );

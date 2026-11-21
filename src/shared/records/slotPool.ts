@@ -1,4 +1,4 @@
-import { report } from '@punyts/core';
+import { isReported, report } from '@punyts/core';
 import { RUNTIME_PATHS, applyLinks, disposeLinks, resolveRowLinks, runtimePath } from '@punyts/stateui-app/core';
 import type { Link, Node } from '@punyts/stateui-app/core';
 import { isPlaceholderKey } from './placeholder.js';
@@ -126,6 +126,9 @@ const NO_META: ShownMeta = { level: 0, expanded: -1, setsize: 0, posinset: 0, la
 
 /** The `slotOrder` of a slot that shows no position: after every shown slot */
 export const UNSHOWN_ORDER = Number.MAX_SAFE_INTEGER;
+
+/** The category of the record views' reports: the pool's size, its window and the slots a refresh recycled */
+const CATEGORY = 'stateui-components.records';
 
 const isEntry = (value: unknown): value is Entry => value !== null && typeof value === 'object' && !Array.isArray(value);
 
@@ -344,6 +347,7 @@ export function createSlotPool(options: SlotPoolOptions): SlotPool {
             for (const slot of slots) store.apply(slot.path, JSON.parse(JSON.stringify(content)) as Entry);
             return;
         }
+        if (isReported(CATEGORY)) report(CATEGORY, 'Rebuilt the slots of %s: the row template changed', [nodePath]);
         destroyAll();
         dirty = true;
     };
@@ -405,6 +409,7 @@ export function createSlotPool(options: SlotPoolOptions): SlotPool {
         const win = readWindow(store.get<unknown>(windowPath));
         const wanted = templateJson === '' ? 0 : poolSize(win.count, overscan(), MAX_SLOTS);
         if (wanted !== slots.length) {
+            if (isReported(CATEGORY)) report(CATEGORY, 'Resized the slot pool of %s from %s to %s', [nodePath, slots.length, wanted]);
             ensure(slotsPath);
             while (slots.length > wanted) destroySlot(slots.pop() as Slot);
             while (slots.length < wanted) slots.push(createSlot(slots.length));
@@ -443,6 +448,7 @@ export function createSlotPool(options: SlotPoolOptions): SlotPool {
             mark(held);
             markMeta(held);
         }
+        let recycled = 0;
         for (const { position, slot, read, key: readKey } of assign(ring, start, span, total)) {
             if (position >= total) {
                 point(slot, RUNTIME_PATHS.empty);
@@ -454,6 +460,7 @@ export function createSlotPool(options: SlotPoolOptions): SlotPool {
                 continue;
             }
             if (!dirty && slot.position === position) continue;
+            recycled += 1;
             const key = read ? readKey : index.keyAt(position);
             const target = key === undefined ? undefined : index.pathOf(key);
             slot.key = key;
@@ -470,6 +477,9 @@ export function createSlotPool(options: SlotPoolOptions): SlotPool {
         }
         for (const slot of slots) markOffset(slot);
         markTab(win.first);
+        if (isReported(CATEGORY)) {
+            report(CATEGORY, 'Showed %s: window %s+%s of %s, %s slots, %s recycled', [nodePath, win.first, win.count, total, size, recycled]);
+        }
         dirty = false;
         reload = false;
         if (lost !== undefined) onPinLost?.(lost);
@@ -551,6 +561,7 @@ export function createSlotPool(options: SlotPoolOptions): SlotPool {
         dispose() {
             if (disposed) return;
             disposed = true;
+            if (isReported(CATEGORY)) report(CATEGORY, 'Disposed the slot pool of %s: %s slots', [nodePath, slots.length]);
             store.off(windowPaths, onWindow);
             store.off(templatePaths, onTemplate);
             destroyAll();

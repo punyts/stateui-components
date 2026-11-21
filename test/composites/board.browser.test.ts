@@ -208,7 +208,7 @@ describe('board in Chromium', () => {
         expect(columnOf(mounted, 'todo').querySelector('.hidden')?.textContent).toBe('Limit überschritten');
     });
 
-    it('should leave out a card whose value matches no column and report it once per distinct value', async () => {
+    it('should leave out a card whose value matches no column and report it once per distinct value, naming no value', async () => {
         // Arrange
         const warn = vi.spyOn(report, 'warning').mockImplementation(() => undefined);
         const mounted = await mountBoard([...cards(), card('x', 'later'), card('y', 'later'), card('z', 'never')]);
@@ -216,8 +216,8 @@ describe('board in Chromium', () => {
         // Assert
         const reports = warn.mock.calls.filter((call) => (call[1] as { code?: string } | undefined)?.code === 'SUI-RUN-BINDING');
         expect(reports).toHaveLength(2);
-        expect(String(reports[0]?.[0])).toContain('"later"');
-        expect(String(reports[1]?.[0])).toContain('"never"');
+        expect(reports.map((call) => String(call[0])).join(' ')).not.toMatch(/later|never/);
+        expect(reports[0]?.[1]).toMatchObject({ path: '$.app', unmatched: 2 });
         expect([...shown(mounted, 'todo'), ...shown(mounted, 'doing'), ...shown(mounted, 'done')]).toHaveLength(5);
 
         // Act

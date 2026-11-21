@@ -50,6 +50,9 @@ interface Held {
     readonly pointer?: number;
 }
 
+/** The category of the board's reports: a card picked up, moved between columns, dropped or put back */
+const CATEGORY = 'stateui-components.board';
+
 const SAFE_KEY = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -214,7 +217,7 @@ export default function controller({ element, store, basePath }: ControllerConte
         for (const value of model.unmatched) {
             if (reported.has(value)) continue;
             reported.add(value);
-            report.warning(`board: the records with ${text('columnField', 'column')} "${value}" are in no column, so they are not shown`, { code: 'SUI-RUN-BINDING', path: basePath });
+            report.warning(`board: some records have a ${text('columnField', 'column')} that is in no column, so they are not shown`, { code: 'SUI-RUN-BINDING', path: basePath, unmatched: model.unmatched.length });
         }
     };
 
@@ -348,6 +351,7 @@ export default function controller({ element, store, basePath }: ControllerConte
             }
             store.set(`${path}.${columnField()}`, write.value);
         }
+        report(CATEGORY, 'Moved card %s of %s from column %s to %s at %s', [key, basePath, from, place.column, plan.index]);
         element.dispatchEvent(new CustomEvent('move', { detail: { key, from, to: place.column, index: plan.index }, bubbles: true, composed: true }));
         return plan.index;
     };
@@ -367,7 +371,10 @@ export default function controller({ element, store, basePath }: ControllerConte
         finish();
         if (place === undefined) return;
         const index = commit(current.home, current.key, place);
-        if (index === undefined) return;
+        if (index === undefined) {
+            report(CATEGORY, 'Dropped card %s of %s where it was', [current.key, basePath]);
+            return;
+        }
         const count = ordersOf(place.column).filter((key) => key !== current.key).length + 1;
         say('dropped', current.name, { column: place.column, index }, count);
         if (current.by === 'keyboard') {
@@ -380,6 +387,7 @@ export default function controller({ element, store, basePath }: ControllerConte
         const current = held;
         if (current === undefined) return;
         finish();
+        report(CATEGORY, 'Put card %s of %s back in column %s: the move was cancelled', [current.key, basePath, current.home]);
         if (announceIt) say('cancelled', current.name, { column: current.home, index: current.homeIndex }, ordersOf(current.home).length);
     };
 
@@ -413,6 +421,7 @@ export default function controller({ element, store, basePath }: ControllerConte
         boardElement?.setAttribute('data-dragging', '');
         from.slot.style.opacity = '0.4';
         held = { by: 'pointer', key: from.key, home: from.column, homeIndex: from.index, name: labelOf(from.key, from.column), place: undefined, slot: from.slot, boxes, pointer: event.pointerId };
+        report(CATEGORY, 'Picked up card %s of %s from column %s by %s', [from.key, basePath, from.column, 'pointer']);
         moveDrag(event);
     };
 
@@ -485,6 +494,7 @@ export default function controller({ element, store, basePath }: ControllerConte
         const place = { column: card.column, index: card.index };
         const name = labelOf(card.key, card.column);
         held = { by: 'keyboard', key: card.key, home: card.column, homeIndex: card.index, name, place, boxes: [] };
+        report(CATEGORY, 'Picked up card %s of %s from column %s by %s', [card.key, basePath, card.column, 'keyboard']);
         showDrop(place, 0);
         say('pickedUp', name, place, ordersOf(card.column).length);
     };

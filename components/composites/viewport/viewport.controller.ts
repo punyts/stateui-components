@@ -1,3 +1,4 @@
+import { isReported, report } from '@punyts/core';
 import type { ControllerContext } from '@punyts/stateui';
 import { isLeftToViewport } from '../shared/gestures/gestures.js';
 
@@ -31,6 +32,8 @@ interface Gesture {
     moved: boolean;
     /** The gesture started on the empty area, not on the content */
     empty: boolean;
+    /** Two pointers were down at some point: the gesture pinched */
+    pinched: boolean;
 }
 
 /** How far a pointer moves before a press becomes a pan, in pixels */
@@ -50,6 +53,11 @@ const FIELDS = 'input, select, textarea, [contenteditable]';
  */
 const OWN_DRAGS = '[data-own-gestures]';
 const OWN_WHEEL = '[data-own-gestures="all"]';
+
+/** What a press, drag, pinch or wheel was decided to be, and who takes it */
+const GESTURES = 'stateui-components.gestures';
+/** The view settling after a gesture or a command */
+const VIEW = 'stateui-components.viewport';
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 const finite = (value: unknown, fallback: number): number => (typeof value === 'number' && Number.isFinite(value) ? value : fallback);
@@ -131,7 +139,8 @@ export default function controller({ element, store, basePath }: ControllerConte
         if (pending !== undefined) write(pending);
         pending = undefined;
     };
-    const raise = (): void => {
+    const raise = (cause: string): void => {
+        if (isReported(VIEW)) report(VIEW, 'Settled the view of %s after %s at zoom %s', [basePath, cause, view().zoom]);
         element.dispatchEvent(new CustomEvent('change', { detail: view(), bubbles: true, composed: true }));
     };
     const current = (): View => pending ?? view();
@@ -159,7 +168,7 @@ export default function controller({ element, store, basePath }: ControllerConte
         const at = middle();
         const from = current();
         write(zoomAround(from, from.zoom * factor, at.x, at.y));
-        raise();
+        raise('a zoom');
     };
 
     const fit = (value: unknown): void => {
@@ -172,7 +181,7 @@ export default function controller({ element, store, basePath }: ControllerConte
         const free = area();
         const zoom = clampZoom(Math.min(1, (free.width - 2 * margin) / width, (free.height - 2 * margin) / height));
         write({ x: free.left + (free.width - width * zoom) / 2, y: free.top + (free.height - height * zoom) / 2, zoom });
-        raise();
+        raise('fit');
     };
 
     /** Moves the view as little as it can for the box to stand inside the free area, its leading edges first */
@@ -192,7 +201,7 @@ export default function controller({ element, store, basePath }: ControllerConte
         const dy = shift(now.y + box.y * now.zoom, box.height * now.zoom, free.top, free.height);
         if (dx === 0 && dy === 0) return;
         write({ x: now.x + dx, y: now.y + dy, zoom: now.zoom });
-        raise();
+        raise('lookAt');
     };
 
     const host = element as Element & CommandHost;
@@ -241,13 +250,20 @@ export default function controller({ element, store, basePath }: ControllerConte
     return {
         onPointerDown: (event: PointerEvent) => {
             if (read('pannable') === false || (event.pointerType === 'mouse' && event.button !== 0)) return;
-            if (inside(event, FIELDS) || (inside(event, OWN_DRAGS) && !isLeftToViewport(event))) return;
+            if (inside(event, FIELDS) || (inside(event, OWN_DRAGS) && !isLeftToViewport(event))) {
+                if (isReported(GESTURES)) report(GESTURES, 'Left a press in %s to its content: %s', [basePath, inside(event, FIELDS) ? 'a field' : 'content with its own gestures']);
+                return;
+            }
             const at = local(event);
             if (gesture === undefined) {
                 const target = event.composedPath()[0];
-                gesture = { pointers: new Map(), startX: at.x, startY: at.y, start: current(), distance: 0, middle: at, moved: false, empty: target === part('.viewport') || target === part('.world') };
+                gesture = { pointers: new Map(), startX: at.x, startY: at.y, start: current(), distance: 0, middle: at, moved: false, empty: target === part('.viewport') || target === part('.world'), pinched: false };
             }
             gesture.pointers.set(event.pointerId, at);
+            if (gesture.pointers.size === 2 && !gesture.pinched) {
+                gesture.pinched = true;
+                if (isReported(GESTURES)) report(GESTURES, 'Started a pinch in %s', [basePath]);
+            }
             restart(gesture);
         },
         onPointerMove: (event: PointerEvent) => {
@@ -273,6 +289,7 @@ export default function controller({ element, store, basePath }: ControllerConte
                     //a pointer the browser no longer tracks cannot be captured; the pan goes on without it
                 }
                 part('.viewport')?.setAttribute('data-panning', '');
+                if (isReported(GESTURES)) report(GESTURES, 'Started a pan in %s by %s', [basePath, event.pointerType || 'pointer']);
             }
             later({ x: state.start.x + dx, y: state.start.y + dy, zoom: state.start.zoom });
         },
@@ -286,6 +303,7 @@ export default function controller({ element, store, basePath }: ControllerConte
             gesture = undefined;
             part('.viewport')?.removeAttribute('data-panning');
             if (!state.moved) {
+                if (isReported(GESTURES)) report(GESTURES, 'Took a press in %s as %s', [basePath, state.empty ? 'a press on the empty area' : 'a press on the content']);
                 if (state.empty) element.dispatchEvent(new CustomEvent('press', { detail: {}, bubbles: true, composed: true }));
                 return;
             }
@@ -295,7 +313,7 @@ export default function controller({ element, store, basePath }: ControllerConte
                 swallowClick = false;
             }, 0);
             flush();
-            raise();
+            raise(state.pinched ? 'a pinch' : 'a pan');
         },
         onWheel: (event: WheelEvent) => {
             if (read('pannable') === false || inside(event, OWN_WHEEL)) return;
@@ -314,7 +332,7 @@ export default function controller({ element, store, basePath }: ControllerConte
             wheelEnd = setTimeout(() => {
                 if (disposed) return;
                 flush();
-                raise();
+                raise('a wheel');
             }, 150);
         },
         onKeyDown: (event: KeyboardEvent) => {
@@ -324,7 +342,7 @@ export default function controller({ element, store, basePath }: ControllerConte
             const move = moves[event.key];
             if (move !== undefined) {
                 write({ x: from.x + move[0], y: from.y + move[1], zoom: from.zoom });
-                raise();
+                raise('a key');
             } else if (event.key === '+' || event.key === '=') zoomBy(STEP);
             else if (event.key === '-') zoomBy(1 / STEP);
             else if (event.key === '0') zoomBy(1 / from.zoom);

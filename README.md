@@ -39,6 +39,18 @@ Ready screens live in `patterns/screen/<name>/<name>.pattern.json` (kind `screen
 ## Theme presets
 Four moods to start a theme from live in `presets/<name>.preset.json`: `clean`, `moody`, `professional` and `playful` (the owner's table of search-first epic 2, S2.7, with amber.700 and teal.700 in light mode for 4.5 contrast). The build checks them (`presetsDir`, see the `@punyts/stateui-app` README) and lists them in the catalog's `themePresets`; `ui_theme_create` copies one by name. Colours that differ by mode are in each preset's own `light` and `dark` mode overlays, which refine the shipped modes of those names; the base holds type, radius, density and motion. A theme cannot set its default mode, so `moody`'s summary asks for the app mode `dark`. Tests: `test/themePresets.test.ts` in stateui-mcp (valid themes, body text passing 4.5 in every mode, any two presets differing).
 
+## Reporting
+The components report through `@punyts/core`'s `report` under categories that are off by default; `stateui-components.*` turns them all on (a host turns categories on: see `docs/design/reporting.md` in the workspace). A report names node paths, record keys, column ids, app and screen names, field names, counts and durations, never a value. Reports on a hot path (a slot pool refresh, a pointer press) are guarded with `isReported`.
+- `stateui-components.records`: a slot pool resized (from and to), each refresh with its window, total, slot count and the slots recycled, a rebuild for a changed row template, the dispose; `recordList` raising `range`.
+- `stateui-components.overlay`: a `modal` or `drawer` dialog opened (focus trapped, from what), dismissed by Escape or the backdrop (or kept open when not dismissible), closed (focus returned or not); a popover (`popover`, `menu`, tips) opened, closed or dismissed by Escape or a press outside.
+- `stateui-components.gestures`: what a `viewport` decided a press was: a pan (by pointer type), a pinch, a press on the empty area or the content, or a press left to a field or to content with its own gestures.
+- `stateui-components.viewport`: the view settled after a pan, pinch, wheel, key or command, with its zoom.
+- `stateui-components.board`: a card picked up (by pointer or keyboard, from which column), moved (from and to column ids, at which index), dropped where it was, or put back.
+- `stateui-components.embed`: an `embeddedApp` asking for an app (live or preview, fill or fixed size), mounted (with the time it took), refused by the host, dropped for a newer ask, moved to a screen, unmounted.
+- `stateui-components.form`: a validation (fields, issues and the failing field names), a submit waiting on fields, refused or submitted (field counts), a reset and a commit.
+- `stateui-components.conversation`: a `messageList` marked unread when a message came while away from the end, and a scroll to the newest message.
+- `stateui-components.scene3d`: for `scene3d` and so for `@punyts/stateui-3d`, which has no reporter: the runtime chunk loaded or not (with its time), the scene made or not, each issue the renderer passes to `onIssue` (the node path, the code, the kind and the reason code), the dispose.
+
 ## Package exports
 - `.`: `COMPONENT_GROUPS`, and the server-side icon helpers: `isIconName` (the `isIconName` option of `validateNode`; reads `dist/icons.json`, names and aliases), `createIconNames` and `loadIconsFile` (the same lookups over any `icons.json`), `validateIconNode` (the `SUI-STATE-FILLED` warning), `CORE_ICON_NAMES` and `ICON_ALIASES`.
 - `./components`: `components`, `componentTokens` and `registerAll()`.
