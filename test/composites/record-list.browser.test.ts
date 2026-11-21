@@ -86,7 +86,7 @@ describe('recordList in Chromium', () => {
         const mounted = await mountList(people(5), { total: 5, rowHeight: 'lg', key: 'id', overscan: 0 });
 
         // Assert
-        expect(slotElements(mounted)).toHaveLength(10);
+        expect(slotElements(mounted)).toHaveLength(5);
         expect(textsFrom(mounted, 0, 5)).toEqual(names(0, 5));
         expect(slotElements(mounted).filter((slot) => !slot.hidden)).toHaveLength(5);
     });

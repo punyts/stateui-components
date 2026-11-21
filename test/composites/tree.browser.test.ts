@@ -115,17 +115,21 @@ describe('tree rendering in Chromium', () => {
     it('should change only the order when records open or close: the same slots are pointed at other records', async () => {
         // Arrange
         const mounted = await mountTree(family());
+        mounted.store.set('$.app.expanded', ['a', 'a2', 'b'] as never);
+        await flush();
         const before = slotElements(mounted);
         const paths = (): string[] => Object.keys(mounted.store.get<Record<string, unknown>>(`${BODY}.slots`));
 
         // Act
+        mounted.store.set('$.app.expanded', [] as never);
+        await flush();
         mounted.store.set('$.app.expanded', ['a', 'a2', 'b'] as never);
         await flush();
         mounted.store.set('$.app.expanded', [] as never);
         await flush();
 
         // Assert
-        expect(slotElements(mounted)).toEqual(before);
+        expect(new Set(slotElements(mounted))).toEqual(new Set(before));
         expect(paths()).toHaveLength(before.length);
         expect(mounted.store.get<unknown>('$.runtime.nodes.app.order')).toEqual(['a', 'b']);
     });

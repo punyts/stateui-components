@@ -436,7 +436,10 @@ export function createSlotPool(options: SlotPoolOptions): SlotPool {
         if (disposed) return;
         if (templateDirty) syncTemplate();
         const win = readWindow(store.get<unknown>(windowPath));
-        const wanted = templateJson === '' ? 0 : poolSize(win.count, overscan(), MAX_SLOTS);
+        const total = index.size();
+        //no more slots than positions: an empty list's viewport would otherwise render a pool of hidden rows. A pool is
+        //not made smaller for records that left, so a list that filters keeps its slots for the records coming back
+        const wanted = templateJson === '' ? 0 : Math.min(poolSize(win.count, overscan(), MAX_SLOTS), Math.max(total, slots.length));
         if (wanted !== slots.length) {
             if (isReported(CATEGORY)) report(CATEGORY, 'Resized the slot pool of %s from %s to %s', [nodePath, slots.length, wanted]);
             ensure(slotsPath);
@@ -447,7 +450,6 @@ export function createSlotPool(options: SlotPoolOptions): SlotPool {
             while (slots.length > wanted) destroySlot(slots.pop() as Slot);
             while (slots.length < wanted) slots.push(createSlot(slots.length));
         }
-        const total = index.size();
         if (total !== shownCount) {
             shownCount = total;
             store.set(countPath, total);

@@ -105,15 +105,35 @@ describe('createSlotPool', () => {
         expect(store.get(`${RUNTIME}.slots.39.slotIndex`)).toBe(39);
     });
 
-    it('should hide a slot that has no record', async () => {
+    it('should make no more slots than there are records, and grow when more come', async () => {
         // Arrange
-        const { store } = setup(2);
+        const { store, pool } = setup(2);
         store.set(`${RUNTIME}.window`, { first: 0, count: 4 });
+        await flush();
+        const before = pool.size();
 
         // Act
+        store.state.data.records.push({ id: 'r2', name: 'Name 2' });
         await flush();
 
         // Assert
+        expect(before).toBe(2);
+        expect(pool.size()).toBe(3);
+        expect(rowName(store, 2)).toBe('Name 2');
+    });
+
+    it('should keep its slots and hide the one whose record is gone', async () => {
+        // Arrange
+        const { store, pool } = setup(4);
+        store.set(`${RUNTIME}.window`, { first: 0, count: 4 });
+        await flush();
+
+        // Act
+        store.delete('$.data.records.3');
+        await flush();
+
+        // Assert
+        expect(pool.size()).toBe(4);
         expect(store.get(`${RUNTIME}.slots.3.slotIndex`)).toBe(-1);
         expect(rowName(store, 3)).toBeUndefined();
     });
