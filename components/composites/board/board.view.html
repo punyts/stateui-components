@@ -1,5 +1,6 @@
 <div class="board" data-bare="{{ $.bare === true ? '' : null }}">
     <span class="probe" aria-hidden="true"></span>
+    <span class="probe gap-probe" aria-hidden="true"></span>
     <section class="column" role="group" repeat="{{ $k,$i,$v in $.cols }}" key="{{ $k }}" data-key="{{ $v.key }}" data-gone="{{ $v.gone ? '' : null }}" style="order: {{ $v.position }}" aria-label="{{ $v.title }}">
         <header class="head" if="{{ $.bare !== true }}" data-tone="{{ $v.over ? 'warning' : null }}">
             <h3 class="title">{{ $v.title }}</h3>

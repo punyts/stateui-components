@@ -1,13 +1,16 @@
+/* A column, so the app grows to the host's least height: a percentage of a parent whose height is only a least
+   height would come to nothing */
 :host {
-    display: block;
+    display: flex;
+    flex-direction: column;
     min-block-size: 100%;
 }
 
 .app {
     box-sizing: border-box;
+    flex: 1 0 auto;
     display: flex;
     flex-direction: column;
-    min-block-size: 100%;
     color: var(--ui-color-text-base);
     background: var(--ui-color-surface-base);
     font-family: var(--ui-text-body-family);

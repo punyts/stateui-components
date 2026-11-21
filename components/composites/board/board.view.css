@@ -84,6 +84,11 @@
     pointer-events: none;
 }
 
+/* The room a row leaves under its card, read when a press may start a drag */
+.gap-probe {
+    block-size: var(--ui-board-gap);
+}
+
 .board[data-dragging] {
     cursor: grabbing;
     user-select: none;
@@ -107,7 +112,8 @@
     position: absolute;
     inset-block-start: 0;
     inset-inline: 0;
-    block-size: var(--sui-card-h);
+    /* A card's place in its row: the row less the room it leaves under the card */
+    block-size: calc(var(--sui-card-h) - var(--ui-board-gap));
     transform: translateY(calc(var(--sui-drop-index) * var(--sui-card-h) - var(--sui-drop-scroll)));
     border: var(--ui-border-width-thick) dashed var(--ui-color-focus);
     border-radius: var(--ui-radius-sm);

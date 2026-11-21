@@ -105,6 +105,43 @@ describe('viewport in Chromium', () => {
         expect((100 - (y as number)) / (zoom as number)).toBeCloseTo(140, 1);
     });
 
+    it('should pan from a press on a movable board under a card, and leave a press on a card to the board', async () => {
+        // Arrange: a bare board whose rows are 120px, 40px of them under each card
+        const board = { component: 'board', bare: true, key: 'id', columnField: 'status', labelField: 'title', columns: { todo: { _title: 'To do' } }, '<-records': '$.data.cards', card: { component: 'text', '<-_text': '$row.title' }, theme: { board: { column: '200px', card: '120px', gap: '40px' } } };
+        const mounted = mountComponent('viewport', { content: board, '<-x': '$.data.view.x', '<-y': '$.data.view.y', '<-zoom': '$.data.view.zoom' }, { data: { view: { x: 0, y: 0, zoom: 1 }, cards: [{ id: 'a', title: 'A', status: 'todo' }, { id: 'b', title: 'B', status: 'todo' }] } });
+        (mounted.element as HTMLElement).style.width = '800px';
+        (mounted.element as HTMLElement).style.height = '600px';
+        await settle();
+        const slotIn = (scope: ParentNode): HTMLElement | undefined => {
+            for (const element of Array.from(scope.querySelectorAll('*'))) {
+                if (element.classList.contains('slot') && element instanceof HTMLElement && element.dataset['slot'] !== undefined) return element;
+                const inner = element.shadowRoot ? slotIn(element.shadowRoot) : undefined;
+                if (inner) return inner;
+            }
+            return undefined;
+        };
+        const slot = slotIn(root(mounted)) as HTMLElement;
+        const box = slot.getBoundingClientRect();
+        const drag = (y: number): void => {
+            const at = { clientX: box.left + 20, pointerId: 3, pointerType: 'mouse', button: 0, bubbles: true, composed: true };
+            slot.dispatchEvent(new PointerEvent('pointerdown', { ...at, clientY: y }));
+            slot.dispatchEvent(new PointerEvent('pointermove', { ...at, clientX: at.clientX + 50, clientY: y + 30 }));
+            slot.dispatchEvent(new PointerEvent('pointerup', { ...at, clientX: at.clientX + 50, clientY: y + 30 }));
+        };
+
+        // Act: a drag from the room under the first card, then one from the card
+        drag(box.bottom - 10);
+        await settle();
+        const underCard = viewOf(mounted);
+        drag(box.top + 10);
+        await settle();
+
+        // Assert: the first panned the view, the second left it to the board
+        expect(box.height).toBeCloseTo(120, 0);
+        expect(underCard).toEqual([50, 30, 1]);
+        expect(viewOf(mounted)).toEqual([50, 30, 1]);
+    });
+
     it('should leave a drag inside content marked data-own-gestures to it, and the wheel too when marked all', async () => {
         // Arrange
         const mounted = await mountViewport();
@@ -131,6 +168,32 @@ describe('viewport in Chromium', () => {
         expect(afterDrag).toEqual([0, 0, 1]);
         expect(afterWheel).toEqual([0, -40, 1]);
         expect(viewOf(mounted)).toEqual([0, -40, 1]);
+    });
+
+    it('should pan and wheel inside a page that a live embeddedApp holds: only its own content counts as marked', async () => {
+        // Arrange: what holds the viewport is marked as a live embeddedApp's frame is
+        const mounted = await mountViewport();
+        const holder = mounted.element.parentElement as HTMLElement;
+        holder.setAttribute('data-own-gestures', 'all');
+        const area = surface(mounted);
+        const rect = area.getBoundingClientRect();
+
+        try {
+            // Act
+            pointer(area, 'pointerdown', 100, 100);
+            pointer(area, 'pointermove', 150, 130);
+            pointer(area, 'pointerup', 150, 130);
+            await settle();
+            const afterDrag = viewOf(mounted);
+            area.dispatchEvent(new WheelEvent('wheel', { deltaY: 40, clientX: rect.left + 10, clientY: rect.top + 10, bubbles: true, composed: true, cancelable: true }));
+            await settle();
+
+            // Assert
+            expect(afterDrag).toEqual([50, 30, 1]);
+            expect(viewOf(mounted)).toEqual([50, -10, 1]);
+        } finally {
+            holder.removeAttribute('data-own-gestures');
+        }
     });
 
     it('should fit the content into the area the inset leaves free, at most at zoom 1', async () => {

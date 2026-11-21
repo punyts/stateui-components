@@ -12,6 +12,7 @@
     ],
     "tokens": {
         "card": "calc({size.control.md} * 2)",
+        "gap": "calc({space.gap.sm} * 0)",
         "column": "calc({size.control.md} * 8)",
         "height": "calc({size.control.md} * 10)"
     },

@@ -8,7 +8,8 @@
         "fill": "{color.surface.base}",
         "border": "{color.border.base}",
         "radius": "{radius.md}",
-        "label": "{color.text.muted}"
+        "label": "{color.text.muted}",
+        "scrollbar": "{color.text.muted}"
     },
     "properties": {
         "app": { "type": "string", "default": "" },
