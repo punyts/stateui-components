@@ -1,0 +1,168 @@
+:host {
+    display: block;
+}
+
+.rich-text {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ui-richtext-gap);
+    color: var(--ui-color-text-base);
+    font-family: var(--ui-text-body-family);
+    font-size: var(--ui-text-body-size);
+    font-weight: var(--ui-text-body-weight);
+    line-height: var(--ui-text-body-leading);
+    overflow-wrap: anywhere;
+}
+
+.rich-text p,
+.rich-text ul,
+.rich-text ol,
+.rich-text pre,
+.rich-text blockquote,
+.rich-text hr,
+.rich-text h1,
+.rich-text h2,
+.rich-text h3,
+.rich-text h4,
+.rich-text h5,
+.rich-text h6 {
+    margin: 0;
+}
+
+/* a run's line breaks and repeated spaces are the writer's, so they are kept */
+.rich-text p,
+.rich-text li,
+.rich-text blockquote,
+.rich-text h1,
+.rich-text h2,
+.rich-text h3,
+.rich-text h4,
+.rich-text h5,
+.rich-text h6 {
+    white-space: pre-wrap;
+}
+
+.rich-text p.empty {
+    color: var(--ui-color-text-muted);
+}
+
+.rich-text h1 {
+    font-family: var(--ui-text-display-family);
+    font-size: var(--ui-text-display-size);
+    font-weight: var(--ui-text-display-weight);
+    line-height: var(--ui-text-display-leading);
+}
+
+.rich-text h2 {
+    font-family: var(--ui-text-title-family);
+    font-size: var(--ui-text-title-size);
+    font-weight: var(--ui-text-title-weight);
+    line-height: var(--ui-text-title-leading);
+}
+
+.rich-text h3,
+.rich-text h4 {
+    font-family: var(--ui-text-heading-family);
+    font-size: var(--ui-text-heading-size);
+    font-weight: var(--ui-text-heading-weight);
+    line-height: var(--ui-text-heading-leading);
+}
+
+.rich-text h5,
+.rich-text h6 {
+    font-family: var(--ui-text-label-family);
+    font-size: var(--ui-text-label-size);
+    font-weight: var(--ui-text-label-weight);
+    line-height: var(--ui-text-label-leading);
+}
+
+.rich-text strong {
+    font-weight: var(--ui-text-heading-weight);
+}
+
+.rich-text ul,
+.rich-text ol {
+    padding-inline-start: var(--ui-space-inset-lg);
+}
+
+.rich-text li > ul,
+.rich-text li > ol {
+    margin-block-start: var(--ui-space-gap-sm);
+}
+
+.rich-text ul.checks {
+    padding-inline-start: 0;
+    list-style: none;
+}
+
+.rich-text li > ul.checks {
+    padding-inline-start: var(--ui-space-inset-lg);
+}
+
+.rich-text ul.checks > li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--ui-space-gap-sm);
+}
+
+.rich-text ul.checks > li > ul,
+.rich-text ul.checks > li > ol {
+    flex-basis: 100%;
+}
+
+.rich-text ul.checks input {
+    margin: 0;
+    accent-color: var(--ui-richtext-check-fill);
+}
+
+.rich-text li[data-checked] > span {
+    color: var(--ui-color-text-muted);
+    text-decoration: line-through;
+}
+
+.rich-text blockquote {
+    padding-inline-start: var(--ui-space-inset-md);
+    color: var(--ui-color-text-muted);
+    border-inline-start: var(--ui-border-width-thick) solid var(--ui-color-border-strong);
+}
+
+.rich-text code {
+    font-family: var(--ui-text-code-family);
+    font-size: var(--ui-text-code-size);
+    font-weight: var(--ui-text-code-weight);
+    line-height: var(--ui-text-code-leading);
+}
+
+.rich-text code.inline {
+    padding-inline: var(--ui-space-gap-sm);
+    background: var(--ui-richtext-code-background);
+    border-radius: var(--ui-radius-sm);
+}
+
+.rich-text pre {
+    padding: var(--ui-space-inset-sm);
+    overflow-x: auto;
+    background: var(--ui-richtext-code-background);
+    border-radius: var(--ui-radius-sm);
+}
+
+.rich-text pre code {
+    white-space: pre;
+}
+
+.rich-text hr {
+    border: 0;
+    border-block-start: var(--ui-border-width-thin) solid var(--ui-color-border-base);
+}
+
+.rich-text .link {
+    color: var(--ui-color-focus);
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+    cursor: pointer;
+}
+
+.rich-text .link:hover {
+    text-decoration-thickness: var(--ui-border-width-thick);
+}

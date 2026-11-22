@@ -1,0 +1,17 @@
+{
+    "summary": "Rich text from a block value, drawn read-only with the theme typography; links only raise press",
+    "category": "content",
+    "purposes": ["show notes a user wrote in the rich-text editor", "display a saved rich-text value read-only", "show a formatted article or description from data", "show a checklist written as rich text"],
+    "events": ["press"],
+    "tokenGroup": "richtext",
+    "tokens": {
+        "gap": "{space.gap.md}",
+        "code": { "background": "{color.surface.sunken}" },
+        "check": { "fill": "{color.accent.base}" }
+    },
+    "properties": {
+        "value": { "type": "object", "default": {} },
+        "headingOffset": { "type": "integer", "default": 1, "validators": { "range": { "min": 0, "max": 5 } } },
+        "_empty": { "type": "string", "kind": "content", "default": "Nothing written yet" }
+    }
+}
