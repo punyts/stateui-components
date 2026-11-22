@@ -1,0 +1,9 @@
+{
+    "_label": "Etiqueta",
+    "_placeholder": "Elegir",
+    "_help": "",
+    "_empty": "Sin opciones",
+    "_errors": {
+        "required": "Este campo es obligatorio"
+    }
+}

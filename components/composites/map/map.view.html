@@ -1,0 +1,17 @@
+<div class="map" role="region" aria-roledescription="map" tabindex="0" aria-label="{{ $._label }}" onpointerdown="{{ onPointerDown }}" onpointermove="{{ onPointerMove }}" onpointerup="{{ onPointerUp }}" onpointercancel="{{ onPointerUp }}" onwheel="{{ onWheel }}" onkeydown="{{ onKeyDown }}">
+    <div class="tiles" aria-hidden="true">
+        <img class="tile" repeat="{{ $k,$i,$v in $.tileList }}" key="{{ $k }}" src="{{ $v.src }}" alt="" draggable="false" style="left: {{ $v.left }}px; top: {{ $v.top }}px; width: {{ $v.size }}px; height: {{ $v.size }}px" />
+    </div>
+    <button class="marker" type="button" repeat="{{ $k,$i,$v in $.markerList }}" key="{{ $k }}" data-key="{{ $k }}" aria-label="{{ $v.label }}" aria-pressed="{{ $v.selected ? 'true' : 'false' }}" title="{{ $v.label }}" style="left: {{ $v.left }}px; top: {{ $v.top }}px" onclick="{{ onMarker }}">
+        <ui-icon name="map-pin"></ui-icon>
+    </button>
+    <div class="zoom">
+        <button class="tool zoom-in" type="button" aria-label="{{ $._zoomIn }}" disabled="{{ $.atMax }}" onclick="{{ onZoomIn }}">
+            <ui-icon size="sm" name="plus"></ui-icon>
+        </button>
+        <button class="tool zoom-out" type="button" aria-label="{{ $._zoomOut }}" disabled="{{ $.atMin }}" onclick="{{ onZoomOut }}">
+            <ui-icon size="sm" name="minus"></ui-icon>
+        </button>
+    </div>
+    <p class="attribution" if="{{ $._attribution }}">{{ $._attribution }}</p>
+</div>

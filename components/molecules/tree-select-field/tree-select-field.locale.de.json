@@ -1,0 +1,9 @@
+{
+    "_label": "Beschriftung",
+    "_placeholder": "Auswählen",
+    "_help": "",
+    "_empty": "Keine Optionen",
+    "_errors": {
+        "required": "Dieses Feld ist erforderlich"
+    }
+}

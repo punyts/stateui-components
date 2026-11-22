@@ -1,0 +1,38 @@
+{
+    "summary": "A street map of tiles from our own server with markers; its centre and zoom are state, moved by drag, wheel and keys",
+    "category": "data",
+    "purposes": ["show places on a street map", "find stores near a place on a map", "plan delivery stops on a map", "mark a pickup point on a map", "pan and zoom a street map"],
+    "events": ["change", "select"],
+    "commands": ["zoomIn", "zoomOut", "lookAt"],
+    "tokenGroup": "map",
+    "tokens": {
+        "fill": "{color.surface.sunken}",
+        "height": "calc({size.control.md} * 10)",
+        "marker": "{color.accent.base}",
+        "selected": "{color.danger.base}",
+        "on": "{color.surface.base}",
+        "control": "{size.control.md}",
+        "gap": "{space.gap.sm}",
+        "padding": "{space.inset.sm}"
+    },
+    "properties": {
+        "tiles": { "type": "string", "default": "" },
+        "lat": { "type": "number", "default": 0, "validators": { "range": { "min": -90, "max": 90 } } },
+        "lng": { "type": "number", "default": 0, "validators": { "range": { "min": -180, "max": 180 } } },
+        "zoom": { "type": "number", "default": 2, "validators": { "range": { "min": 0, "max": 22 } } },
+        "minZoom": { "type": "number", "default": 0, "validators": { "range": { "min": 0, "max": 22 } } },
+        "maxZoom": { "type": "number", "default": 18, "validators": { "range": { "min": 0, "max": 22 } } },
+        "markers": { "type": ["object", "array"], "default": {} },
+        "selected": { "type": "string", "default": "" },
+        "width": { "type": "number", "default": 0, "runtime": true },
+        "height": { "type": "number", "default": 0, "runtime": true },
+        "tileList": { "type": "object", "default": {}, "runtime": true },
+        "markerList": { "type": "object", "default": {}, "runtime": true },
+        "atMin": { "type": "boolean", "default": false, "runtime": true },
+        "atMax": { "type": "boolean", "default": false, "runtime": true },
+        "_label": { "type": "string", "kind": "content", "default": "Map" },
+        "_attribution": { "type": "string", "kind": "content", "default": "" },
+        "_zoomIn": { "type": "string", "kind": "content", "default": "Zoom in" },
+        "_zoomOut": { "type": "string", "kind": "content", "default": "Zoom out" }
+    }
+}

@@ -58,8 +58,8 @@ const difference = (found: readonly string[], spec: readonly string[]): { missin
 
 /** Components that joined the library after the first set (Epic 8, plus popover, numberField, segmented, chip, timeField, rating, colorField, avatarGroup, codeBlock, toggleButton, timeline, pinField, carousel, commandPalette, richText, richTextField, actionBar, sources, steps, actionConfirm and composer); the Epic 4 and 5 counts below stay as the spec fixed them */
 const LATER_ATOMS: readonly string[] = ['segmented', 'markdown', 'chip', 'chipList', 'codeBlock', 'toggleButton', 'richText', 'meter', 'sparkline', 'infoTip', 'qrCode'];
-const LATER_MOLECULES: readonly string[] = ['buttonGroup', 'editableText', 'mediaPlayer', 'numberField', 'comboboxField', 'multiSelectField', 'breadcrumb', 'pagination', 'sliderField', 'disclosure', 'stepper', 'dateRangeField', 'fileField', 'paintField', 'timeField', 'rating', 'colorField', 'avatarGroup', 'timeline', 'pinField', 'richTextField', 'actionBar', 'sources', 'steps', 'actionConfirm', 'composer', 'dateTimeField'];
-const LATER_COMPOSITES: readonly string[] = ['popover', 'tour', 'lightbox', 'accordion', 'splitPane', 'tree', 'chart', 'board', 'calendar', 'recordGrid', 'messageList', 'drawing', 'scene3d', 'window', 'carousel', 'commandPalette', 'treeDiagram', 'viewport', 'embeddedApp'];
+const LATER_MOLECULES: readonly string[] = ['buttonGroup', 'treeSelectField', 'editableText', 'mediaPlayer', 'numberField', 'comboboxField', 'multiSelectField', 'breadcrumb', 'pagination', 'sliderField', 'disclosure', 'stepper', 'dateRangeField', 'fileField', 'paintField', 'timeField', 'rating', 'colorField', 'avatarGroup', 'timeline', 'pinField', 'richTextField', 'actionBar', 'sources', 'steps', 'actionConfirm', 'composer', 'dateTimeField'];
+const LATER_COMPOSITES: readonly string[] = ['popover', 'tour', 'lightbox', 'map', 'accordion', 'splitPane', 'tree', 'chart', 'board', 'calendar', 'recordGrid', 'messageList', 'drawing', 'scene3d', 'window', 'carousel', 'commandPalette', 'treeDiagram', 'viewport', 'embeddedApp'];
 const LATER_COMPOSED: readonly string[] = ['wizard', 'chatView'];
 
 /** Every component Epic 8 adds; all are built, so none is skipped */
@@ -70,7 +70,7 @@ const EPIC_8_COMPONENTS = [
     'markdown', 'wizard', 'chatView'
 ] as const;
 
-const FIELDS = ['textField', 'textareaField', 'selectField', 'checkField', 'switchField', 'radioField', 'dateField', 'numberField', 'comboboxField', 'multiSelectField', 'sliderField', 'dateRangeField', 'fileField', 'paintField', 'timeField', 'rating', 'colorField', 'pinField'] as const;
+const FIELDS = ['textField', 'textareaField', 'selectField', 'treeSelectField', 'checkField', 'switchField', 'radioField', 'dateField', 'numberField', 'comboboxField', 'multiSelectField', 'sliderField', 'dateRangeField', 'fileField', 'paintField', 'timeField', 'rating', 'colorField', 'pinField'] as const;
 
 let names: IconNames;
 const isIconName = (name: string): boolean => names.isIconName(name);

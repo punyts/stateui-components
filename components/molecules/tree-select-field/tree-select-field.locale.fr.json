@@ -1,0 +1,9 @@
+{
+    "_label": "Libellé",
+    "_placeholder": "Choisir",
+    "_help": "",
+    "_empty": "Aucune option",
+    "_errors": {
+        "required": "Ce champ est obligatoire"
+    }
+}

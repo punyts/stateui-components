@@ -1,7 +1,7 @@
 {
     "summary": "A pannable, zoomable area around one node; its offset and zoom are state, moved by drag, wheel, pinch and commands",
     "category": "layout",
-    "purposes": ["pan and zoom a large diagram", "move around a canvas by dragging", "zoom a board with the wheel or a pinch", "fit a drawing into the visible area", "bring a part of a big map into view"],
+    "purposes": ["pan and zoom a large diagram", "move around a canvas by dragging", "zoom a board with the wheel or a pinch", "fit a drawing into the visible area", "bring a part of a big diagram into view"],
     "tokenGroup": "viewport",
     "events": ["change", "press"],
     "commands": ["zoomIn", "zoomOut", "zoomReset", "fit", "lookAt"],

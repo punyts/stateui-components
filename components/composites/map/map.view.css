@@ -1,0 +1,110 @@
+:host {
+    display: block;
+    block-size: var(--ui-map-height);
+}
+
+.map {
+    position: relative;
+    block-size: 100%;
+    overflow: hidden;
+    background-color: var(--ui-map-fill);
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.map[data-panning] {
+    cursor: grabbing;
+}
+
+.map:focus-visible {
+    outline: 2px solid var(--ui-color-focus);
+    outline-offset: -2px;
+}
+
+.tiles {
+    position: absolute;
+    inset: 0;
+}
+
+.tile {
+    position: absolute;
+    display: block;
+    max-inline-size: none;
+    pointer-events: none;
+}
+
+/* A marker's tip stands on its place */
+.marker {
+    position: absolute;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
+    color: var(--ui-map-marker);
+    background: none;
+    border: 0;
+    translate: -50% -100%;
+    cursor: pointer;
+}
+
+.marker[aria-pressed='true'] {
+    z-index: 1;
+    color: var(--ui-map-selected);
+}
+
+.marker:focus-visible {
+    outline: 2px solid var(--ui-color-focus);
+    outline-offset: 2px;
+    border-radius: var(--ui-radius-full);
+}
+
+.zoom {
+    position: absolute;
+    inset-block-start: var(--ui-map-padding);
+    inset-inline-end: var(--ui-map-padding);
+    display: flex;
+    flex-direction: column;
+    gap: var(--ui-map-gap);
+}
+
+.tool {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    inline-size: var(--ui-map-control);
+    block-size: var(--ui-map-control);
+    margin: 0;
+    padding: 0;
+    color: var(--ui-color-text-base);
+    background: var(--ui-map-on);
+    border: var(--ui-border-width-thin) solid var(--ui-color-border-base);
+    border-radius: var(--ui-radius-md);
+    cursor: pointer;
+}
+
+.tool:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.tool:focus-visible {
+    outline: 2px solid var(--ui-color-focus);
+    outline-offset: 2px;
+}
+
+.attribution {
+    position: absolute;
+    inset-block-end: 0;
+    inset-inline-end: 0;
+    margin: 0;
+    padding-inline: var(--ui-map-gap);
+    color: var(--ui-color-text-muted);
+    background: color-mix(in srgb, var(--ui-map-on) 80%, transparent);
+    font-family: var(--ui-text-label-family);
+    font-size: var(--ui-text-label-size);
+    line-height: var(--ui-text-label-leading);
+}

@@ -47,6 +47,7 @@ export const CORE_ICON_NAMES: readonly string[] = [
     'list',
     'list-check',
     'list-numbers',
+    'map-pin',
     'maximize',
     'menu-2',
     'minimize',

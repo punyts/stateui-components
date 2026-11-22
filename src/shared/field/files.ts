@@ -1,5 +1,6 @@
 /**
- * The media types ADR-0017 allows for an app's files, with `model/gltf-binary` (a GLB, G3.7); `fileField.accept` can
+ * The media types ADR-0017 allows for an app's files, with `model/gltf-binary` (a GLB, G3.7) and audio and video that
+ * `mediaPlayer` plays; `fileField.accept` can
  * narrow this list, never widen it. The host (`previewFiles.ts`) and the server check the same list: the server's
  * domain cannot import this library, so `files.test.ts` here and `UiFile.test.ts` in `@punyts/stateui-mcp` pin it to
  * the same literal
@@ -16,7 +17,13 @@ export const ALLOWED_FILE_TYPES: readonly string[] = [
     'text/csv',
     'text/markdown',
     'application/json',
-    'model/gltf-binary'
+    'model/gltf-binary',
+    'audio/mpeg',
+    'audio/mp4',
+    'audio/ogg',
+    'audio/wav',
+    'video/mp4',
+    'video/webm'
 ];
 
 /** The largest file, in bytes: 10 MiB, which is also the default of `maxSize` */
@@ -35,7 +42,13 @@ const EXTENSIONS: Readonly<Record<string, readonly string[]>> = {
     'text/csv': ['csv'],
     'text/markdown': ['md', 'markdown'],
     'application/json': ['json'],
-    'model/gltf-binary': ['glb']
+    'model/gltf-binary': ['glb'],
+    'audio/mpeg': ['mp3'],
+    'audio/mp4': ['m4a'],
+    'audio/ogg': ['ogg', 'oga', 'opus'],
+    'audio/wav': ['wav'],
+    'video/mp4': ['mp4', 'm4v'],
+    'video/webm': ['webm']
 };
 
 /** The reference a stored file leaves in `value`: never the bytes */

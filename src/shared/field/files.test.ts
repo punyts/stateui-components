@@ -15,7 +15,7 @@ import {
 } from './files.js';
 
 describe('file field helpers', () => {
-    it('should list exactly the ADR-0017 types and GLB, and a 10 MiB limit', () => {
+    it('should list exactly the ADR-0017 types, GLB, audio and video, and a 10 MiB limit', () => {
         // Assert: the same literal as `UiFile.test.ts` in @punyts/stateui-mcp, whose domain cannot import this list
         expect(ALLOWED_FILE_TYPES).toEqual([
             'image/png',
@@ -29,7 +29,13 @@ describe('file field helpers', () => {
             'text/csv',
             'text/markdown',
             'application/json',
-            'model/gltf-binary'
+            'model/gltf-binary',
+            'audio/mpeg',
+            'audio/mp4',
+            'audio/ogg',
+            'audio/wav',
+            'video/mp4',
+            'video/webm'
         ]);
         expect(ALLOWED_FILE_TYPES).not.toContain('text/html');
         expect(ALLOWED_FILE_TYPES).not.toContain('model/gltf+json');
