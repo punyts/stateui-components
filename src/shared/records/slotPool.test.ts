@@ -113,7 +113,7 @@ describe('createSlotPool', () => {
         const before = pool.size();
 
         // Act
-        store.state.data.records.push({ id: 'r2', name: 'Name 2' });
+        (store.state as { data: { records: { id: string; name: string }[] } }).data.records.push({ id: 'r2', name: 'Name 2' });
         await flush();
 
         // Assert
