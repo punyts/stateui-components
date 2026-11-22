@@ -1,0 +1,31 @@
+{
+    "_label": "Beschriftung",
+    "_placeholder": "",
+    "_help": "",
+    "_errors": {
+        "required": "Dieses Feld ist erforderlich",
+        "minLength": "Zu kurz",
+        "maxLength": "Zu lang"
+    },
+    "_tools": {
+        "toolbar": "Formatierung",
+        "undo": "Rückgängig",
+        "redo": "Wiederholen",
+        "heading1": "Überschrift 1",
+        "heading2": "Überschrift 2",
+        "heading3": "Überschrift 3",
+        "bold": "Fett",
+        "italic": "Kursiv",
+        "strike": "Durchgestrichen",
+        "code": "Code im Text",
+        "bullet": "Aufzählung",
+        "numbered": "Nummerierte Liste",
+        "check": "Checkliste",
+        "outdent": "Einzug verkleinern",
+        "indent": "Einzug vergrößern",
+        "quote": "Zitat",
+        "codeBlock": "Codeblock",
+        "divider": "Trennlinie",
+        "checkItem": "Erledigt"
+    }
+}

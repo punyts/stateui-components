@@ -1,0 +1,40 @@
+<div class="field" style="--field-width: {{ widthOf($.width) }}">
+    <span class="label" id="label">{{ $._label }}</span>
+    <div class="box">
+        <div class="frame" style="--rows: {{ $.rows }}">
+            <div class="toolbar" role="toolbar" aria-label="{{ $._tools.toolbar }}" aria-controls="control" if="{{ $.toolbar !== 'none' }}" onmousedown="{{ onToolbarDown }}" onclick="{{ onTool }}">
+                <button type="button" class="tool" data-command="undo" aria-label="{{ $._tools.undo }}" title="{{ $._tools.undo }}" disabled="{{ uneditable($.disabled, $.readonly, $.locked) || !$.canUndo }}" if="{{ $.toolbar === 'full' }}"><ui-icon name="arrow-back-up" size="sm"></ui-icon></button>
+                <button type="button" class="tool" data-command="redo" aria-label="{{ $._tools.redo }}" title="{{ $._tools.redo }}" disabled="{{ uneditable($.disabled, $.readonly, $.locked) || !$.canRedo }}" if="{{ $.toolbar === 'full' }}"><ui-icon name="arrow-forward-up" size="sm"></ui-icon></button>
+                <span class="separator" aria-hidden="true" if="{{ $.toolbar === 'full' }}"></span>
+                <button type="button" class="tool" data-command="heading1" aria-label="{{ $._tools.heading1 }}" title="{{ $._tools.heading1 }}" aria-pressed="{{ pressed($.active, 'heading1') }}" disabled="{{ uneditable($.disabled, $.readonly, $.locked) }}" if="{{ $.toolbar === 'full' &amp;&amp; allowed($.blocks, 'heading') }}"><ui-icon name="h-1" size="sm"></ui-icon></button>
+                <button type="button" class="tool" data-command="heading2" aria-label="{{ $._tools.heading2 }}" title="{{ $._tools.heading2 }}" aria-pressed="{{ pressed($.active, 'heading2') }}" disabled="{{ uneditable($.disabled, $.readonly, $.locked) }}" if="{{ $.toolbar === 'full' &amp;&amp; allowed($.blocks, 'heading') }}"><ui-icon name="h-2" size="sm"></ui-icon></button>
+                <button type="button" class="tool" data-command="heading3" aria-label="{{ $._tools.heading3 }}" title="{{ $._tools.heading3 }}" aria-pressed="{{ pressed($.active, 'heading3') }}" disabled="{{ uneditable($.disabled, $.readonly, $.locked) }}" if="{{ $.toolbar === 'full' &amp;&amp; allowed($.blocks, 'heading') }}"><ui-icon name="h-3" size="sm"></ui-icon></button>
+                <span class="separator" aria-hidden="true" if="{{ $.toolbar === 'full' }}"></span>
+                <button type="button" class="tool" data-command="bold" aria-label="{{ $._tools.bold }}" title="{{ $._tools.bold }}" aria-pressed="{{ pressed($.active, 'bold') }}" disabled="{{ uneditable($.disabled, $.readonly, $.locked) }}"><ui-icon name="bold" size="sm"></ui-icon></button>
+                <button type="button" class="tool" data-command="italic" aria-label="{{ $._tools.italic }}" title="{{ $._tools.italic }}" aria-pressed="{{ pressed($.active, 'italic') }}" disabled="{{ uneditable($.disabled, $.readonly, $.locked) }}"><ui-icon name="italic" size="sm"></ui-icon></button>
+                <button type="button" class="tool" data-command="strike" aria-label="{{ $._tools.strike }}" title="{{ $._tools.strike }}" aria-pressed="{{ pressed($.active, 'strike') }}" disabled="{{ uneditable($.disabled, $.readonly, $.locked) }}" if="{{ $.toolbar === 'full' }}"><ui-icon name="strikethrough" size="sm"></ui-icon></button>
+                <button type="button" class="tool" data-command="code" aria-label="{{ $._tools.code }}" title="{{ $._tools.code }}" aria-pressed="{{ pressed($.active, 'code') }}" disabled="{{ uneditable($.disabled, $.readonly, $.locked) }}" if="{{ $.toolbar === 'full' }}"><ui-icon name="code" size="sm"></ui-icon></button>
+                <span class="separator" aria-hidden="true"></span>
+                <button type="button" class="tool" data-command="bullet" aria-label="{{ $._tools.bullet }}" title="{{ $._tools.bullet }}" aria-pressed="{{ pressed($.active, 'bullet') }}" disabled="{{ uneditable($.disabled, $.readonly, $.locked) }}" if="{{ allowed($.blocks, 'bullet') }}"><ui-icon name="list" size="sm"></ui-icon></button>
+                <button type="button" class="tool" data-command="numbered" aria-label="{{ $._tools.numbered }}" title="{{ $._tools.numbered }}" aria-pressed="{{ pressed($.active, 'numbered') }}" disabled="{{ uneditable($.disabled, $.readonly, $.locked) }}" if="{{ allowed($.blocks, 'numbered') }}"><ui-icon name="list-numbers" size="sm"></ui-icon></button>
+                <button type="button" class="tool" data-command="check" aria-label="{{ $._tools.check }}" title="{{ $._tools.check }}" aria-pressed="{{ pressed($.active, 'check') }}" disabled="{{ uneditable($.disabled, $.readonly, $.locked) }}" if="{{ $.toolbar === 'full' &amp;&amp; allowed($.blocks, 'check') }}"><ui-icon name="list-check" size="sm"></ui-icon></button>
+                <button type="button" class="tool" data-command="outdent" aria-label="{{ $._tools.outdent }}" title="{{ $._tools.outdent }}" disabled="{{ uneditable($.disabled, $.readonly, $.locked) }}" if="{{ $.toolbar === 'full' }}"><ui-icon name="indent-decrease" size="sm"></ui-icon></button>
+                <button type="button" class="tool" data-command="indent" aria-label="{{ $._tools.indent }}" title="{{ $._tools.indent }}" disabled="{{ uneditable($.disabled, $.readonly, $.locked) }}" if="{{ $.toolbar === 'full' }}"><ui-icon name="indent-increase" size="sm"></ui-icon></button>
+                <span class="separator" aria-hidden="true" if="{{ $.toolbar === 'full' }}"></span>
+                <button type="button" class="tool" data-command="quote" aria-label="{{ $._tools.quote }}" title="{{ $._tools.quote }}" aria-pressed="{{ pressed($.active, 'quote') }}" disabled="{{ uneditable($.disabled, $.readonly, $.locked) }}" if="{{ $.toolbar === 'full' &amp;&amp; allowed($.blocks, 'quote') }}"><ui-icon name="blockquote" size="sm"></ui-icon></button>
+                <button type="button" class="tool" data-command="codeBlock" aria-label="{{ $._tools.codeBlock }}" title="{{ $._tools.codeBlock }}" aria-pressed="{{ pressed($.active, 'code-block') }}" disabled="{{ uneditable($.disabled, $.readonly, $.locked) }}" if="{{ $.toolbar === 'full' &amp;&amp; allowed($.blocks, 'code') }}"><ui-icon name="codeblock" size="sm"></ui-icon></button>
+                <button type="button" class="tool" data-command="divider" aria-label="{{ $._tools.divider }}" title="{{ $._tools.divider }}" disabled="{{ uneditable($.disabled, $.readonly, $.locked) }}" if="{{ $.toolbar === 'full' &amp;&amp; allowed($.blocks, 'divider') }}"><ui-icon name="separator-horizontal" size="sm"></ui-icon></button>
+            </div>
+            <div class="body">
+                <div id="control" class="editor" role="textbox" aria-multiline="true" aria-labelledby="label" contenteditable="{{ uneditable($.disabled, $.readonly, $.locked) ? 'false' : 'true' }}" tabindex="{{ $.disabled || $.locked ? -1 : 0 }}" spellcheck="true" aria-readonly="{{ $.readonly ? 'true' : null }}" aria-disabled="{{ $.disabled || $.locked ? 'true' : null }}" aria-required="{{ $.required ? 'true' : null }}" aria-placeholder="{{ $._placeholder !== '' ? $._placeholder : null }}" aria-describedby="{{ describedBy($._help, $.message) }}" aria-invalid="{{ $.error !== '' ? 'true' : null }}" onbeforeinput="{{ onBeforeInput }}" oninput="{{ onInput }}" onkeydown="{{ onKeyDown }}" oncompositionstart="{{ onCompositionStart }}" oncompositionend="{{ onCompositionEnd }}" onmousedown="{{ onEditorDown }}" onclick="{{ onEditorClick }}" onfocus="{{ onFocus }}" onblur="{{ onBlur }}"></div>
+                <p class="placeholder" aria-hidden="true" if="{{ $.empty &amp;&amp; $._placeholder !== '' }}">{{ $._placeholder }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="messages">
+        <p class="help" id="help" if="{{ $._help !== '' }}">{{ $._help }}</p>
+        <div class="alert" role="status" aria-live="polite">
+            <p class="error" id="error" if="{{ $.message !== '' }}">{{ $.message }}</p>
+        </div>
+    </div>
+</div>

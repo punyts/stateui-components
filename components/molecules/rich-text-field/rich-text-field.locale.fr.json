@@ -1,0 +1,31 @@
+{
+    "_label": "Libellé",
+    "_placeholder": "",
+    "_help": "",
+    "_errors": {
+        "required": "Ce champ est obligatoire",
+        "minLength": "Trop court",
+        "maxLength": "Trop long"
+    },
+    "_tools": {
+        "toolbar": "Mise en forme",
+        "undo": "Annuler",
+        "redo": "Rétablir",
+        "heading1": "Titre 1",
+        "heading2": "Titre 2",
+        "heading3": "Titre 3",
+        "bold": "Gras",
+        "italic": "Italique",
+        "strike": "Barré",
+        "code": "Code en ligne",
+        "bullet": "Liste à puces",
+        "numbered": "Liste numérotée",
+        "check": "Liste de tâches",
+        "outdent": "Diminuer le retrait",
+        "indent": "Augmenter le retrait",
+        "quote": "Citation",
+        "codeBlock": "Bloc de code",
+        "divider": "Séparateur",
+        "checkItem": "Fait"
+    }
+}

@@ -1,0 +1,31 @@
+{
+    "_label": "Etiqueta",
+    "_placeholder": "",
+    "_help": "",
+    "_errors": {
+        "required": "Este campo es obligatorio",
+        "minLength": "Demasiado corto",
+        "maxLength": "Demasiado largo"
+    },
+    "_tools": {
+        "toolbar": "Formato",
+        "undo": "Deshacer",
+        "redo": "Rehacer",
+        "heading1": "Título 1",
+        "heading2": "Título 2",
+        "heading3": "Título 3",
+        "bold": "Negrita",
+        "italic": "Cursiva",
+        "strike": "Tachado",
+        "code": "Código en línea",
+        "bullet": "Lista con viñetas",
+        "numbered": "Lista numerada",
+        "check": "Lista de tareas",
+        "outdent": "Reducir sangría",
+        "indent": "Aumentar sangría",
+        "quote": "Cita",
+        "codeBlock": "Bloque de código",
+        "divider": "Separador",
+        "checkItem": "Hecho"
+    }
+}

@@ -1,0 +1,86 @@
+{
+    "summary": "A labelled rich-text editor writing block JSON: headings, lists, checks, quotes, code and marks",
+    "category": "forms",
+    "purposes": ["write formatted notes with headings and lists", "edit a rich-text description or article", "write a formatted comment with bold and italic", "keep a checklist inside a form field"],
+    "events": ["change", "invalid", "valid"],
+    "commands": ["validate", "reset", "focus", "clear"],
+    "tokenGroup": "richtextfield",
+    "tokens": {
+        "gap": "{space.gap.sm}",
+        "code": { "background": "{color.surface.sunken}" },
+        "check": { "fill": "{color.accent.base}" },
+        "toolbar": { "background": "{color.surface.raised}", "active": "{color.accent.base}" }
+    },
+    "shared": {
+        "variant": { "default": "outline", "values": ["outline", "soft", "ghost"] },
+        "corners": {},
+        "size": { "default": "md" },
+        "density": {}
+    },
+    "properties": {
+        "value": { "type": "object", "default": {} },
+        "toolbar": { "type": "string", "values": ["full", "compact", "none"], "default": "full", "reflect": true },
+        "blocks": {
+            "type": "array",
+            "default": [],
+            "validators": { "eachOf": ["paragraph", "heading", "bullet", "numbered", "check", "quote", "code", "divider"] }
+        },
+        "rows": { "type": "integer", "default": 4, "validators": { "range": { "min": 1, "max": 50 } } },
+        "disabled": { "type": "boolean", "default": false },
+        "readonly": { "type": "boolean", "default": false },
+        "titlePosition": { "type": "string", "values": ["top", "left", "hidden"], "default": "top", "reflect": true },
+        "width": { "type": ["string", "integer"], "default": "fill" },
+        "required": { "type": "boolean", "default": false },
+        "minLength": { "type": "integer", "default": 0, "validators": { "range": { "min": 0 } } },
+        "maxLength": { "type": "integer", "default": 0, "validators": { "range": { "min": 0 } } },
+        "error": { "type": "string", "default": "", "runtime": true },
+        "touched": { "type": "boolean", "default": false, "runtime": true },
+        "dirty": { "type": "boolean", "default": false, "runtime": true },
+        "locked": { "type": "boolean", "default": false, "runtime": true },
+        "message": { "type": "string", "default": "", "runtime": true },
+        "selection": { "type": "object", "default": {}, "runtime": true },
+        "active": { "type": "string", "default": "", "runtime": true },
+        "empty": { "type": "boolean", "default": true, "runtime": true },
+        "canUndo": { "type": "boolean", "default": false, "runtime": true },
+        "canRedo": { "type": "boolean", "default": false, "runtime": true },
+        "_label": { "type": "string", "kind": "content", "default": "Label" },
+        "_placeholder": { "type": "string", "kind": "content", "default": "" },
+        "_help": { "type": "string", "kind": "content", "default": "" },
+        "_errors": {
+            "type": "map",
+            "items": "string",
+            "kind": "content",
+            "default": {
+                "required": "This field is required",
+                "minLength": "Too short",
+                "maxLength": "Too long"
+            }
+        },
+        "_tools": {
+            "type": "map",
+            "items": "string",
+            "kind": "content",
+            "default": {
+                "toolbar": "Formatting",
+                "undo": "Undo",
+                "redo": "Redo",
+                "heading1": "Heading 1",
+                "heading2": "Heading 2",
+                "heading3": "Heading 3",
+                "bold": "Bold",
+                "italic": "Italic",
+                "strike": "Strikethrough",
+                "code": "Inline code",
+                "bullet": "Bulleted list",
+                "numbered": "Numbered list",
+                "check": "Checklist",
+                "outdent": "Outdent",
+                "indent": "Indent",
+                "quote": "Quote",
+                "codeBlock": "Code block",
+                "divider": "Divider",
+                "checkItem": "Done"
+            }
+        }
+    }
+}

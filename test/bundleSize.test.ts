@@ -4,12 +4,13 @@ import { build } from 'esbuild';
 import { describe, expect, it } from 'vitest';
 
 /**
- * The gzipped size of the library's own code, every component with its shape, view, styles, controller and functions,
- * as measured when `treeDiagram` and its `layoutTree` joined it (stateui-hard-ip.md, Size). Component functions add to
- * this bundle, so it has a gate like stateui-3d's chunk: the test fails when it is more than 5% above the measure. A
- * component that needs more raises the measure in the same commit, with the reason
+ * The gzipped size of the library's own code, every component with its shape, view, styles, controller and functions.
+ * First measured when `treeDiagram` and its `layoutTree` joined it (stateui-hard-ip.md, Size); raised when
+ * `richTextField` joined it, whose editing model, view and undo history add about 13 KB (stateui-text-editor.md, T2).
+ * Component functions add to this bundle, so it has a gate like stateui-3d's chunk: the test fails when it is more than
+ * 5% above the measure. A component that needs more raises the measure in the same commit, with the reason
  */
-const MEASURED_GZIP_BYTES = 223_110;
+const MEASURED_GZIP_BYTES = 247_679;
 const GZIP_LIMIT = Math.floor(MEASURED_GZIP_BYTES * 1.05);
 
 describe('the components bundle', () => {

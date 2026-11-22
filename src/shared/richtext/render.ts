@@ -17,7 +17,8 @@ export interface RichTextRenderOptions {
 
 const MARK_TAGS: Readonly<Record<Mark, string>> = { code: 'code', strike: 's', italic: 'em', bold: 'strong' };
 
-function markedNode(document: Document, run: Run): Node {
+/** A run as a text node inside its mark elements, code innermost */
+export function markedNode(document: Document, run: Run): Node {
     let node: Node = document.createTextNode(run.text);
     for (const mark of MARKS) {
         if (!(run.marks ?? []).includes(mark)) continue;

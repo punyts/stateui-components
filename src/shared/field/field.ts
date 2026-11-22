@@ -103,6 +103,12 @@ export interface FieldOptions {
      * and returns a promise for its end, or undefined when it has none. Without it a field has nothing to settle
      */
     readonly settle?: () => Promise<void> | undefined;
+    /**
+     * Watches writes inside the value as well as to it, for a value that is an object written a part at a time (a
+     * rich-text value, block by block). The writes of one task are taken together: `dirty`, validation and
+     * `change` follow once, in a microtask
+     */
+    readonly deep?: boolean;
 }
 
 /** The element of a field as the command dispatcher sees it */
@@ -250,7 +256,18 @@ export function createField({ element, store, basePath }: ControllerContext, val
     };
     const host = element as Element & CommandHost;
     host.commands = { validate: () => void validate(), reset, focus, clear };
-    store.on(valuePath, onValue);
+    let pending = false;
+    const onDeepValue = (): void => {
+        if (pending) return;
+        pending = true;
+        queueMicrotask(() => {
+            pending = false;
+            if (!released) onValue();
+        });
+    };
+    const valuePaths = options.deep === true ? [valuePath, `${valuePath}.$all`] : [valuePath];
+    const valueListener = options.deep === true ? onDeepValue : onValue;
+    store.on(valuePaths, valueListener);
     store.on(iconPath, syncGlyph);
     store.on(messagePaths, syncMessage);
     store.on(statusPaths, onStatus);
@@ -303,7 +320,7 @@ export function createField({ element, store, basePath }: ControllerContext, val
             watchers.length = 0;
             store.off(statusPaths, onStatus);
             for (const callback of releases.splice(0)) callback();
-            store.off(valuePath, onValue);
+            store.off(valuePaths, valueListener);
             store.off(iconPath, syncGlyph);
             store.off(messagePaths, syncMessage);
         }
