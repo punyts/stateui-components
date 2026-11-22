@@ -1,3 +1,14 @@
 {
-    "_empty": "No hay registros"
+    "_empty": "No hay registros",
+    "_resize": "Cambiar el ancho de la columna",
+    "_errors": {
+        "required": "Este campo es obligatorio",
+        "minLength": "Demasiado corto",
+        "maxLength": "Demasiado largo",
+        "min": "Demasiado pequeño",
+        "max": "Demasiado grande",
+        "step": "No es un paso permitido",
+        "number": "No es un número",
+        "pattern": "No tiene el formato esperado"
+    }
 }

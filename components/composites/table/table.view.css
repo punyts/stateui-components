@@ -8,6 +8,7 @@
 }
 
 .table {
+    position: relative;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -28,12 +29,14 @@
 
 .head-row {
     display: grid;
+    min-inline-size: var(--table-min, 0px);
     grid-template-columns: var(--table-columns, minmax(0, 1fr));
     align-items: center;
     min-block-size: var(--ui-recordlist-row);
 }
 
 .head {
+    position: relative;
     box-sizing: border-box;
     min-inline-size: 0;
     padding-inline: var(--ui-table-cell-padding);
@@ -54,6 +57,48 @@
 
 .head[data-align="end"] {
     text-align: end;
+}
+
+/* A pinned column sticks to its edge while the body scrolls sideways; the controller sets each one's offset as --table-pin-<index> */
+.head[data-pin] {
+    position: sticky;
+    z-index: 1;
+    background: var(--ui-table-header-fill);
+}
+
+.head[data-pin="start"] {
+    inset-inline-start: var(--pin-at);
+}
+
+.head[data-pin="end"] {
+    inset-inline-end: var(--pin-at);
+}
+
+.resize {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: 0;
+    inline-size: var(--ui-space-gap-md);
+    cursor: col-resize;
+    touch-action: none;
+}
+
+.resize::after {
+    content: "";
+    position: absolute;
+    inset-block: 25%;
+    inset-inline-end: 0;
+    border-inline-end: var(--ui-border-width-thin) solid var(--ui-table-border);
+}
+
+.resize:hover::after,
+.resize:focus-visible::after {
+    border-inline-end: var(--ui-border-width-thick) solid var(--ui-color-focus);
+}
+
+.resize:focus-visible {
+    outline: var(--ui-border-width-thick) solid var(--ui-color-focus);
+    outline-offset: calc(var(--ui-border-width-thick) * -1);
 }
 
 .sort {
@@ -93,7 +138,16 @@
     flex: 1 1 auto;
     display: grid;
     grid-template-rows: auto;
+    grid-template-columns: minmax(0, 1fr);
     min-block-size: calc(var(--ui-recordlist-row) * 3);
+    --sui-list-overflow-x: auto;
+    --sui-rows-min: var(--table-min, 0px);
+}
+
+/* Chromium places an end-pinned cell under the scrollbar of a body with a stable gutter, so a table with one keeps its scrollbar instead */
+:host([data-pin-end]) .body {
+    --sui-list-overflow-y: scroll;
+    --sui-list-gutter: auto;
 }
 
 .empty {
@@ -113,4 +167,46 @@
 :host(:is([selectable=single], [selectable=multi])) {
     --sui-row-cursor: pointer;
     --sui-row-selected: var(--ui-color-surface-sunken);
+}
+
+/* The editor of a cell sits over it, in the table's own box, so the virtual body draws nothing for it */
+.editor {
+    position: absolute;
+    z-index: 3;
+    box-sizing: border-box;
+}
+
+.edit-control {
+    box-sizing: border-box;
+    inline-size: 100%;
+    block-size: 100%;
+    margin: 0;
+    padding-inline: var(--ui-table-cell-padding);
+    border: var(--ui-border-width-thick) solid var(--ui-color-focus);
+    border-radius: 0;
+    background: var(--ui-color-surface-base);
+    color: var(--ui-color-text-base);
+    font: inherit;
+}
+
+.edit-control:focus-visible {
+    outline: var(--ui-border-width-thick) solid var(--ui-color-focus);
+    outline-offset: 0;
+}
+
+.edit-control[aria-invalid="true"] {
+    border-color: var(--ui-table-error);
+}
+
+.edit-error {
+    position: absolute;
+    inset-block-start: 100%;
+    inset-inline-start: 0;
+    margin: 0;
+    padding: var(--ui-space-inset-sm);
+    border-radius: var(--ui-radius-sm);
+    background: var(--ui-table-error);
+    color: var(--ui-color-text-inverse);
+    font-size: var(--ui-text-caption-size);
+    white-space: nowrap;
 }

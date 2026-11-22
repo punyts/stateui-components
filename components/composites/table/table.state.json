@@ -1,8 +1,8 @@
 {
-    "summary": "A table over a list of records: keyed columns, a fixed header, a virtual body, sortable columns and row selection",
+    "summary": "A table over records: keyed columns, a virtual body, sortable, resizable and pinned columns, and row selection",
     "category": "data",
-    "purposes": ["list transactions in sortable columns", "show records in rows and columns", "select rows of a large data set"],
-    "events": ["sort", "select", "activate"],
+    "purposes": ["list transactions in sortable columns", "show records in rows and columns", "select rows of a large data set", "keep a column in view while scrolling sideways", "edit values in a grid of records"],
+    "events": ["sort", "select", "activate", "columnResize", "edit"],
     "commands": ["delete", "clearSelection", "selectAll"],
     "shared": { "density": {} },
     "tokenGroup": "table",
@@ -10,11 +10,15 @@
         "cell": { "padding": "{space.inset.md}" },
         "header": { "fill": "{color.surface.sunken}", "color": "{color.text.muted}" },
         "stripe": "{color.surface.sunken}",
-        "border": "{color.border.base}"
+        "border": "{color.border.base}",
+        "pin": { "fill": "{color.surface.base}", "width": "calc({size.control.md} * 5)" },
+        "column": { "min": "calc({size.control.md} * 2)" },
+        "error": "{color.danger.base}"
     },
     "properties": {
         "key": { "type": "string", "validators": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" }, "default": "id" },
         "striped": { "type": "boolean", "default": false, "reflect": true },
+        "resizable": { "type": "boolean", "default": false, "reflect": true },
         "selectable": { "type": "string", "values": ["none", "single", "multi"], "default": "none", "reflect": true },
         "sortBy": { "type": "string", "validators": { "pattern": "^$|^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*$" }, "default": "" },
         "sortDir": { "type": "string", "values": ["asc", "desc"], "default": "asc" },
@@ -26,10 +30,20 @@
                 "width": { "type": "string", "validators": { "pattern": "^(auto|(0|[1-9][0-9]*)(\\.[0-9]+)?(fr|px|%))$" }, "default": "auto" },
                 "align": { "type": "string", "values": ["start", "center", "end"], "default": "start" },
                 "sortable": { "type": "boolean", "default": false },
+                "pin": { "type": "string", "values": ["none", "start", "end"], "default": "none" },
                 "format": { "type": "string", "values": ["number", "percent", "currency", "duration"] },
                 "currency": { "type": "string", "validators": { "pattern": "^[A-Z]{3}$" } },
                 "fractionDigits": { "type": "integer", "validators": { "range": { "min": 0, "max": 20 } } },
-                "cell": { "type": "node", "row": true }
+                "cell": { "type": "node", "row": true },
+                "edit": { "type": "string", "values": ["none", "text", "number", "date", "select", "check"], "default": "none" },
+                "options": { "type": "map", "items": { "_label": { "type": "string", "kind": "content" } } },
+                "required": { "type": "boolean", "default": false },
+                "minLength": { "type": "integer", "validators": { "range": { "min": 0 } } },
+                "maxLength": { "type": "integer", "validators": { "range": { "min": 0 } } },
+                "min": { "type": ["number", "string"] },
+                "max": { "type": ["number", "string"] },
+                "step": { "type": "number", "validators": { "range": { "min": 0 } } },
+                "pattern": { "type": "string", "validators": { "regex": 120 } }
             },
             "default": {}
         },
@@ -39,6 +53,23 @@
         "window": { "type": "object" },
         "empty": { "type": "node" },
         "_empty": { "type": "string", "kind": "content", "default": "No records" },
+        "_resize": { "type": "string", "kind": "content", "default": "Resize column" },
+        "_errors": {
+            "type": "map",
+            "items": "string",
+            "kind": "content",
+            "default": {
+                "required": "This field is required",
+                "minLength": "Too short",
+                "maxLength": "Too long",
+                "min": "Too small",
+                "max": "Too large",
+                "step": "Not an allowed step",
+                "number": "Not a number",
+                "pattern": "Not in the expected format"
+            }
+        },
+        "editing": { "type": "object", "default": { "column": "" }, "runtime": true },
         "current": { "type": "object", "default": {}, "runtime": true, "exposed": true },
         "body": {
             "type": "object",

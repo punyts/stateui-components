@@ -1,3 +1,14 @@
 {
-    "_empty": "Keine Einträge"
+    "_empty": "Keine Einträge",
+    "_resize": "Spaltenbreite ändern",
+    "_errors": {
+        "required": "Dieses Feld ist erforderlich",
+        "minLength": "Zu kurz",
+        "maxLength": "Zu lang",
+        "min": "Zu klein",
+        "max": "Zu groß",
+        "step": "Kein erlaubter Schritt",
+        "number": "Keine Zahl",
+        "pattern": "Nicht im erwarteten Format"
+    }
 }

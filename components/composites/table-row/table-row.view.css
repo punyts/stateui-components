@@ -36,6 +36,25 @@
     text-align: center;
 }
 
+/* A pinned cell sticks to its edge of the table's body, which scrolls sideways; it is opaque so cells pass under it */
+.cell[data-pin] {
+    position: sticky;
+    z-index: 1;
+    background: var(--sui-row-pin, var(--ui-table-pin-fill));
+}
+
+.row[data-odd] .cell[data-pin] {
+    background: var(--sui-row-pin, var(--table-stripe, var(--ui-table-pin-fill)));
+}
+
+.cell[data-pin="start"] {
+    inset-inline-start: var(--pin-at);
+}
+
+.cell[data-pin="end"] {
+    inset-inline-end: var(--pin-at);
+}
+
 .cell[data-align="end"] {
     justify-content: flex-end;
     text-align: end;
@@ -47,4 +66,8 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
+}
+
+.cell[data-editable] {
+    cursor: text;
 }

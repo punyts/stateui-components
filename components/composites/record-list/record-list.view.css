@@ -23,13 +23,14 @@
 .list {
     block-size: 100%;
     max-block-size: var(--sui-list-max, 100dvh);
-    overflow-y: auto;
-    overflow-x: hidden;
-    scrollbar-gutter: stable;
+    overflow-y: var(--sui-list-overflow-y, auto);
+    overflow-x: var(--sui-list-overflow-x, hidden);
+    scrollbar-gutter: var(--sui-list-gutter, stable);
 }
 
 .rows {
     position: relative;
+    min-inline-size: var(--sui-rows-min, 0px);
     block-size: calc(var(--sui-count, 0) * var(--sui-row-h));
 }
 
@@ -48,7 +49,7 @@
     inset-block-start: 0;
     inset-inline: 0;
     block-size: var(--sui-row-h);
-    overflow: hidden;
+    overflow: clip;
     transform: translateY(calc(var(--sui-index, 0) * var(--sui-row-h)));
     box-shadow: var(--sui-row-divider, none);
     cursor: var(--sui-row-cursor, auto);
@@ -56,6 +57,7 @@
 
 .slot[data-selected] {
     --sui-row-stripe: transparent;
+    --sui-row-pin: var(--sui-row-selected);
     background: var(--sui-row-selected, none);
 }
 

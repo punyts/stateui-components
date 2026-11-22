@@ -6,9 +6,11 @@ type Entry = Record<string, unknown>;
 const isEntry = (value: unknown): value is Entry => value !== null && typeof value === 'object' && !Array.isArray(value);
 const text = (value: unknown): string => (typeof value === 'string' ? value : '');
 
-/** What a cell shows for a value: the formatted number with a `format`, otherwise the value as text; nothing for no value or an object */
+/** What a cell shows for a value: a select column's label for the key, the formatted number with a `format`, otherwise the value as text; nothing for no value or an object */
 function shownText(value: unknown, cell: Entry, locale: string): string {
     if (value === undefined || value === null || typeof value === 'object') return '';
+    const options = cell['options'];
+    if (isEntry(options) && typeof value === 'string' && typeof options[value] === 'string') return options[value] as string;
     const format = text(cell['format']);
     if (format === '') return String(value);
     const digits = cell['fractionDigits'];

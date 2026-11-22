@@ -1,5 +1,5 @@
 <div class="row" data-odd="{{ ($.slotIndex % 2) === 1 ? '' : null }}">
-    <div class="cell" role="cell" if="{{ $.cells }}" repeat="{{ $k,$i,$v in $.cells }}" key="{{ $k }}" data-key="{{ $k }}" data-align="{{ $v.align || 'start' }}">
+    <div class="cell" role="cell" if="{{ $.cells }}" repeat="{{ $k,$i,$v in $.cells }}" key="{{ $k }}" data-key="{{ $k }}" data-align="{{ $v.align || 'start' }}" data-pin="{{ ($v.pin === 'start' || $v.pin === 'end') ? $v.pin : null }}" data-editable="{{ $v.editable ? '' : null }}" style="--pin-at: var(--table-pin-{{ $i }}, 0px)">
         <sui-node if="{{ $v.content }}" repeat="{{ $nk,$ni,$np in $v.content }}" key="{{ $nk }}" state="{{ $np }}"></sui-node>
         <span class="text" if="{{ $v.text }}">{{ $v.text }}</span>
     </div>

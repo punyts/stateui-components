@@ -1,14 +1,23 @@
 <div class="table" onclick="{{ onClick }}" ondblclick="{{ onDoubleClick }}" onkeydown="{{ onKeyDown }}">
     <div class="header" role="rowgroup">
         <div class="head-row" role="row" aria-rowindex="1">
-            <div class="head" role="columnheader" if="{{ $.columns }}" repeat="{{ $k,$i,$v in $.columns }}" key="{{ $k }}" data-key="{{ $k }}" data-align="{{ $v.align || 'start' }}" aria-sort="{{ ($v.sortable &amp;&amp; $v.field) ? (($.sortBy === $v.field) ? (($.sortDir === 'desc') ? 'descending' : 'ascending') : 'none') : null }}">
+            <div class="head" role="columnheader" if="{{ $.columns }}" repeat="{{ $k,$i,$v in $.columns }}" key="{{ $k }}" data-key="{{ $k }}" data-align="{{ $v.align || 'start' }}" data-pin="{{ ($v.pin === 'start' || $v.pin === 'end') ? $v.pin : null }}" style="--pin-at: var(--table-pin-{{ $i }}, 0px)" aria-sort="{{ ($v.sortable &amp;&amp; $v.field) ? (($.sortBy === $v.field) ? (($.sortDir === 'desc') ? 'descending' : 'ascending') : 'none') : null }}">
                 <button class="sort" type="button" if="{{ $v.sortable &amp;&amp; $v.field }}" data-key="{{ $k }}" onclick="{{ onSortHeader }}">
                     <span class="title">{{ $v._title }}</span>
                     <span class="arrow" aria-hidden="true">{{ ($.sortBy === $v.field) ? (($.sortDir === 'desc') ? '▼' : '▲') : '' }}</span>
                 </button>
                 <span class="title" if="{{ !($v.sortable &amp;&amp; $v.field) }}">{{ $v._title }}</span>
+                <span class="resize" role="separator" aria-orientation="vertical" tabindex="0" if="{{ $.resizable }}" data-key="{{ $k }}" aria-label="{{ $._resize }} {{ $v._title }}" aria-valuemin="48" onpointerdown="{{ onResizeDown }}" onpointermove="{{ onResizeMove }}" onpointerup="{{ onResizeUp }}" onpointercancel="{{ onResizeUp }}" onkeydown="{{ onResizeKey }}" onfocus="{{ onResizeFocus }}"></span>
             </div>
         </div>
+    </div>
+    <div class="editor" if="{{ $.editing.column }}" style="inset-block-start: {{ $.editing.top }}px; inset-inline-start: {{ $.editing.start }}px; inline-size: {{ $.editing.width }}px; block-size: {{ $.editing.height }}px">
+        <input class="edit-control" if="{{ $.editing.kind !== 'select' }}" type="{{ $.editing.kind === 'number' ? 'number' : ($.editing.kind === 'date' ? 'date' : 'text') }}" value="{{ $.editing.draft }}" aria-label="{{ $.editing.label }}" aria-invalid="{{ $.editing.message ? 'true' : null }}" aria-describedby="{{ $.editing.message ? 'edit-error' : null }}" oninput="{{ onEditInput }}" onkeydown="{{ onEditKey }}" onblur="{{ onEditBlur }}"/>
+        <select class="edit-control" if="{{ $.editing.kind === 'select' }}" aria-label="{{ $.editing.label }}" aria-invalid="{{ $.editing.message ? 'true' : null }}" aria-describedby="{{ $.editing.message ? 'edit-error' : null }}" oninput="{{ onEditInput }}" onkeydown="{{ onEditKey }}" onblur="{{ onEditBlur }}">
+            <option value="" if="{{ !$.editing.required }}" selected="{{ $.editing.draft === '' }}"></option>
+            <option repeat="{{ $k,$i,$v in $.editing.options }}" key="{{ $k }}" value="{{ $k }}" selected="{{ $k === $.editing.draft }}">{{ $v }}</option>
+        </select>
+        <p class="edit-error" id="edit-error" role="alert" if="{{ $.editing.message }}">{{ $.editing.message }}</p>
     </div>
     <div class="body">
         <sui-node state=".body"></sui-node>

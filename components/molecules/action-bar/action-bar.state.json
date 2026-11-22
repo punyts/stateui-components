@@ -1,0 +1,33 @@
+{
+    "summary": "A bar of bulk actions that shows while records are selected: the count, the actions and a way to clear the selection",
+    "category": "data",
+    "purposes": ["act on the selected rows at once", "delete or export several selected records", "show how many records are selected", "clear a selection of records"],
+    "events": ["action", "clear"],
+    "tokenGroup": "actionbar",
+    "tokens": {
+        "fill": "{color.surface.raised}",
+        "border": "{color.border.base}",
+        "radius": "{radius.md}",
+        "gap": "{space.gap.sm}",
+        "padding": "{space.inset.sm}",
+        "danger": "{color.danger.base}"
+    },
+    "properties": {
+        "selected": { "type": ["string", "number", "array"] },
+        "actions": {
+            "type": "map",
+            "default": {},
+            "items": {
+                "_label": { "type": "string", "kind": "content" },
+                "icon": { "type": "icon", "default": "" },
+                "tone": { "type": "string", "values": ["neutral", "danger"], "default": "neutral" },
+                "disabled": { "type": "boolean", "default": false }
+            }
+        },
+        "_label": { "type": "string", "kind": "content", "default": "Bulk actions" },
+        "_count": { "type": "string", "kind": "content", "default": "{count} selected" },
+        "_clear": { "type": "string", "kind": "content", "default": "Clear selection" },
+        "count": { "type": "integer", "default": 0, "runtime": true },
+        "countText": { "type": "string", "default": "", "runtime": true }
+    }
+}

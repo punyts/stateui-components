@@ -1,0 +1,12 @@
+<div class="bar" role="toolbar" aria-label="{{ $._label }}" if="{{ $.count &gt; 0 }}">
+    <span class="count" role="status">{{ $.countText }}</span>
+    <span class="actions">
+        <button class="action" type="button" repeat="{{ $k,$i,$v in $.actions }}" key="{{ $k }}" data-key="{{ $k }}" data-tone="{{ $v.tone || 'neutral' }}" disabled="{{ $v.disabled }}" onclick="{{ onAction }}">
+            <ui-icon class="glyph" size="sm" name="{{ $v.icon }}" if="{{ $v.icon }}"></ui-icon>
+            <span class="label">{{ $v._label || $k }}</span>
+        </button>
+    </span>
+    <button class="clear" type="button" aria-label="{{ $._clear }}" onclick="{{ onClear }}">
+        <ui-icon size="sm" name="x"></ui-icon>
+    </button>
+</div>
