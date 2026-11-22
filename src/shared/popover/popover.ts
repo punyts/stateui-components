@@ -1,3 +1,5 @@
+import { report } from '@punyts/core';
+
 /** Where a popover sits next to its anchor. `start` and `end` follow the writing direction */
 export const PLACEMENTS = ['top', 'bottom', 'start', 'end'] as const;
 
@@ -16,6 +18,9 @@ export type AnyPlacement = Placement | AlignedPlacement;
  * page that clips the frame it runs in (an editor laid over the app) can hear of a popover drawn outside its panels
  */
 export const POPOVER_TOGGLE_EVENT = 'ui-popover-toggle';
+
+/** The category of the popovers' reports, the overlays' category: a popover opened, closed or dismissed */
+const POPOVER_CATEGORY = 'stateui-components.overlay';
 
 /** Why a popover closed itself: the Escape key, or a press outside it and its trigger */
 export type PopoverDismissReason = 'escape' | 'outside';
@@ -118,15 +123,22 @@ export function createPopover(options: PopoverOptions): PopoverHandle {
     if (options.anchor !== undefined) setAnchor(options.anchor);
 
     const isOpen = (): boolean => element.matches(':popover-open');
+    /** The tag of the component the popover is in, for the reports */
+    const owner = (): string => {
+        const root = element.getRootNode();
+        return root instanceof ShadowRoot ? root.host.localName : element.localName;
+    };
 
     const onKeyDown = (event: KeyboardEvent): void => {
         if (event.key !== 'Escape' || !dismissible()) return;
+        report(POPOVER_CATEGORY, 'Dismissed the popover of %s by %s', [owner(), 'escape']);
         close();
         onDismiss?.('escape');
     };
     const onPointerDown = (event: PointerEvent): void => {
         const path = event.composedPath();
         if (path.includes(element) || inside.some((target) => path.includes(target)) || !dismissible()) return;
+        report(POPOVER_CATEGORY, 'Dismissed the popover of %s by %s', [owner(), 'a press outside']);
         close();
         onDismiss?.('outside');
     };
@@ -141,6 +153,7 @@ export function createPopover(options: PopoverOptions): PopoverHandle {
     function open(): void {
         if (disposed || !element.isConnected || isOpen()) return;
         element.showPopover();
+        report(POPOVER_CATEGORY, 'Opened the popover of %s', [owner()]);
         announce(true);
         if (listening) return;
         listening = true;
@@ -151,6 +164,7 @@ export function createPopover(options: PopoverOptions): PopoverHandle {
         unlisten();
         if (!isOpen()) return;
         element.hidePopover();
+        report(POPOVER_CATEGORY, 'Closed the popover of %s', [owner()]);
         announce(false);
     }
     function announce(open: boolean): void {

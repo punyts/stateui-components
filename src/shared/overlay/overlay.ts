@@ -1,7 +1,11 @@
+import { report } from '@punyts/core';
 import { registerMixin } from '@punyts/stateui';
 import type { ControllerContext, Mixin } from '@punyts/stateui';
 
 type Scope = Parameters<Mixin>[2];
+
+/** The category of the overlays' reports: a dialog or popover opened, closed or dismissed, and where focus went */
+export const OVERLAY_CATEGORY = 'stateui-components.overlay';
 
 interface CommandHost {
     commands?: Record<string, () => void>;
@@ -55,13 +59,16 @@ function overlayMixin(element: Element, _attrs: Readonly<Record<string, unknown>
         }
         opener = deepActiveElement(dialog.ownerDocument);
         dialog.showModal();
+        report(OVERLAY_CATEGORY, 'Opened the dialog of %s: focus trapped, from %s', [scope.basePath, opener?.localName ?? 'nothing']);
     };
     const hide = (): void => {
         if (!dialog.open) return;
         dialog.close();
         const target = opener;
         opener = null;
-        if (target?.isConnected && deepActiveElement(dialog.ownerDocument) !== target) (target as HTMLElement).focus?.();
+        const returned = target?.isConnected === true;
+        if (returned && deepActiveElement(dialog.ownerDocument) !== target) (target as HTMLElement).focus?.();
+        report(OVERLAY_CATEGORY, 'Closed the dialog of %s: focus %s', [scope.basePath, returned ? `returned to ${target.localName}` : 'not returned']);
     };
     function sync(): void {
         const open = wantsOpen();
@@ -71,13 +78,15 @@ function overlayMixin(element: Element, _attrs: Readonly<Record<string, unknown>
         last = open;
         raise(open ? 'open' : 'close');
     }
-    const requestClose = (): void => {
-        if (dismissible()) scope.store.set(openPath, false);
+    const requestClose = (how: 'escape' | 'backdrop'): void => {
+        const allowed = dismissible();
+        report(OVERLAY_CATEGORY, allowed ? 'Dismissed the dialog of %s by %s' : 'Kept the dialog of %s open on %s: not dismissible', [scope.basePath, how]);
+        if (allowed) scope.store.set(openPath, false);
     };
 
     const onCancel = (event: Event): void => {
         event.preventDefault();
-        requestClose();
+        requestClose('escape');
     };
     const onNativeClose = (): void => {
         if (wantsOpen()) scope.store.set(openPath, false);
@@ -88,7 +97,7 @@ function overlayMixin(element: Element, _attrs: Readonly<Record<string, unknown>
     const onClick = (event: Event): void => {
         const fromBackdrop = pressedBackdrop && event.target === dialog;
         pressedBackdrop = false;
-        if (fromBackdrop) requestClose();
+        if (fromBackdrop) requestClose('backdrop');
     };
 
     dialog.addEventListener('cancel', onCancel);

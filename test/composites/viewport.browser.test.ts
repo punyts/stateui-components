@@ -334,4 +334,32 @@ describe('viewport in Chromium', () => {
         // Assert
         expect(presses).toBe(1);
     });
+
+    it('should pan by a drag that moves onto other content at once and is lifted there, so the next press is a press', async () => {
+        // Arrange: a panel over the canvas, outside the viewport, that the uncaptured pointer moves onto and is lifted over
+        const mounted = await mountViewport();
+        let presses = 0;
+        mounted.element.addEventListener('press', () => presses++);
+        const area = surface(mounted);
+        const panel = document.body.appendChild(document.createElement('div'));
+        const over = (type: string, x: number, y: number): void => {
+            const rect = area.getBoundingClientRect();
+            panel.dispatchEvent(new PointerEvent(type, { clientX: rect.left + x, clientY: rect.top + y, pointerId: 1, pointerType: 'touch', button: 0, bubbles: true, composed: true }));
+        };
+
+        // Act
+        pointer(area, 'pointerdown', 700, 500);
+        over('pointermove', 640, 460);
+        over('pointerup', 640, 460);
+        await settle();
+        pointer(area, 'pointerdown', 500, 300);
+        pointer(area, 'pointerup', 500, 300);
+        await settle();
+        panel.remove();
+
+        // Assert: the pan wrote its view, and the press after it was taken as one
+        expect(viewOf(mounted)).toEqual([-60, -40, 1]);
+        expect(presses).toBe(1);
+        expect(surface(mounted).hasAttribute('data-panning')).toBe(false);
+    });
 });

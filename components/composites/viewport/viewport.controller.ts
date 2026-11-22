@@ -1,3 +1,4 @@
+import { isReported, report } from '@punyts/core';
 import type { ControllerContext } from '@punyts/stateui';
 import { isLeftToViewport } from '../shared/gestures/gestures.js';
 
@@ -31,6 +32,8 @@ interface Gesture {
     moved: boolean;
     /** The gesture started on the empty area, not on the content */
     empty: boolean;
+    /** Two pointers were down at some point: the gesture pinched */
+    pinched: boolean;
 }
 
 /** How far a pointer moves before a press becomes a pan, in pixels */
@@ -50,6 +53,11 @@ const FIELDS = 'input, select, textarea, [contenteditable]';
  */
 const OWN_DRAGS = '[data-own-gestures]';
 const OWN_WHEEL = '[data-own-gestures="all"]';
+
+/** What a press, drag, pinch or wheel was decided to be, and who takes it */
+const GESTURES = 'stateui-components.gestures';
+/** The view settling after a gesture or a command */
+const VIEW = 'stateui-components.viewport';
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 const finite = (value: unknown, fallback: number): number => (typeof value === 'number' && Number.isFinite(value) ? value : fallback);
@@ -131,7 +139,8 @@ export default function controller({ element, store, basePath }: ControllerConte
         if (pending !== undefined) write(pending);
         pending = undefined;
     };
-    const raise = (): void => {
+    const raise = (cause: string): void => {
+        if (isReported(VIEW)) report(VIEW, 'Settled the view of %s after %s at zoom %s', [basePath, cause, view().zoom]);
         element.dispatchEvent(new CustomEvent('change', { detail: view(), bubbles: true, composed: true }));
     };
     const current = (): View => pending ?? view();
@@ -159,7 +168,7 @@ export default function controller({ element, store, basePath }: ControllerConte
         const at = middle();
         const from = current();
         write(zoomAround(from, from.zoom * factor, at.x, at.y));
-        raise();
+        raise('a zoom');
     };
 
     const fit = (value: unknown): void => {
@@ -172,7 +181,7 @@ export default function controller({ element, store, basePath }: ControllerConte
         const free = area();
         const zoom = clampZoom(Math.min(1, (free.width - 2 * margin) / width, (free.height - 2 * margin) / height));
         write({ x: free.left + (free.width - width * zoom) / 2, y: free.top + (free.height - height * zoom) / 2, zoom });
-        raise();
+        raise('fit');
     };
 
     /** Moves the view as little as it can for the box to stand inside the free area, its leading edges first */
@@ -192,7 +201,7 @@ export default function controller({ element, store, basePath }: ControllerConte
         const dy = shift(now.y + box.y * now.zoom, box.height * now.zoom, free.top, free.height);
         if (dx === 0 && dy === 0) return;
         write({ x: now.x + dx, y: now.y + dy, zoom: now.zoom });
-        raise();
+        raise('lookAt');
     };
 
     const host = element as Element & CommandHost;
@@ -237,66 +246,95 @@ export default function controller({ element, store, basePath }: ControllerConte
         }
         if (state.pointers.size === 2) Object.assign(state, pinchOf(state.pointers));
     };
+    /**
+     * The window follows the pointers of an open gesture too: a pointer the viewport has not captured (it captures one
+     * only once a drag starts, and the browser may refuse) can move onto content over the canvas, a panel, at once, and
+     * be lifted there. Each event may then come twice, through the viewport and the window; both handlers take that
+     */
+    const ownWindow = element.ownerDocument.defaultView;
+    const follow = (on: boolean): void => {
+        const listeners: [string, (event: PointerEvent) => void][] = [['pointermove', onPointerMove], ['pointerup', onPointerEnd], ['pointercancel', onPointerEnd]];
+        for (const [type, listener] of listeners) {
+            if (on) ownWindow?.addEventListener(type, listener as EventListener, true);
+            else ownWindow?.removeEventListener(type, listener as EventListener, true);
+        }
+    };
+    /** A pointer moved: past the slop a press becomes a pan (capturing the pointer), and two pointers pinch */
+    const onPointerMove = (event: PointerEvent): void => {
+        const state = gesture;
+        if (state === undefined || !state.pointers.has(event.pointerId)) return;
+        const at = local(event);
+        state.pointers.set(event.pointerId, at);
+        if (state.pointers.size >= 2) {
+            const pinch = pinchOf(state.pointers);
+            const zoomed = zoomAround(state.start, state.start.zoom * (pinch.distance / Math.max(1, state.distance)), state.middle.x, state.middle.y);
+            state.moved = true;
+            later({ ...zoomed, x: zoomed.x + pinch.middle.x - state.middle.x, y: zoomed.y + pinch.middle.y - state.middle.y });
+            return;
+        }
+        const dx = at.x - state.startX;
+        const dy = at.y - state.startY;
+        if (!state.moved && Math.hypot(dx, dy) < SLOP) return;
+        if (!state.moved) {
+            state.moved = true;
+            try {
+                part('.viewport')?.setPointerCapture(event.pointerId);
+            } catch (error) {
+                //a pointer the browser does not let it capture: the pan goes on, followed through the window
+                if (isReported(GESTURES)) report(GESTURES, 'Could not capture the pointer of a pan in %s: %s', [basePath, error instanceof Error ? error.name : 'unknown']);
+            }
+            part('.viewport')?.setAttribute('data-panning', '');
+            if (isReported(GESTURES)) report(GESTURES, 'Started a pan in %s by %s', [basePath, event.pointerType || 'pointer']);
+        }
+        later({ x: state.start.x + dx, y: state.start.y + dy, zoom: state.start.zoom });
+    };
+    /** A pointer lifted or lost: it leaves the gesture, and the last one ends it, as a press, a pan or a pinch */
+    const onPointerEnd = (event: PointerEvent): void => {
+        const state = gesture;
+        if (state === undefined || !state.pointers.delete(event.pointerId)) return;
+        if (state.pointers.size > 0) {
+            restart(state);
+            return;
+        }
+        gesture = undefined;
+        follow(false);
+        part('.viewport')?.removeAttribute('data-panning');
+        if (!state.moved) {
+            if (isReported(GESTURES)) report(GESTURES, 'Took a press in %s as %s', [basePath, state.empty ? 'a press on the empty area' : 'a press on the content']);
+            if (state.empty) element.dispatchEvent(new CustomEvent('press', { detail: {}, bubbles: true, composed: true }));
+            return;
+        }
+        swallowClick = event.type === 'pointerup';
+        //the click, if one comes, follows this event in the same task
+        setTimeout(() => {
+            swallowClick = false;
+        }, 0);
+        flush();
+        raise(state.pinched ? 'a pinch' : 'a pan');
+    };
 
     return {
         onPointerDown: (event: PointerEvent) => {
             if (read('pannable') === false || (event.pointerType === 'mouse' && event.button !== 0)) return;
-            if (inside(event, FIELDS) || (inside(event, OWN_DRAGS) && !isLeftToViewport(event))) return;
+            if (inside(event, FIELDS) || (inside(event, OWN_DRAGS) && !isLeftToViewport(event))) {
+                if (isReported(GESTURES)) report(GESTURES, 'Left a press in %s to its content: %s', [basePath, inside(event, FIELDS) ? 'a field' : 'content with its own gestures']);
+                return;
+            }
             const at = local(event);
             if (gesture === undefined) {
                 const target = event.composedPath()[0];
-                gesture = { pointers: new Map(), startX: at.x, startY: at.y, start: current(), distance: 0, middle: at, moved: false, empty: target === part('.viewport') || target === part('.world') };
+                gesture = { pointers: new Map(), startX: at.x, startY: at.y, start: current(), distance: 0, middle: at, moved: false, empty: target === part('.viewport') || target === part('.world'), pinched: false };
+                follow(true);
             }
             gesture.pointers.set(event.pointerId, at);
+            if (gesture.pointers.size === 2 && !gesture.pinched) {
+                gesture.pinched = true;
+                if (isReported(GESTURES)) report(GESTURES, 'Started a pinch in %s', [basePath]);
+            }
             restart(gesture);
         },
-        onPointerMove: (event: PointerEvent) => {
-            const state = gesture;
-            if (state === undefined || !state.pointers.has(event.pointerId)) return;
-            const at = local(event);
-            state.pointers.set(event.pointerId, at);
-            if (state.pointers.size >= 2) {
-                const pinch = pinchOf(state.pointers);
-                const zoomed = zoomAround(state.start, state.start.zoom * (pinch.distance / Math.max(1, state.distance)), state.middle.x, state.middle.y);
-                state.moved = true;
-                later({ ...zoomed, x: zoomed.x + pinch.middle.x - state.middle.x, y: zoomed.y + pinch.middle.y - state.middle.y });
-                return;
-            }
-            const dx = at.x - state.startX;
-            const dy = at.y - state.startY;
-            if (!state.moved && Math.hypot(dx, dy) < SLOP) return;
-            if (!state.moved) {
-                state.moved = true;
-                try {
-                    part('.viewport')?.setPointerCapture(event.pointerId);
-                } catch {
-                    //a pointer the browser no longer tracks cannot be captured; the pan goes on without it
-                }
-                part('.viewport')?.setAttribute('data-panning', '');
-            }
-            later({ x: state.start.x + dx, y: state.start.y + dy, zoom: state.start.zoom });
-        },
-        onPointerUp: (event: PointerEvent) => {
-            const state = gesture;
-            if (state === undefined || !state.pointers.delete(event.pointerId)) return;
-            if (state.pointers.size > 0) {
-                restart(state);
-                return;
-            }
-            gesture = undefined;
-            part('.viewport')?.removeAttribute('data-panning');
-            if (!state.moved) {
-                if (state.empty) element.dispatchEvent(new CustomEvent('press', { detail: {}, bubbles: true, composed: true }));
-                return;
-            }
-            swallowClick = event.type === 'pointerup';
-            //the click, if one comes, follows this event in the same task
-            setTimeout(() => {
-                swallowClick = false;
-            }, 0);
-            flush();
-            raise();
-        },
+        onPointerMove,
+        onPointerUp: onPointerEnd,
         onWheel: (event: WheelEvent) => {
             if (read('pannable') === false || inside(event, OWN_WHEEL)) return;
             event.preventDefault();
@@ -314,7 +352,7 @@ export default function controller({ element, store, basePath }: ControllerConte
             wheelEnd = setTimeout(() => {
                 if (disposed) return;
                 flush();
-                raise();
+                raise('a wheel');
             }, 150);
         },
         onKeyDown: (event: KeyboardEvent) => {
@@ -324,7 +362,7 @@ export default function controller({ element, store, basePath }: ControllerConte
             const move = moves[event.key];
             if (move !== undefined) {
                 write({ x: from.x + move[0], y: from.y + move[1], zoom: from.zoom });
-                raise();
+                raise('a key');
             } else if (event.key === '+' || event.key === '=') zoomBy(STEP);
             else if (event.key === '-') zoomBy(1 / STEP);
             else if (event.key === '0') zoomBy(1 / from.zoom);
@@ -337,6 +375,7 @@ export default function controller({ element, store, basePath }: ControllerConte
             clearTimeout(wheelEnd);
             element.removeEventListener('click', onClickCapture, true);
             element.removeEventListener('dragstart', onDragStart, true);
+            follow(false);
             delete host.commands;
         }
     };

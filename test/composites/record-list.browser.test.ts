@@ -86,7 +86,7 @@ describe('recordList in Chromium', () => {
         const mounted = await mountList(people(5), { total: 5, rowHeight: 'lg', key: 'id', overscan: 0 });
 
         // Assert
-        expect(slotElements(mounted)).toHaveLength(10);
+        expect(slotElements(mounted)).toHaveLength(5);
         expect(textsFrom(mounted, 0, 5)).toEqual(names(0, 5));
         expect(slotElements(mounted).filter((slot) => !slot.hidden)).toHaveLength(5);
     });
@@ -104,7 +104,7 @@ describe('recordList in Chromium', () => {
         // Assert
         expect(textsFrom(mounted, 9970, 25)).toEqual(names(9970, 25));
         expect(slotElements(mounted)).toHaveLength(30);
-        expect(slotElements(mounted).every((slot, i) => slot === before[i])).toBe(true);
+        expect(slotElements(mounted).every((slot) => before.includes(slot))).toBe(true);
         expect(on).not.toHaveBeenCalled();
         expect(off).not.toHaveBeenCalled();
     });
@@ -263,7 +263,7 @@ describe('recordList in Chromium', () => {
         expect(filtered).toEqual(['Name 4', 'Name 2', 'Name 9', '']);
         expect(textsFrom(mounted, 0, 3)).toEqual(['Name 1', 'Name 0', '']);
         expect(mounted.store.get<number>('$.app.count')).toBe(2);
-        expect(slotElements(mounted).every((slot, i) => slot === before[i])).toBe(true);
+        expect(slotElements(mounted).every((slot) => before.includes(slot))).toBe(true);
     });
 
     it('should rebuild the pool from an edited row template', async () => {
@@ -300,7 +300,7 @@ describe('recordList in Chromium', () => {
 
         // Assert
         expect(english).toBe('Hello');
-        expect(slotElements(mounted).every((slot, i) => slot === before[i])).toBe(true);
+        expect(slotElements(mounted).every((slot) => before.includes(slot))).toBe(true);
         expect(slotText(before[0] as HTMLElement)).toBe('Hallo');
     });
 

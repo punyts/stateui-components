@@ -85,15 +85,55 @@ describe('createSlotPool', () => {
         expect([30, 31, 32, 33, 34, 35, 36].map((position) => pool.keyOfSlot(pool.slotAt(position) as number))).toEqual(['r30', 'r31', 'r32', 'r33', 'r34', 'r35', 'r36']);
     });
 
-    it('should hide a slot that has no record', async () => {
+    it('should make a pool that more than doubles in one write of the slots, so the view hears one change', async () => {
         // Arrange
-        const { store } = setup(2);
+        const { store, pool } = setup(100);
         store.set(`${RUNTIME}.window`, { first: 0, count: 4 });
+        await flush();
+        const heard: string[] = [];
+        store.on('$.app.slots', (_path, _value, _old, action) => heard.push(action));
 
         // Act
+        store.set(`${RUNTIME}.window.count`, 40);
         await flush();
 
         // Assert
+        expect(pool.size()).toBe(42);
+        expect(heard).toEqual(['replace']);
+        expect(rowName(store, 0)).toBe('Name 0');
+        expect(rowName(store, 39)).toBe('Name 39');
+        expect(store.get(`${RUNTIME}.slots.39.slotIndex`)).toBe(39);
+    });
+
+    it('should make no more slots than there are records, and grow when more come', async () => {
+        // Arrange
+        const { store, pool } = setup(2);
+        store.set(`${RUNTIME}.window`, { first: 0, count: 4 });
+        await flush();
+        const before = pool.size();
+
+        // Act
+        (store.state as { data: { records: { id: string; name: string }[] } }).data.records.push({ id: 'r2', name: 'Name 2' });
+        await flush();
+
+        // Assert
+        expect(before).toBe(2);
+        expect(pool.size()).toBe(3);
+        expect(rowName(store, 2)).toBe('Name 2');
+    });
+
+    it('should keep its slots and hide the one whose record is gone', async () => {
+        // Arrange
+        const { store, pool } = setup(4);
+        store.set(`${RUNTIME}.window`, { first: 0, count: 4 });
+        await flush();
+
+        // Act
+        store.delete('$.data.records.3');
+        await flush();
+
+        // Assert
+        expect(pool.size()).toBe(4);
         expect(store.get(`${RUNTIME}.slots.3.slotIndex`)).toBe(-1);
         expect(rowName(store, 3)).toBeUndefined();
     });

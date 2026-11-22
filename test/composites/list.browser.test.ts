@@ -216,7 +216,8 @@ describe('list in Chromium', () => {
         // Act and Assert
         array().push({ id: 'new', description: 'New' });
         await flush();
-        expect(shown(mounted, 5)).toEqual([...texts(0, 3), 'New', '']);
+        expect(shown(mounted, 4)).toEqual([...texts(0, 3), 'New']);
+        const grown = slotElements(mounted);
 
         array().shift();
         await flush();
@@ -227,9 +228,10 @@ describe('list in Chromium', () => {
         await flush();
         expect(shown(mounted, 3)).toEqual(['New', 'Line 2', 'Line 1']);
 
-        expect(slotElements(mounted)).toHaveLength(slots.length);
-        expect(slotElements(mounted).every((slot, i) => slot === slots[i])).toBe(true);
-        expect(Object.keys(mounted.store.get<Record<string, unknown>>(`${BODY}.slots`))).toHaveLength(slots.length);
+        expect(slots).toHaveLength(3);
+        expect(new Set(slotElements(mounted))).toEqual(new Set(grown));
+        expect(slots.every((slot) => grown.includes(slot))).toBe(true);
+        expect(Object.keys(mounted.store.get<Record<string, unknown>>(`${BODY}.slots`))).toHaveLength(grown.length);
     });
 
     it('should show _empty when there are no items and no empty slot, and hide it when an item arrives', async () => {

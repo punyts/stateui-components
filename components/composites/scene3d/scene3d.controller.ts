@@ -118,6 +118,9 @@ const THEME_PATHS = ['$.theme.active', '$.theme.active.$all'];
  * named by `_label`, so the keyboard (Enter, Space), a screen reader and `ui_interact` reach it; while any node is
  * interactive the scene box's role is `group` (its buttons are reached), else `img`
  */
+/** The category of the scene's reports, for stateui-3d too (it has no reporter): the chunk loaded, the scene made and disposed, each issue */
+const CATEGORY = 'stateui-components.scene3d';
+
 export default function controller({ element, store, basePath }: ControllerContext) {
     const read = (path: string): JsonValue | undefined => store.get<JsonValue | undefined>(path) ?? undefined;
     const watched = SCENE_PROPERTIES.flatMap((name) => [`${basePath}.${name}`, `${basePath}.${name}.$all`]);
@@ -142,6 +145,7 @@ export default function controller({ element, store, basePath }: ControllerConte
     const onIssue = ({ kind, path, reason, node }: Scene3dIssue): void => {
         if (disposed) return;
         const code = kind === 'file' ? 'SUI-RUN-FILE' : 'SUI-RUN-3D';
+        report(CATEGORY, 'The scene %s cannot draw %s: %s, %s %s', [basePath, path, code, kind, reason.split(/[\s:]/)[0] ?? reason]);
         const error = buildError(code, { component: node ?? 'model', path, reason, statePath: path });
         report.error(error.message, { code, path });
     };
@@ -322,10 +326,12 @@ export default function controller({ element, store, basePath }: ControllerConte
         try {
             scene = chunk.createScene3d(surface, { resolveColor: resolve, reducedMotion: readReducedMotion(), onStatus, readFile, onIssue, onCamera, keyTarget: box, onEvent });
         } catch (error) {
+            report(CATEGORY, 'Could not make the scene %s: %s', [basePath, isScene3dError(error) ? error.code : 'script_error']);
             showFallback(isScene3dError(error) ? error.code : `script_error: ${error instanceof Error ? error.message : String(error)}`);
             return;
         }
         element.removeAttribute('data-fallback');
+        report(CATEGORY, 'Made the scene %s', [basePath]);
         // The context events do not bubble: they are heard on the way down to the renderer's canvas in the surface
         surfaceOf = surface;
         surface.addEventListener('webglcontextlost', onContextLost, true);
@@ -340,11 +346,15 @@ export default function controller({ element, store, basePath }: ControllerConte
     //the element is in the page once the controller has returned, so the request bubbles to the dispatcher a microtask later
     queueMicrotask(() => {
         if (disposed) return;
+        const asked = performance.now();
+        const took = (): number => Math.round((performance.now() - asked) * 10) / 10;
         requestScene3dChunk(element).then(
             (chunk) => {
+                report(CATEGORY, 'Loaded the 3D runtime chunk for %s in %s ms', [basePath, took()]);
                 if (!disposed) start(chunk);
             },
             (failure: Load3dFailure) => {
+                report(CATEGORY, 'Could not load the 3D runtime chunk for %s: %s, after %s ms', [basePath, reasonOf(failure), took()]);
                 if (!disposed) showFallback(reasonOf(failure));
             }
         );
@@ -358,6 +368,7 @@ export default function controller({ element, store, basePath }: ControllerConte
             repeats.dispose();
             surfaceOf?.removeEventListener('webglcontextlost', onContextLost, true);
             surfaceOf?.removeEventListener('webglcontextrestored', onContextRestored, true);
+            if (scene !== undefined) report(CATEGORY, 'Disposed the scene %s', [basePath]);
             scene?.dispose();
             scene = undefined;
         }

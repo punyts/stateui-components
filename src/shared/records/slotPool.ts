@@ -1,4 +1,4 @@
-import { report } from '@punyts/core';
+import { isReported, report } from '@punyts/core';
 import { RUNTIME_PATHS, applyLinks, disposeLinks, resolveRowLinks, runtimePath } from '@punyts/stateui-app/core';
 import type { Link, Node } from '@punyts/stateui-app/core';
 import { isPlaceholderKey } from './placeholder.js';
@@ -124,6 +124,12 @@ interface Assigned {
 
 const NO_META: ShownMeta = { level: 0, expanded: -1, setsize: 0, posinset: 0, label: '' };
 
+/** The `slotOrder` of a slot that shows no position: after every shown slot */
+export const UNSHOWN_ORDER = Number.MAX_SAFE_INTEGER;
+
+/** The category of the record views' reports: the pool's size, its window and the slots a refresh recycled */
+const CATEGORY = 'stateui-components.records';
+
 const isEntry = (value: unknown): value is Entry => value !== null && typeof value === 'object' && !Array.isArray(value);
 
 /** The template with the value of every `_` property blanked: equal structures differ only in content, such as a translation */
@@ -169,8 +175,9 @@ export function removeLinked(tree: Entry, nodePath: string, links: readonly Link
  * `p % N`, or the next free one. So a window move recycles only the slots whose record left the window, and a focused
  * element in a slot stays with its record.
  *
- * Recycling is one store link: `slots.<i>.row` is re-pointed at the record, and one write of `slots.<i>.slotIndex` gives
- * the position. The template's `$row.x` links are rewritten once per slot to fixed `allowMissing` aliases under
+ * Recycling is one store link: `slots.<i>.row` is re-pointed at the record, and a write of `slots.<i>.slotIndex` gives
+ * the position. `slotOrder` is the same position, or `UNSHOWN_ORDER` for a slot that shows none: the views repeat the
+ * slots sorted by it, so the document holds the rows in the order shown and the empty slots after them. The template's `$row.x` links are rewritten once per slot to fixed `allowMissing` aliases under
  * `slots.<i>.row.x`, so they follow whatever `row` points at, a missing field reads as `undefined`, and a slot with no
  * record points at the shared empty record. Nothing is created or listened to when the window moves.
  *
@@ -214,10 +221,12 @@ export function createSlotPool(options: SlotPoolOptions): SlotPool {
         return { tree, links: rewritten.links };
     };
 
-    const createSlot = (i: number): Slot => {
+    /** The node of slot `i` as it starts, showing no position, and the links its `$row` fields take */
+    const slotTree = (i: number): { path: string; tree: Entry; links: Link[] } => {
         const path = slotPath(i);
         const { tree, links } = rewrite(templateJson, path);
         tree['slotIndex'] = -1;
+        tree['slotOrder'] = UNSHOWN_ORDER;
         tree['slotSelected'] = false;
         tree['slotTab'] = false;
         tree['slotPending'] = false;
@@ -227,12 +236,40 @@ export function createSlotPool(options: SlotPoolOptions): SlotPool {
         tree['slotSetsize'] = NO_META.setsize;
         tree['slotPosinset'] = NO_META.posinset;
         tree['slotLabel'] = NO_META.label;
-        store.set(path, tree);
+        return { path, tree, links };
+    };
+
+    /** Points a slot node already in the store at the empty record and makes its links */
+    const linkSlot = (path: string, links: Link[]): Slot => {
         store.link(rowLink(path), RUNTIME_PATHS.empty);
         for (const error of applyLinks(store, links)) {
             report.error(error.message, { code: error.code, path });
         }
         return { path, links, position: -1, key: undefined, target: RUNTIME_PATHS.empty, selected: false, tab: false, pending: false, offset: 0, shown: NO_META };
+    };
+
+    const createSlot = (i: number): Slot => {
+        const { path, tree, links } = slotTree(i);
+        store.set(path, tree);
+        return linkSlot(path, links);
+    };
+
+    /**
+     * Makes the pool `wanted` slots in one write of the slots object. Adding slots one at a time makes the view's repeat
+     * reconcile every slot for each one; one replace makes it reconcile once, keeping the element of each slot whose
+     * index stays. The slots that were there lose their links first and show their positions again in the refresh
+     */
+    const rebuildAll = (wanted: number): void => {
+        for (const slot of slots) {
+            store.unlink(rowLink(slot.path));
+            disposeLinks(store, slot.links);
+        }
+        const made = Array.from({ length: wanted }, (_, i) => slotTree(i));
+        const all: Entry = {};
+        for (const [i, { tree }] of made.entries()) all[String(i)] = tree;
+        store.replace(slotsPath, all);
+        slots = made.map(({ path, links }) => linkSlot(path, links));
+        dirty = true;
     };
 
     const destroySlot = (slot: Slot): void => {
@@ -259,6 +296,7 @@ export function createSlotPool(options: SlotPoolOptions): SlotPool {
     const place = (slot: Slot, position: number): void => {
         if (slot.position === position) return;
         slot.position = position;
+        store.set(`${slot.path}.slotOrder`, position >= 0 ? position : UNSHOWN_ORDER);
         store.set(`${slot.path}.slotIndex`, position);
     };
 
@@ -338,6 +376,7 @@ export function createSlotPool(options: SlotPoolOptions): SlotPool {
             for (const slot of slots) store.apply(slot.path, JSON.parse(JSON.stringify(content)) as Entry);
             return;
         }
+        if (isReported(CATEGORY)) report(CATEGORY, 'Rebuilt the slots of %s: the row template changed', [nodePath]);
         destroyAll();
         dirty = true;
     };
@@ -397,13 +436,20 @@ export function createSlotPool(options: SlotPoolOptions): SlotPool {
         if (disposed) return;
         if (templateDirty) syncTemplate();
         const win = readWindow(store.get<unknown>(windowPath));
-        const wanted = templateJson === '' ? 0 : poolSize(win.count, overscan(), MAX_SLOTS);
+        const total = index.size();
+        //no more slots than positions: an empty list's viewport would otherwise render a pool of hidden rows. A pool is
+        //not made smaller for records that left, so a list that filters keeps its slots for the records coming back
+        const wanted = templateJson === '' ? 0 : Math.min(poolSize(win.count, overscan(), MAX_SLOTS), Math.max(total, slots.length));
         if (wanted !== slots.length) {
+            if (isReported(CATEGORY)) report(CATEGORY, 'Resized the slot pool of %s from %s to %s', [nodePath, slots.length, wanted]);
             ensure(slotsPath);
+            //a pool that starts or more than doubles is made in one write; a pinned record keeps its slot, so not then
+            if (wanted > slots.length && pinKey === undefined && wanted >= slots.length * 2) {
+                rebuildAll(wanted);
+            }
             while (slots.length > wanted) destroySlot(slots.pop() as Slot);
             while (slots.length < wanted) slots.push(createSlot(slots.length));
         }
-        const total = index.size();
         if (total !== shownCount) {
             shownCount = total;
             store.set(countPath, total);
@@ -437,6 +483,7 @@ export function createSlotPool(options: SlotPoolOptions): SlotPool {
             mark(held);
             markMeta(held);
         }
+        let recycled = 0;
         for (const { position, slot, read, key: readKey } of assign(ring, start, span, total)) {
             if (position >= total) {
                 point(slot, RUNTIME_PATHS.empty);
@@ -448,6 +495,7 @@ export function createSlotPool(options: SlotPoolOptions): SlotPool {
                 continue;
             }
             if (!dirty && slot.position === position) continue;
+            recycled += 1;
             const key = read ? readKey : index.keyAt(position);
             const target = key === undefined ? undefined : index.pathOf(key);
             slot.key = key;
@@ -464,6 +512,9 @@ export function createSlotPool(options: SlotPoolOptions): SlotPool {
         }
         for (const slot of slots) markOffset(slot);
         markTab(win.first);
+        if (isReported(CATEGORY)) {
+            report(CATEGORY, 'Showed %s: window %s+%s of %s, %s slots, %s recycled', [nodePath, win.first, win.count, total, size, recycled]);
+        }
         dirty = false;
         reload = false;
         if (lost !== undefined) onPinLost?.(lost);
@@ -545,6 +596,7 @@ export function createSlotPool(options: SlotPoolOptions): SlotPool {
         dispose() {
             if (disposed) return;
             disposed = true;
+            if (isReported(CATEGORY)) report(CATEGORY, 'Disposed the slot pool of %s: %s slots', [nodePath, slots.length]);
             store.off(windowPaths, onWindow);
             store.off(templatePaths, onTemplate);
             destroyAll();

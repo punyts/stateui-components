@@ -9,6 +9,9 @@ interface CommandHost {
     commands?: Record<string, () => void>;
 }
 
+/** The category of the form's reports: validations, submits, resets and commits, with field names and counts, never values */
+const CATEGORY = 'stateui-components.form';
+
 const MODES: readonly FieldManaged[] = ['blur', 'change', 'submit'];
 
 /** How many times a submit asks the fields again for work under way before it validates what they hold */
@@ -84,6 +87,7 @@ export default function controller({ element, store, basePath }: ControllerConte
         for (const field of fields.values()) if (field.validate() !== '') keys.push(field.key);
         failed = keys.length > 0;
         validated = true;
+        report(CATEGORY, 'Validated %s: %s fields, %s with an issue', [basePath, fields.size, keys.length, keys]);
         sync();
         if (keys.length > 0) element.dispatchEvent(new CustomEvent('invalid', { detail: { keys }, bubbles: true, composed: true }));
         return keys;
@@ -125,6 +129,7 @@ export default function controller({ element, store, basePath }: ControllerConte
             finishSubmit();
             return;
         }
+        report(CATEGORY, 'Waiting on %s field(s) of %s before the submit', [works.length, basePath]);
         waiting = true;
         failed = false;
         sync();
@@ -135,6 +140,7 @@ export default function controller({ element, store, basePath }: ControllerConte
         const keys = validate();
         submitting = false;
         if (keys.length > 0) {
+            report(CATEGORY, 'Refused the submit of %s: %s field(s) with an issue', [basePath, keys.length]);
             sync();
             return;
         }
@@ -147,6 +153,7 @@ export default function controller({ element, store, basePath }: ControllerConte
             values[field.key] = copyValue(field.value);
         }
         submitted = true;
+        report(CATEGORY, 'Submitted %s: %s field(s)', [basePath, Object.keys(values).length]);
         sync();
         element.dispatchEvent(new CustomEvent('submitted', { detail: { values }, bubbles: true, composed: true }));
     };
@@ -165,6 +172,7 @@ export default function controller({ element, store, basePath }: ControllerConte
         failed = false;
         validated = false;
         submitted = false;
+        report(CATEGORY, 'Reset %s: %s field(s)', [basePath, fields.size]);
         sync();
     };
     const commit = (): void => {
@@ -172,6 +180,7 @@ export default function controller({ element, store, basePath }: ControllerConte
         for (const field of fields.values()) field.rebase();
         busy = false;
         submitted = false;
+        report(CATEGORY, 'Committed %s: %s field(s) took their values as the baseline', [basePath, fields.size]);
         sync();
     };
     const onConnect = (event: Event): void => {

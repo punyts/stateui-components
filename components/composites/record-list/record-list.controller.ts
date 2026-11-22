@@ -1,4 +1,4 @@
-import { report } from '@punyts/core';
+import { isReported, report } from '@punyts/core';
 import type { ControllerContext } from '@punyts/stateui';
 import { buildError } from '@punyts/stateui-app';
 import { runtimePath } from '@punyts/stateui-app/core';
@@ -183,6 +183,7 @@ export default function controller({ element, store, basePath }: ControllerConte
         if (!sameWindow(next, readWindow(store.get<unknown>(shownPath)))) store.set(shownPath, { first: next.first, count: next.count });
         if (sameWindow(next, raised)) return;
         raised = next;
+        if (isReported('stateui-components.records')) report('stateui-components.records', 'Raised range of %s: %s+%s of %s', [basePath, next.first, next.count, index.size()]);
         element.dispatchEvent(new CustomEvent('range', { detail: { ...next, total: index.size() }, bubbles: true, composed: true }));
     };
     const syncRowcount = (): void => {
