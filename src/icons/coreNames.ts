@@ -9,6 +9,7 @@ export const CORE_ICON_NAMES: readonly string[] = [
     'arrow-back-up',
     'arrow-forward-up',
     'arrow-up',
+    'badge-cc',
     'blockquote',
     'bold',
     'brush',
@@ -46,7 +47,9 @@ export const CORE_ICON_NAMES: readonly string[] = [
     'list',
     'list-check',
     'list-numbers',
+    'maximize',
     'menu-2',
+    'minimize',
     'minus',
     'oval',
     'paperclip',
@@ -64,5 +67,10 @@ export const CORE_ICON_NAMES: readonly string[] = [
     'table-minus',
     'trash',
     'upload',
-    'x'
+    'volume',
+    'volume-off',
+    'x',
+    'zoom-in',
+    'zoom-out',
+    'zoom-reset'
 ];

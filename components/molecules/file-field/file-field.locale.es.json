@@ -4,6 +4,11 @@
     "_choose": "Elegir archivos",
     "_drop": "Suelta los archivos aquí o",
     "_remove": "Quitar {name}",
+    "_crop": "Recortar {name}",
+    "_cropFrame": "Imagen para recortar: arrástrala o usa las flechas para colocarla",
+    "_zoom": "Zoom",
+    "_useCrop": "Usar imagen",
+    "_cancelCrop": "Cancelar",
     "_errors": {
         "required": "Añade un archivo",
         "accept": "Este tipo de archivo no se acepta",

@@ -5,6 +5,17 @@
             <span class="drop-hint">{{ $._drop }}</span>
             <button id="control" class="choose" type="button" disabled="{{ $.disabled || $.locked || $.readonly }}" aria-describedby="{{ describedBy($._help, $.message) }}" aria-invalid="{{ $.error !== '' ? 'true' : null }}" onclick="{{ onChoose }}" onblur="{{ onBlur }}">{{ $._choose }}</button>
         </div>
+        <div class="crop" if="{{ $.cropping }}" role="group" aria-label="{{ $.cropLabel }}">
+            <canvas class="crop-frame" tabindex="0" role="img" aria-label="{{ $._cropFrame }}" width="{{ $.cropWidth }}" height="{{ $.cropHeight }}" onpointerdown="{{ onCropDown }}" onpointermove="{{ onCropMove }}" onpointerup="{{ onCropUp }}" onpointercancel="{{ onCropUp }}" onkeydown="{{ onCropKey }}"></canvas>
+            <label class="crop-zoom">
+                <span>{{ $._zoom }}</span>
+                <input class="zoom" type="range" min="1" max="4" step="0.05" value="{{ $.cropZoom }}" oninput="{{ onCropZoom }}" />
+            </label>
+            <div class="crop-actions">
+                <button class="action crop-cancel" type="button" onclick="{{ onCropCancel }}">{{ $._cancelCrop }}</button>
+                <button class="action crop-use" type="button" onclick="{{ onCropUse }}">{{ $._useCrop }}</button>
+            </div>
+        </div>
         <input class="picker" type="file" tabindex="-1" aria-hidden="true" multiple="{{ $.maxFiles > 1 }}" accept="{{ $.types }}" disabled="{{ $.disabled || $.locked || $.readonly }}" onchange="{{ onPicked }}" />
         <ul class="files" if="{{ $.count > 0 }}">
             <li class="file" repeat="{{ $k,$i,$v in $.rows }}" key="{{ $k }}" data-state="{{ $v.state }}">

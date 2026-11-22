@@ -4,6 +4,11 @@
     "_choose": "Choisir des fichiers",
     "_drop": "Déposez des fichiers ici ou",
     "_remove": "Supprimer {name}",
+    "_crop": "Recadrer {name}",
+    "_cropFrame": "Image à recadrer : faites-la glisser ou utilisez les flèches pour la placer",
+    "_zoom": "Zoom",
+    "_useCrop": "Utiliser l’image",
+    "_cancelCrop": "Annuler",
     "_errors": {
         "required": "Ajoutez un fichier",
         "accept": "Ce type de fichier n’est pas accepté",

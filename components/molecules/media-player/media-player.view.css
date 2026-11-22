@@ -1,0 +1,89 @@
+:host {
+    display: block;
+    min-inline-size: 0;
+}
+
+.player {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    color: var(--ui-media-on);
+    background: var(--ui-media-fill);
+    border-radius: var(--ui-media-radius);
+}
+
+.media {
+    display: block;
+    inline-size: 100%;
+}
+
+video.media {
+    aspect-ratio: 16 / 9;
+    background: var(--ui-media-fill);
+    cursor: pointer;
+}
+
+/* The native controls stay off; an audio element without them takes no room */
+audio.media {
+    display: none;
+}
+
+.failed {
+    margin: 0;
+    padding: var(--ui-media-padding);
+    font-size: var(--ui-text-caption-size);
+}
+
+.controls {
+    display: flex;
+    align-items: center;
+    gap: var(--ui-media-gap);
+    padding: var(--ui-media-padding);
+}
+
+.control {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--ui-size-control-sm);
+    block-size: var(--ui-size-control-sm);
+    margin: 0;
+    padding: 0;
+    color: inherit;
+    background: transparent;
+    border: 0;
+    border-radius: var(--ui-radius-full);
+    cursor: pointer;
+}
+
+.control:hover:not(:disabled),
+.control[aria-pressed="true"] {
+    background: color-mix(in srgb, var(--ui-media-on) 20%, transparent);
+}
+
+.control:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.control:focus-visible,
+.seek:focus-visible {
+    outline: 2px solid var(--ui-color-focus);
+    outline-offset: 2px;
+}
+
+.seek {
+    flex: 1;
+    min-inline-size: 0;
+    margin: 0;
+    accent-color: var(--ui-media-progress);
+}
+
+.time {
+    flex: none;
+    font-family: var(--ui-text-caption-family);
+    font-size: var(--ui-text-caption-size);
+    font-variant-numeric: tabular-nums;
+}

@@ -1,0 +1,11 @@
+{
+    "_label": "Lecteur",
+    "_play": "Lire",
+    "_pause": "Pause",
+    "_seek": "Position",
+    "_mute": "Couper le son",
+    "_unmute": "Activer le son",
+    "_captions": "Sous-titres",
+    "_fullscreen": "Plein écran",
+    "_failed": "Ce média ne peut pas être lu"
+}

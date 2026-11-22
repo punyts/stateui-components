@@ -1,0 +1,11 @@
+{
+    "_label": "Reproductor",
+    "_play": "Reproducir",
+    "_pause": "Pausa",
+    "_seek": "Posición",
+    "_mute": "Silenciar",
+    "_unmute": "Activar sonido",
+    "_captions": "Subtítulos",
+    "_fullscreen": "Pantalla completa",
+    "_failed": "Este contenido no se puede reproducir"
+}

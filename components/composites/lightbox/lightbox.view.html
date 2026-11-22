@@ -1,0 +1,30 @@
+<dialog class="dialog" tabindex="-1" overlay="" aria-label="{{ $._label }}" onkeydown="{{ onKeyDown }}">
+    <div class="frame">
+        <div class="bar">
+            <span class="progress" aria-live="polite">{{ $.progressText }}</span>
+            <span class="spacer"></span>
+            <button class="tool zoom-out" type="button" aria-label="{{ $._zoomOut }}" disabled="{{ $.zoom &lt;= 1 }}" onclick="{{ onZoomOut }}">
+                <ui-icon size="sm" name="zoom-out"></ui-icon>
+            </button>
+            <button class="tool zoom-reset" type="button" aria-label="{{ $._zoomReset }}" disabled="{{ $.zoom === 1 }}" onclick="{{ onZoomReset }}">
+                <ui-icon size="sm" name="zoom-reset"></ui-icon>
+            </button>
+            <button class="tool zoom-in" type="button" aria-label="{{ $._zoomIn }}" disabled="{{ $.zoom &gt;= 4 }}" onclick="{{ onZoomIn }}">
+                <ui-icon size="sm" name="zoom-in"></ui-icon>
+            </button>
+            <button class="tool close" type="button" aria-label="{{ $._close }}" onclick="{{ onClose }}">
+                <ui-icon size="sm" name="x"></ui-icon>
+            </button>
+        </div>
+        <div class="stage" id="stage" data-zoomed="{{ $.zoom &gt; 1 ? '' : null }}" ondblclick="{{ onToggleZoom }}" onpointerdown="{{ onPointerDown }}" onpointermove="{{ onPointerMove }}" onpointerup="{{ onPointerUp }}" onpointercancel="{{ onPointerUp }}">
+            <img class="picture" if="{{ $.src }}" src="{{ $.src }}" alt="{{ $.alt }}" draggable="false" />
+        </div>
+        <button class="nav previous" type="button" if="{{ $.count &gt; 1 }}" aria-label="{{ $._previous }}" disabled="{{ $.atStart }}" onclick="{{ onPrevious }}">
+            <ui-icon name="chevron-left"></ui-icon>
+        </button>
+        <button class="nav next" type="button" if="{{ $.count &gt; 1 }}" aria-label="{{ $._next }}" disabled="{{ $.atEnd }}" onclick="{{ onNext }}">
+            <ui-icon name="chevron-right"></ui-icon>
+        </button>
+        <p class="caption" if="{{ $.caption }}">{{ $.caption }}</p>
+    </div>
+</dialog>

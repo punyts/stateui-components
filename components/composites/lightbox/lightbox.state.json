@@ -1,0 +1,39 @@
+{
+    "summary": "A full-screen viewer over a set of pictures with previous, next, zoom and captions, opened by a command",
+    "category": "overlays",
+    "purposes": ["view photos full screen", "enlarge a product picture", "page through a photo gallery at full size", "zoom into a picture to see detail"],
+    "events": ["open", "close", "change"],
+    "commands": ["open", "close", "next", "previous"],
+    "tokenGroup": "lightbox",
+    "tokens": {
+        "padding": "{space.inset.md}",
+        "gap": "{space.gap.sm}",
+        "scrim": "{color.text.base}",
+        "on": "{color.surface.base}",
+        "control": "{size.control.md}"
+    },
+    "properties": {
+        "images": { "type": ["object", "array"], "default": {} },
+        "active": { "type": "string", "default": "" },
+        "loop": { "type": "boolean", "default": false },
+        "open": { "type": "boolean", "default": false },
+        "dismissible": { "type": "boolean", "default": true },
+        "index": { "type": "integer", "default": -1, "runtime": true },
+        "count": { "type": "integer", "default": 0, "runtime": true },
+        "src": { "type": "string", "default": "", "runtime": true },
+        "alt": { "type": "string", "default": "", "runtime": true },
+        "caption": { "type": "string", "default": "", "runtime": true },
+        "progressText": { "type": "string", "default": "", "runtime": true },
+        "zoom": { "type": "number", "default": 1, "runtime": true },
+        "atStart": { "type": "boolean", "default": true, "runtime": true },
+        "atEnd": { "type": "boolean", "default": true, "runtime": true },
+        "_label": { "type": "string", "kind": "content", "default": "Pictures" },
+        "_previous": { "type": "string", "kind": "content", "default": "Previous picture" },
+        "_next": { "type": "string", "kind": "content", "default": "Next picture" },
+        "_close": { "type": "string", "kind": "content", "default": "Close" },
+        "_zoomIn": { "type": "string", "kind": "content", "default": "Zoom in" },
+        "_zoomOut": { "type": "string", "kind": "content", "default": "Zoom out" },
+        "_zoomReset": { "type": "string", "kind": "content", "default": "Fit to the screen" },
+        "_progress": { "type": "string", "kind": "content", "default": "{index} of {count}" }
+    }
+}

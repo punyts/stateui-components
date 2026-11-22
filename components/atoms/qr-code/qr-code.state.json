@@ -1,0 +1,20 @@
+{
+    "summary": "A QR code of a text or link, drawn as one SVG path with its quiet zone, at four error correction levels",
+    "category": "content",
+    "purposes": ["show a QR code for a link", "put a scannable code on a ticket or booking", "let a phone open a page by scanning", "share wifi or contact details as a QR code"],
+    "tokenGroup": "qrcode",
+    "tokens": {
+        "size": "calc({size.control.lg} * 4)",
+        "dark": "{color.text.base}",
+        "light": "{color.surface.base}",
+        "radius": "{radius.sm}"
+    },
+    "properties": {
+        "value": { "type": "string", "default": "" },
+        "level": { "type": "string", "values": ["low", "medium", "quartile", "high"], "default": "medium" },
+        "_label": { "type": "string", "kind": "content", "default": "QR code" },
+        "path": { "type": "string", "default": "", "runtime": true },
+        "extent": { "type": "integer", "default": 0, "runtime": true },
+        "overflow": { "type": "boolean", "default": false, "runtime": true, "reflect": true }
+    }
+}

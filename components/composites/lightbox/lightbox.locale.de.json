@@ -1,0 +1,10 @@
+{
+    "_label": "Bilder",
+    "_previous": "Vorheriges Bild",
+    "_next": "Nächstes Bild",
+    "_close": "Schließen",
+    "_zoomIn": "Vergrößern",
+    "_zoomOut": "Verkleinern",
+    "_zoomReset": "An den Bildschirm anpassen",
+    "_progress": "{index} von {count}"
+}

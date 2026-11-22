@@ -57,9 +57,9 @@ const difference = (found: readonly string[], spec: readonly string[]): { missin
 });
 
 /** Components that joined the library after the first set (Epic 8, plus popover, numberField, segmented, chip, timeField, rating, colorField, avatarGroup, codeBlock, toggleButton, timeline, pinField, carousel, commandPalette, richText, richTextField, actionBar, sources, steps, actionConfirm and composer); the Epic 4 and 5 counts below stay as the spec fixed them */
-const LATER_ATOMS: readonly string[] = ['segmented', 'markdown', 'chip', 'chipList', 'codeBlock', 'toggleButton', 'richText', 'meter', 'sparkline', 'infoTip'];
-const LATER_MOLECULES: readonly string[] = ['buttonGroup', 'editableText', 'numberField', 'comboboxField', 'multiSelectField', 'breadcrumb', 'pagination', 'sliderField', 'disclosure', 'stepper', 'dateRangeField', 'fileField', 'paintField', 'timeField', 'rating', 'colorField', 'avatarGroup', 'timeline', 'pinField', 'richTextField', 'actionBar', 'sources', 'steps', 'actionConfirm', 'composer', 'dateTimeField'];
-const LATER_COMPOSITES: readonly string[] = ['popover', 'tour', 'accordion', 'splitPane', 'tree', 'chart', 'board', 'calendar', 'recordGrid', 'messageList', 'drawing', 'scene3d', 'window', 'carousel', 'commandPalette', 'treeDiagram', 'viewport', 'embeddedApp'];
+const LATER_ATOMS: readonly string[] = ['segmented', 'markdown', 'chip', 'chipList', 'codeBlock', 'toggleButton', 'richText', 'meter', 'sparkline', 'infoTip', 'qrCode'];
+const LATER_MOLECULES: readonly string[] = ['buttonGroup', 'editableText', 'mediaPlayer', 'numberField', 'comboboxField', 'multiSelectField', 'breadcrumb', 'pagination', 'sliderField', 'disclosure', 'stepper', 'dateRangeField', 'fileField', 'paintField', 'timeField', 'rating', 'colorField', 'avatarGroup', 'timeline', 'pinField', 'richTextField', 'actionBar', 'sources', 'steps', 'actionConfirm', 'composer', 'dateTimeField'];
+const LATER_COMPOSITES: readonly string[] = ['popover', 'tour', 'lightbox', 'accordion', 'splitPane', 'tree', 'chart', 'board', 'calendar', 'recordGrid', 'messageList', 'drawing', 'scene3d', 'window', 'carousel', 'commandPalette', 'treeDiagram', 'viewport', 'embeddedApp'];
 const LATER_COMPOSED: readonly string[] = ['wizard', 'chatView'];
 
 /** Every component Epic 8 adds; all are built, so none is skipped */
@@ -388,7 +388,8 @@ describe('the library build and its styles', () => {
         // Assert
         expect(result.errors.map(formatError)).toEqual([]);
         expect(result.built).toHaveLength(roots.length);
-    });
+        //it builds every component, which takes longer than the default 5 s while the whole suite runs in parallel
+    }, 30_000);
 
     it('should reference no tone colour token in any component or shared stylesheet', async () => {
         // Arrange

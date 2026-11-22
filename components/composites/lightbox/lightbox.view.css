@@ -1,0 +1,138 @@
+:host {
+    display: contents;
+}
+
+.dialog {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    inline-size: 100vw;
+    block-size: 100dvh;
+    max-inline-size: none;
+    max-block-size: none;
+    overflow: hidden;
+    color: var(--ui-lightbox-on);
+    background: color-mix(in srgb, var(--ui-lightbox-scrim) 92%, transparent);
+    border: 0;
+    font-family: var(--ui-text-body-family);
+    font-size: var(--ui-text-body-size);
+    line-height: var(--ui-text-body-leading);
+}
+
+.dialog:focus-visible {
+    outline: 2px solid var(--ui-color-focus);
+    outline-offset: -2px;
+}
+
+.dialog::backdrop {
+    background: transparent;
+}
+
+.frame {
+    position: relative;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    block-size: 100%;
+}
+
+.bar {
+    display: flex;
+    align-items: center;
+    gap: var(--ui-lightbox-gap);
+    padding: var(--ui-lightbox-padding);
+}
+
+.spacer {
+    flex: 1;
+}
+
+.progress {
+    font-family: var(--ui-text-label-family);
+    font-size: var(--ui-text-label-size);
+}
+
+.tool,
+.nav {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    inline-size: var(--ui-lightbox-control);
+    block-size: var(--ui-lightbox-control);
+    margin: 0;
+    padding: 0;
+    color: inherit;
+    background: color-mix(in srgb, var(--ui-lightbox-scrim) 60%, transparent);
+    border: 0;
+    border-radius: var(--ui-radius-full);
+    cursor: pointer;
+}
+
+.tool:hover:not(:disabled),
+.nav:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--ui-lightbox-on) 20%, transparent);
+}
+
+.tool:disabled,
+.nav:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.tool:focus-visible,
+.nav:focus-visible {
+    outline: 2px solid var(--ui-color-focus);
+    outline-offset: 2px;
+}
+
+/* The stage scrolls when the picture is zoomed past it; a drag pans it */
+.stage {
+    display: grid;
+    place-items: center;
+    min-block-size: 0;
+    overflow: hidden;
+    padding-inline: calc(var(--ui-lightbox-control) + var(--ui-lightbox-padding) * 2);
+}
+
+.stage[data-zoomed] {
+    place-items: start;
+    overflow: auto;
+    padding-inline: 0;
+    cursor: grab;
+    touch-action: none;
+}
+
+.picture {
+    display: block;
+    max-inline-size: 100%;
+    max-block-size: 100%;
+    object-fit: contain;
+    user-select: none;
+}
+
+.stage[data-zoomed] .picture {
+    max-inline-size: none;
+    max-block-size: none;
+    inline-size: calc(var(--sui-zoom, 1) * 100%);
+    block-size: calc(var(--sui-zoom, 1) * 100%);
+}
+
+.nav {
+    position: absolute;
+    inset-block-start: 50%;
+    translate: 0 -50%;
+}
+
+.previous {
+    inset-inline-start: var(--ui-lightbox-padding);
+}
+
+.next {
+    inset-inline-end: var(--ui-lightbox-padding);
+}
+
+.caption {
+    margin: 0;
+    padding: var(--ui-lightbox-padding);
+    text-align: center;
+}

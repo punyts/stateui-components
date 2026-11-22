@@ -1,0 +1,50 @@
+{
+    "summary": "Video or audio from an https URL or the app's files, with themed controls, captions and full screen",
+    "category": "content",
+    "purposes": ["play a video", "play an audio clip or podcast", "show a recorded talk with captions", "embed a product demo video"],
+    "events": ["play", "pause", "ended"],
+    "commands": ["play", "pause", "toggle"],
+    "tokenGroup": "media",
+    "tokens": {
+        "radius": "{radius.md}",
+        "gap": "{space.gap.sm}",
+        "padding": "{space.inset.sm}",
+        "fill": "{color.text.base}",
+        "on": "{color.surface.base}",
+        "progress": "{color.accent.base}"
+    },
+    "properties": {
+        "src": { "type": "url", "default": "" },
+        "kind": { "type": "string", "values": ["video", "audio"], "default": "video", "reflect": true },
+        "poster": { "type": "url", "default": "", "validators": { "pattern": "^(?:data:|https:|$)" } },
+        "tracks": {
+            "type": "map",
+            "default": {},
+            "items": {
+                "src": { "type": "url" },
+                "srclang": { "type": "string", "default": "" },
+                "_label": { "type": "string", "kind": "content" }
+            }
+        },
+        "loop": { "type": "boolean", "default": false },
+        "muted": { "type": "boolean", "default": false },
+        "source": { "type": "string", "default": "", "runtime": true },
+        "captions": { "type": "object", "default": {}, "runtime": true },
+        "hasCaptions": { "type": "boolean", "default": false, "runtime": true },
+        "playing": { "type": "boolean", "default": false, "runtime": true, "reflect": true },
+        "captionsOn": { "type": "boolean", "default": false, "runtime": true, "reflect": true },
+        "failed": { "type": "boolean", "default": false, "runtime": true, "reflect": true },
+        "current": { "type": "number", "default": 0, "runtime": true },
+        "duration": { "type": "number", "default": 0, "runtime": true },
+        "timeText": { "type": "string", "default": "0:00 / 0:00", "runtime": true },
+        "_label": { "type": "string", "kind": "content", "default": "Media player" },
+        "_play": { "type": "string", "kind": "content", "default": "Play" },
+        "_pause": { "type": "string", "kind": "content", "default": "Pause" },
+        "_seek": { "type": "string", "kind": "content", "default": "Seek" },
+        "_mute": { "type": "string", "kind": "content", "default": "Mute" },
+        "_unmute": { "type": "string", "kind": "content", "default": "Unmute" },
+        "_captions": { "type": "string", "kind": "content", "default": "Captions" },
+        "_fullscreen": { "type": "string", "kind": "content", "default": "Full screen" },
+        "_failed": { "type": "string", "kind": "content", "default": "This media cannot be played" }
+    }
+}

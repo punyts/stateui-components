@@ -1,0 +1,32 @@
+:host {
+    display: inline-block;
+    vertical-align: middle;
+    inline-size: var(--ui-qrcode-size);
+    block-size: var(--ui-qrcode-size);
+}
+
+.code,
+.plot {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+}
+
+.plot {
+    border-radius: var(--ui-qrcode-radius);
+}
+
+.light {
+    fill: var(--ui-qrcode-light);
+}
+
+.dark {
+    fill: var(--ui-qrcode-dark);
+}
+
+/* A value too long for any version draws nothing: a dashed frame keeps the space */
+:host([overflow]) .code {
+    box-sizing: border-box;
+    border: var(--ui-border-width-thin) dashed var(--ui-color-border-strong);
+    border-radius: var(--ui-qrcode-radius);
+}

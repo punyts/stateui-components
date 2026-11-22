@@ -1,0 +1,6 @@
+<div class="code" role="img" aria-label="{{ $._label }}">
+    <svg if="{{ $.extent &gt; 0 }}" class="plot" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {{ $.extent }} {{ $.extent }}" shape-rendering="crispEdges" aria-hidden="true" focusable="false">
+        <rect class="light" x="0" y="0" width="{{ $.extent }}" height="{{ $.extent }}" />
+        <path class="dark" d="{{ $.path }}" />
+    </svg>
+</div>

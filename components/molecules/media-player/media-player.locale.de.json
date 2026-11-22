@@ -1,0 +1,11 @@
+{
+    "_label": "Medienwiedergabe",
+    "_play": "Abspielen",
+    "_pause": "Pause",
+    "_seek": "Position",
+    "_mute": "Stumm schalten",
+    "_unmute": "Ton an",
+    "_captions": "Untertitel",
+    "_fullscreen": "Vollbild",
+    "_failed": "Diese Medien können nicht abgespielt werden"
+}

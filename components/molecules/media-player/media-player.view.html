@@ -1,0 +1,25 @@
+<div class="player" role="group" aria-label="{{ $._label }}" onkeydown="{{ onKeyDown }}">
+    <video class="media" if="{{ $.kind === 'video' }}" src="{{ $.source || null }}" poster="{{ $.poster || null }}" preload="metadata" playsinline="" loop="{{ $.loop }}" muted="{{ $.muted }}" onplay="{{ onPlay }}" onpause="{{ onPause }}" onended="{{ onEnded }}" ontimeupdate="{{ onTime }}" ondurationchange="{{ onTime }}" onloadedmetadata="{{ onLoaded }}" onvolumechange="{{ onVolume }}" onerror="{{ onError }}" onclick="{{ onToggle }}">
+        <track repeat="{{ $k,$i,$v in $.captions }}" key="{{ $k }}" kind="captions" src="{{ $v.src }}" srclang="{{ $v.srclang || null }}" label="{{ $v.label }}" />
+    </video>
+    <audio class="media" if="{{ $.kind === 'audio' }}" src="{{ $.source || null }}" preload="metadata" loop="{{ $.loop }}" muted="{{ $.muted }}" onplay="{{ onPlay }}" onpause="{{ onPause }}" onended="{{ onEnded }}" ontimeupdate="{{ onTime }}" ondurationchange="{{ onTime }}" onloadedmetadata="{{ onLoaded }}" onvolumechange="{{ onVolume }}" onerror="{{ onError }}">
+        <track repeat="{{ $k,$i,$v in $.captions }}" key="{{ $k }}" kind="captions" src="{{ $v.src }}" srclang="{{ $v.srclang || null }}" label="{{ $v.label }}" />
+    </audio>
+    <p class="failed" role="status" if="{{ $.failed }}">{{ $._failed }}</p>
+    <div class="controls">
+        <button class="control play" type="button" aria-label="{{ $.playing ? $._pause : $._play }}" disabled="{{ !$.source }}" onclick="{{ onToggle }}">
+            <ui-icon size="sm" name="{{ $.playing ? 'player-pause' : 'player-play' }}"></ui-icon>
+        </button>
+        <input class="seek" type="range" min="0" max="{{ $.duration }}" step="any" value="{{ $.current }}" aria-label="{{ $._seek }}" aria-valuetext="{{ $.timeText }}" disabled="{{ !$.source || $.duration === 0 }}" oninput="{{ onSeek }}" />
+        <span class="time">{{ $.timeText }}</span>
+        <button class="control mute" type="button" aria-label="{{ $.muted ? $._unmute : $._mute }}" aria-pressed="{{ $.muted ? 'true' : 'false' }}" onclick="{{ onMute }}">
+            <ui-icon size="sm" name="{{ $.muted ? 'volume-off' : 'volume' }}"></ui-icon>
+        </button>
+        <button class="control captions" type="button" if="{{ $.hasCaptions }}" aria-label="{{ $._captions }}" aria-pressed="{{ $.captionsOn ? 'true' : 'false' }}" onclick="{{ onCaptions }}">
+            <ui-icon size="sm" name="badge-cc"></ui-icon>
+        </button>
+        <button class="control fullscreen" type="button" if="{{ $.kind === 'video' }}" aria-label="{{ $._fullscreen }}" onclick="{{ onFullscreen }}">
+            <ui-icon size="sm" name="maximize"></ui-icon>
+        </button>
+    </div>
+</div>

@@ -40,7 +40,8 @@
     color: var(--ui-color-text-muted);
 }
 
-.choose {
+.choose,
+.action {
     box-sizing: border-box;
     min-block-size: var(--control-height, var(--ui-size-control-md));
     margin: 0;
@@ -54,11 +55,14 @@
     cursor: pointer;
 }
 
-.choose:hover:not(:disabled) {
+.choose:hover:not(:disabled),
+.action:hover {
     border-color: var(--ui-color-text-muted);
 }
 
-.choose:focus-visible {
+.choose:focus-visible,
+.action:focus-visible,
+.zoom:focus-visible {
     outline: 2px solid var(--ui-color-focus);
     outline-offset: 2px;
 }
@@ -136,4 +140,53 @@
 .remove:disabled {
     color: var(--ui-color-text-disabled);
     cursor: not-allowed;
+}
+
+.crop {
+    display: grid;
+    justify-items: start;
+    gap: var(--ui-space-gap-md);
+}
+
+.crop-frame {
+    display: block;
+    box-sizing: border-box;
+    inline-size: min(100%, calc(var(--ui-size-control-lg) * 8));
+    block-size: auto;
+    background: var(--ui-color-surface-sunken);
+    border: var(--ui-control-border) solid var(--ui-color-border-strong);
+    border-radius: var(--ui-control-radius);
+    cursor: grab;
+    touch-action: none;
+}
+
+.crop-frame:active {
+    cursor: grabbing;
+}
+
+.crop-frame:focus-visible {
+    outline: 2px solid var(--ui-color-focus);
+    outline-offset: 2px;
+}
+
+.crop-zoom {
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space-gap-sm);
+}
+
+.zoom {
+    accent-color: var(--ui-field-selected-fill);
+}
+
+.crop-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--ui-space-gap-sm);
+}
+
+.crop-use {
+    color: var(--ui-field-selected-on);
+    background: var(--ui-field-selected-fill);
+    border-color: var(--ui-field-selected-fill);
 }

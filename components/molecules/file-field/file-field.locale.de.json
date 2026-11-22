@@ -4,6 +4,11 @@
     "_choose": "Dateien wählen",
     "_drop": "Dateien hier ablegen oder",
     "_remove": "{name} entfernen",
+    "_crop": "{name} zuschneiden",
+    "_cropFrame": "Bild zum Zuschneiden: ziehen oder mit den Pfeiltasten platzieren",
+    "_zoom": "Zoom",
+    "_useCrop": "Bild verwenden",
+    "_cancelCrop": "Abbrechen",
     "_errors": {
         "required": "Eine Datei hinzufügen",
         "accept": "Dieser Dateityp wird nicht akzeptiert",

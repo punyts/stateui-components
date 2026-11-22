@@ -16,6 +16,7 @@ import {
     typeFromName
 } from '../shared/field/files.js';
 import type { FileRef } from '../shared/field/files.js';
+import { CROPPABLE_TYPES, clampZoom, cropRatio, cropRect, croppedName, croppedSize, croppedType } from '../shared/field/crop.js';
 
 /** The event that hands a file to the host's `transferFile` hook (the dispatcher of `@punyts/stateui-app` answers it) */
 const FILE_TRANSFER_EVENT = 'ui-file-transfer';
@@ -37,6 +38,19 @@ interface Upload {
     abort: AbortController;
 }
 
+/** The picture the crop step shows: the decoded file, the zoom and the centre of the frame in picture pixels */
+interface Crop {
+    bitmap: ImageBitmap;
+    zoom: number;
+    centerX: number;
+    centerY: number;
+}
+
+/** The longest edge of the crop step's preview canvas, in canvas pixels */
+const PREVIEW_EDGE = 480;
+/** The quality a cropped JPEG or WebP is encoded at */
+const CROP_QUALITY = 0.92;
+
 interface CommandHost {
     commands?: Record<string, () => void>;
 }
@@ -55,7 +69,13 @@ interface CommandHost {
  * resolves with is appended to `value`; a rejection sets the error to its code (`too_large`, `unsupported_type`, `quota`,
  * `offline`, ...), and so does a host that gives no hook (`offline`). The error stays until the next attempt, a removal or
  * a successful transfer. Nothing but the reference is written to the store. A form's submit waits for the transfers under
- * way (the field's `settle`), so it submits the files they add, or refuses with the error of one that failed
+ * way (the field's `settle`), so it submits the files they add, or refuses with the error of one that failed.
+ *
+ * With `crop` set to a ratio (`1:1` for an avatar), an accepted PNG, JPEG, WebP or GIF opens the crop step first: the
+ * picture fills a frame of that ratio, a drag or the arrow keys move it, the zoom slider (or `+` and `-`) enlarges it,
+ * and "use" (or Enter) sends the framed part, re-encoded in its own type (a GIF as a PNG) and at most 2048 pixels on its
+ * longest edge, while "cancel" (or Escape) drops the file. Several pictures are cropped one after another. The picture is
+ * drawn on a canvas, so no URL of it is made and nothing of it reaches the store
  */
 export default function controller(context: ControllerContext) {
     const { element, store, basePath } = context;
@@ -65,6 +85,14 @@ export default function controller(context: ControllerContext) {
     let counter = 0;
     let failure = '';
     let disposed = false;
+    /** The pictures waiting for the crop step, the one it shows, and the crops being encoded */
+    const queue: File[] = [];
+    let cropFile: File | null = null;
+    let crop: Crop | null = null;
+    let encoding = 0;
+    /** Raised whenever the crop step closes, so a picture that finishes decoding after that is dropped */
+    let generation = 0;
+    let drag: { id: number; x: number; y: number } | null = null;
     /** The promises of `settle` (a form's submit): woken whenever a transfer ends or is dropped */
     const waiters = createWaiters();
 
@@ -100,6 +128,7 @@ export default function controller(context: ControllerContext) {
         settle: () => (uploads.size > 0 && !disposed ? waiters.wait() : undefined),
         //a reset (the command, or a form's) stops the transfers, so a late result cannot append a file to the restored list
         onReset: () => {
+            dropCrops();
             for (const upload of uploads.values()) upload.abort.abort();
             uploads.clear();
             failure = '';
@@ -150,7 +179,7 @@ export default function controller(context: ControllerContext) {
     const check = (file: File): string => {
         if (!accepted().includes(mediaTypeOf(file))) return 'accept';
         if (file.size > limitSize()) return 'maxSize';
-        if (refs().length + uploads.size >= limitFiles()) return 'maxFiles';
+        if (refs().length + uploads.size + queue.length + encoding + (cropFile !== null ? 1 : 0) >= limitFiles()) return 'maxFiles';
         return '';
     };
 
@@ -212,13 +241,136 @@ export default function controller(context: ControllerContext) {
         if (blocked() || files.length === 0) return;
         failure = '';
         let rejected = '';
+        const cropping = cropRatio(read('crop')) > 0;
         for (const file of files) {
             const rule = check(file);
-            if (rule === '') start(file);
-            else if (rejected === '') rejected = rule;
+            if (rule !== '') {
+                if (rejected === '') rejected = rule;
+            } else if (cropping && CROPPABLE_TYPES.includes(mediaTypeOf(file))) {
+                queue.push(file);
+            } else {
+                start(file);
+            }
         }
         if (rejected !== '') fail(rejected);
         else succeed();
+        openCrop();
+    };
+
+    const frame = (): HTMLCanvasElement | null => element.shadowRoot?.querySelector<HTMLCanvasElement>('.crop-frame') ?? null;
+    const ratio = (): number => cropRatio(read('crop')) || 1;
+    /** The frame over the picture, its centre clamped into it */
+    const framed = (current: Crop): ReturnType<typeof cropRect> => {
+        const rect = cropRect(current.bitmap.width, current.bitmap.height, ratio(), current.zoom, current.centerX, current.centerY);
+        current.centerX = rect.centerX;
+        current.centerY = rect.centerY;
+        return rect;
+    };
+    const paint = (): void => {
+        const canvas = frame();
+        const context2d = canvas?.getContext('2d');
+        if (!canvas || !context2d || crop === null) return;
+        const rect = framed(crop);
+        context2d.clearRect(0, 0, canvas.width, canvas.height);
+        context2d.drawImage(crop.bitmap, rect.x, rect.y, rect.width, rect.height, 0, 0, canvas.width, canvas.height);
+    };
+    const closeCrop = (): void => {
+        generation += 1;
+        crop?.bitmap.close();
+        crop = null;
+        cropFile = null;
+        drag = null;
+        store.set(`${basePath}.cropping`, false);
+    };
+    const dropCrops = (): void => {
+        queue.length = 0;
+        closeCrop();
+    };
+    /** Decodes the next waiting picture and shows it in the crop step; a file that does not decode is refused */
+    const openCrop = (): void => {
+        if (cropFile !== null || disposed) return;
+        const next = queue.shift();
+        if (next === undefined) return;
+        cropFile = next;
+        const token = generation;
+        createImageBitmap(next).then(
+            (bitmap) => {
+                if (token !== generation || disposed) {
+                    bitmap.close();
+                    return;
+                }
+                crop = { bitmap, zoom: 1, centerX: bitmap.width / 2, centerY: bitmap.height / 2 };
+                const shape = ratio();
+                const template = typeof read('_crop') === 'string' ? (read('_crop') as string) : '{name}';
+                store.set(`${basePath}.cropWidth`, shape >= 1 ? PREVIEW_EDGE : Math.round(PREVIEW_EDGE * shape));
+                store.set(`${basePath}.cropHeight`, shape >= 1 ? Math.round(PREVIEW_EDGE / shape) : PREVIEW_EDGE);
+                store.set(`${basePath}.cropZoom`, 1);
+                store.set(`${basePath}.cropLabel`, template.replace('{name}', next.name));
+                store.set(`${basePath}.cropping`, true);
+                paint();
+                frame()?.focus();
+            },
+            () => {
+                if (token !== generation || disposed) return;
+                cropFile = null;
+                fail('unsupported_type');
+                openCrop();
+            }
+        );
+    };
+    const focusControl = (): void => {
+        if (cropFile === null) element.shadowRoot?.querySelector<HTMLElement>('#control')?.focus();
+    };
+    /** Draws the framed part at its size, closes the step and sends the encoded picture; then opens the next */
+    const useCrop = (): void => {
+        if (crop === null || cropFile === null) return;
+        const source = cropFile;
+        const rect = framed(crop);
+        const size = croppedSize(rect);
+        const canvas = document.createElement('canvas');
+        canvas.width = size.width;
+        canvas.height = size.height;
+        canvas.getContext('2d')?.drawImage(crop.bitmap, rect.x, rect.y, rect.width, rect.height, 0, 0, size.width, size.height);
+        const from = mediaTypeOf(source);
+        const type = croppedType(from);
+        const name = croppedName(source.name, from, type);
+        encoding += 1;
+        closeCrop();
+        canvas.toBlob(
+            (blob) => {
+                encoding -= 1;
+                if (disposed) return;
+                if (blob === null) fail('internal');
+                else if (blob.size > limitSize()) fail('maxSize');
+                else {
+                    start(new File([blob], name, { type }));
+                    succeed();
+                }
+                openCrop();
+                focusControl();
+            },
+            type,
+            CROP_QUALITY
+        );
+    };
+    const cancelCrop = (): void => {
+        closeCrop();
+        openCrop();
+        focusControl();
+    };
+    const zoomTo = (zoom: number): void => {
+        if (crop === null) return;
+        crop.zoom = clampZoom(zoom);
+        store.set(`${basePath}.cropZoom`, crop.zoom);
+        paint();
+    };
+    /** Moves the picture under the frame by a distance in frame pixels (the frame's centre moves the other way) */
+    const panBy = (dx: number, dy: number, frameWidth: number): void => {
+        if (crop === null || frameWidth <= 0) return;
+        const scale = framed(crop).width / frameWidth;
+        crop.centerX -= dx * scale;
+        crop.centerY -= dy * scale;
+        paint();
     };
 
     const abortAll = (): void => {
@@ -256,6 +408,7 @@ export default function controller(context: ControllerContext) {
     const baseClear = host.commands?.clear;
     if (host.commands) {
         host.commands.clear = () => {
+            dropCrops();
             abortAll();
             failure = '';
             draw();
@@ -303,8 +456,54 @@ export default function controller(context: ControllerContext) {
             removeKey(key);
             if (!blocked()) element.shadowRoot?.querySelector<HTMLElement>('#control')?.focus();
         },
+        onCropDown: (event: PointerEvent) => {
+            const canvas = event.currentTarget as HTMLCanvasElement | null;
+            if (crop === null || !canvas || event.button !== 0) return;
+            event.preventDefault();
+            canvas.focus();
+            try {
+                canvas.setPointerCapture(event.pointerId);
+            } catch {
+                //a synthetic pointer cannot be captured; the drag still follows the canvas's own moves
+            }
+            drag = { id: event.pointerId, x: event.clientX, y: event.clientY };
+        },
+        onCropMove: (event: PointerEvent) => {
+            const canvas = event.currentTarget as HTMLCanvasElement | null;
+            if (drag === null || drag.id !== event.pointerId || !canvas) return;
+            const dx = event.clientX - drag.x;
+            const dy = event.clientY - drag.y;
+            drag.x = event.clientX;
+            drag.y = event.clientY;
+            panBy(dx, dy, canvas.getBoundingClientRect().width);
+        },
+        onCropUp: (event: PointerEvent) => {
+            if (drag !== null && drag.id === event.pointerId) drag = null;
+        },
+        onCropKey: (event: KeyboardEvent) => {
+            const canvas = event.currentTarget as HTMLCanvasElement | null;
+            if (crop === null || !canvas || event.ctrlKey || event.metaKey || event.altKey) return;
+            const width = canvas.getBoundingClientRect().width;
+            const step = width / 20;
+            const moves: Record<string, [number, number]> = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] };
+            const move = moves[event.key];
+            if (move) panBy(move[0], move[1], width);
+            else if (event.key === '+' || event.key === '=') zoomTo(crop.zoom + 0.25);
+            else if (event.key === '-') zoomTo(crop.zoom - 0.25);
+            else if (event.key === 'Enter') useCrop();
+            else if (event.key === 'Escape') cancelCrop();
+            else return;
+            event.preventDefault();
+            event.stopPropagation();
+        },
+        onCropZoom: (event: Event) => {
+            zoomTo(Number((event.currentTarget as HTMLInputElement).value));
+        },
+        onCropUse: useCrop,
+        onCropCancel: cancelCrop,
         dispose: () => {
             disposed = true;
+            dropCrops();
             abortAll();
             store.off(watched, draw);
             field.dispose();
