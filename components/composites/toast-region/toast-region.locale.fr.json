@@ -1,4 +1,6 @@
 {
     "_label": "Notifications",
-    "_closeLabel": "Fermer"
+    "_closeLabel": "Fermer",
+    "_unsavedText": "Non enregistré : le serveur rattrape des modifications antérieures. Réessayez dans un instant.",
+    "_rejectedText": "Cette modification n’a pas été acceptée."
 }

@@ -1,5 +1,5 @@
 import type { ControllerContext } from '@punyts/stateui';
-import { runtimePath } from '@punyts/stateui-app/core';
+import { SYNC_NOTICES, runtimePath } from '@punyts/stateui-app/core';
 
 type Entry = Record<string, unknown>;
 
@@ -25,6 +25,8 @@ const text = (value: unknown): string => (typeof value === 'string' ? value : ''
 /**
  * Shows the toasts of `messages`. `show` (the value is a message key) writes a `toast` node at
  * `$.runtime.nodes.<path>.items.<id>`, never into `$.app`; `items` is an alias of that runtime object for the view.
+ * Besides `messages` it knows the notices of a refused change (`SYNC_NOTICES`, from `_unsavedText` and `_rejectedText`),
+ * which the runtime shows when the app has no `sync.rejected` entry; a message of the same key wins.
  * The locale step treats a node that appears under `$.app` as one written later and translates it, and it would replace a
  * toast written whole, so the node is written as an empty object, then property by property, with `component` last
  * (the content is already in the current language). At most `max` toasts are on screen, later ones wait in a queue and appear as room is made. A toast leaves after
@@ -83,11 +85,18 @@ export default function controller({ element, store, basePath }: ControllerConte
         pump();
     }
 
+    /** A message of `messages`, else one of the built-in notices of a refused change (`SYNC_NOTICES`) */
     const messageOf = (key: string): Entry | undefined => {
         const messages = read(`${basePath}.messages`);
-        if (!isEntry(messages) || !Object.hasOwn(messages, key)) return undefined;
+        if (!isEntry(messages) || !Object.hasOwn(messages, key)) return builtIn(key);
         const message: unknown = JSON.parse(JSON.stringify(messages[key]));
         return isEntry(message) ? message : undefined;
+    };
+
+    const builtIn = (key: string): Entry | undefined => {
+        if (key === SYNC_NOTICES.unsaved) return { tone: 'warning', _text: text(read(`${basePath}._unsavedText`)) };
+        if (key === SYNC_NOTICES.rejected) return { tone: 'warning', _text: text(read(`${basePath}._rejectedText`)) };
+        return undefined;
     };
 
     const display = (key: string): void => {
