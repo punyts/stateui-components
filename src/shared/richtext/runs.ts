@@ -80,7 +80,39 @@ export function markRuns(runs: readonly Run[], from: number, to: number, mark: M
     return joinRuns(sliceRuns(runs, 0, from), middle, sliceRuns(runs, to, length));
 }
 
-const graphemes = typeof Intl !== 'undefined' && 'Segmenter' in Intl ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : undefined;
+/** Runs with every character in `[from, to)` linked to `href`, or unlinked when it is null; marks are kept */
+export function linkRuns(runs: readonly Run[], from: number, to: number, href: string | null): Run[] {
+    const length = plainText(runs).length;
+    const middle = sliceRuns(runs, from, to).map((run) => {
+        const next: Run = { text: run.text };
+        if (run.marks !== undefined) next.marks = run.marks;
+        if (href !== null) next.link = href;
+        return next;
+    });
+    return joinRuns(sliceRuns(runs, 0, from), middle, sliceRuns(runs, to, length));
+}
+
+/** The stretch `[from, to)` around `offset` whose characters share one link, or null when no link touches it (the character before the offset counts first) */
+export function linkExtent(runs: readonly Run[], offset: number): { href: string; from: number; to: number } | null {
+    const bounds: Array<{ run: Run; start: number; end: number }> = [];
+    let at = 0;
+    for (const run of runs) {
+        bounds.push({ run, start: at, end: at + run.text.length });
+        at += run.text.length;
+    }
+    const hit = bounds.findIndex((bound) => bound.run.link !== undefined && bound.start < offset && offset <= bound.end);
+    const index = hit >= 0 ? hit : bounds.findIndex((bound) => bound.run.link !== undefined && bound.start === offset);
+    const found = bounds[index];
+    if (found === undefined || found.run.link === undefined) return null;
+    const href = found.run.link;
+    let first = index;
+    let last = index;
+    while (bounds[first - 1]?.run.link === href) first--;
+    while (bounds[last + 1]?.run.link === href) last++;
+    return { href, from: (bounds[first] as { start: number }).start, to: (bounds[last] as { end: number }).end };
+}
+
+const graphemes =typeof Intl !== 'undefined' && 'Segmenter' in Intl ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : undefined;
 const words = typeof Intl !== 'undefined' && 'Segmenter' in Intl ? new Intl.Segmenter(undefined, { granularity: 'word' }) : undefined;
 
 /** How far a delete reaches: one character as the reader sees it, a word, or the rest of the line */

@@ -1,7 +1,7 @@
 {
     "summary": "A labelled rich-text editor writing block JSON: headings, lists, checks, quotes, code and marks",
     "category": "forms",
-    "purposes": ["write formatted notes with headings and lists", "edit a rich-text description or article", "write a formatted comment with bold and italic", "keep a checklist inside a form field"],
+    "purposes": ["write formatted notes with headings and lists", "write text with links pasted from documents", "edit a rich-text description or article", "write a formatted comment with bold and italic", "keep a checklist inside a form field"],
     "events": ["change", "invalid", "valid"],
     "commands": ["validate", "reset", "focus", "clear"],
     "tokenGroup": "richtextfield",
@@ -9,7 +9,8 @@
         "gap": "{space.gap.sm}",
         "code": { "background": "{color.surface.sunken}" },
         "check": { "fill": "{color.accent.base}" },
-        "toolbar": { "background": "{color.surface.raised}", "active": "{color.accent.base}" }
+        "toolbar": { "background": "{color.surface.raised}", "active": "{color.accent.base}" },
+        "link": { "width": "calc({size.control.md} * 9)" }
     },
     "shared": {
         "variant": { "default": "outline", "values": ["outline", "soft", "ghost"] },
@@ -43,6 +44,8 @@
         "empty": { "type": "boolean", "default": true, "runtime": true },
         "canUndo": { "type": "boolean", "default": false, "runtime": true },
         "canRedo": { "type": "boolean", "default": false, "runtime": true },
+        "link": { "type": "string", "values": ["", "new", "edit"], "default": "", "runtime": true },
+        "linkInvalid": { "type": "boolean", "default": false, "runtime": true },
         "_label": { "type": "string", "kind": "content", "default": "Label" },
         "_placeholder": { "type": "string", "kind": "content", "default": "" },
         "_help": { "type": "string", "kind": "content", "default": "" },
@@ -79,7 +82,12 @@
                 "quote": "Quote",
                 "codeBlock": "Code block",
                 "divider": "Divider",
-                "checkItem": "Done"
+                "checkItem": "Done",
+                "link": "Link",
+                "linkUrl": "Link address",
+                "applyLink": "Apply",
+                "removeLink": "Remove link",
+                "linkInvalid": "Enter an https address, a path or a #fragment"
             }
         }
     }

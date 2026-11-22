@@ -227,7 +227,7 @@ describe('richTextField in Chromium', () => {
         await flush();
 
         // Assert
-        expect(Array.from(part(compact.element, '.toolbar').querySelectorAll('button')).map((button) => button.dataset['command'])).toEqual(['bold', 'italic', 'bullet', 'numbered']);
+        expect(Array.from(part(compact.element, '.toolbar').querySelectorAll('button')).map((button) => button.dataset['command'])).toEqual(['bold', 'italic', 'link', 'bullet', 'numbered']);
         expect(part(none.element, '.toolbar')).toBeNull();
     });
 
@@ -337,6 +337,145 @@ describe('richTextField in Chromium', () => {
 
         // Assert
         expect(shapes(stored(mounted))).toEqual(['paragraph:one', 'paragraph:two']);
+    });
+
+    it('should paste HTML as blocks with marks and safe links only', async () => {
+        // Arrange
+        const mounted = await mountFocused();
+        const data = new DataTransfer();
+        data.setData('text/html', '<h2>Plan</h2><ul><li><b>first</b></li><li><a href="https://x.example">second</a></li></ul><p><a href="javascript:alert(1)">bad</a><img src="x.png" onerror="alert(1)"></p>');
+        data.setData('text/plain', 'Plan first second bad');
+
+        // Act
+        editor(mounted.element).dispatchEvent(new InputEvent('beforeinput', { inputType: 'insertFromPaste', dataTransfer: data, bubbles: true, cancelable: true, composed: true }));
+        await flush();
+
+        // Assert
+        const blocks = readRichText(stored(mounted));
+        expect(shapes(stored(mounted))).toEqual(['heading2:Plan', 'bullet:first', 'bullet:second', 'paragraph:bad']);
+        expect(blocks[1]?.runs).toEqual([{ text: 'first', marks: ['bold'] }]);
+        expect(blocks[2]?.runs).toEqual([{ text: 'second', link: 'https://x.example' }]);
+        expect(blocks[3]?.runs).toEqual([{ text: 'bad' }]);
+        expect(editor(mounted.element).querySelector('img')).toBeNull();
+    });
+
+    it('should paste Markdown text as blocks, keeping only the types the field allows', async () => {
+        // Arrange
+        const mounted = await mountFocused({ blocks: ['bullet'] });
+        const data = new DataTransfer();
+        data.setData('text/plain', '# Title\n\n- **one**\n- two');
+
+        // Act
+        editor(mounted.element).dispatchEvent(new InputEvent('beforeinput', { inputType: 'insertFromPaste', dataTransfer: data, bubbles: true, cancelable: true, composed: true }));
+        await flush();
+
+        // Assert
+        expect(shapes(stored(mounted))).toEqual(['paragraph:Title', 'bullet:one', 'bullet:two']);
+    });
+
+    it('should paste lines into the middle of a block, splitting it around them', async () => {
+        // Arrange
+        const mounted = await mountFocused({ value: { blocks: { bOne: { order: 'a', type: 'paragraph', runs: [{ text: 'startend' }] } } } });
+        await userEvent.keyboard('{ArrowLeft}{ArrowLeft}{ArrowLeft}');
+        await flush();
+        const data = new DataTransfer();
+        data.setData('text/plain', 'one\ntwo');
+
+        // Act
+        editor(mounted.element).dispatchEvent(new InputEvent('beforeinput', { inputType: 'insertFromPaste', dataTransfer: data, bubbles: true, cancelable: true, composed: true }));
+        await flush();
+        await userEvent.keyboard('!');
+        await flush();
+
+        // Assert
+        expect(shapes(stored(mounted))).toEqual(['paragraph:startone', 'paragraph:two!end']);
+    });
+
+    it('should drop text at the drop point', async () => {
+        // Arrange
+        const mounted = await mountFocused({ value: VALUE });
+        const text = editor(mounted.element).querySelector('.block[data-key="bOne"] .text')?.firstChild as Text;
+        const range = new StaticRange({ startContainer: text, startOffset: 2, endContainer: text, endOffset: 2 });
+        const data = new DataTransfer();
+        data.setData('text/plain', 'XY');
+
+        // Act
+        const event = new InputEvent('beforeinput', { inputType: 'insertFromDrop', dataTransfer: data, targetRanges: [range], bubbles: true, cancelable: true, composed: true });
+        editor(mounted.element).dispatchEvent(event);
+        await flush();
+
+        // Assert
+        expect(event.defaultPrevented).toBe(true);
+        expect(shapes(stored(mounted))).toEqual(['paragraph:fiXYrst', 'bullet:item']);
+    });
+
+    it('should link the selection from the panel Ctrl+K opens, reading a bare domain as https', async () => {
+        // Arrange
+        const mounted = await mountFocused({ value: VALUE });
+        await userEvent.keyboard('{Control>}{Home}{/Control}{Shift>}{End}{/Shift}');
+        await flush();
+
+        // Act
+        await userEvent.keyboard('{Control>}k{/Control}');
+        await flush();
+        const panel = part(mounted.element, '#linkPanel');
+        const opened = panel.matches(':popover-open');
+        const focusedInput = mounted.element.shadowRoot?.activeElement?.id;
+        await userEvent.keyboard('example.com/docs{Enter}');
+        await flush();
+
+        // Assert
+        expect(opened).toBe(true);
+        expect(focusedInput).toBe('linkInput');
+        expect(panel.matches(':popover-open')).toBe(false);
+        expect(readRichText(stored(mounted))[0]?.runs).toEqual([{ text: 'first', link: 'https://example.com/docs' }]);
+        expect(mounted.element.shadowRoot?.activeElement).toBe(editor(mounted.element));
+        expect(editor(mounted.element).querySelector('.link')?.getAttribute('data-href')).toBe('https://example.com/docs');
+    });
+
+    it('should refuse an unsafe address and keep the panel open with its error', async () => {
+        // Arrange
+        const mounted = await mountFocused({ value: VALUE });
+        await userEvent.keyboard('{Control>}{Home}{/Control}{Shift>}{End}{/Shift}');
+        await userEvent.click(tool(mounted.element, 'link'));
+        await flush();
+
+        // Act
+        await userEvent.keyboard('javascript:alert(1){Enter}');
+        await flush();
+
+        // Assert
+        expect(part(mounted.element, '#linkPanel').matches(':popover-open')).toBe(true);
+        expect(part(mounted.element, '#linkInput').getAttribute('aria-invalid')).toBe('true');
+        expect(part(mounted.element, '#linkError')?.textContent).toContain('https');
+        expect(readRichText(stored(mounted))[0]?.runs).toEqual([{ text: 'first' }]);
+    });
+
+    it('should edit and remove the link under the caret, and close on Escape', async () => {
+        // Arrange
+        const value = { blocks: { bOne: { order: 'a', type: 'paragraph', runs: [{ text: 'see ' }, { text: 'docs', link: 'https://a.example' }] } } };
+        const mounted = await mountFocused({ value });
+        await userEvent.keyboard('{ArrowLeft}');
+        await flush();
+
+        // Act
+        await userEvent.keyboard('{Control>}k{/Control}');
+        await flush();
+        const prefilled = part<HTMLInputElement>(mounted.element, '#linkInput').value;
+        const buttons = part(mounted.element, '#linkPanel').querySelectorAll('button').length;
+        await userEvent.keyboard('{Escape}');
+        await flush();
+        const closed = !part(mounted.element, '#linkPanel').matches(':popover-open');
+        await userEvent.keyboard('{Control>}k{/Control}');
+        await flush();
+        await userEvent.click(part(mounted.element, '#linkPanel').querySelectorAll('button')[1] as HTMLButtonElement);
+        await flush();
+
+        // Assert
+        expect(prefilled).toBe('https://a.example');
+        expect(buttons).toBe(2);
+        expect(closed).toBe(true);
+        expect(readRichText(stored(mounted))[0]?.runs).toEqual([{ text: 'see docs' }]);
     });
 
     it('should read the block back after an input method composes into it', async () => {

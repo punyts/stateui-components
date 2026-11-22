@@ -8,9 +8,13 @@ import {
     deleteForward,
     indent,
     insertDivider,
+    insertBlocks,
     insertText,
+    linkAt,
     replaceBlockText,
     setBlockKind,
+    setLink,
+    linkTarget,
     splitBlock,
     toggleCheck,
     toggleMark,
@@ -393,5 +397,134 @@ describe('replaceBlockText', () => {
 
         // Assert
         expect(result).toBeNull();
+    });
+});
+
+describe('insertBlocks', () => {
+    it('should put one pasted paragraph in at the caret with its marks', () => {
+        // Arrange
+        const blocks = [block('a', 'V', { type: 'bullet', text: 'ad' })];
+
+        // Act
+        const edit = insertBlocks(blocks, at('a', 1), [{ type: 'paragraph', runs: [{ text: 'bc', marks: ['bold'] }] }], all);
+
+        // Assert
+        expect(shapes(edit)).toEqual(['bullet:abcd']);
+        expect(edit?.blocks[0]?.runs).toEqual([{ text: 'a' }, { text: 'bc', marks: ['bold'] }, { text: 'd' }]);
+        expect(edit?.selection).toEqual(at('a', 3));
+    });
+
+    it('should split the block, joining the first pasted block to its start and the last to its end', () => {
+        // Arrange
+        const blocks = [block('a', 'V', { text: 'start|end' }), block('z', 'W', { text: 'after' })];
+        const pasted = [
+            { type: 'paragraph' as const, runs: [{ text: 'one' }] },
+            { type: 'heading' as const, level: 2, runs: [{ text: 'two' }] },
+            { type: 'paragraph' as const, runs: [{ text: 'three' }] }
+        ];
+
+        // Act
+        const edit = insertBlocks(blocks, at('a', 6), pasted, all);
+
+        // Assert
+        expect(shapes(edit)).toEqual(['paragraph:start|one', 'heading2:two', 'paragraph:threeend', 'paragraph:after']);
+        expect(edit?.blocks[0]?.key).toBe('a');
+        expect(edit?.selection.focus.offset).toBe(5);
+        expect(edit?.selection.focus.block).toBe(edit?.blocks[2]?.key);
+    });
+
+    it('should make pasted paragraphs items of the list they land in, and give an empty block the first pasted kind', () => {
+        // Arrange
+        const list = [block('a', 'V', { type: 'bullet', indent: 1, text: '' })];
+        const empty = [block('a', 'V', { text: '' })];
+
+        // Act
+        const lines = insertBlocks(list, at('a', 0), [{ type: 'paragraph', runs: [{ text: 'x' }] }, { type: 'paragraph', runs: [{ text: 'y' }] }], all);
+        const heading = insertBlocks(empty, at('a', 0), [{ type: 'heading', level: 1, runs: [{ text: 'T' }] }, { type: 'paragraph', runs: [{ text: 'p' }] }], all);
+
+        // Assert
+        expect(shapes(lines)).toEqual(['bullet+1:x', 'bullet+1:y']);
+        expect(shapes(heading)).toEqual(['heading1:T', 'paragraph:p']);
+        expect(heading?.blocks[0]?.key).toBe('a');
+    });
+
+    it('should put pasted dividers between blocks, with the text after them in a block of its own', () => {
+        // Arrange
+        const blocks = [block('a', 'V', { text: 'ab' })];
+
+        // Act
+        const edit = insertBlocks(blocks, at('a', 1), [{ type: 'divider', runs: [] }], all);
+
+        // Assert
+        expect(shapes(edit)).toEqual(['paragraph:a', 'divider:', 'paragraph:b']);
+        expect(edit?.selection.focus).toEqual({ block: edit?.blocks[2]?.key, offset: 0 });
+    });
+
+    it('should paste into a code block as plain lines and cut the paste to maxLength', () => {
+        // Arrange
+        const code = [block('a', 'V', { type: 'code', text: '' })];
+        const short = [block('a', 'V', { text: 'ab' })];
+
+        // Act
+        const inCode = insertBlocks(code, at('a', 0), [{ type: 'heading', level: 1, runs: [{ text: 'x', marks: ['bold'] }] }, { type: 'bullet', runs: [{ text: 'y' }] }], all);
+        const cut = insertBlocks(short, at('a', 2), [{ type: 'paragraph', runs: [{ text: 'cd' }] }, { type: 'paragraph', runs: [{ text: 'ef' }] }], { ...all, maxLength: 5 });
+
+        // Assert
+        expect(shapes(inCode)).toEqual(['code:x\ny']);
+        expect(shapes(cut)).toEqual(['paragraph:abcd', 'paragraph:e']);
+    });
+});
+
+describe('links', () => {
+    it('should find the whole link around a caret, and the one link a selection has', () => {
+        // Arrange
+        const blocks = [block('a', 'V', { runs: [{ text: 'see ' }, { text: 'the', link: 'https://x.example' }, { text: ' docs', marks: ['bold'], link: 'https://x.example' }, { text: '!' }] })];
+
+        // Act
+        const around = linkAt(blocks, at('a', 6));
+        const atEnd = linkAt(blocks, at('a', 12));
+        const outside = linkAt(blocks, at('a', 2));
+        const mixed = linkAt(blocks, at('a', 2, { block: 'a', offset: 6 }));
+
+        // Assert
+        expect(around).toEqual({ href: 'https://x.example', selection: at('a', 4, { block: 'a', offset: 12 }) });
+        expect(atEnd?.href).toBe('https://x.example');
+        expect(outside).toBeNull();
+        expect(mixed).toBeNull();
+    });
+
+    it('should link and unlink the selected text, keeping its marks', () => {
+        // Arrange
+        const blocks = [block('a', 'V', { runs: [{ text: 'ab' }, { text: 'cd', marks: ['italic'] }] })];
+
+        // Act
+        const linked = setLink(blocks, at('a', 1, { block: 'a', offset: 3 }), 'https://x.example', all);
+        const unlinked = setLink(linked?.blocks ?? [], at('a', 2), null, all);
+
+        // Assert
+        expect(linked?.blocks[0]?.runs).toEqual([{ text: 'a' }, { text: 'b', link: 'https://x.example' }, { text: 'c', marks: ['italic'], link: 'https://x.example' }, { text: 'd', marks: ['italic'] }]);
+        expect(unlinked?.blocks[0]?.runs).toEqual([{ text: 'ab' }, { text: 'cd', marks: ['italic'] }]);
+    });
+
+    it('should put the address in as linked text at a caret outside a link', () => {
+        // Arrange
+        const blocks = [block('a', 'V', { text: 'go ' })];
+
+        // Act
+        const edit = setLink(blocks, at('a', 3), 'https://x.example', all);
+
+        // Assert
+        expect(edit?.blocks[0]?.runs).toEqual([{ text: 'go ' }, { text: 'https://x.example', link: 'https://x.example' }]);
+        expect(setLink(blocks, at('a', 3), null, all)).toBeNull();
+    });
+});
+
+describe('linkTarget', () => {
+    it('should read a bare domain as https and refuse what safeHref refuses', () => {
+        // Act
+        const read = ['example.com', 'www.example.com/a?b#c', 'https://x.example', '/docs', '#part', 'http://x.example', 'javascript:alert(1)', 'mailto:a@b.example', ''].map(linkTarget);
+
+        // Assert
+        expect(read).toEqual(['https://example.com', 'https://www.example.com/a?b#c', 'https://x.example', '/docs', '#part', undefined, undefined, undefined, undefined]);
     });
 });

@@ -26,6 +26,11 @@
         "quote": "Citation",
         "codeBlock": "Bloc de code",
         "divider": "Séparateur",
-        "checkItem": "Fait"
+        "checkItem": "Fait",
+        "link": "Lien",
+        "linkUrl": "Adresse du lien",
+        "applyLink": "Appliquer",
+        "removeLink": "Supprimer le lien",
+        "linkInvalid": "Saisissez une adresse https, un chemin ou un #fragment"
     }
 }

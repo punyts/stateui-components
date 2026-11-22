@@ -1,7 +1,8 @@
-import { LIST_TYPES, MARKS, MAX_HEADING_LEVEL, MAX_INDENT, newBlockKey, plainText, readBlock, textLength } from './model.js';
+import { LIST_TYPES, MARKS, MAX_BLOCKS, MAX_HEADING_LEVEL, MAX_INDENT, newBlockKey, plainText, readBlock, textLength } from './model.js';
 import type { Block, BlockType, KeyedBlock, Mark, Run } from './model.js';
+import { safeHref } from '../markdown/links.js';
 import { orderBetween } from './order.js';
-import { deleteRuns, hasMark, insertRuns, joinRuns, markRuns, nextBoundary, previousBoundary, sliceRuns, styleAt } from './runs.js';
+import { deleteRuns, hasMark, insertRuns, joinRuns, linkExtent, linkRuns, markRuns, nextBoundary, previousBoundary, sliceRuns, styleAt } from './runs.js';
 import type { DeleteUnit } from './runs.js';
 
 /**
@@ -55,7 +56,7 @@ type Shape = Omit<Block, 'order'>;
 
 const textOf = (block: Block): string => plainText(block.runs);
 const lengthOf = (block: Block): number => textOf(block).length;
-const isList = (block: Block): boolean => LIST_TYPES.includes(block.type);
+const isList = (block: Pick<Block, 'type'>): boolean => LIST_TYPES.includes(block.type);
 
 /** A block in its one form, as `readRichText` would read it back */
 function canonical(block: KeyedBlock): KeyedBlock {
@@ -544,6 +545,139 @@ export function toggleCheck(blocks: readonly KeyedBlock[], key: string, selectio
     if (block === undefined || block.type !== 'check') return null;
     draft.put({ ...block, checked: block.checked !== true });
     return draft.done(selection);
+}
+
+/** Shapes cut to `room` characters in all: the shape that reaches it is cut, those after it are left out */
+function fitShapes(shapes: readonly Shape[], room: number): Shape[] {
+    const fitted: Shape[] = [];
+    let left = room;
+    for (const shape of shapes) {
+        const length = plainText(shape.runs).length;
+        if (length <= left) {
+            fitted.push(shape);
+            left -= length;
+            continue;
+        }
+        const cut = fit(plainText(shape.runs), left).length;
+        if (cut > 0) fitted.push({ ...shape, runs: sliceRuns(shape.runs, 0, cut) });
+        break;
+    }
+    return fitted;
+}
+
+/** A pasted shape as it lands next to `block`: a paragraph takes the kind Enter would continue with, a list item adds the list's indent */
+function landed(shape: Shape, block: Block): Shape {
+    if (shape.type === 'paragraph') return { ...continuation(block, true), runs: shape.runs };
+    if (isList(shape) && isList(block)) return { ...shape, indent: Math.min(MAX_INDENT, (shape.indent ?? 0) + (block.indent ?? 0)) };
+    return shape;
+}
+
+/**
+ * Pasted or dropped blocks put in over the selection. One pasted block goes in at the caret; with more, the block at the
+ * caret is split, the first pasted block joins its start, the last takes its end and those between are added after it.
+ * A pasted paragraph takes the kind of the block it lands in (pasted lines in a list become items of it), and a block at
+ * the caret with no text before it takes the first pasted block's kind. In a code block the text goes in plain, one
+ * block per line. The text is cut to the room `maxLength` leaves, and no more blocks are added than `MAX_BLOCKS` allows
+ */
+export function insertBlocks(blocks: readonly KeyedBlock[], selection: TextSelection, shapes: readonly Shape[], settings: EditSettings): Edit | null {
+    const range = rangeOf(blocks, selection);
+    if (range === null) return null;
+    if ((blocks[range.start.index] as KeyedBlock).type === 'code') {
+        const text = shapes.filter((shape) => shape.type !== 'divider').map((shape) => plainText(shape.runs)).join('\n');
+        return insertText(blocks, selection, text, settings);
+    }
+    const draft = new Draft(blocks);
+    const at = textPoint(draft, removeRange(draft, range));
+    const block = draft.get(at.block);
+    const room = settings.maxLength > 0 ? settings.maxLength - textLength(draft.blocks) : Number.POSITIVE_INFINITY;
+    const fitted = fitShapes(shapes, room).slice(0, Math.max(1, MAX_BLOCKS - draft.blocks.length + 1));
+    const nothing = fitted.length === 0 || (fitted.length === 1 && fitted[0]?.type !== 'divider' && fitted[0]?.runs.length === 0);
+    if (nothing) return draft.changed ? draft.done(caret(at)) : null;
+    const length = lengthOf(block);
+    const head = sliceRuns(block.runs, 0, at.offset);
+    const tail = sliceRuns(block.runs, at.offset, length);
+    const [first, ...rest] = fitted as [Shape, ...Shape[]];
+    let index = draft.index(block.key);
+    let pieces = rest;
+
+    if (first.type === 'divider') {
+        if (length === 0) draft.put(reshape(block, { type: 'divider', runs: [] }));
+        else {
+            draft.put({ ...block, runs: head });
+            pieces = fitted;
+        }
+    } else {
+        const runs = joinRuns(head, first.runs, rest.length === 0 ? tail : []);
+        const takesKind = at.offset === 0 && first.type !== 'paragraph';
+        draft.put(takesKind ? reshape(block, { ...landed(first, block), runs }) : { ...block, runs });
+        if (rest.length === 0) return draft.done(caret({ block: block.key, offset: at.offset + plainText(first.runs).length }));
+    }
+
+    let end: Point = { block: block.key, offset: 0 };
+    pieces.forEach((shape, position) => {
+        const lastPiece = position === pieces.length - 1;
+        const placed = landed(shape, block);
+        if (placed.type === 'divider') {
+            draft.insertAt(++index, placed);
+            if (lastPiece) {
+                const after = draft.insertAt(++index, { ...continuation(block, true), runs: tail });
+                end = { block: after.key, offset: 0 };
+            }
+            return;
+        }
+        const added = draft.insertAt(++index, { ...placed, runs: lastPiece ? joinRuns(placed.runs, tail) : placed.runs });
+        if (lastPiece) end = { block: added.key, offset: plainText(placed.runs).length };
+    });
+    return draft.done(caret(end));
+}
+
+/** The link under the caret with its whole stretch selected, or the one link all of a selection has; null when there is none */
+export function linkAt(blocks: readonly KeyedBlock[], selection: TextSelection): { href: string; selection: TextSelection } | null {
+    const range = rangeOf(blocks, selection);
+    if (range === null) return null;
+    if (collapsed(range)) {
+        const block = blocks[range.start.index] as KeyedBlock;
+        const extent = linkExtent(block.runs, range.start.offset);
+        if (extent === null) return null;
+        return { href: extent.href, selection: { anchor: { block: block.key, offset: extent.from }, focus: { block: block.key, offset: extent.to } } };
+    }
+    const parts = stretches(blocks, range);
+    const links = new Set(parts.flatMap((part) => sliceRuns(part.block.runs, part.from, part.to).map((run) => run.link)));
+    const [only] = links;
+    return links.size === 1 && only !== undefined ? { href: only, selection } : null;
+}
+
+/**
+ * Links the selected text to `href`, or unlinks it when `href` is null. A caret in a link applies to the whole link; a
+ * caret elsewhere puts `href` in as linked text (unlinking there does nothing). `href` must already be checked with
+ * `safeHref`; the run's own check drops it otherwise
+ */
+export function setLink(blocks: readonly KeyedBlock[], selection: TextSelection, href: string | null, settings: EditSettings): Edit | null {
+    const range = rangeOf(blocks, selection);
+    if (range === null) return null;
+    if (collapsed(range)) {
+        const found = linkAt(blocks, selection);
+        if (found !== null) return setLink(blocks, found.selection, href, settings);
+        if (href === null) return null;
+        const block = blocks[range.start.index] as KeyedBlock;
+        if (block.type === 'code') return null;
+        return insertBlocks(blocks, selection, [{ type: 'paragraph', runs: [{ text: href, link: href }] }], settings);
+    }
+    const parts = stretches(blocks, range);
+    if (parts.length === 0) return null;
+    const draft = new Draft(blocks);
+    for (const part of parts) draft.put({ ...part.block, runs: linkRuns(part.block.runs, part.from, part.to, href) });
+    return draft.changed ? draft.done(selection) : null;
+}
+
+/** A typed address that starts like a domain (`example.com/a`) and so is read as https, not as a relative path */
+const DOMAIN = /^(?:[\p{L}\p{N}-]+\.)+\p{L}{2,}(?::\d{1,5})?(?:[/?#]|$)/u;
+
+/** A typed link address as a safe target: a bare domain gets `https://`; undefined when `safeHref` refuses it */
+export function linkTarget(typed: string): string | undefined {
+    const text = typed.trim();
+    if (text === '') return undefined;
+    return safeHref(DOMAIN.test(text) ? `https://${text}` : text);
 }
 
 /** A selection whose points are in the blocks: a point whose block is gone goes to the start of the first block, and offsets are clamped */

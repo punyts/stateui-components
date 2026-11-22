@@ -254,3 +254,82 @@
     text-decoration: underline;
     text-underline-offset: 0.15em;
 }
+
+/* The block the link panel opens under */
+.block.anchored {
+    anchor-name: --richtext-link;
+}
+
+.linkPanel {
+    box-sizing: border-box;
+    margin: 0;
+    margin-block: var(--ui-space-gap-sm);
+    border: var(--ui-border-width-thin) solid var(--ui-color-border-base);
+    inset: auto;
+    inline-size: var(--ui-richtextfield-link-width);
+    max-inline-size: calc(100vw - 2 * var(--ui-space-gap-sm));
+    padding: var(--ui-space-gap-sm);
+    display: none;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--ui-space-gap-sm);
+    position-try-fallbacks: flip-block, flip-inline;
+    color: var(--ui-color-text-base);
+    background: var(--ui-color-surface-raised);
+    border-radius: var(--ui-control-radius);
+    box-shadow: var(--ui-elevation-overlay-shadow);
+    font: inherit;
+}
+
+.linkPanel:popover-open {
+    display: flex;
+}
+
+.linkInput {
+    box-sizing: border-box;
+    flex: 1 1 10em;
+    min-inline-size: 0;
+    block-size: var(--ui-size-control-sm);
+    padding-inline: var(--ui-control-padding-inline);
+    color: inherit;
+    background: var(--ui-color-surface-base);
+    border: var(--ui-control-border) solid var(--ui-color-border-strong);
+    border-radius: var(--ui-control-radius);
+    font: inherit;
+}
+
+.linkInput:focus-visible {
+    outline: 2px solid var(--ui-color-focus);
+    outline-offset: -1px;
+}
+
+.linkInput[aria-invalid=true] {
+    border-color: var(--ui-field-error-color);
+}
+
+.linkButton {
+    block-size: var(--ui-size-control-sm);
+    padding-inline: var(--ui-control-padding-inline);
+    color: inherit;
+    background: transparent;
+    border: var(--ui-control-border) solid var(--ui-color-border-base);
+    border-radius: var(--ui-control-radius);
+    font: inherit;
+    cursor: pointer;
+}
+
+.linkButton:hover {
+    background: var(--ui-color-surface-sunken);
+}
+
+.linkButton:focus-visible {
+    outline: 2px solid var(--ui-color-focus);
+    outline-offset: 1px;
+}
+
+.linkError {
+    flex: 1 0 100%;
+    margin: 0;
+    color: var(--ui-field-error-color);
+    font-size: var(--ui-text-caption-size);
+}

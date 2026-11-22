@@ -1,5 +1,7 @@
 import type { ControllerContext } from '@punyts/stateui';
 import { createField } from '../shared/field/field.js';
+import { createPopover } from '../shared/popover/popover.js';
+import type { PopoverHandle } from '../shared/popover/popover.js';
 import { BLOCK_TYPES, MARKS, compareBlocks, newBlockKey, readRichText, textLength } from '../shared/richtext/model.js';
 import type { Block, BlockType, KeyedBlock, Mark } from '../shared/richtext/model.js';
 import {
@@ -8,11 +10,15 @@ import {
     deleteBackward,
     deleteForward,
     indent,
+    insertBlocks,
     insertDivider,
     insertLineBreak,
     insertText,
+    linkAt,
+    linkTarget,
     replaceBlockText,
     setBlockKind,
+    setLink,
     splitBlock,
     toggleCheck,
     toggleMark,
@@ -22,6 +28,7 @@ import type { BlockKind, Edit, EditSettings, TextSelection } from '../shared/ric
 import { createEditorView } from '../shared/richtext/editorView.js';
 import type { EditorView } from '../shared/richtext/editorView.js';
 import { createHistory } from '../shared/richtext/history.js';
+import { allowedShapes, htmlToShapes, textToShapes } from '../shared/richtext/paste.js';
 import type { EditKind, HistoryStep } from '../shared/richtext/history.js';
 import type { DeleteUnit } from '../shared/richtext/runs.js';
 
@@ -43,7 +50,7 @@ const DELETES: Readonly<Record<string, { direction: 'backward' | 'forward'; unit
 };
 
 /** Input types whose reach the browser knows better than a count of characters: their target range is used */
-const RANGED = new Set(['deleteWordBackward', 'deleteWordForward', 'deleteSoftLineBackward', 'deleteSoftLineForward', 'deleteHardLineBackward', 'deleteHardLineForward', 'insertReplacementText']);
+const RANGED = new Set(['deleteWordBackward', 'deleteWordForward', 'deleteSoftLineBackward', 'deleteSoftLineForward', 'deleteHardLineBackward', 'deleteHardLineForward', 'insertReplacementText', 'insertFromDrop']);
 
 const FORMATS: Readonly<Record<string, Mark>> = { formatBold: 'bold', formatItalic: 'italic', formatStrikeThrough: 'strike' };
 
@@ -58,6 +65,8 @@ const BLOCK_COMMANDS: Readonly<Record<string, BlockKind>> = {
     codeBlock: { type: 'code' }
 };
 
+/** The CSS anchor name of the block the link panel opens under (`.block.anchored` in the view's CSS) */
+const LINK_ANCHOR = '--richtext-link';
 const samePoint = (a: TextSelection | null, b: TextSelection | null): boolean => JSON.stringify(a) === JSON.stringify(b);
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 const stored = (block: KeyedBlock): Block => {
@@ -74,9 +83,13 @@ const stored = (block: KeyedBlock): Block => {
  * runtime properties; the undo history (`history.ts`) is kept here and never written. A value with no blocks shows one
  * empty paragraph that is written with the first edit.
  *
- * Keys: Ctrl+B, Ctrl+I, Ctrl+E (code) and Ctrl+Shift+X (strike) toggle marks; Ctrl+Z, Ctrl+Shift+Z and Ctrl+Y undo and
- * redo; Tab and Shift+Tab indent and outdent list items (elsewhere Tab moves focus). Markdown shortcuts are in `edit.ts`.
- * The field never logs its text
+ * A paste or drop brings HTML or Markdown in as blocks (`paste.ts`), keeping only what the field allows. Links are added
+ * and changed in a panel that opens under the selection's block (Ctrl+K or the toolbar), whose address must pass
+ * `safeHref`.
+ *
+ * Keys: Ctrl+B, Ctrl+I, Ctrl+E (code) and Ctrl+Shift+X (strike) toggle marks; Ctrl+K opens the link panel (Enter applies,
+ * Escape returns to the text); Ctrl+Z, Ctrl+Shift+Z and Ctrl+Y undo and redo; Tab and Shift+Tab indent and outdent list
+ * items (elsewhere Tab moves focus). Markdown shortcuts are in `edit.ts`. The field never logs its text
  */
 export default function controller(context: ControllerContext) {
     const { element, store, basePath } = context;
@@ -113,6 +126,11 @@ export default function controller(context: ControllerContext) {
     let disposed = false;
     let view: EditorView | null = null;
     let editor: HTMLElement | null = null;
+    let linkPanel: PopoverHandle | null = null;
+    let linkInput: HTMLInputElement | null = null;
+    /** The text the open link panel links: the selection, or the whole link the caret was in */
+    let linkRange: TextSelection | null = null;
+    let anchored: HTMLElement | undefined;
 
     const put = (name: string, value: unknown): void => {
         if (JSON.stringify(read(name)) !== JSON.stringify(value)) store.set(`${basePath}.${name}`, value as never);
@@ -220,45 +238,22 @@ export default function controller(context: ControllerContext) {
     const undo = (): void => applyStep(history.undo(blocks));
     const redo = (): void => applyStep(history.redo(blocks));
 
-    /** Several edits made one after another, as one edit */
-    const chain = (start: TextSelection, steps: ReadonlyArray<(current: KeyedBlock[], at: TextSelection) => Edit | null>): Edit | null => {
-        let merged: Edit | null = null;
-        let current = blocks;
-        let at = start;
-        for (const step of steps) {
-            const edit = step(current, at);
-            if (edit === null) continue;
-            if (merged === null) merged = { blocks: edit.blocks, written: new Map(), removed: new Set(), selection: edit.selection };
-            for (const [key, block] of edit.written) {
-                merged.written.set(key, block);
-                merged.removed.delete(key);
-            }
-            for (const key of edit.removed) {
-                merged.written.delete(key);
-                merged.removed.add(key);
-            }
-            merged.blocks = edit.blocks;
-            merged.selection = edit.selection;
-            current = edit.blocks;
-            at = edit.selection;
-        }
-        return merged;
-    };
-
-    /** Plain text put in as typed: one paragraph per line (in a code block, the lines stay in it) */
-    const pasteText = (at: TextSelection, text: string): void => {
-        const clean = text.replace(/\r\n?/gu, '\n');
+    /**
+     * A paste or drop: HTML (parsed by `DOMParser` into an inert document) when the data has it, else plain text, which
+     * is read as Markdown when it looks like it. Types the field leaves out become paragraphs. In a code block the plain
+     * text goes in as it is
+     */
+    const paste = (at: TextSelection, data: DataTransfer | null, fallback: string): void => {
+        const text = (data?.getData('text/plain') || fallback).replace(/\r\n?/gu, '\n');
         const current = settings();
-        const inCode = blocks.find((block) => block.key === at.focus.block)?.type === 'code';
-        if (inCode || !clean.includes('\n')) {
-            apply(insertText(blocks, at, clean, current));
+        if (blocks.find((block) => block.key === at.focus.block)?.type === 'code') {
+            apply(insertText(blocks, at, text, current));
             return;
         }
-        const steps = clean.split('\n').flatMap((line, index) => [
-            ...(index > 0 ? [(now: KeyedBlock[], point: TextSelection) => splitBlock(now, point, current)] : []),
-            (now: KeyedBlock[], point: TextSelection) => (line === '' ? null : insertText(now, point, line, current))
-        ]);
-        apply(chain(at, steps));
+        const html = data?.getData('text/html') ?? '';
+        const fromHtml = html !== '' ? htmlToShapes(new DOMParser().parseFromString(html, 'text/html')) : [];
+        const shapes = fromHtml.length > 0 ? fromHtml : textToShapes(text);
+        apply(insertBlocks(blocks, at, allowedShapes(shapes, current.allowed), current));
     };
 
     const pendingMarks = (): Mark[] | undefined => (pending !== null && selection !== null && samePoint(pending.at, selection) ? pending.marks : undefined);
@@ -290,6 +285,10 @@ export default function controller(context: ControllerContext) {
         const first = blocks[0];
         if (selection === null && first !== undefined) selection = { anchor: { block: first.key, offset: 0 }, focus: { block: first.key, offset: 0 } };
         if (selection === null) return;
+        if (name === 'link') {
+            openLink();
+            return;
+        }
         const current = settings();
         if (name === 'undo') undo();
         else if (name === 'redo') redo();
@@ -316,6 +315,58 @@ export default function controller(context: ControllerContext) {
         }
         history.record(blocks, result.edit, selection ?? result.edit.selection, 'typing', Date.now());
         commit(result.edit, new Set([key]));
+    };
+
+    /** Closes the link panel; with `refocus`, the editor takes the focus back with the selection it had */
+    const closeLink = (refocus: boolean): void => {
+        linkPanel?.close();
+        anchored?.classList.remove('anchored');
+        anchored = undefined;
+        linkRange = null;
+        put('link', '');
+        put('linkInvalid', false);
+        if (refocus && editor !== null) {
+            editor.focus();
+            showSelection();
+        }
+    };
+
+    /** Opens the link panel under the selection's block, filled with the link already there */
+    const openLink = (): void => {
+        if (selection === null || view === null || linkPanel === null || linkInput === null) return;
+        const block = blocks.find((candidate) => candidate.key === selection?.focus.block);
+        if (block === undefined || block.type === 'code' || block.type === 'divider') return;
+        const found = linkAt(blocks, selection);
+        linkRange = found?.selection ?? selection;
+        anchored?.classList.remove('anchored');
+        anchored = view.elementOf(block.key);
+        anchored?.classList.add('anchored');
+        linkInput.value = found?.href ?? '';
+        put('link', found !== null ? 'edit' : 'new');
+        put('linkInvalid', false);
+        linkPanel.open();
+        linkInput.focus();
+        linkInput.select();
+    };
+
+    const finishLink = (href: string | null): void => {
+        const range = linkRange;
+        closeLink(true);
+        if (range !== null && !isLocked()) apply(setLink(blocks, clampSelection(blocks, range), href, settings()));
+    };
+
+    const applyLink = (): void => {
+        const typed = linkInput?.value.trim() ?? '';
+        if (typed === '') {
+            finishLink(null);
+            return;
+        }
+        const href = linkTarget(typed);
+        if (href === undefined) {
+            put('linkInvalid', true);
+            return;
+        }
+        finishLink(href);
     };
 
     const onSelectionChange = (): void => {
@@ -360,6 +411,9 @@ export default function controller(context: ControllerContext) {
             return;
         }
         editor = found;
+        linkInput = element.shadowRoot?.querySelector<HTMLInputElement>('#linkInput') ?? null;
+        const panel = element.shadowRoot?.querySelector<HTMLElement>('#linkPanel') ?? null;
+        if (panel !== null) linkPanel = createPopover({ element: panel, placement: 'bottomStart', anchor: LINK_ANCHOR, onDismiss: (reason) => closeLink(reason === 'escape') });
         view = createEditorView(found, { checkLabel: () => tool('checkItem') });
         sync();
     };
@@ -412,7 +466,7 @@ export default function controller(context: ControllerContext) {
                 case 'insertFromPaste':
                 case 'insertFromDrop':
                 case 'insertFromYank':
-                    pasteText(selection, event.dataTransfer?.getData('text/plain') ?? event.data ?? '');
+                    paste(selection, event.dataTransfer, event.data ?? '');
                     return;
                 case 'deleteByCut':
                 case 'deleteByDrag':
@@ -448,6 +502,7 @@ export default function controller(context: ControllerContext) {
                 else if (key === 'x' && event.shiftKey) command('strike');
                 else if (key === 'z') command(event.shiftKey ? 'redo' : 'undo');
                 else if (key === 'y' && !event.shiftKey) command('redo');
+                else if (key === 'k' && !event.shiftKey) command('link');
                 else handled = false;
                 if (handled) event.preventDefault();
                 return;
@@ -506,8 +561,19 @@ export default function controller(context: ControllerContext) {
             if (button === null || button.disabled) return;
             command(button.dataset['command'] ?? '');
         },
+        onLinkKey: (event: KeyboardEvent) => {
+            if (event.key === 'Enter' && event.target === linkInput) {
+                event.preventDefault();
+                applyLink();
+            }
+        },
+        onLinkInput: () => put('linkInvalid', false),
+        onApplyLink: () => applyLink(),
+        onRemoveLink: () => finishLink(null),
         dispose: () => {
             disposed = true;
+            linkPanel?.dispose();
+            linkPanel = null;
             document.removeEventListener('selectionchange', onSelectionChange);
             store.off(valuePaths, scheduleSync);
             view = null;

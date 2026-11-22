@@ -35,6 +35,7 @@ export const CORE_ICON_NAMES: readonly string[] = [
     'layout-sidebar',
     'layout-sidebar-right',
     'line',
+    'link',
     'list',
     'list-check',
     'list-numbers',

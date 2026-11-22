@@ -26,6 +26,11 @@
         "quote": "Zitat",
         "codeBlock": "Codeblock",
         "divider": "Trennlinie",
-        "checkItem": "Erledigt"
+        "checkItem": "Erledigt",
+        "link": "Link",
+        "linkUrl": "Linkadresse",
+        "applyLink": "Übernehmen",
+        "removeLink": "Link entfernen",
+        "linkInvalid": "Eine https-Adresse, einen Pfad oder ein #Fragment eingeben"
     }
 }
