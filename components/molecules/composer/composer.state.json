@@ -1,0 +1,182 @@
+{
+    "summary": "Where the next chat message is written: text, attachments, suggested prompts, and a stop button while a reply streams",
+    "category": "conversation",
+    "purposes": [
+        "write the next message to an assistant",
+        "attach files to a chat message",
+        "offer suggested prompts to start a chat",
+        "stop a reply while it streams"
+    ],
+    "events": [
+        "send",
+        "stop"
+    ],
+    "commands": [
+        "send",
+        "stop",
+        "clear",
+        "focus"
+    ],
+    "tokenGroup": "composer",
+    "tokens": {
+        "fill": "{color.surface.raised}",
+        "border": "{color.border.base}",
+        "radius": "{radius.lg}",
+        "gap": "{space.gap.sm}",
+        "padding": "{space.inset.sm}",
+        "send": {
+            "fill": "{color.accent.base}",
+            "on": "{color.accent.on}"
+        },
+        "chip": {
+            "fill": "{color.surface.sunken}",
+            "radius": "{radius.full}"
+        },
+        "error": "{color.danger.base}"
+    },
+    "properties": {
+        "value": {
+            "type": "string",
+            "default": ""
+        },
+        "attachments": {
+            "type": "array",
+            "default": []
+        },
+        "suggestions": {
+            "type": "map",
+            "default": {},
+            "items": {
+                "_label": {
+                    "type": "string",
+                    "kind": "content"
+                },
+                "_prompt": {
+                    "type": "string",
+                    "kind": "content"
+                }
+            }
+        },
+        "streaming": {
+            "type": "boolean",
+            "default": false,
+            "reflect": true
+        },
+        "disabled": {
+            "type": "boolean",
+            "default": false
+        },
+        "attach": {
+            "type": "boolean",
+            "default": true
+        },
+        "accept": {
+            "type": "array",
+            "default": []
+        },
+        "maxFiles": {
+            "type": "integer",
+            "default": 4,
+            "validators": {
+                "range": {
+                    "min": 1,
+                    "max": 20
+                }
+            }
+        },
+        "maxSize": {
+            "type": "integer",
+            "default": 10485760,
+            "validators": {
+                "range": {
+                    "min": 1,
+                    "max": 10485760
+                }
+            }
+        },
+        "rows": {
+            "type": "object",
+            "default": {},
+            "runtime": true
+        },
+        "canSend": {
+            "type": "boolean",
+            "default": false,
+            "runtime": true
+        },
+        "uploading": {
+            "type": "boolean",
+            "default": false,
+            "runtime": true,
+            "exposed": true
+        },
+        "types": {
+            "type": "string",
+            "default": "",
+            "runtime": true
+        },
+        "error": {
+            "type": "string",
+            "default": "",
+            "runtime": true
+        },
+        "message": {
+            "type": "string",
+            "default": "",
+            "runtime": true
+        },
+        "_label": {
+            "type": "string",
+            "kind": "content",
+            "default": "Message"
+        },
+        "_placeholder": {
+            "type": "string",
+            "kind": "content",
+            "default": "Type a message"
+        },
+        "_send": {
+            "type": "string",
+            "kind": "content",
+            "default": "Send"
+        },
+        "_stop": {
+            "type": "string",
+            "kind": "content",
+            "default": "Stop"
+        },
+        "_attach": {
+            "type": "string",
+            "kind": "content",
+            "default": "Attach files"
+        },
+        "_suggestions": {
+            "type": "string",
+            "kind": "content",
+            "default": "Suggestions"
+        },
+        "_remove": {
+            "type": "string",
+            "kind": "content",
+            "default": "Remove {name}"
+        },
+        "_errors": {
+            "type": "map",
+            "items": "string",
+            "kind": "content",
+            "default": {
+                "accept": "This type of file is not accepted",
+                "maxSize": "The file is too large",
+                "maxFiles": "Too many files",
+                "too_large": "The file is too large",
+                "unsupported_type": "This type of file is not supported",
+                "quota": "The storage limit of this app is reached",
+                "not_found": "The app could not be found",
+                "unauthorized": "You are not allowed to upload files",
+                "offline": "The file could not be sent",
+                "cancelled": "The upload was cancelled",
+                "internal": "The upload failed"
+            }
+        }
+    }
+}

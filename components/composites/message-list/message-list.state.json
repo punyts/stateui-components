@@ -52,6 +52,13 @@
                                 "component": "markdown",
                                 "<-_text": "$row.text"
                             },
+                            "typing": {
+                                "component": "spinner",
+                                "look": "dots",
+                                "size": "sm",
+                                "_label": "Typing",
+                                "<-active": "$row.streaming"
+                            },
                             "time": {
                                 "component": "text",
                                 "textRole": "caption",

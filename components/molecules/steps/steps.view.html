@@ -1,0 +1,22 @@
+<section class="steps" data-failed="{{ $.failed ? 'true' : null }}">
+    <button class="toggle" type="button" aria-expanded="{{ $.open ? 'true' : 'false' }}" aria-controls="list" onclick="{{ onToggle }}">
+        <ui-icon class="chevron" size="sm" name="chevron-down"></ui-icon>
+        <span class="title">{{ $._title }}</span>
+        <ui-spinner look="dots" size="sm" _label="{{ $._running }}" if="{{ $.busy }}"></ui-spinner>
+        <span class="progress" aria-live="polite">{{ $.progressText }}</span>
+    </button>
+    <ol class="list" id="list" hidden="{{ !$.open }}">
+        <li class="step" repeat="{{ $k,$i,$v in $.items }}" key="{{ $k }}" data-key="{{ $k }}" data-status="{{ $v.status || 'pending' }}">
+            <span class="mark">
+                <ui-spinner look="dots" size="sm" _label="{{ $._running }}" if="{{ $v.status === 'running' }}"></ui-spinner>
+                <ui-icon size="sm" name="circle-check" if="{{ $v.status === 'done' }}"></ui-icon>
+                <ui-icon size="sm" name="alert-circle" if="{{ $v.status === 'error' }}"></ui-icon>
+                <ui-icon size="sm" name="circle" if="{{ !$v.status || $v.status === 'pending' }}"></ui-icon>
+            </span>
+            <span class="body">
+                <span class="label">{{ $v._label || $k }}</span>
+                <span class="detail" if="{{ $v._detail }}">{{ $v._detail }}</span>
+            </span>
+        </li>
+    </ol>
+</section>

@@ -1,0 +1,25 @@
+<div class="composer" data-disabled="{{ $.disabled ? 'true' : null }}">
+    <div class="suggestions" role="group" aria-label="{{ $._suggestions }}" if="{{ $.suggestions &amp;&amp; $.value === '' &amp;&amp; !$.streaming }}">
+        <button class="suggestion" type="button" repeat="{{ $k,$i,$v in $.suggestions }}" key="{{ $k }}" data-key="{{ $k }}" disabled="{{ $.disabled }}" onclick="{{ onSuggest }}">{{ $v._label || $v._prompt || $k }}</button>
+    </div>
+    <div class="box">
+        <ul class="attachments" if="{{ $.rows }}">
+            <li class="attachment" repeat="{{ $k,$i,$v in $.rows }}" key="{{ $k }}" data-state="{{ $v.state }}">
+                <ui-icon size="sm" name="paperclip"></ui-icon>
+                <span class="name">{{ $v.name }}</span>
+                <span class="detail">{{ $v.detail }}</span>
+                <button class="remove" type="button" data-key="{{ $k }}" aria-label="{{ $v.removeLabel }}" disabled="{{ $.disabled }}" onclick="{{ onRemove }}"><ui-icon size="sm" name="x"></ui-icon></button>
+            </li>
+        </ul>
+        <textarea class="input" rows="1" aria-label="{{ $._label }}" placeholder="{{ $._placeholder }}" disabled="{{ $.disabled }}" aria-describedby="{{ $.message !== '' ? 'error' : null }}" value="{{ $.value }}" bind="value" onkeydown="{{ onKeyDown }}" ondragover="{{ onDragOver }}" ondrop="{{ onDrop }}" onpaste="{{ onPaste }}"></textarea>
+        <div class="tools">
+            <button class="attach" type="button" aria-label="{{ $._attach }}" title="{{ $._attach }}" disabled="{{ $.disabled }}" if="{{ $.attach }}" onclick="{{ onPick }}"><ui-icon size="sm" name="paperclip"></ui-icon></button>
+            <input class="picker" type="file" multiple="" hidden="" tabindex="-1" accept="{{ $.types }}" if="{{ $.attach }}" onchange="{{ onPicked }}" />
+            <button class="send" type="button" aria-label="{{ $._send }}" title="{{ $._send }}" disabled="{{ $.disabled || !$.canSend }}" if="{{ !$.streaming }}" onclick="{{ onSend }}"><ui-icon size="sm" name="arrow-up"></ui-icon></button>
+            <button class="stop" type="button" aria-label="{{ $._stop }}" title="{{ $._stop }}" if="{{ $.streaming }}" onclick="{{ onStop }}"><ui-icon size="sm" name="square"></ui-icon></button>
+        </div>
+    </div>
+    <div class="alert" role="status" aria-live="polite">
+        <p class="error" id="error" if="{{ $.message !== '' }}">{{ $.message }}</p>
+    </div>
+</div>

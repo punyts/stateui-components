@@ -1,1 +1,2 @@
-<span class="spinner" role="status" aria-label="{{ $._label }}"></span>
+<span class="spinner" role="status" aria-label="{{ $._label }}" if="{{ $.active &amp;&amp; $.look !== 'dots' }}"></span>
+<span class="dots" role="status" aria-label="{{ $._label }}" if="{{ $.active &amp;&amp; $.look === 'dots' }}"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>

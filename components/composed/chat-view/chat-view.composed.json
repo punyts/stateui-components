@@ -2,43 +2,47 @@
     "component": "panel",
     "summary": "A chat screen: the conversation above and a composer to write and send the next message",
     "category": "conversation",
-    "purposes": ["chat with an assistant", "write and send messages in a conversation", "build a support chat screen"],
-    "layout": { "type": "column", "gap": "sm" },
+    "purposes": [
+        "chat with an assistant",
+        "write and send messages in a conversation",
+        "build a support chat screen"
+    ],
+    "layout": {
+        "type": "column",
+        "gap": "sm"
+    },
     "children": {
         "messages": {
             "component": "messageList",
-            "placement": { "grow": 1 }
+            "placement": {
+                "grow": 1
+            }
         },
         "composer": {
-            "component": "toolbar",
-            "children": {
-                "input": {
-                    "component": "textareaField",
-                    "_label": "Message",
-                    "_placeholder": "Type a message",
-                    "titlePosition": "hidden",
-                    "autoGrow": true,
-                    "rows": 1,
-                    "sendOnEnter": true,
-                    "on": {
-                        "send": [
-                            { "command": "emit", "target": "chat.send" },
-                            { "command": "clear" }
-                        ]
-                    }
-                },
+            "component": "composer",
+            "_placeholder": "Type a message",
+            "streaming": false,
+            "attach": true,
+            "suggestions": {},
+            "on": {
                 "send": {
-                    "component": "button",
-                    "_title": "Send",
-                    "on": { "press": { "command": "send", "target": "^chatView.children.composer.children.input" } }
+                    "command": "emit",
+                    "target": "chat.send"
+                },
+                "stop": {
+                    "command": "emit",
+                    "target": "chat.stop"
                 }
             }
         }
     },
     "exposes": {
-        "children.messages.records": "The messages shown: link it with <-records to an array in $.data of records { id, author, text, time }; a reply that streams in is one record whose text is rewritten per chunk",
-        "children.composer.children.input._placeholder": "The hint in the empty composer",
-        "children.composer.children.input.on.send": "What sending does: a list that replaces the default whole. The first command emits the event named by its target (chat.send, with the typed text as payload; rename the target to change the event name) and the second clears the composer, so keep both in that order and add your own commands after them",
-        "children.composer.children.send._title": "Send button text"
+        "children.messages.records": "The messages shown: link it with <-records to an array in $.data of records { id, author, text, time, streaming }; a reply that streams in is one record whose text is rewritten per chunk, with streaming true until it ends (the row shows a typing indicator meanwhile)",
+        "children.composer.streaming": "Link it with <-streaming to a boolean that is true while a reply streams: the send button becomes a stop button that emits chat.stop",
+        "children.composer.suggestions": "Prompts offered while the composer is empty: a map of { _label, _prompt }; a press sends the prompt",
+        "children.composer.attach": "Whether files can be attached (default true); accept and maxFiles narrow them",
+        "children.composer._placeholder": "The hint in the empty composer",
+        "children.composer.on.send": "What sending does: the default emits chat.send with { text, attachments } (attachments are file references); rename the target to change the event name. The composer clears itself",
+        "children.composer.on.stop": "What the stop button does: the default emits chat.stop"
     }
 }

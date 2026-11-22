@@ -1,0 +1,89 @@
+{
+    "summary": "The steps an agent takes, with each one's status, folded to a line of progress until opened",
+    "category": "conversation",
+    "purposes": [
+        "show the steps an agent is working through",
+        "show the tool calls behind an answer",
+        "show progress through a running task"
+    ],
+    "events": [
+        "toggle"
+    ],
+    "commands": [
+        "open",
+        "close",
+        "toggle"
+    ],
+    "tokenGroup": "steps",
+    "tokens": {
+        "gap": "{space.gap.sm}",
+        "border": "{color.border.base}",
+        "radius": "{radius.md}",
+        "done": "{color.success.base}",
+        "error": "{color.danger.base}",
+        "pending": "{color.text.muted}"
+    },
+    "properties": {
+        "items": {
+            "type": "map",
+            "default": {},
+            "items": {
+                "_label": {
+                    "type": "string",
+                    "kind": "content"
+                },
+                "status": {
+                    "type": "string",
+                    "values": [
+                        "pending",
+                        "running",
+                        "done",
+                        "error"
+                    ],
+                    "default": "pending"
+                },
+                "_detail": {
+                    "type": "string",
+                    "kind": "content"
+                }
+            }
+        },
+        "open": {
+            "type": "boolean",
+            "default": false,
+            "reflect": true
+        },
+        "_title": {
+            "type": "string",
+            "kind": "content",
+            "default": "Steps"
+        },
+        "_progress": {
+            "type": "string",
+            "kind": "content",
+            "default": "{done} of {total} done"
+        },
+        "_running": {
+            "type": "string",
+            "kind": "content",
+            "default": "Running"
+        },
+        "progressText": {
+            "type": "string",
+            "default": "",
+            "runtime": true
+        },
+        "busy": {
+            "type": "boolean",
+            "default": false,
+            "runtime": true,
+            "exposed": true
+        },
+        "failed": {
+            "type": "boolean",
+            "default": false,
+            "runtime": true,
+            "exposed": true
+        }
+    }
+}

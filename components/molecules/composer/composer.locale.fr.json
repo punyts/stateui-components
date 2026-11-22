@@ -1,0 +1,22 @@
+{
+    "_label": "Message",
+    "_placeholder": "Écrire un message",
+    "_send": "Envoyer",
+    "_stop": "Arrêter",
+    "_attach": "Joindre des fichiers",
+    "_suggestions": "Suggestions",
+    "_remove": "Retirer {name}",
+    "_errors": {
+        "accept": "Ce type de fichier n’est pas accepté",
+        "maxSize": "Le fichier est trop volumineux",
+        "maxFiles": "Trop de fichiers",
+        "too_large": "Le fichier est trop volumineux",
+        "unsupported_type": "Ce type de fichier n’est pas pris en charge",
+        "quota": "La limite de stockage de cette app est atteinte",
+        "not_found": "L’app est introuvable",
+        "unauthorized": "Vous n’êtes pas autorisé à envoyer des fichiers",
+        "offline": "Le fichier n’a pas pu être envoyé",
+        "cancelled": "L’envoi a été annulé",
+        "internal": "L’envoi a échoué"
+    }
+}

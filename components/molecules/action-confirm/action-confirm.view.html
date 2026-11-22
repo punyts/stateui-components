@@ -1,0 +1,19 @@
+<section class="confirm" role="group" aria-labelledby="title">
+    <span class="title" id="title">{{ $._title }}</span>
+    <span class="description" if="{{ $._description }}">{{ $._description }}</span>
+    <dl class="details" if="{{ $.details }}">
+        <div class="detail" repeat="{{ $k,$i,$v in $.details }}" key="{{ $k }}">
+            <dt>{{ $v._label || $k }}</dt>
+            <dd>{{ $v._value }}</dd>
+        </div>
+    </dl>
+    <div class="actions" if="{{ $.status === 'pending' }}">
+        <button class="reject" type="button" disabled="{{ $.disabled }}" onclick="{{ onReject }}">{{ $._reject }}</button>
+        <button class="approve" type="button" disabled="{{ $.disabled }}" onclick="{{ onApprove }}">{{ $._approve }}</button>
+    </div>
+    <span class="outcome" role="status" if="{{ $.status !== 'pending' }}">
+        <ui-icon size="sm" name="circle-check" if="{{ $.status === 'approved' }}"></ui-icon>
+        <ui-icon size="sm" name="circle-x" if="{{ $.status === 'rejected' }}"></ui-icon>
+        <span>{{ $.status === 'approved' ? $._approved : $._rejected }}</span>
+    </span>
+</section>

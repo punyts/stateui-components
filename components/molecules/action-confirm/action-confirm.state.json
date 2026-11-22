@@ -1,0 +1,88 @@
+{
+    "summary": "An action an agent proposes, with its details and buttons to approve or reject it, then the decision",
+    "category": "conversation",
+    "purposes": [
+        "ask the user to approve an action an agent wants to take",
+        "confirm a tool call before it runs",
+        "record whether a proposed action was approved"
+    ],
+    "events": [
+        "approve",
+        "reject"
+    ],
+    "tokenGroup": "actionconfirm",
+    "tokens": {
+        "fill": "{color.surface.raised}",
+        "border": "{color.border.base}",
+        "radius": "{radius.md}",
+        "gap": "{space.gap.sm}",
+        "padding": "{space.inset.md}",
+        "approved": "{color.success.base}",
+        "rejected": "{color.danger.base}"
+    },
+    "shared": {
+        "tone": {
+            "default": "accent"
+        }
+    },
+    "properties": {
+        "_title": {
+            "type": "string",
+            "kind": "content",
+            "default": "Approve this action?"
+        },
+        "_description": {
+            "type": "string",
+            "kind": "content",
+            "default": ""
+        },
+        "details": {
+            "type": "map",
+            "default": {},
+            "items": {
+                "_label": {
+                    "type": "string",
+                    "kind": "content"
+                },
+                "_value": {
+                    "type": "string",
+                    "kind": "content"
+                }
+            }
+        },
+        "status": {
+            "type": "string",
+            "values": [
+                "pending",
+                "approved",
+                "rejected"
+            ],
+            "default": "pending",
+            "reflect": true
+        },
+        "disabled": {
+            "type": "boolean",
+            "default": false
+        },
+        "_approve": {
+            "type": "string",
+            "kind": "content",
+            "default": "Approve"
+        },
+        "_reject": {
+            "type": "string",
+            "kind": "content",
+            "default": "Reject"
+        },
+        "_approved": {
+            "type": "string",
+            "kind": "content",
+            "default": "Approved"
+        },
+        "_rejected": {
+            "type": "string",
+            "kind": "content",
+            "default": "Rejected"
+        }
+    }
+}

@@ -1,10 +1,7 @@
 {
     "children": {
         "composer": {
-            "children": {
-                "input": { "_label": "Nachricht", "_placeholder": "Nachricht eingeben" },
-                "send": { "_title": "Senden" }
-            }
+            "_placeholder": "Nachricht eingeben"
         }
     }
 }

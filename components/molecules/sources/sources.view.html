@@ -1,0 +1,13 @@
+<nav class="sources" aria-label="{{ $._label }}">
+    <ol class="list">
+        <li class="source" repeat="{{ $k,$i,$v in $.rows }}" key="{{ $k }}" data-key="{{ $k }}">
+            <span class="number" aria-hidden="true">{{ $v.number }}</span>
+            <span class="body">
+                <a class="title" href="{{ $v.href }}" target="_blank" rel="noopener noreferrer" if="{{ $v.href }}">{{ $v.title }}</a>
+                <span class="title" if="{{ !$v.href }}">{{ $v.title }}</span>
+                <span class="host" if="{{ $v.host }}">{{ $v.host }}</span>
+                <span class="excerpt" if="{{ $v.excerpt }}">{{ $v.excerpt }}</span>
+            </span>
+        </li>
+    </ol>
+</nav>

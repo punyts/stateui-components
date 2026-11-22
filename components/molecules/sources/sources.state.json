@@ -1,0 +1,50 @@
+{
+    "summary": "Numbered citations of an answer: each source a link with its title, its host and an excerpt",
+    "category": "conversation",
+    "purposes": [
+        "cite the sources of an AI answer",
+        "list numbered references with links",
+        "show where a reply took its facts from"
+    ],
+    "tokenGroup": "sources",
+    "tokens": {
+        "gap": "{space.gap.sm}",
+        "number": {
+            "fill": "{color.surface.sunken}",
+            "color": "{color.text.muted}"
+        },
+        "border": "{color.border.base}",
+        "radius": "{radius.md}",
+        "link": "{color.accent.base}"
+    },
+    "properties": {
+        "items": {
+            "type": "map",
+            "default": {},
+            "items": {
+                "_title": {
+                    "type": "string",
+                    "kind": "content"
+                },
+                "url": {
+                    "type": "string",
+                    "default": ""
+                },
+                "_excerpt": {
+                    "type": "string",
+                    "kind": "content"
+                }
+            }
+        },
+        "_label": {
+            "type": "string",
+            "kind": "content",
+            "default": "Sources"
+        },
+        "rows": {
+            "type": "object",
+            "default": {},
+            "runtime": true
+        }
+    }
+}

@@ -1,9 +1,11 @@
 {
-    "summary": "A turning ring that shows work in progress; it stops under reduced motion",
+    "summary": "A turning ring or three pulsing dots that show work in progress; it stops under reduced motion",
     "category": "feedback",
-    "purposes": ["show that work is in progress", "show a loading indicator", "wait for a server reply"],
+    "purposes": ["show that work is in progress", "show a loading indicator", "wait for a server reply", "show that a reply is being typed"],
     "shared": { "tone": {}, "size": { "default": "md" } },
     "properties": {
-        "_label": { "type": "string", "kind": "content", "default": "Loading" }
+        "_label": { "type": "string", "kind": "content", "default": "Loading" },
+        "look": { "type": "string", "values": ["ring", "dots"], "default": "ring", "reflect": true },
+        "active": { "type": "boolean", "default": true, "reflect": true }
     }
 }

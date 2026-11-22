@@ -1,0 +1,22 @@
+{
+    "_label": "Mensaje",
+    "_placeholder": "Escribe un mensaje",
+    "_send": "Enviar",
+    "_stop": "Detener",
+    "_attach": "Adjuntar archivos",
+    "_suggestions": "Sugerencias",
+    "_remove": "Quitar {name}",
+    "_errors": {
+        "accept": "Este tipo de archivo no se acepta",
+        "maxSize": "El archivo es demasiado grande",
+        "maxFiles": "Demasiados archivos",
+        "too_large": "El archivo es demasiado grande",
+        "unsupported_type": "Este tipo de archivo no es compatible",
+        "quota": "Se alcanzó el límite de almacenamiento de esta app",
+        "not_found": "No se encontró la app",
+        "unauthorized": "No tienes permiso para subir archivos",
+        "offline": "No se pudo enviar el archivo",
+        "cancelled": "Se canceló la subida",
+        "internal": "La subida falló"
+    }
+}

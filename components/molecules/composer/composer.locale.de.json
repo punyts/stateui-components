@@ -1,0 +1,22 @@
+{
+    "_label": "Nachricht",
+    "_placeholder": "Nachricht eingeben",
+    "_send": "Senden",
+    "_stop": "Stoppen",
+    "_attach": "Dateien anhängen",
+    "_suggestions": "Vorschläge",
+    "_remove": "{name} entfernen",
+    "_errors": {
+        "accept": "Dieser Dateityp wird nicht angenommen",
+        "maxSize": "Die Datei ist zu groß",
+        "maxFiles": "Zu viele Dateien",
+        "too_large": "Die Datei ist zu groß",
+        "unsupported_type": "Dieser Dateityp wird nicht unterstützt",
+        "quota": "Das Speicherlimit dieser App ist erreicht",
+        "not_found": "Die App wurde nicht gefunden",
+        "unauthorized": "Sie dürfen keine Dateien hochladen",
+        "offline": "Die Datei konnte nicht gesendet werden",
+        "cancelled": "Das Hochladen wurde abgebrochen",
+        "internal": "Das Hochladen ist fehlgeschlagen"
+    }
+}

@@ -1,0 +1,99 @@
+:host {
+    display: block;
+}
+
+.confirm {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ui-actionconfirm-gap);
+    padding: var(--ui-actionconfirm-padding);
+    border: var(--ui-border-width-thin) solid var(--ui-actionconfirm-border);
+    border-radius: var(--ui-actionconfirm-radius);
+    background: var(--ui-actionconfirm-fill);
+    font-family: var(--ui-text-body-family);
+    font-size: var(--ui-text-body-size);
+    line-height: var(--ui-text-body-leading);
+    color: var(--ui-color-text-base);
+}
+
+.title {
+    font-family: var(--ui-text-label-family);
+    font-weight: var(--ui-text-label-weight);
+}
+
+.description {
+    color: var(--ui-color-text-muted);
+}
+
+.details {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: var(--ui-space-gap-sm) var(--ui-actionconfirm-gap);
+    margin: 0;
+}
+
+.detail {
+    display: contents;
+}
+
+dt {
+    color: var(--ui-color-text-muted);
+}
+
+dd {
+    margin: 0;
+    font-family: var(--ui-text-code-family);
+    overflow-wrap: anywhere;
+}
+
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--ui-actionconfirm-gap);
+}
+
+button {
+    min-block-size: var(--ui-size-control-md);
+    padding: 0 var(--ui-space-inset-md);
+    border: var(--ui-border-width-thin) solid var(--ui-actionconfirm-border);
+    border-radius: var(--ui-radius-md);
+    background: var(--ui-color-surface-base);
+    color: var(--ui-color-text-base);
+    font-family: var(--ui-text-label-family);
+    font-size: var(--ui-text-label-size);
+    font-weight: var(--ui-text-label-weight);
+    cursor: pointer;
+}
+
+button.approve {
+    border-color: var(--tone);
+    background: var(--tone);
+    color: var(--tone-on);
+}
+
+button:focus-visible {
+    outline: var(--ui-border-width-thick) solid var(--ui-color-focus);
+    outline-offset: var(--ui-border-width-thin);
+}
+
+button:disabled {
+    color: var(--ui-color-text-disabled);
+    cursor: not-allowed;
+}
+
+.outcome {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ui-space-gap-sm);
+    font-family: var(--ui-text-label-family);
+    font-weight: var(--ui-text-label-weight);
+}
+
+:host([status='approved']) .outcome {
+    color: var(--ui-actionconfirm-approved);
+}
+
+:host([status='rejected']) .outcome {
+    color: var(--ui-actionconfirm-rejected);
+}
