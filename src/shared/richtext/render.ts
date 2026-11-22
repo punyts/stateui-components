@@ -1,6 +1,6 @@
 import { LINK_ROLE, headingTag } from '../markdown/render.js';
 import { LIST_TYPES, MARKS } from './model.js';
-import type { KeyedBlock, Mark, Run } from './model.js';
+import type { Block, Cell, KeyedBlock, Mark, Run } from './model.js';
 
 /**
  * Draws blocks into an element. Every element comes from `createElement` and every character reaches the page as a text
@@ -30,11 +30,51 @@ export function markedNode(document: Document, run: Run): Node {
     return node;
 }
 
-/** Appends a block's runs to `parent`; consecutive runs with the same link share one link */
+/** A mention: `span.mention` with `data-mention`, its id, holding the text it shows; the editor makes it not editable */
+export function mentionNode(document: Document, run: Run): HTMLElement {
+    const element = document.createElement('span');
+    element.className = 'mention';
+    element.dataset['mention'] = run.mention ?? '';
+    element.appendChild(markedNode(document, run));
+    return element;
+}
+
+/**
+ * A table: `table` with the first row in `thead` as `th` cells and the rest in `tbody`. Each cell carries `data-row`
+ * and `data-column`, and `data-align` when its column has one; `fill` puts the cell's content in
+ */
+export function tableElement(document: Document, block: Pick<Block, 'rows' | 'align'>, fill: (cell: HTMLElement, content: Cell, row: number, column: number) => void): HTMLTableElement {
+    const table = document.createElement('table');
+    const head = document.createElement('thead');
+    const body = document.createElement('tbody');
+    (block.rows ?? []).forEach((row, rowIndex) => {
+        const line = document.createElement('tr');
+        row.cells.forEach((content, column) => {
+            const cell = document.createElement(rowIndex === 0 ? 'th' : 'td');
+            cell.dataset['row'] = String(rowIndex);
+            cell.dataset['column'] = String(column);
+            const align = block.align?.[column];
+            if (align !== undefined && align !== '') cell.dataset['align'] = align;
+            fill(cell, content, rowIndex, column);
+            line.appendChild(cell);
+        });
+        (rowIndex === 0 ? head : body).appendChild(line);
+    });
+    table.appendChild(head);
+    if (body.childNodes.length > 0) table.appendChild(body);
+    return table;
+}
+
+/** Appends a block's runs to `parent`; consecutive runs with the same link share one link, and a mention is `span.mention` */
 export function renderRuns(document: Document, parent: Node, runs: readonly Run[]): void {
     let at = 0;
     while (at < runs.length) {
         const link = runs[at]?.link;
+        if (runs[at]?.mention !== undefined) {
+            parent.appendChild(mentionNode(document, runs[at] as Run));
+            at++;
+            continue;
+        }
         if (link === undefined) {
             parent.appendChild(markedNode(document, runs[at] as Run));
             at++;
@@ -74,6 +114,9 @@ function blockElement(document: Document, block: KeyedBlock, options: RichTextRe
         }
         case 'divider':
             element = document.createElement('hr');
+            break;
+        case 'table':
+            element = tableElement(document, block, (cell, content) => renderRuns(document, cell, content.runs));
             break;
         default:
             element = document.createElement('p');

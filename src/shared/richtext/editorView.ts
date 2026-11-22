@@ -1,7 +1,7 @@
 import { LIST_TYPES, plainText } from './model.js';
 import type { KeyedBlock, Run } from './model.js';
-import { markedNode } from './render.js';
-import type { Point, TextSelection } from './edit.js';
+import { markedNode, mentionNode, tableElement } from './render.js';
+import type { CellPoint, Point, TextSelection } from './edit.js';
 
 /**
  * The DOM of the rich-text editor: one flat element per block inside the `contenteditable` root, keyed by the block key.
@@ -13,7 +13,9 @@ import type { Point, TextSelection } from './edit.js';
  * A block is `div.block` with `data-key` and `data-type` (and `data-level`, `data-indent`, `data-number`, `data-checked`
  * and `data-language` as the type has them). Its text is in `span.text`, runs as text nodes in their mark elements; a
  * link is `span.link` with `data-href`. An empty block, and a block whose text ends in a line break, end in a `br` so the
- * caret has a line. A check item's box is in `span.marker`, which is not editable; a divider's block is not editable
+ * caret has a line. A check item's box is in `span.marker`, which is not editable; a divider's block is not editable. A
+ * mention is `span.mention`, not editable, so the caret goes around it. A table's block holds a `table` whose cells
+ * (`data-row`, `data-column`) each hold a `span.text`; a point in a table names its cell
  */
 
 export interface EditorView {
@@ -27,8 +29,8 @@ export interface EditorView {
     readSelection(): TextSelection | null;
     /** A model selection from a DOM range (a `beforeinput` target range), or null */
     selectionOfRange(range: StaticRange | AbstractRange): TextSelection | null;
-    /** The text of a block as the page now holds it */
-    textOf(key: string): string | null;
+    /** The text of a block (of a table's cell) as the page now holds it */
+    textOf(key: string, cell?: CellPoint): string | null;
     /** The key of the block a node is in */
     blockOf(node: Node): string | null;
     /** The element drawn for a block */
@@ -77,15 +79,24 @@ function textNodes(element: HTMLElement): Text[] {
     return found;
 }
 
-function appendRuns(document: Document, parent: HTMLElement, block: KeyedBlock): void {
-    if (block.type === 'code') {
-        const text = plainText(block.runs);
+/** The element of a table's cell */
+const cellElement = (block: HTMLElement, cell: CellPoint): HTMLElement | null => block.querySelector<HTMLElement>(`[data-row="${cell.row}"][data-column="${cell.column}"]`);
+
+function appendRuns(document: Document, parent: HTMLElement, type: KeyedBlock['type'], runs: readonly Run[]): void {
+    if (type === 'code') {
+        const text = plainText(runs);
         if (text !== '') parent.appendChild(document.createTextNode(text));
         return;
     }
     let at = 0;
-    const runs = block.runs;
     while (at < runs.length) {
+        if (runs[at]?.mention !== undefined) {
+            const mention = mentionNode(document, runs[at] as Run);
+            mention.contentEditable = 'false';
+            parent.appendChild(mention);
+            at++;
+            continue;
+        }
         const link = runs[at]?.link;
         if (link === undefined) {
             parent.appendChild(markedNode(document, runs[at] as Run));
@@ -113,6 +124,16 @@ function blockElement(document: Document, block: KeyedBlock, number: number | un
         element.appendChild(document.createElement('hr'));
         return element;
     }
+    if (block.type === 'table') {
+        element.appendChild(tableElement(document, block, (cell, content) => {
+            const text = document.createElement('span');
+            text.className = 'text';
+            appendRuns(document, text, 'paragraph', content.runs);
+            if (content.runs.length === 0) text.appendChild(document.createElement('br'));
+            cell.appendChild(text);
+        }));
+        return element;
+    }
     if (block.type === 'heading') element.dataset['level'] = String(block.level ?? 1);
     if (LIST_TYPES.includes(block.type)) element.dataset['indent'] = String(block.indent ?? 0);
     if (number !== undefined) element.dataset['number'] = `${number}.`;
@@ -132,7 +153,7 @@ function blockElement(document: Document, block: KeyedBlock, number: number | un
     }
     const text = document.createElement('span');
     text.className = 'text';
-    appendRuns(document, text, block);
+    appendRuns(document, text, block.type, block.runs);
     const content = plainText(block.runs);
     if (content === '' || content.endsWith('\n')) text.appendChild(document.createElement('br'));
     element.appendChild(text);
@@ -140,7 +161,7 @@ function blockElement(document: Document, block: KeyedBlock, number: number | un
 }
 
 const signatureOf = (block: KeyedBlock, number: number | undefined): string =>
-    JSON.stringify([block.type, block.level, block.indent, block.checked, block.language, block.runs, number]);
+    JSON.stringify([block.type, block.level, block.indent, block.checked, block.language, block.runs, block.rows, block.align, number]);
 
 /** The selection a shadow root holds: Chromium answers it on the root; elsewhere the document's composed range is read */
 function shadowSelection(root: HTMLElement): { anchorNode: Node | null; anchorOffset: number; focusNode: Node | null; focusOffset: number } | null {
@@ -188,8 +209,21 @@ export function createEditorView(root: HTMLElement, options: EditorViewOptions):
         if (block === null) return null;
         const key = block.dataset['key'] as string;
         if (block.dataset['type'] === 'divider') return { block: key, offset: 0 };
+        if (block.dataset['type'] === 'table') {
+            const element = node instanceof Element ? node : node.parentElement;
+            const cell = element?.closest<HTMLElement>('[data-row]');
+            if (cell === null || cell === undefined || !block.contains(cell)) return { block: key, offset: 0, cell: { row: 0, column: 0 } };
+            const at: CellPoint = { row: Number(cell.dataset['row']), column: Number(cell.dataset['column']) };
+            return { ...offsetIn(cell, key, node, offset), cell: at };
+        }
         const marker = block.querySelector('.marker');
         if (marker !== null && marker.contains(node)) return { block: key, offset: 0 };
+        return offsetIn(block, key, node, offset);
+    };
+
+    /** The character offset of a DOM point counted over the text nodes of `container` (a block, or a table's cell) */
+    const offsetIn = (container: HTMLElement, key: string, node: Node, offset: number): Point => {
+        const block = container;
         let total = 0;
         if (node.nodeType === Node.TEXT_NODE) {
             for (const text of textNodes(block)) {
@@ -213,15 +247,23 @@ export function createEditorView(root: HTMLElement, options: EditorViewOptions):
         const element = drawn.get(point.block)?.element;
         if (element === undefined || element.parentElement !== root) return null;
         if (element.dataset['type'] === 'divider') return { node: root, offset: Array.prototype.indexOf.call(root.childNodes, element) };
+        const container = element.dataset['type'] === 'table' ? cellElement(element, point.cell ?? { row: 0, column: 0 }) : element;
+        if (container === null) return null;
         let rest = Math.max(0, point.offset);
-        const texts = textNodes(element);
+        const texts = textNodes(container);
         for (const text of texts) {
-            if (rest <= text.data.length) return { node: text, offset: rest };
+            if (rest <= text.data.length) {
+                //the caret goes beside a mention, never into its text
+                const mention = text.parentElement?.closest('.mention');
+                if (mention === null || mention === undefined || mention.parentNode === null) return { node: text, offset: rest };
+                const index = Array.prototype.indexOf.call(mention.parentNode.childNodes, mention) as number;
+                return { node: mention.parentNode, offset: rest === 0 ? index : index + 1 };
+            }
             rest -= text.data.length;
         }
         const last = texts[texts.length - 1];
         if (last !== undefined) return { node: last, offset: last.data.length };
-        const holder = element.querySelector('.text') ?? element;
+        const holder = container.querySelector('.text') ?? container;
         return { node: holder, offset: 0 };
     };
 
@@ -276,9 +318,10 @@ export function createEditorView(root: HTMLElement, options: EditorViewOptions):
             const focus = pointAt(range.endContainer, range.endOffset);
             return anchor === null || focus === null ? null : { anchor, focus };
         },
-        textOf: (key) => {
+        textOf: (key, cell) => {
             const element = drawn.get(key)?.element;
-            return element === undefined ? null : textNodes(element).map((text) => text.data).join('');
+            const container = element !== undefined && cell !== undefined ? cellElement(element, cell) : element;
+            return container === undefined || container === null ? null : textNodes(container).map((text) => text.data).join('');
         },
         blockOf: (node) => blockElementOf(node)?.dataset['key'] ?? null,
         elementOf: (key) => drawn.get(key)?.element

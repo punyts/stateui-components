@@ -7,7 +7,9 @@
     "tokens": {
         "gap": "{space.gap.md}",
         "code": { "background": "{color.surface.sunken}" },
-        "check": { "fill": "{color.accent.base}" }
+        "check": { "fill": "{color.accent.base}" },
+        "mention": { "color": "{color.accent.base}", "background": "{color.surface.sunken}" },
+        "table": { "header": "{color.surface.sunken}" }
     },
     "properties": {
         "value": { "type": "object", "default": {} },

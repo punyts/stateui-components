@@ -493,4 +493,158 @@ describe('richTextField in Chromium', () => {
         // Assert
         expect(shapes(stored(mounted))).toEqual(['paragraph:ab日本']);
     });
+    it('should open the slash menu at the start of a block, filter it as you type and insert a table from it', async () => {
+        // Arrange
+        const mounted = await mountFocused();
+        const picker = part(mounted.element, '#picker');
+
+        // Act
+        await userEvent.keyboard('/');
+        await flush();
+        const opened = picker.matches(':popover-open');
+        const all = Array.from(picker.querySelectorAll('[role=option]')).map((option) => option.textContent);
+        await userEvent.keyboard('tab');
+        await flush();
+        const filtered = Array.from(picker.querySelectorAll('[role=option]')).map((option) => option.textContent);
+        await userEvent.keyboard('{Enter}');
+        await flush();
+        await userEvent.keyboard('x');
+        await flush();
+
+        // Assert
+        expect(opened).toBe(true);
+        expect(all).toContain('Heading 1');
+        expect(all).toContain('Table');
+        expect(filtered).toEqual(['Table']);
+        expect(picker.matches(':popover-open')).toBe(false);
+        const [table] = readRichText(stored(mounted));
+        expect(table?.type).toBe('table');
+        expect(table?.rows?.map((row) => row.cells.map((cell) => plainText(cell.runs)))).toEqual([['x', '', ''], ['', '', ''], ['', '', '']]);
+        expect(mounted.store.get('$.app.picker')).toBe('');
+    });
+
+    it('should move through the slash menu with the arrows, and close it with Escape keeping the text', async () => {
+        // Arrange
+        const mounted = await mountFocused();
+        const picker = part(mounted.element, '#picker');
+
+        // Act
+        await userEvent.keyboard('/');
+        await flush();
+        await userEvent.keyboard('{ArrowDown}');
+        await flush();
+        const active = picker.querySelector('[aria-selected=true]')?.textContent;
+        const described = editor(mounted.element).getAttribute('aria-activedescendant');
+        await userEvent.keyboard('{Escape}');
+        await flush();
+        await userEvent.keyboard('{Enter}/');
+        await flush();
+        await userEvent.keyboard('{ArrowDown}{Enter}');
+        await flush();
+
+        // Assert
+        expect(active).toBe('Heading 2');
+        expect(described).toBe('pick-1');
+        expect(shapes(stored(mounted))).toEqual(['paragraph:/', 'heading2:']);
+    });
+
+    it('should not open the slash menu inside a word', async () => {
+        // Arrange
+        const mounted = await mountFocused();
+
+        // Act
+        await userEvent.keyboard('a/b');
+        await flush();
+
+        // Assert
+        expect(part(mounted.element, '#picker').matches(':popover-open')).toBe(false);
+        expect(shapes(stored(mounted))).toEqual(['paragraph:a/b']);
+    });
+
+    it('should type into table cells, move with Tab, add a row with Tab in the last cell and go down with Enter', async () => {
+        // Arrange
+        const value = { blocks: { bTab: { order: 'a', type: 'table', runs: [], rows: [{ cells: [{ runs: [{ text: 'A' }] }, { runs: [] }] }] }, bEnd: { order: 'b', type: 'paragraph', runs: [] } } };
+        const mounted = mountComponent('richTextField', { value });
+        await flush();
+        const first = editor(mounted.element).querySelector('th .text') as HTMLElement;
+
+        // Act
+        await userEvent.click(first);
+        await userEvent.keyboard('{End}1{Tab}B{Tab}c{Enter}d');
+        await flush();
+
+        // Assert
+        const [table] = readRichText(stored(mounted));
+        expect(table?.rows?.map((row) => row.cells.map((cell) => plainText(cell.runs)))).toEqual([['A1', 'B'], ['c', ''], ['d', '']]);
+        expect(editor(mounted.element).querySelectorAll('th').length).toBe(2);
+        expect(editor(mounted.element).querySelectorAll('td').length).toBe(4);
+    });
+
+    it('should show the table tools in a table and add a column and remove the table with them', async () => {
+        // Arrange
+        const value = { blocks: { bTab: { order: 'a', type: 'table', runs: [], rows: [{ cells: [{ runs: [{ text: 'A' }] }, { runs: [] }] }] }, bEnd: { order: 'b', type: 'paragraph', runs: [{ text: 'after' }] } } };
+        const mounted = mountComponent('richTextField', { value });
+        await flush();
+        const outside = tool(mounted.element, 'addColumn');
+
+        // Act
+        await userEvent.click(editor(mounted.element).querySelector('th .text') as HTMLElement);
+        await flush();
+        await userEvent.click(tool(mounted.element, 'addColumn'));
+        await flush();
+        const columns = readRichText(stored(mounted))[0]?.rows?.[0]?.cells.length;
+        await userEvent.click(tool(mounted.element, 'removeTable'));
+        await flush();
+
+        // Assert
+        expect(outside).toBeNull();
+        expect(columns).toBe(3);
+        expect(shapes(stored(mounted))).toEqual(['paragraph:after']);
+        expect(tool(mounted.element, 'addColumn')).toBeNull();
+    });
+
+    it('should offer mentions from its records as @ is typed, raise mentionQuery and put the chosen one in whole', async () => {
+        // Arrange
+        const mentions = [{ value: 'u1', label: 'Ada Lovelace' }, { value: 'u2', label: 'Bo Diddley' }];
+        const mounted = await mountFocused({ mentions });
+        const asked = events(mounted.element, 'mentionQuery');
+        const picker = part(mounted.element, '#picker');
+
+        // Act
+        await userEvent.keyboard('hi @ad');
+        await flush();
+        const offered = Array.from(picker.querySelectorAll('[role=option]')).map((option) => option.textContent);
+        await new Promise((resolve) => setTimeout(resolve, 400));
+        await userEvent.keyboard('{Enter}');
+        await flush();
+        const runs = readRichText(stored(mounted))[0]?.runs;
+        const chip = editor(mounted.element).querySelector<HTMLElement>('.mention');
+        await userEvent.keyboard('{Backspace}{Backspace}');
+        await flush();
+
+        // Assert
+        expect(offered).toEqual(['Ada Lovelace']);
+        expect(asked).toContain('ad');
+        expect(runs).toEqual([{ text: 'hi ' }, { text: '@Ada Lovelace', mention: 'u1' }, { text: ' ' }]);
+        expect(chip?.dataset['mention']).toBe('u1');
+        expect(chip?.getAttribute('contenteditable')).toBe('false');
+        expect(shapes(stored(mounted))).toEqual(['paragraph:hi ']);
+    });
+
+    it('should show mentions the app writes after mentionQuery', async () => {
+        // Arrange
+        const mounted = await mountFocused();
+        mounted.element.addEventListener('mentionQuery', () => mounted.store.set('$.app.mentions', [{ value: 'u9', label: 'Grace Hopper' }] as never));
+        const picker = part(mounted.element, '#picker');
+
+        // Act
+        await userEvent.keyboard('@gr');
+        await new Promise((resolve) => setTimeout(resolve, 400));
+        await flush();
+
+        // Assert
+        expect(picker.matches(':popover-open')).toBe(true);
+        expect(Array.from(picker.querySelectorAll('[role=option]')).map((option) => option.textContent)).toEqual(['Grace Hopper']);
+        expect(mounted.store.get('$.app.picker')).toBe('mention');
+    });
 });

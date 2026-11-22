@@ -255,7 +255,46 @@
     text-underline-offset: 0.15em;
 }
 
-/* The block the link panel opens under */
+.text .mention {
+    padding-inline: calc(var(--ui-space-gap-sm) / 2);
+    color: var(--ui-richtextfield-mention-color);
+    background: var(--ui-richtextfield-mention-background);
+    border-radius: var(--ui-radius-sm);
+    white-space: nowrap;
+}
+
+.block[data-type=table] {
+    overflow-x: auto;
+}
+
+.block table {
+    border-collapse: collapse;
+    min-inline-size: 50%;
+}
+
+.block th,
+.block td {
+    min-inline-size: calc(var(--ui-size-control-md) * 2);
+    padding: calc(var(--ui-space-gap-sm) / 2) var(--ui-space-gap-sm);
+    border: var(--ui-border-width-thin) solid var(--ui-color-border-base);
+    text-align: start;
+    vertical-align: top;
+}
+
+.block th {
+    font-weight: var(--ui-text-heading-weight);
+    background: var(--ui-richtextfield-table-header);
+}
+
+.block [data-align=center] {
+    text-align: center;
+}
+
+.block [data-align=right] {
+    text-align: end;
+}
+
+/* The block the link panel and the picker open under */
 .block.anchored {
     anchor-name: --richtext-link;
 }
@@ -279,6 +318,45 @@
     border-radius: var(--ui-control-radius);
     box-shadow: var(--ui-elevation-overlay-shadow);
     font: inherit;
+}
+
+.picker {
+    box-sizing: border-box;
+    margin: 0;
+    margin-block: var(--ui-space-gap-sm);
+    border: var(--ui-border-width-thin) solid var(--ui-color-border-base);
+    inset: auto;
+    min-inline-size: calc(var(--ui-size-control-md) * 5);
+    max-block-size: calc(var(--ui-size-control-md) * 8);
+    overflow-y: auto;
+    padding: calc(var(--ui-space-gap-sm) / 2);
+    display: none;
+    flex-direction: column;
+    position-try-fallbacks: flip-block, flip-inline;
+    color: var(--ui-color-text-base);
+    background: var(--ui-color-surface-raised);
+    border-radius: var(--ui-control-radius);
+    box-shadow: var(--ui-elevation-overlay-shadow);
+    font: inherit;
+}
+
+.picker:popover-open {
+    display: flex;
+}
+
+.picker .option {
+    padding: calc(var(--ui-space-gap-sm) / 2) var(--ui-space-gap-sm);
+    border-radius: var(--ui-radius-sm);
+    cursor: pointer;
+}
+
+.picker .option:hover {
+    background: var(--ui-color-surface-sunken);
+}
+
+.picker .option[aria-selected=true] {
+    color: var(--ui-richtextfield-picker-on);
+    background: var(--ui-richtextfield-picker-active);
 }
 
 .linkPanel:popover-open {

@@ -1,8 +1,8 @@
 {
-    "summary": "A labelled rich-text editor writing block JSON: headings, lists, checks, quotes, code and marks",
+    "summary": "A labelled rich-text editor writing block JSON: headings, lists, checks, quotes, code, tables, mentions and marks",
     "category": "forms",
-    "purposes": ["write formatted notes with headings and lists", "write text with links pasted from documents", "edit a rich-text description or article", "write a formatted comment with bold and italic", "keep a checklist inside a form field"],
-    "events": ["change", "invalid", "valid"],
+    "purposes": ["write formatted notes with headings and lists", "write text with links pasted from documents", "edit a rich-text description or article", "write a formatted comment with bold and italic", "keep a checklist inside a form field", "mention people with @ in a note", "insert blocks and tables from a slash menu"],
+    "events": ["change", "invalid", "valid", "mentionQuery"],
     "commands": ["validate", "reset", "focus", "clear"],
     "tokenGroup": "richtextfield",
     "tokens": {
@@ -10,7 +10,10 @@
         "code": { "background": "{color.surface.sunken}" },
         "check": { "fill": "{color.accent.base}" },
         "toolbar": { "background": "{color.surface.raised}", "active": "{color.accent.base}" },
-        "link": { "width": "calc({size.control.md} * 9)" }
+        "link": { "width": "calc({size.control.md} * 9)" },
+        "mention": { "color": "{color.accent.base}", "background": "{color.surface.sunken}" },
+        "table": { "header": "{color.surface.sunken}" },
+        "picker": { "active": "{color.accent.base}", "on": "{color.accent.on}" }
     },
     "shared": {
         "variant": { "default": "outline", "values": ["outline", "soft", "ghost"] },
@@ -24,8 +27,11 @@
         "blocks": {
             "type": "array",
             "default": [],
-            "validators": { "eachOf": ["paragraph", "heading", "bullet", "numbered", "check", "quote", "code", "divider"] }
+            "validators": { "eachOf": ["paragraph", "heading", "bullet", "numbered", "check", "quote", "code", "divider", "table"] }
         },
+        "mentions": { "type": "array", "default": [] },
+        "mentionValue": { "type": "string", "default": "value" },
+        "mentionLabel": { "type": "string", "default": "label" },
         "rows": { "type": "integer", "default": 4, "validators": { "range": { "min": 1, "max": 50 } } },
         "disabled": { "type": "boolean", "default": false },
         "readonly": { "type": "boolean", "default": false },
@@ -46,6 +52,7 @@
         "canRedo": { "type": "boolean", "default": false, "runtime": true },
         "link": { "type": "string", "values": ["", "new", "edit"], "default": "", "runtime": true },
         "linkInvalid": { "type": "boolean", "default": false, "runtime": true },
+        "picker": { "type": "string", "values": ["", "slash", "mention"], "default": "", "runtime": true },
         "_label": { "type": "string", "kind": "content", "default": "Label" },
         "_placeholder": { "type": "string", "kind": "content", "default": "" },
         "_help": { "type": "string", "kind": "content", "default": "" },
@@ -87,7 +94,15 @@
                 "linkUrl": "Link address",
                 "applyLink": "Apply",
                 "removeLink": "Remove link",
-                "linkInvalid": "Enter an https address, a path or a #fragment"
+                "linkInvalid": "Enter an https address, a path or a #fragment",
+                "table": "Table",
+                "addRow": "Add row",
+                "addColumn": "Add column",
+                "removeRow": "Remove row",
+                "removeColumn": "Remove column",
+                "removeTable": "Remove table",
+                "commands": "Insert block",
+                "mentions": "Mention"
             }
         }
     }

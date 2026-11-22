@@ -8,7 +8,7 @@ import { orderKeys } from './order.js';
  * field checked; `normalizeRuns` gives equal content one form
  */
 
-export const BLOCK_TYPES = ['paragraph', 'heading', 'bullet', 'numbered', 'check', 'quote', 'code', 'divider'] as const;
+export const BLOCK_TYPES = ['paragraph', 'heading', 'bullet', 'numbered', 'check', 'quote', 'code', 'divider', 'table'] as const;
 export type BlockType = (typeof BLOCK_TYPES)[number];
 
 /** The marks in the order they are stored and nested: code innermost, bold outermost */
@@ -16,16 +16,37 @@ export const MARKS = ['code', 'strike', 'italic', 'bold'] as const;
 export type Mark = (typeof MARKS)[number];
 
 export const LIST_TYPES: readonly BlockType[] = ['bullet', 'numbered', 'check'];
+/** Blocks with no text of their own: the caret cannot sit in their runs (a table's text is in its cells) */
+export const ATOMIC_TYPES: readonly BlockType[] = ['divider', 'table'];
+export const ALIGNS = ['left', 'center', 'right'] as const;
+export type Align = (typeof ALIGNS)[number];
 
 export const MAX_HEADING_LEVEL = 3;
 export const MAX_INDENT = 4;
 /** At most this many blocks are read; the rest are dropped */
 export const MAX_BLOCKS = 10_000;
+/** A table has at most this many columns and rows (the first row is its header) */
+export const MAX_COLUMNS = 20;
+export const MAX_ROWS = 500;
+/** The longest id a mention keeps */
+export const MAX_MENTION_ID = 128;
 
 export interface Run {
     text: string;
     marks?: Mark[];
     link?: string;
+    /** The id of the person or record a mention names; the run's text is what it shows (`@Ada`). A mention is edited whole */
+    mention?: string;
+}
+
+/** A table cell: one line of runs */
+export interface Cell {
+    runs: Run[];
+}
+
+/** A table row; every row has the table's number of cells */
+export interface Row {
+    cells: Cell[];
 }
 
 export interface Block {
@@ -40,6 +61,10 @@ export interface Block {
     checked?: boolean;
     /** A code block's language label */
     language?: string;
+    /** A table's rows, the first its header */
+    rows?: Row[];
+    /** A table's column alignment, one per column (`''` for none); left out when no column has one */
+    align?: Array<Align | ''>;
 }
 
 export interface RichTextValue {
@@ -94,7 +119,7 @@ export function readMarks(value: unknown): Mark[] {
 
 /**
  * Runs in their one form: unknown marks and unsafe links dropped, empty runs dropped, and neighbours with the same marks
- * and link joined. A run keeps `marks` and `link` only when it has them
+ * and link joined (a mention is never joined). A run keeps `marks`, `link` and `mention` only when it has them
  */
 export function normalizeRuns(value: unknown): Run[] {
     if (!Array.isArray(value)) return [];
@@ -102,15 +127,19 @@ export function normalizeRuns(value: unknown): Run[] {
     for (const item of value) {
         if (!isRecord(item) || typeof item['text'] !== 'string' || item['text'] === '') continue;
         const marks = readMarks(item['marks']);
-        const link = typeof item['link'] === 'string' ? safeHref(item['link']) : undefined;
+        const mentioned = item['mention'];
+        const mention = typeof mentioned === 'string' && mentioned !== '' && mentioned.length <= MAX_MENTION_ID ? mentioned : undefined;
+        //a mention is its own target, so it carries no link
+        const link = mention === undefined && typeof item['link'] === 'string' ? safeHref(item['link']) : undefined;
         const last = runs[runs.length - 1];
-        if (last !== undefined && sameMarks(last.marks, marks) && last.link === link) {
+        if (last !== undefined && mention === undefined && last.mention === undefined && sameMarks(last.marks, marks) && last.link === link) {
             last.text += item['text'];
             continue;
         }
         const run: Run = { text: item['text'] };
         if (marks.length > 0) run.marks = marks;
         if (link !== undefined) run.link = link;
+        if (mention !== undefined) run.mention = mention;
         runs.push(run);
     }
     return runs;
@@ -121,13 +150,48 @@ export function plainText(runs: readonly Run[]): string {
     return runs.map((run) => run.text).join('');
 }
 
+/** Lists of runs joined into one, with `between` as plain text between each two; empty lists are left out */
+export function joinRunsOf(lists: ReadonlyArray<readonly Run[]>, between: string): Run[] {
+    const runs: Run[] = [];
+    for (const list of lists) {
+        if (list.length === 0) continue;
+        if (runs.length > 0) runs.push({ text: between });
+        runs.push(...list);
+    }
+    return normalizeRuns(runs);
+}
+
+/** A cell's runs: one line, so a line break reads as a space */
+const cellRuns = (value: unknown): Run[] => normalizeRuns(normalizeRuns(value).map((run) => ({ ...run, text: run.text.replace(/\n/g, ' ') })));
+
+/** A table's rows and alignment, checked: as many columns as its header has (1 to `MAX_COLUMNS`), every row padded or cut to them, 1 to `MAX_ROWS` rows */
+function readTable(value: Record<string, unknown>, block: Block): void {
+    const stored = Array.isArray(value['rows']) ? value['rows'].slice(0, MAX_ROWS) : [];
+    const cellsOf = (row: unknown): unknown[] => (isRecord(row) && Array.isArray(row['cells']) ? row['cells'] : []);
+    const columns = Math.min(MAX_COLUMNS, Math.max(1, cellsOf(stored[0]).length));
+    const rows: Row[] = (stored.length > 0 ? stored : [{}]).map((row) => {
+        const cells = cellsOf(row);
+        return { cells: Array.from({ length: columns }, (_, index) => ({ runs: cellRuns(isRecord(cells[index]) ? cells[index]['runs'] : []) })) };
+    });
+    block.rows = rows;
+    const align = Array.isArray(value['align']) ? value['align'] : [];
+    const aligned = Array.from({ length: columns }, (_, index): Align | '' => ((ALIGNS as readonly unknown[]).includes(align[index]) ? (align[index] as Align) : ''));
+    if (aligned.some((one) => one !== '')) block.align = aligned;
+}
+
+/** The text of every cell of a table, or of a block's runs */
+export function blockLength(block: Pick<Block, 'runs' | 'rows'>): number {
+    if (block.rows === undefined) return plainText(block.runs).length;
+    return block.rows.reduce((total, row) => total + row.cells.reduce((sum, cell) => sum + plainText(cell.runs).length, 0), 0);
+}
+
 /** One stored block read into its checked form, or undefined when it is not a block */
 export function readBlock(value: unknown): Block | undefined {
     if (!isRecord(value)) return undefined;
     const type = value['type'];
     if (typeof type !== 'string' || !(BLOCK_TYPES as readonly string[]).includes(type)) return undefined;
     const order = typeof value['order'] === 'string' ? value['order'] : '';
-    const block: Block = { order, type: type as BlockType, runs: type === 'divider' ? [] : normalizeRuns(value['runs']) };
+    const block: Block = { order, type: type as BlockType, runs: type === 'divider' || type === 'table' ? [] : normalizeRuns(value['runs']) };
     if (type === 'heading') block.level = clampInteger(value['level'], 1, MAX_HEADING_LEVEL, 1);
     if (LIST_TYPES.includes(block.type)) block.indent = clampInteger(value['indent'], 0, MAX_INDENT, 0);
     if (type === 'check') block.checked = value['checked'] === true;
@@ -136,6 +200,7 @@ export function readBlock(value: unknown): Block | undefined {
         block.runs = block.runs.length === 0 ? [] : [{ text: plainText(block.runs) }];
         if (typeof value['language'] === 'string' && value['language'] !== '') block.language = value['language'].slice(0, 32);
     }
+    if (type === 'table') readTable(value, block);
     return block;
 }
 
@@ -168,7 +233,7 @@ export function valueOf(blocks: readonly Omit<Block, 'order'>[]): RichTextValue 
     return value;
 }
 
-/** The number of characters across every block */
-export function textLength(blocks: readonly Block[]): number {
-    return blocks.reduce((total, block) => total + plainText(block.runs).length, 0);
+/** The number of characters across every block, a table's cells among them */
+export function textLength(blocks: readonly Pick<Block, 'runs' | 'rows'>[]): number {
+    return blocks.reduce((total, block) => total + blockLength(block), 0);
 }

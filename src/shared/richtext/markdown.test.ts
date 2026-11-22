@@ -176,3 +176,33 @@ describe('toMarkdown', () => {
         expect(written).toBe('see [the **guide**](</help>)');
     });
 });
+
+describe('tables in Markdown', () => {
+    it('should read a GFM table as a table block with its alignment and write it back the same', () => {
+        // Arrange
+        const source = '| Name | Score |\n| :--- | ---: |\n| **Ada** | 3 |\n| Bo | |';
+
+        // Act
+        const value = fromMarkdown(source);
+        const [read] = readRichText(value);
+        const written = toMarkdown(value);
+
+        // Assert
+        expect(read?.type).toBe('table');
+        expect(read?.align).toEqual(['left', 'right']);
+        expect(read?.rows?.[1]?.cells[0]?.runs).toEqual([{ text: 'Ada', marks: ['bold'] }]);
+        expect(written).toBe('| Name | Score |\n| :--- | ---: |\n| **Ada** | 3 |\n| Bo |   |');
+        expect(readRichText(fromMarkdown(written)).map(({ key: _key, order: _order, ...rest }) => rest)).toEqual([{ type: 'table', runs: [], align: ['left', 'right'], rows: read?.rows }]);
+    });
+
+    it('should write a mention as its text and escape a pipe in a cell', () => {
+        // Arrange
+        const value = { blocks: { t: { order: 'V', type: 'table', runs: [], rows: [{ cells: [{ runs: [{ text: 'a|b' }] }] }] }, p: { order: 'W', type: 'paragraph', runs: [{ text: '@Ada', mention: 'u1' }] } } };
+
+        // Act
+        const written = toMarkdown(value);
+
+        // Assert
+        expect(written).toBe('| a\\|b |\n| --- |\n\n@Ada');
+    });
+});

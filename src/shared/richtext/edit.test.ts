@@ -3,24 +3,30 @@ import { BLOCK_TYPES, plainText, readBlock } from './model.js';
 import type { Block, KeyedBlock } from './model.js';
 import {
     activeState,
+    chainEdits,
     clampSelection,
     deleteBackward,
     deleteForward,
     indent,
     insertDivider,
     insertBlocks,
+    insertMention,
+    insertTable,
     insertText,
     linkAt,
+    opensPicker,
+    pickerQuery,
     replaceBlockText,
     setBlockKind,
     setLink,
     linkTarget,
     splitBlock,
+    tableCommand,
     toggleCheck,
     toggleMark,
     touchesList
 } from './edit.js';
-import type { Edit, EditSettings, TextSelection } from './edit.js';
+import type { Edit, EditSettings, Point, TextSelection } from './edit.js';
 
 const all: EditSettings = { allowed: [...BLOCK_TYPES], maxLength: 0 };
 
@@ -526,5 +532,286 @@ describe('linkTarget', () => {
 
         // Assert
         expect(read).toEqual(['https://example.com', 'https://www.example.com/a?b#c', 'https://x.example', '/docs', '#part', undefined, undefined, undefined, undefined]);
+    });
+});
+
+/** A table block from rows of cell texts */
+const table = (key: string, order: string, rows: string[][]): KeyedBlock => block(key, order, { type: 'table', rows: rows.map((cells) => ({ cells: cells.map((text) => ({ runs: text === '' ? [] : [{ text }] })) })) });
+const inCell = (key: string, row: number, column: number, offset: number, focusOffset = offset): TextSelection => ({
+    anchor: { block: key, offset, cell: { row, column } },
+    focus: { block: key, offset: focusOffset, cell: { row, column } }
+});
+/** A table's cell texts, row by row */
+const cells = (edit: Edit | null, key: string): string[][] => (edit?.blocks.find((one) => one.key === key)?.rows ?? []).map((row) => row.cells.map((cell) => plainText(cell.runs)));
+
+describe('tables', () => {
+    it('should put a three by three table in place of an empty paragraph with a paragraph after it and the caret in its first cell', () => {
+        // Arrange
+        const blocks = [block('a', 'V', {})];
+
+        // Act
+        const edit = insertTable(blocks, at('a', 0), all);
+
+        // Assert
+        expect(shapes(edit)).toEqual(['table:', 'paragraph:']);
+        expect(cells(edit, 'a')).toEqual([['', '', ''], ['', '', ''], ['', '', '']]);
+        expect(edit?.selection).toEqual(inCell('a', 0, 0, 0));
+    });
+
+    it('should refuse a table where the field does not allow one', () => {
+        // Act
+        const edit = insertTable([block('a', 'V', {})], at('a', 0), { allowed: ['bullet'], maxLength: 0 });
+
+        // Assert
+        expect(edit).toBeNull();
+    });
+
+    it('should type into a cell as one line, without block shortcuts, writing only the table', () => {
+        // Arrange
+        const blocks = [table('t', 'V', [['ab', 'c'], ['', '']]), block('p', 'W', { text: 'after' })];
+
+        // Act
+        const typed = insertText(blocks, inCell('t', 0, 0, 1), 'x', all, { shortcuts: true });
+        const shortcut = insertText(blocks, inCell('t', 1, 0, 0), '# ', all, { shortcuts: true });
+        const broken = insertText(blocks, inCell('t', 1, 1, 0), 'a\nb', all);
+
+        // Assert
+        expect(cells(typed, 't')).toEqual([['axb', 'c'], ['', '']]);
+        expect([...(typed?.written.keys() ?? [])]).toEqual(['t']);
+        expect(typed?.selection).toEqual(inCell('t', 0, 0, 2));
+        expect(cells(shortcut, 't')[1]).toEqual(['# ', '']);
+        expect(cells(broken, 't')[1]).toEqual(['', 'a b']);
+    });
+
+    it('should count every cell against maxLength', () => {
+        // Arrange
+        const blocks = [table('t', 'V', [['abc', 'de']]), block('p', 'W', { text: 'fg' })];
+
+        // Act
+        const edit = insertText(blocks, inCell('t', 0, 1, 2), 'xyz', { ...all, maxLength: 8 });
+
+        // Assert
+        expect(cells(edit, 't')).toEqual([['abc', 'dex']]);
+    });
+
+    it('should delete within a cell and stop at its start', () => {
+        // Arrange
+        const blocks = [table('t', 'V', [['ab', 'cd']])];
+
+        // Act
+        const deleted = deleteBackward(blocks, inCell('t', 0, 1, 1), 'character');
+        const atStart = deleteBackward(blocks, inCell('t', 0, 1, 0), 'character');
+
+        // Assert
+        expect(cells(deleted, 't')).toEqual([['ab', 'd']]);
+        expect(atStart?.written.size ?? 0).toBe(0);
+    });
+
+    it('should move Backspace after a table into its last cell and Delete before one into its first, removing nothing', () => {
+        // Arrange
+        const blocks = [block('a', 'V', { text: 'x' }), table('t', 'W', [['h1', 'h2'], ['c1', 'c2']]), block('b', 'X', { text: 'y' })];
+
+        // Act
+        const back = deleteBackward(blocks, at('b', 0), 'character');
+        const forward = deleteForward(blocks, at('a', 1), 'character');
+
+        // Assert
+        expect(back?.selection).toEqual(inCell('t', 1, 1, 2));
+        expect(back?.written.size).toBe(0);
+        expect(forward?.selection).toEqual(inCell('t', 0, 0, 0));
+        expect(forward?.removed.size).toBe(0);
+    });
+
+    it('should move with Tab and Shift+Tab, and add a row with Tab in the last cell or Enter in the last row', () => {
+        // Arrange
+        const blocks = [table('t', 'V', [['a', 'b'], ['c', 'd']])];
+
+        // Act
+        const next = tableCommand(blocks, inCell('t', 0, 1, 0), 'next');
+        const previous = tableCommand(blocks, inCell('t', 1, 0, 0), 'previous');
+        const added = tableCommand(blocks, inCell('t', 1, 1, 1), 'next');
+        const enter = splitBlock(blocks, inCell('t', 1, 0, 1), all);
+        const down = splitBlock(blocks, inCell('t', 0, 1, 0), all);
+
+        // Assert
+        expect(next?.selection).toEqual(inCell('t', 1, 0, 0));
+        expect(previous?.selection).toEqual(inCell('t', 0, 1, 1));
+        expect(cells(added, 't')).toEqual([['a', 'b'], ['c', 'd'], ['', '']]);
+        expect(added?.selection).toEqual(inCell('t', 2, 0, 0));
+        expect(cells(enter, 't')).toHaveLength(3);
+        expect(enter?.selection).toEqual(inCell('t', 2, 0, 0));
+        expect(down?.selection).toEqual(inCell('t', 1, 1, 0));
+        expect(down?.written.size).toBe(0);
+    });
+
+    it('should add and remove rows and columns, keeping alignment with its columns, and remove the table with its last row', () => {
+        // Arrange
+        const blocks = [block('t', 'V', { type: 'table', align: ['left', 'right'], rows: [{ cells: [{ runs: [{ text: 'a' }] }, { runs: [{ text: 'b' }] }] }] })];
+
+        // Act
+        const column = tableCommand(blocks, inCell('t', 0, 0, 0), 'addColumn');
+        const removed = tableCommand(column?.blocks ?? [], inCell('t', 0, 2, 0), 'removeColumn');
+        const row = tableCommand(blocks, inCell('t', 0, 0, 0), 'addRow');
+        const gone = tableCommand(blocks, inCell('t', 0, 0, 0), 'removeRow');
+
+        // Assert
+        expect(cells(column, 't')).toEqual([['a', '', 'b']]);
+        expect(column?.blocks[0]?.align).toEqual(['left', '', 'right']);
+        expect(removed?.blocks[0]?.align).toEqual(['left', '']);
+        expect(cells(row, 't')).toEqual([['a', 'b'], ['', '']]);
+        expect(shapes(gone)).toEqual(['paragraph:']);
+        expect(gone?.removed.has('t')).toBe(true);
+    });
+
+    it('should bold a cell selection and find a link in a cell', () => {
+        // Arrange
+        const blocks = [block('t', 'V', { type: 'table', rows: [{ cells: [{ runs: [{ text: 'go ' }, { text: 'here', link: 'https://x.example' }] }] }] })];
+
+        // Act
+        const bold = toggleMark(blocks, inCell('t', 0, 0, 0, 2), 'bold');
+        const found = linkAt(blocks, inCell('t', 0, 0, 4));
+
+        // Assert
+        expect(bold?.blocks[0]?.rows?.[0]?.cells[0]?.runs[0]).toEqual({ text: 'go', marks: ['bold'] });
+        expect(found).toEqual({ href: 'https://x.example', selection: inCell('t', 0, 0, 3, 7) });
+    });
+
+    it('should clamp a point into a cell that exists and report the table as the active kind', () => {
+        // Arrange
+        const blocks = [table('t', 'V', [['ab']])];
+
+        // Act
+        const clamped = clampSelection(blocks, inCell('t', 4, 2, 9));
+        const state = activeState(blocks, inCell('t', 0, 0, 1), null);
+
+        // Assert
+        expect(clamped).toEqual(inCell('t', 0, 0, 2));
+        expect(state.kind).toEqual({ type: 'table' });
+    });
+
+    it('should read the text an input method wrote back into a cell', () => {
+        // Arrange
+        const blocks = [table('t', 'V', [['ab', 'c']])];
+
+        // Act
+        const result = replaceBlockText(blocks, 't', 'aXb', { row: 0, column: 0 });
+
+        // Assert
+        expect(cells(result?.edit ?? null, 't')).toEqual([['aXb', 'c']]);
+        expect(result?.offset).toBe(2);
+    });
+
+    it('should paste blocks into a cell as one line', () => {
+        // Arrange
+        const blocks = [table('t', 'V', [['', '']])];
+
+        // Act
+        const edit = insertBlocks(blocks, inCell('t', 0, 1, 0), [{ type: 'heading', level: 1, runs: [{ text: 'one' }] }, { type: 'divider', runs: [] }, { type: 'paragraph', runs: [{ text: 'two' }] }], all);
+
+        // Assert
+        expect(cells(edit, 't')).toEqual([['', 'one two']]);
+    });
+});
+
+describe('mentions', () => {
+    const mentioned = (): KeyedBlock[] => [block('a', 'V', { runs: [{ text: 'hi ' }, { text: '@Ada', mention: 'u1' }, { text: ' there' }] })];
+
+    it('should put a mention and a space in at the caret, with the caret after them', () => {
+        // Arrange
+        const blocks = [block('a', 'V', { text: 'hi ' })];
+
+        // Act
+        const edit = insertMention(blocks, at('a', 3), 'u1', 'Ada', all);
+
+        // Assert
+        expect(edit?.blocks[0]?.runs).toEqual([{ text: 'hi ' }, { text: '@Ada', mention: 'u1' }, { text: ' ' }]);
+        expect(edit?.selection).toEqual(at('a', 8));
+    });
+
+    it('should not put a mention in a code block', () => {
+        // Act
+        const edit = insertMention([block('a', 'V', { type: 'code', text: 'x' })], at('a', 1), 'u1', 'Ada', all);
+
+        // Assert
+        expect(edit).toBeNull();
+    });
+
+    it('should delete a mention whole with one Backspace or Delete', () => {
+        // Act
+        const back = deleteBackward(mentioned(), at('a', 7), 'character');
+        const forward = deleteForward(mentioned(), at('a', 3), 'character');
+
+        // Assert
+        expect(plainText(back?.blocks[0]?.runs ?? [])).toBe('hi  there');
+        expect(back?.selection).toEqual(at('a', 3));
+        expect(plainText(forward?.blocks[0]?.runs ?? [])).toBe('hi  there');
+    });
+
+    it('should type after a mention, not into it, when the caret is inside it', () => {
+        // Act
+        const edit = insertText(mentioned(), at('a', 5), 'x', all);
+
+        // Assert
+        expect(edit?.blocks[0]?.runs).toEqual([{ text: 'hi ' }, { text: '@Ada', mention: 'u1' }, { text: 'x there' }]);
+    });
+
+    it('should keep a mention when marking it and never link it', () => {
+        // Act
+        const bold = toggleMark(mentioned(), at('a', 0, { block: 'a', offset: 7 }), 'bold');
+        const linked = setLink(mentioned(), at('a', 0, { block: 'a', offset: 7 }), 'https://x.example', all);
+
+        // Assert
+        expect(bold?.blocks[0]?.runs[1]).toEqual({ text: '@Ada', marks: ['bold'], mention: 'u1' });
+        expect(linked?.blocks[0]?.runs[1]).toEqual({ text: '@Ada', mention: 'u1' });
+    });
+});
+
+describe('pickers', () => {
+    it('should open a picker at the start of the text or after a space, never in code, and the slash menu not in a cell', () => {
+        // Arrange
+        const blocks = [block('a', 'V', { text: 'ab cd' }), block('c', 'W', { type: 'code', text: '' }), table('t', 'X', [['']])];
+        const cell: Point = { block: 't', offset: 0, cell: { row: 0, column: 0 } };
+
+        // Act
+        const opened = [opensPicker(blocks, { block: 'a', offset: 0 }, 'slash'), opensPicker(blocks, { block: 'a', offset: 3 }, 'mention'), opensPicker(blocks, cell, 'mention')];
+        const refused = [opensPicker(blocks, { block: 'a', offset: 2 }, 'slash'), opensPicker(blocks, { block: 'c', offset: 0 }, 'slash'), opensPicker(blocks, cell, 'slash')];
+
+        // Assert
+        expect(opened).toEqual([true, true, true]);
+        expect(refused).toEqual([false, false, false]);
+    });
+
+    it('should follow the query after the trigger and close when the caret leaves it', () => {
+        // Arrange
+        const blocks = [block('a', 'V', { text: 'x /head' }), block('b', 'W', { text: 'y' })];
+        const from: Point = { block: 'a', offset: 2 };
+
+        // Act
+        const query = pickerQuery(blocks, from, at('a', 7), 'slash');
+        const before = pickerQuery(blocks, from, at('a', 2), 'slash');
+        const elsewhere = pickerQuery(blocks, from, at('b', 1), 'slash');
+        const spaced = pickerQuery([block('a', 'V', { text: 'x /he ad' })], from, at('a', 8), 'slash');
+        const named = pickerQuery([block('a', 'V', { text: 'x @Ada Lo' })], from, at('a', 9), 'mention');
+
+        // Assert
+        expect(query).toBe('head');
+        expect(before).toBeNull();
+        expect(elsewhere).toBeNull();
+        expect(spaced).toBeNull();
+        expect(named).toBe('Ada Lo');
+    });
+
+    it('should chain two edits into one that writes both and removes what the second removed', () => {
+        // Arrange
+        const blocks = [block('a', 'V', { text: '/' })];
+        const first = deleteBackward(blocks, at('a', 1), 'character') as Edit;
+
+        // Act
+        const chained = chainEdits(first, insertTable(first.blocks, first.selection, all));
+
+        // Assert
+        expect(shapes(chained)).toEqual(['table:', 'paragraph:']);
+        expect(chained.written.size).toBe(2);
+        expect(chained.removed.size).toBe(0);
     });
 });

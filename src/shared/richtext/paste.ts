@@ -1,14 +1,14 @@
 import { safeHref } from '../markdown/links.js';
 import { fromMarkdown } from './markdown.js';
-import { MARKS, MAX_BLOCKS, MAX_HEADING_LEVEL, MAX_INDENT, readBlock, readRichText } from './model.js';
-import type { Block, BlockType, Mark, Run } from './model.js';
+import { MARKS, MAX_BLOCKS, MAX_COLUMNS, MAX_HEADING_LEVEL, MAX_INDENT, MAX_ROWS, joinRunsOf, readBlock, readRichText } from './model.js';
+import type { Block, BlockType, Mark, Row, Run } from './model.js';
 
 /**
  * What a paste or drop brings into the rich-text editor, as blocks without key or order (`Shape`), which `insertBlocks`
  * (`edit.ts`) puts in at the selection. Plain text is one paragraph per line, unless it reads as Markdown, which goes
  * through `fromMarkdown`. HTML is read from a document the caller parsed with `DOMParser` (inert: no script runs and
  * nothing loads), and only these elements count: `p`, `h1` to `h6` (above 3 drawn as 3), `ul`, `ol`, `li` (a task item
- * with a checkbox is a check), `blockquote`, `pre`, `code`, `hr`, `br`, `b`, `strong`, `i`, `em`, `s`, `del`, `strike` and
+ * with a checkbox is a check), `blockquote`, `pre`, `code`, `hr`, `table` (its rows and cells, the first row its header), `br`, `b`, `strong`, `i`, `em`, `s`, `del`, `strike` and
  * `a` with a safe `href`; an element's inline `font-weight`, `font-style` and `line-through` count as marks, as editors
  * such as Google Docs mark text that way. Every other element gives its text only, and no attribute is kept but a
  * checked link (docs/design/stateui-text-editor.md, T3)
@@ -17,10 +17,10 @@ import type { Block, BlockType, Mark, Run } from './model.js';
 /** A block as a paste brings it: no key, no order */
 export type Shape = Omit<Block, 'order'>;
 
-const BLOCK_MARKER = /^(?:#{1,6} |[-*+] |\d{1,9}[.)] |> |```|(?:---|\*\*\*|___)[ \t]*$)/mu;
+const BLOCK_MARKER = /^(?:#{1,6} |[-*+] |\d{1,9}[.)] |> |```|(?:---|\*\*\*|___)[ \t]*$|\|? *:?-{3,}:? *(?:\| *:?-{3,}:? *)+\|? *$)/mu;
 const INLINE_MARKER = /\*\*[^*\n]+\*\*|__[^_\n]+__|~~[^~\n]+~~|`[^`\n]+`|\[[^\]\n]+\]\([^)\s]+\)/u;
 
-/** Whether pasted text reads as Markdown: a line that starts like a heading, list item, quote, fence or rule, or inline marks or a link */
+/** Whether pasted text reads as Markdown: a line that starts like a heading, list item, quote, fence or rule, a table's delimiter row, or inline marks or a link */
 export function looksLikeMarkdown(text: string): boolean {
     return BLOCK_MARKER.test(text) || INLINE_MARKER.test(text);
 }
@@ -46,7 +46,7 @@ export function textToShapes(text: string): Shape[] {
 /** Elements whose content is never text (scripts, styles, media) */
 const SKIPPED = new Set(['script', 'style', 'template', 'head', 'title', 'meta', 'link', 'noscript', 'iframe', 'object', 'embed', 'svg', 'math', 'img', 'video', 'audio', 'canvas', 'select', 'button', 'textarea', 'input']);
 /** Elements that hold blocks: each starts a new block of the kind around it */
-const CONTAINERS = new Set(['p', 'div', 'section', 'article', 'header', 'footer', 'main', 'aside', 'nav', 'figure', 'figcaption', 'address', 'dl', 'dt', 'dd', 'table', 'thead', 'tbody', 'tfoot', 'tr', 'caption', 'details', 'summary', 'form', 'fieldset', 'center']);
+const CONTAINERS = new Set(['p', 'div', 'section', 'article', 'header', 'footer', 'main', 'aside', 'nav', 'figure', 'figcaption', 'address', 'dl', 'dt', 'dd', 'thead', 'tbody', 'tfoot', 'tr', 'caption', 'details', 'summary', 'form', 'fieldset', 'center']);
 const MARK_TAGS: Readonly<Record<string, Mark>> = { b: 'bold', strong: 'bold', i: 'italic', em: 'italic', s: 'strike', del: 'strike', strike: 'strike', code: 'code' };
 
 interface Context {
@@ -192,6 +192,25 @@ export function htmlToShapes(document: Document): Shape[] {
             if (current !== null && (current as { runs: Run[] }).runs.some((run) => run.text.trim() !== '')) flush();
             return;
         }
+        if (tag === 'table') {
+            flush();
+            const rows: Row[] = [];
+            for (const line of Array.from(element.querySelectorAll(':scope > tr, :scope > thead > tr, :scope > tbody > tr, :scope > tfoot > tr')).slice(0, MAX_ROWS)) {
+                const cells = Array.from(line.querySelectorAll(':scope > td, :scope > th')).slice(0, MAX_COLUMNS).map((cell) => {
+                    //a cell's blocks are read as blocks and taken back out, joined into one line
+                    const before = shapes.length;
+                    start({ type: 'paragraph', runs: [] });
+                    for (const child of Array.from(cell.childNodes)) walk(child, { ...context, kind: { type: 'paragraph', runs: [] } }, false);
+                    flush();
+                    const lines = shapes.splice(before).filter((shape) => shape.type !== 'table' && shape.type !== 'divider').map((shape) => shape.runs);
+                    return { runs: joinRunsOf(lines, ' ') };
+                });
+                if (cells.length > 0) rows.push({ cells });
+            }
+            const block = readBlock({ type: 'table', order: '', runs: [], rows });
+            if (block !== undefined && rows.length > 0) shapes.push(shapeOf(block));
+            return;
+        }
         if (tag === 'td' || tag === 'th') {
             if (current !== null && element.previousElementSibling !== null) append(' ', context);
             children(context);
@@ -217,7 +236,7 @@ export function htmlToShapes(document: Document): Shape[] {
     return shapes.slice(0, MAX_BLOCKS);
 }
 
-/** Shapes the field allows: a type it leaves out becomes a paragraph (a divider is dropped), and list fields go with it */
+/** Shapes the field allows: a type it leaves out becomes a paragraph (a divider is dropped, a table is a paragraph per row, its cells joined by ` | `), and list fields go with it */
 export function allowedShapes(shapes: readonly Shape[], allowed: readonly BlockType[]): Shape[] {
     const result: Shape[] = [];
     for (const shape of shapes) {
@@ -226,6 +245,10 @@ export function allowedShapes(shapes: readonly Shape[], allowed: readonly BlockT
             continue;
         }
         if (shape.type === 'divider') continue;
+        if (shape.type === 'table') {
+            for (const row of shape.rows ?? []) result.push({ type: 'paragraph', runs: joinRunsOf(row.cells.map((cell) => cell.runs), ' | ') });
+            continue;
+        }
         result.push({ type: 'paragraph', runs: shape.runs });
     }
     return result;

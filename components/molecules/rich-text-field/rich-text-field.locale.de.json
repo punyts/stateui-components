@@ -31,6 +31,14 @@
         "linkUrl": "Linkadresse",
         "applyLink": "Übernehmen",
         "removeLink": "Link entfernen",
-        "linkInvalid": "Eine https-Adresse, einen Pfad oder ein #Fragment eingeben"
+        "linkInvalid": "Eine https-Adresse, einen Pfad oder ein #Fragment eingeben",
+        "table": "Tabelle",
+        "addRow": "Zeile hinzufügen",
+        "addColumn": "Spalte hinzufügen",
+        "removeRow": "Zeile entfernen",
+        "removeColumn": "Spalte entfernen",
+        "removeTable": "Tabelle entfernen",
+        "commands": "Block einfügen",
+        "mentions": "Erwähnen"
     }
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_INDENT, isBlockKey, newBlockKey, normalizeRuns, readRichText, textLength, valueOf } from './model.js';
+import { MAX_INDENT, isBlockKey, newBlockKey, normalizeRuns, plainText, readRichText, textLength, valueOf } from './model.js';
+import type { KeyedBlock } from './model.js';
 
 describe('normalizeRuns', () => {
     it('should join neighbours with the same marks and link, and drop empty runs and unknown marks', () => {
@@ -94,5 +95,41 @@ describe('valueOf', () => {
         // Assert
         expect(keys.every((key) => isBlockKey(key) && !/^\d+$/.test(key))).toBe(true);
         expect(new Set(keys).size).toBe(200);
+    });
+});
+
+describe('tables and mentions', () => {
+    it('should read a table with as many columns as its header, padding and cutting rows, and keep alignment only when set', () => {
+        // Arrange
+        const value = {
+            blocks: {
+                t: { order: 'V', type: 'table', runs: [{ text: 'dropped' }], align: ['center', 'up'], rows: [{ cells: [{ runs: [{ text: 'a\nb' }] }, { runs: [] }] }, { cells: [{ runs: [{ text: 'c' }] }, {}, { runs: [{ text: 'cut' }] }] }, { cells: [] }] },
+                u: { order: 'W', type: 'table', align: ['', ''], rows: [] }
+            }
+        };
+
+        // Act
+        const [t, u] = readRichText(value);
+
+        // Assert
+        expect(t?.runs).toEqual([]);
+        expect(t?.rows?.map((row) => row.cells.map((cell) => plainText(cell.runs)))).toEqual([['a b', ''], ['c', ''], ['', '']]);
+        expect(t?.align).toEqual(['center', '']);
+        expect(u?.rows).toEqual([{ cells: [{ runs: [] }] }]);
+        expect(u?.align).toBeUndefined();
+        expect(textLength([t as KeyedBlock])).toBe(4);
+    });
+
+    it('should keep a mention as its own run without a link, and drop an empty or overlong id', () => {
+        // Act
+        const runs = normalizeRuns([
+            { text: '@Ada', mention: 'u1', link: 'https://x.example' },
+            { text: '@Bo', mention: 'u2' },
+            { text: 'x', mention: '' },
+            { text: 'y', mention: 'z'.repeat(129) }
+        ]);
+
+        // Assert
+        expect(runs).toEqual([{ text: '@Ada', mention: 'u1' }, { text: '@Bo', mention: 'u2' }, { text: 'xy' }]);
     });
 });

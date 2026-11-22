@@ -122,18 +122,16 @@ function block(node: MarkdownNode, out: Draft[], quoted = false): void {
         case 'rule':
             out.push({ type: 'divider', runs: [] });
             break;
-        case 'table':
-            //a table has no block of its own: each row is a paragraph of its cells
-            for (const row of node.children) {
-                const cells = row.children.map((cell) => inlineRuns(cell.children));
-                const runs: Run[] = [];
-                cells.forEach((cell, index) => {
-                    if (index > 0) runs.push({ text: ' | ' });
-                    runs.push(...cell);
-                });
-                out.push(plain({ type: 'paragraph', runs: normalizeRuns(runs) }));
-            }
+        case 'table': {
+            //the first row is the header; its cells give each column's alignment
+            const rows = node.children.map((row) => ({ cells: row.children.map((cell) => ({ runs: inlineRuns(cell.children) })) }));
+            const header = node.children[0]?.children ?? [];
+            const align = header.map((cell) => cell.align ?? '');
+            const table: Draft = { type: 'table', runs: [], rows };
+            if (align.some((one) => one !== '')) table.align = align;
+            out.push(table);
             break;
+        }
         default:
             break;
     }
@@ -252,6 +250,23 @@ const fenceFor = (text: string): string => {
     return '`'.repeat(longest + 1);
 };
 
+/** A table as a GFM table: the header row, the delimiter row with each column's alignment, then the other rows */
+function tableMarkdown(table: KeyedBlock): string {
+    const rows = table.rows ?? [];
+    const line = (cells: readonly string[]): string => `| ${cells.join(' | ')} |`;
+    const cellText = (runs: readonly Run[]): string => {
+        const text = inlineMarkdown(runs);
+        return text === '' ? ' ' : text;
+    };
+    const columns = rows[0]?.cells.length ?? 0;
+    const delimiter = Array.from({ length: columns }, (_, index) => {
+        const align = table.align?.[index] ?? '';
+        return align === 'center' ? ':---:' : align === 'right' ? '---:' : align === 'left' ? ':---' : '---';
+    });
+    const [head, ...body] = rows.map((row) => line(row.cells.map((cell) => cellText(cell.runs))));
+    return [head ?? line([]), line(delimiter), ...body].join('\n');
+}
+
 /** A block value as CommonMark: list items of one list on consecutive lines, every other block apart by a blank line */
 export function toMarkdown(value: unknown): string {
     const blocks: KeyedBlock[] = readRichText(value);
@@ -286,6 +301,9 @@ export function toMarkdown(value: unknown): string {
             }
             case 'divider':
                 lines.push('---');
+                break;
+            case 'table':
+                lines.push(tableMarkdown(current));
                 break;
             default: {
                 const indent = Math.min(current.indent ?? 0, columns.length);

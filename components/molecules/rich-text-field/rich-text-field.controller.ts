@@ -1,11 +1,14 @@
 import type { ControllerContext } from '@punyts/stateui';
+import { QUERY_DELAY_MS, filterComboOptions, readComboOptions } from '../shared/field/combo.js';
 import { createField } from '../shared/field/field.js';
 import { createPopover } from '../shared/popover/popover.js';
 import type { PopoverHandle } from '../shared/popover/popover.js';
 import { BLOCK_TYPES, MARKS, compareBlocks, newBlockKey, readRichText, textLength } from '../shared/richtext/model.js';
 import type { Block, BlockType, KeyedBlock, Mark } from '../shared/richtext/model.js';
 import {
+    PICKER_TRIGGERS,
     activeState,
+    chainEdits,
     clampSelection,
     deleteBackward,
     deleteForward,
@@ -13,18 +16,23 @@ import {
     insertBlocks,
     insertDivider,
     insertLineBreak,
+    insertMention,
+    insertTable,
     insertText,
     linkAt,
     linkTarget,
+    opensPicker,
+    pickerQuery,
     replaceBlockText,
     setBlockKind,
     setLink,
     splitBlock,
+    tableCommand,
     toggleCheck,
     toggleMark,
     touchesList
 } from '../shared/richtext/edit.js';
-import type { BlockKind, Edit, EditSettings, TextSelection } from '../shared/richtext/edit.js';
+import type { BlockKind, Edit, EditSettings, PickerKind, Point, TableCommand, TextSelection } from '../shared/richtext/edit.js';
 import { createEditorView } from '../shared/richtext/editorView.js';
 import type { EditorView } from '../shared/richtext/editorView.js';
 import { createHistory } from '../shared/richtext/history.js';
@@ -65,7 +73,40 @@ const BLOCK_COMMANDS: Readonly<Record<string, BlockKind>> = {
     codeBlock: { type: 'code' }
 };
 
-/** The CSS anchor name of the block the link panel opens under (`.block.anchored` in the view's CSS) */
+/** The slash menu's commands in order; each is offered when the field allows its block type */
+const SLASH_COMMANDS: ReadonlyArray<{ name: string; type: BlockType }> = [
+    { name: 'heading1', type: 'heading' },
+    { name: 'heading2', type: 'heading' },
+    { name: 'heading3', type: 'heading' },
+    { name: 'bullet', type: 'bullet' },
+    { name: 'numbered', type: 'numbered' },
+    { name: 'check', type: 'check' },
+    { name: 'quote', type: 'quote' },
+    { name: 'codeBlock', type: 'code' },
+    { name: 'divider', type: 'divider' },
+    { name: 'table', type: 'table' }
+];
+
+const TABLE_COMMANDS: ReadonlySet<string> = new Set(['addRow', 'addColumn', 'removeRow', 'removeColumn', 'removeTable']);
+
+/** The most options the picker shows */
+const MAX_PICKER_ITEMS = 8;
+
+interface PickerItem {
+    id: string;
+    label: string;
+}
+
+/** The open picker: its kind, the trigger's point, the query typed after it and the options it shows */
+interface Picker {
+    kind: PickerKind;
+    from: Point;
+    query: string;
+    items: PickerItem[];
+    active: number;
+}
+
+/** The CSS anchor name of the block the link panel and the picker open under (`.block.anchored` in the view's CSS) */
 const LINK_ANCHOR = '--richtext-link';
 const samePoint = (a: TextSelection | null, b: TextSelection | null): boolean => JSON.stringify(a) === JSON.stringify(b);
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -121,7 +162,7 @@ export default function controller(context: ControllerContext) {
     let blocks: KeyedBlock[] = [];
     let selection: TextSelection | null = null;
     let pending: { marks: Mark[]; at: TextSelection } | null = null;
-    let composing: string | null = null;
+    let composing: Point | null = null;
     let focused = false;
     let disposed = false;
     let view: EditorView | null = null;
@@ -131,6 +172,10 @@ export default function controller(context: ControllerContext) {
     /** The text the open link panel links: the selection, or the whole link the caret was in */
     let linkRange: TextSelection | null = null;
     let anchored: HTMLElement | undefined;
+    let picker: Picker | null = null;
+    let pickerPanel: PopoverHandle | null = null;
+    let pickerList: HTMLElement | null = null;
+    let queryTimer: ReturnType<typeof setTimeout> | undefined;
 
     const put = (name: string, value: unknown): void => {
         if (JSON.stringify(read(name)) !== JSON.stringify(value)) store.set(`${basePath}.${name}`, value as never);
@@ -209,6 +254,127 @@ export default function controller(context: ControllerContext) {
         for (const key of changes.removed) if (Object.hasOwn(map, key)) store.delete(`${valuePath}.blocks.${key}`);
     };
 
+    /** Marks the block a panel opens under (the link panel or the picker), so its CSS anchor name moves to it */
+    const anchorTo = (key: string | null): void => {
+        const next = key === null ? undefined : view?.elementOf(key);
+        if (next === anchored) return;
+        anchored?.classList.remove('anchored');
+        anchored = next;
+        anchored?.classList.add('anchored');
+    };
+
+    const text = (name: string): string => {
+        const value = read(name);
+        return typeof value === 'string' ? value : '';
+    };
+
+    const pickerItems = (kind: PickerKind, query: string): PickerItem[] => {
+        if (kind === 'slash') {
+            const allowed = settings().allowed;
+            const wanted = query.toLowerCase();
+            return SLASH_COMMANDS.filter((one) => allowed.includes(one.type))
+                .map((one) => ({ id: one.name, label: tool(one.name) || one.name }))
+                .filter((item) => wanted === '' || item.label.toLowerCase().includes(wanted) || item.id.toLowerCase().startsWith(wanted));
+        }
+        const options = readComboOptions(read('mentions'), text('mentionValue') || 'value', text('mentionLabel') || 'label');
+        const locale = store.get<unknown>('$.locale');
+        return filterComboOptions(options, query, typeof locale === 'string' ? locale : '', MAX_PICKER_ITEMS).shown.map((option) => ({ id: option.key, label: option.label }));
+    };
+
+    /** Draws the picker's options (built with `createElement`, labels as text) and shows it when it has any */
+    const drawPicker = (): void => {
+        if (pickerList === null || pickerPanel === null) return;
+        const open = picker;
+        const options = (open?.items ?? []).map((item, index) => {
+            const option = document.createElement('div');
+            option.className = 'option';
+            option.id = `pick-${index}`;
+            option.setAttribute('role', 'option');
+            option.setAttribute('aria-selected', index === open?.active ? 'true' : 'false');
+            option.dataset['index'] = String(index);
+            option.textContent = item.label;
+            return option;
+        });
+        pickerList.replaceChildren(...options);
+        if (open !== null && options.length > 0) {
+            anchorTo(open.from.block);
+            put('picker', open.kind);
+            pickerPanel.open();
+            editor?.setAttribute('aria-controls', 'picker');
+            editor?.setAttribute('aria-activedescendant', `pick-${open.active}`);
+            options[open.active]?.scrollIntoView({ block: 'nearest' });
+            return;
+        }
+        put('picker', '');
+        pickerPanel.close();
+        editor?.removeAttribute('aria-activedescendant');
+        editor?.removeAttribute('aria-controls');
+        if (read('link') === '') anchorTo(null);
+    };
+
+    const closePicker = (): void => {
+        if (picker === null) return;
+        picker = null;
+        clearTimeout(queryTimer);
+        drawPicker();
+    };
+
+    /** Raises `mentionQuery` with the typed query once typing pauses, so an app can load the records it names */
+    const askMentions = (query: string): void => {
+        clearTimeout(queryTimer);
+        queryTimer = setTimeout(() => {
+            if (!disposed) element.dispatchEvent(new CustomEvent('mentionQuery', { detail: query, bubbles: true, composed: true }));
+        }, QUERY_DELAY_MS);
+    };
+
+    /** Follows the caret after an edit or a move: the picker's query is the text since its trigger, and it closes when the caret leaves it */
+    const followPicker = (): void => {
+        if (picker === null) return;
+        const query = selection === null ? null : pickerQuery(blocks, picker.from, selection, picker.kind);
+        if (query === null) {
+            closePicker();
+            return;
+        }
+        const changed = query !== picker.query;
+        picker.query = query;
+        picker.items = pickerItems(picker.kind, query);
+        if (changed) picker.active = 0;
+        picker.active = Math.min(picker.active, Math.max(0, picker.items.length - 1));
+        //a slash query nothing matches closes the menu; a mention query may still be answered by the app
+        if (picker.kind === 'slash' && picker.items.length === 0) {
+            closePicker();
+            return;
+        }
+        if (picker.kind === 'mention' && changed) askMentions(query);
+        drawPicker();
+    };
+
+    const openPicker = (kind: PickerKind, from: Point): void => {
+        picker = { kind, from, query: '', items: pickerItems(kind, ''), active: 0 };
+        if (kind === 'mention') askMentions('');
+        drawPicker();
+    };
+
+    /** Takes the trigger and query out and runs the chosen option: a block command, or a mention put in */
+    const pick = (index: number): void => {
+        const open = picker;
+        const item = open?.items[index];
+        closePicker();
+        if (open === null || item === undefined || selection === null || isLocked()) return;
+        const removed = deleteBackward(blocks, { anchor: open.from, focus: selection.focus }, 'character');
+        if (removed === null) return;
+        const current = settings();
+        let next: Edit | null;
+        if (open.kind === 'mention') next = insertMention(removed.blocks, removed.selection, item.id, item.label, current);
+        else if (item.id === 'divider') next = insertDivider(removed.blocks, removed.selection, current);
+        else if (item.id === 'table') next = insertTable(removed.blocks, removed.selection, current);
+        else {
+            const kind = BLOCK_COMMANDS[item.id];
+            next = kind === undefined ? null : setBlockKind(removed.blocks, removed.selection, kind, current);
+        }
+        apply(chainEdits(removed, next));
+    };
+
     const commit = (changes: Changes, stale?: ReadonlySet<string>): void => {
         blocks = changes.blocks;
         selection = changes.selection;
@@ -216,10 +382,20 @@ export default function controller(context: ControllerContext) {
         write(changes);
         showSelection();
         publish();
+        followPicker();
     };
 
     const apply = (edit: Edit | null, kind: EditKind = 'other'): boolean => {
         if (edit === null) return false;
+        if (edit.written.size === 0 && edit.removed.size === 0) {
+            //a move only (into a table's cell): no history, nothing written
+            selection = edit.selection;
+            showSelection();
+            put('selection', selection);
+            updateActive();
+            followPicker();
+            return true;
+        }
         history.record(blocks, edit, selection ?? edit.selection, kind, Date.now());
         commit(edit);
         pending = edit.marks !== undefined ? { marks: edit.marks, at: edit.selection } : null;
@@ -294,6 +470,8 @@ export default function controller(context: ControllerContext) {
         else if (name === 'redo') redo();
         else if (name === 'bold' || name === 'italic' || name === 'strike' || name === 'code') mark(name);
         else if (name === 'divider') apply(insertDivider(blocks, selection, current));
+        else if (name === 'table') apply(insertTable(blocks, selection, current));
+        else if (TABLE_COMMANDS.has(name)) apply(tableCommand(blocks, selection, name as TableCommand));
         else if (name === 'indent' || name === 'outdent') apply(indent(blocks, selection, name === 'indent' ? 1 : -1));
         else {
             const kind = BLOCK_COMMANDS[name];
@@ -304,10 +482,11 @@ export default function controller(context: ControllerContext) {
     };
 
     /** Reads a block back from the page after the browser wrote into it (an input method, an input that could not be cancelled) */
-    const readBack = (key: string | null): void => {
-        if (view === null || key === null) return;
-        const text = view.textOf(key);
-        const result = text === null ? null : replaceBlockText(blocks, key, text);
+    const readBack = (point: Point | null): void => {
+        if (view === null || point === null) return;
+        const key = point.block;
+        const text = view.textOf(key, point.cell);
+        const result = text === null ? null : replaceBlockText(blocks, key, text, point.cell);
         if (result === null) {
             view.render(blocks, new Set([key]));
             showSelection();
@@ -320,8 +499,7 @@ export default function controller(context: ControllerContext) {
     /** Closes the link panel; with `refocus`, the editor takes the focus back with the selection it had */
     const closeLink = (refocus: boolean): void => {
         linkPanel?.close();
-        anchored?.classList.remove('anchored');
-        anchored = undefined;
+        anchorTo(null);
         linkRange = null;
         put('link', '');
         put('linkInvalid', false);
@@ -335,12 +513,11 @@ export default function controller(context: ControllerContext) {
     const openLink = (): void => {
         if (selection === null || view === null || linkPanel === null || linkInput === null) return;
         const block = blocks.find((candidate) => candidate.key === selection?.focus.block);
-        if (block === undefined || block.type === 'code' || block.type === 'divider') return;
+        if (block === undefined || block.type === 'code' || block.type === 'divider' || (block.type === 'table' && selection.focus.cell === undefined)) return;
+        closePicker();
         const found = linkAt(blocks, selection);
         linkRange = found?.selection ?? selection;
-        anchored?.classList.remove('anchored');
-        anchored = view.elementOf(block.key);
-        anchored?.classList.add('anchored');
+        anchorTo(block.key);
         linkInput.value = found?.href ?? '';
         put('link', found !== null ? 'edit' : 'new');
         put('linkInvalid', false);
@@ -378,12 +555,22 @@ export default function controller(context: ControllerContext) {
         if (pending !== null && !samePoint(pending.at, next)) pending = null;
         put('selection', next);
         updateActive();
+        followPicker();
     };
     const document = element.ownerDocument;
     document.addEventListener('selectionchange', onSelectionChange);
 
     const valuePaths = [valuePath, `${valuePath}.$all`];
     store.on(valuePaths, scheduleSync);
+    //the app answers `mentionQuery` by writing `mentions`
+    const mentionPaths = [`${basePath}.mentions`, `${basePath}.mentions.$all`];
+    const onMentions = (): void => {
+        if (picker?.kind !== 'mention') return;
+        picker.items = pickerItems('mention', picker.query);
+        picker.active = Math.min(picker.active, Math.max(0, picker.items.length - 1));
+        drawPicker();
+    };
+    store.on(mentionPaths, onMentions);
 
     const resetHistory = (): void => {
         history.clear();
@@ -414,6 +601,8 @@ export default function controller(context: ControllerContext) {
         linkInput = element.shadowRoot?.querySelector<HTMLInputElement>('#linkInput') ?? null;
         const panel = element.shadowRoot?.querySelector<HTMLElement>('#linkPanel') ?? null;
         if (panel !== null) linkPanel = createPopover({ element: panel, placement: 'bottomStart', anchor: LINK_ANCHOR, onDismiss: (reason) => closeLink(reason === 'escape') });
+        pickerList = element.shadowRoot?.querySelector<HTMLElement>('#picker') ?? null;
+        if (pickerList !== null) pickerPanel = createPopover({ element: pickerList, placement: 'bottomStart', anchor: LINK_ANCHOR, onDismiss: () => closePicker() });
         view = createEditorView(found, { checkLabel: () => tool('checkItem') });
         sync();
     };
@@ -451,9 +640,15 @@ export default function controller(context: ControllerContext) {
                 return;
             }
             switch (type) {
-                case 'insertText':
-                    apply(insertText(blocks, selection, event.data ?? '', current, { marks: pendingMarks(), shortcuts: true }), 'typing');
+                case 'insertText': {
+                    const data = event.data ?? '';
+                    const at = selection.focus;
+                    const collapsedAt = samePoint({ anchor: selection.anchor, focus: selection.anchor }, selection);
+                    const trigger = (['slash', 'mention'] as const).find((kind) => PICKER_TRIGGERS[kind] === data);
+                    const opens = picker === null && trigger !== undefined && collapsedAt && opensPicker(blocks, at, trigger);
+                    if (apply(insertText(blocks, selection, data, current, { marks: pendingMarks(), shortcuts: true }), 'typing') && opens && trigger !== undefined) openPicker(trigger, at);
                     return;
+                }
                 case 'insertReplacementText':
                     apply(insertText(blocks, selection, event.dataTransfer?.getData('text/plain') ?? event.data ?? '', current));
                     return;
@@ -488,11 +683,30 @@ export default function controller(context: ControllerContext) {
             event.stopPropagation();
             if (composing !== null || event.inputType === 'insertCompositionText' || event.isComposing) return;
             //an input the browser did not let the field cancel: its block is read back
-            readBack(view?.readSelection()?.focus.block ?? selection?.focus.block ?? null);
+            readBack(view?.readSelection()?.focus ?? selection?.focus ?? null);
         },
         onKeyDown: (event: KeyboardEvent) => {
             if (event.isComposing || composing !== null || view === null) return;
             const modifier = event.ctrlKey || event.metaKey;
+            if (picker !== null && !modifier && !event.altKey) {
+                const count = picker.items.length;
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    closePicker();
+                    return;
+                }
+                if (count > 0 && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+                    event.preventDefault();
+                    picker.active = (picker.active + (event.key === 'ArrowDown' ? 1 : count - 1)) % count;
+                    drawPicker();
+                    return;
+                }
+                if (count > 0 && (event.key === 'Enter' || event.key === 'Tab') && !event.shiftKey) {
+                    event.preventDefault();
+                    pick(picker.active);
+                    return;
+                }
+            }
             const key = event.key.toLowerCase();
             if (modifier && !event.altKey) {
                 let handled = true;
@@ -509,7 +723,14 @@ export default function controller(context: ControllerContext) {
             }
             if (event.key === 'Tab' && !modifier && !event.altKey) {
                 const at = currentSelection();
-                if (at === null || isLocked() || !touchesList(blocks, at)) return;
+                if (at === null || isLocked()) return;
+                if (at.focus.cell !== undefined && at.anchor.cell !== undefined) {
+                    event.preventDefault();
+                    selection = at;
+                    apply(tableCommand(blocks, at, event.shiftKey ? 'previous' : 'next'));
+                    return;
+                }
+                if (!touchesList(blocks, at)) return;
                 event.preventDefault();
                 selection = at;
                 apply(indent(blocks, at, event.shiftKey ? -1 : 1));
@@ -522,7 +743,7 @@ export default function controller(context: ControllerContext) {
                 selection = at;
                 apply(deleteBackward(blocks, at, 'character'));
             }
-            composing = (selection ?? at)?.focus.block ?? null;
+            composing = (selection ?? at)?.focus ?? null;
         },
         onCompositionEnd: () => {
             const key = composing;
@@ -567,6 +788,13 @@ export default function controller(context: ControllerContext) {
                 applyLink();
             }
         },
+        onPickerDown: (event: MouseEvent) => {
+            //the editor keeps its focus and caret while an option is pressed
+            event.preventDefault();
+            const option = event.target instanceof Element ? event.target.closest<HTMLElement>('[role=option]') : null;
+            const index = Number(option?.dataset['index']);
+            if (option !== null && Number.isInteger(index)) pick(index);
+        },
         onLinkInput: () => put('linkInvalid', false),
         onApplyLink: () => applyLink(),
         onRemoveLink: () => finishLink(null),
@@ -574,6 +802,10 @@ export default function controller(context: ControllerContext) {
             disposed = true;
             linkPanel?.dispose();
             linkPanel = null;
+            clearTimeout(queryTimer);
+            pickerPanel?.dispose();
+            pickerPanel = null;
+            store.off(mentionPaths, onMentions);
             document.removeEventListener('selectionchange', onSelectionChange);
             store.off(valuePaths, scheduleSync);
             view = null;

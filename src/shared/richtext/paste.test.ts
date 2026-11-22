@@ -97,14 +97,6 @@ describe('htmlToShapes', () => {
         // Assert
         expect(shapes[0]?.runs).toEqual([{ text: 'Bold', marks: ['bold'] }, { text: ' plain ' }, { text: 'slanted', marks: ['italic'] }]);
     });
-
-    it('should join the cells of a table row into one paragraph', () => {
-        // Act
-        const shapes = htmlToShapes(parse('<table><tr><td>a</td><td>b</td></tr><tr><td>c</td></tr></table>'));
-
-        // Assert
-        expect(outline(shapes)).toEqual(['paragraph:a b', 'paragraph:c']);
-    });
 });
 
 describe('allowedShapes', () => {
@@ -121,5 +113,38 @@ describe('allowedShapes', () => {
 
         // Assert
         expect(allowed).toEqual([{ type: 'paragraph', runs: [{ text: 'h' }] }, { type: 'bullet', indent: 1, runs: [{ text: 'b' }] }]);
+    });
+});
+
+describe('pasted tables', () => {
+    it('should read an HTML table as a table block, each cell one line', () => {
+        // Act
+        const shapes = htmlToShapes(parse('<p>before</p><table><thead><tr><th>Name</th><th>Score</th></tr></thead><tbody><tr><td><p>Ada</p><p><b>L</b></p></td><td>3</td></tr></tbody></table><p>after</p>'));
+
+        // Assert
+        expect(outline(shapes)).toEqual(['paragraph:before', 'table:', 'paragraph:after']);
+        expect(shapes[1]?.rows?.map((row) => row.cells.map((cell) => cell.runs))).toEqual([
+            [[{ text: 'Name' }], [{ text: 'Score' }]],
+            [[{ text: 'Ada ' }, { text: 'L', marks: ['bold'] }], [{ text: '3' }]]
+        ]);
+    });
+
+    it('should read pasted Markdown with a table delimiter row as a table', () => {
+        // Act
+        const shapes = textToShapes('| a | b |\n| --- | --- |\n| 1 | 2 |');
+
+        // Assert
+        expect(outline(shapes)).toEqual(['table:']);
+    });
+
+    it('should turn a table the field does not allow into a paragraph per row', () => {
+        // Arrange
+        const shapes: Shape[] = [{ type: 'table', runs: [], rows: [{ cells: [{ runs: [{ text: 'a' }] }, { runs: [{ text: 'b' }] }] }, { cells: [{ runs: [] }, { runs: [{ text: 'c' }] }] }] }];
+
+        // Act
+        const allowed = allowedShapes(shapes, ['bullet']);
+
+        // Assert
+        expect(outline(allowed)).toEqual(['paragraph:a | b', 'paragraph:c']);
     });
 });

@@ -31,6 +31,14 @@
         "linkUrl": "Adresse du lien",
         "applyLink": "Appliquer",
         "removeLink": "Supprimer le lien",
-        "linkInvalid": "Saisissez une adresse https, un chemin ou un #fragment"
+        "linkInvalid": "Saisissez une adresse https, un chemin ou un #fragment",
+        "table": "Tableau",
+        "addRow": "Ajouter une ligne",
+        "addColumn": "Ajouter une colonne",
+        "removeRow": "Supprimer la ligne",
+        "removeColumn": "Supprimer la colonne",
+        "removeTable": "Supprimer le tableau",
+        "commands": "Insérer un bloc",
+        "mentions": "Mentionner"
     }
 }

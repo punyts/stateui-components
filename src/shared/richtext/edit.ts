@@ -1,8 +1,8 @@
-import { LIST_TYPES, MARKS, MAX_BLOCKS, MAX_HEADING_LEVEL, MAX_INDENT, newBlockKey, plainText, readBlock, textLength } from './model.js';
-import type { Block, BlockType, KeyedBlock, Mark, Run } from './model.js';
+import { ATOMIC_TYPES, LIST_TYPES, MARKS, MAX_BLOCKS, MAX_COLUMNS, MAX_HEADING_LEVEL, MAX_INDENT, MAX_ROWS, blockLength, joinRunsOf, newBlockKey, plainText, readBlock, textLength } from './model.js';
+import type { Block, BlockType, KeyedBlock, Mark, Row, Run } from './model.js';
 import { safeHref } from '../markdown/links.js';
 import { orderBetween } from './order.js';
-import { deleteRuns, hasMark, insertRuns, joinRuns, linkExtent, linkRuns, markRuns, nextBoundary, previousBoundary, sliceRuns, styleAt } from './runs.js';
+import { atomAround, deleteRuns, hasMark, insertRuns, joinRuns, linkExtent, linkRuns, markRuns, nextBoundary, previousBoundary, sliceRuns, styleAt } from './runs.js';
 import type { DeleteUnit } from './runs.js';
 
 /**
@@ -12,10 +12,17 @@ import type { DeleteUnit } from './runs.js';
  * writes only the blocks it changed (docs/design/stateui-text-editor.md)
  */
 
-/** A place in the text: a block and a character offset in it (UTF-16 code units, as the DOM counts) */
+/** A table cell, by row (0 is the header) and column */
+export interface CellPoint {
+    row: number;
+    column: number;
+}
+
+/** A place in the text: a block and a character offset in it (UTF-16 code units, as the DOM counts); in a table, the cell and the offset in it */
 export interface Point {
     block: string;
     offset: number;
+    cell?: CellPoint;
 }
 
 /** The selection: where it started (`anchor`) and where it ends (`focus`); equal points are a caret */
@@ -30,6 +37,8 @@ export interface EditSettings {
     readonly allowed: readonly BlockType[];
     /** The most characters across all blocks; 0 for no limit */
     readonly maxLength: number;
+    /** Characters counted against `maxLength` outside the blocks an edit is given (the rest of the value, for an edit in a table cell) */
+    readonly used?: number;
 }
 
 export interface Edit {
@@ -57,6 +66,11 @@ type Shape = Omit<Block, 'order'>;
 const textOf = (block: Block): string => plainText(block.runs);
 const lengthOf = (block: Block): number => textOf(block).length;
 const isList = (block: Pick<Block, 'type'>): boolean => LIST_TYPES.includes(block.type);
+/** A divider or a table: a block the caret does not type into */
+const isAtomic = (block: Pick<Block, 'type'>): boolean => ATOMIC_TYPES.includes(block.type);
+/** The room `maxLength` leaves in blocks that hold `length` characters */
+const NO_LIMIT: EditSettings = { allowed: [], maxLength: 0 };
+const roomIn = (settings: EditSettings, length: number): number => (settings.maxLength > 0 ? settings.maxLength - length - (settings.used ?? 0) : Number.POSITIVE_INFINITY);
 
 /** A block in its one form, as `readRichText` would read it back */
 function canonical(block: KeyedBlock): KeyedBlock {
@@ -127,6 +141,58 @@ class Draft {
 
 const caret = (point: Point): TextSelection => ({ anchor: point, focus: point });
 
+/** The cell the whole selection is in; a selection reaching out of a cell takes the table as one block */
+interface CellAt {
+    table: KeyedBlock;
+    row: number;
+    column: number;
+    runs: Run[];
+}
+
+/** The key of the one block an edit in a cell is run on */
+const CELL_KEY = 'cell';
+
+const sameCell = (a: Point, b: Point): boolean => a.block === b.block && a.cell?.row === b.cell?.row && a.cell?.column === b.cell?.column;
+
+function cellOf(blocks: readonly KeyedBlock[], selection: TextSelection): CellAt | null {
+    const { anchor, focus } = selection;
+    if (focus.cell === undefined || !sameCell(anchor, focus)) return null;
+    const table = blocks.find((block) => block.key === focus.block);
+    const cell = table?.type === 'table' ? table.rows?.[focus.cell.row]?.cells[focus.cell.column] : undefined;
+    if (table === undefined || cell === undefined) return null;
+    return { table, row: focus.cell.row, column: focus.cell.column, runs: cell.runs };
+}
+
+/** The selection inside one cell as a selection of the one-block document an edit runs on */
+const intoCell = (selection: TextSelection): TextSelection => ({ anchor: { block: CELL_KEY, offset: selection.anchor.offset }, focus: { block: CELL_KEY, offset: selection.focus.offset } });
+
+const outOfCell = (at: CellAt, selection: TextSelection): TextSelection => {
+    const point = (inner: Point): Point => ({ block: at.table.key, offset: inner.offset, cell: { row: at.row, column: at.column } });
+    return { anchor: point(selection.anchor), focus: point(selection.focus) };
+};
+
+/** A table with one cell's runs replaced (a cell is one line, so a line break becomes a space) */
+function withCell(table: KeyedBlock, row: number, column: number, runs: readonly Run[]): KeyedBlock {
+    const line = runs.map((run) => ({ ...run, text: run.text.replace(/\n/g, ' ') }));
+    const rows = (table.rows ?? []).map((one, index) => (index !== row ? one : { cells: one.cells.map((cell, at) => (at === column ? { runs: line } : cell)) }));
+    return { ...table, rows };
+}
+
+/**
+ * An edit in a table cell: the cell is given to `run` as a one-paragraph document, and what it writes there is written
+ * back into the table. The settings count the rest of the value against `maxLength` and allow no block type, so no
+ * block shortcut runs in a cell
+ */
+function viaCell(blocks: readonly KeyedBlock[], selection: TextSelection, at: CellAt, settings: EditSettings, run: (cell: KeyedBlock[], selection: TextSelection, settings: EditSettings) => Edit | null): Edit | null {
+    const inner: EditSettings = { allowed: [], maxLength: settings.maxLength, used: (settings.used ?? 0) + textLength(blocks) - plainText(at.runs).length };
+    const edit = run([{ key: CELL_KEY, order: 'V', type: 'paragraph', runs: at.runs }], intoCell(selection), inner);
+    const written = edit?.blocks.find((block) => block.key === CELL_KEY);
+    if (edit === null || written === undefined) return null;
+    const draft = new Draft(blocks);
+    draft.put(withCell(at.table, at.row, at.column, written.runs));
+    return draft.done(outOfCell(at, edit.selection), edit.marks);
+}
+
 interface Bound extends Point {
     index: number;
 }
@@ -143,10 +209,28 @@ function rangeOf(blocks: readonly KeyedBlock[], selection: TextSelection): { sta
     const focus = bound(selection.focus);
     if (anchor === null || focus === null) return null;
     const forward = anchor.index < focus.index || (anchor.index === focus.index && anchor.offset <= focus.offset);
-    return forward ? { start: anchor, end: focus } : { start: focus, end: anchor };
+    const start = forward ? anchor : focus;
+    const end = forward ? focus : anchor;
+    //a mention is edited whole: a point inside one moves to its edge, a caret to its end
+    const snap = (bound: Bound, toEnd: boolean): Bound => {
+        const atom = atomAround((blocks[bound.index] as KeyedBlock).runs, bound.offset);
+        return atom === null ? bound : { ...bound, offset: toEnd ? atom.to : atom.from };
+    };
+    const caretOnly = start.index === end.index && start.offset === end.offset;
+    return { start: snap(start, caretOnly), end: snap(end, true) };
 }
 
 const collapsed = (range: { start: Bound; end: Bound }): boolean => range.start.index === range.end.index && range.start.offset === range.end.offset;
+
+/** The start of a table's first cell, or the end of its last */
+function cellEdge(table: KeyedBlock, edge: 'first' | 'last'): Point {
+    const rows = table.rows ?? [];
+    if (edge === 'first') return { block: table.key, offset: 0, cell: { row: 0, column: 0 } };
+    const row = Math.max(0, rows.length - 1);
+    const cells = rows[row]?.cells ?? [];
+    const column = Math.max(0, cells.length - 1);
+    return { block: table.key, offset: plainText(cells[column]?.runs ?? []).length, cell: { row, column } };
+}
 
 /** Takes the selected text out and returns where the caret lands */
 function removeRange(draft: Draft, range: { start: Bound; end: Bound }): Point {
@@ -158,14 +242,14 @@ function removeRange(draft: Draft, range: { start: Bound; end: Bound }): Point {
     }
     const last = draft.blocks[end.index] as KeyedBlock;
     for (const block of draft.blocks.slice(start.index + 1, end.index)) draft.remove(block.key);
-    const tail = last.type === 'divider' ? [] : sliceRuns(last.runs, end.offset, lengthOf(last));
-    if (first.type !== 'divider') {
+    const tail = isAtomic(last) ? [] : sliceRuns(last.runs, end.offset, lengthOf(last));
+    if (!isAtomic(first)) {
         draft.remove(last.key);
         draft.put({ ...first, runs: joinRuns(sliceRuns(first.runs, 0, start.offset), tail) });
         return { block: first.key, offset: start.offset };
     }
     draft.remove(first.key);
-    if (last.type !== 'divider') {
+    if (!isAtomic(last)) {
         draft.put({ ...last, runs: tail });
         return { block: last.key, offset: 0 };
     }
@@ -243,7 +327,7 @@ function reshape(block: KeyedBlock, shape: Shape): KeyedBlock {
 /** A caret in a divider moves into a new paragraph after it, which the edit then types into */
 function textPoint(draft: Draft, point: Point): Point {
     const block = draft.get(point.block);
-    if (block.type !== 'divider') return point;
+    if (!isAtomic(block)) return point;
     const paragraph = draft.insertAt(draft.index(block.key) + 1, { type: 'paragraph', runs: [] });
     return { block: paragraph.key, offset: 0 };
 }
@@ -262,12 +346,14 @@ interface InsertOptions {
  * its opener
  */
 export function insertText(blocks: readonly KeyedBlock[], selection: TextSelection, text: string, settings: EditSettings, options: InsertOptions = {}): Edit | null {
+    const cell = cellOf(blocks, selection);
+    if (cell !== null) return viaCell(blocks, selection, cell, settings, (inner, at, room) => insertText(inner, at, text.replace(/\n/g, ' '), room, options));
     const range = rangeOf(blocks, selection);
     if (range === null) return null;
     const draft = new Draft(blocks);
     const at = textPoint(draft, removeRange(draft, range));
     const block = draft.get(at.block);
-    const room = settings.maxLength > 0 ? settings.maxLength - textLength(draft.blocks) : Number.POSITIVE_INFINITY;
+    const room = roomIn(settings, textLength(draft.blocks));
     const typed = fit(text, room);
     if (typed === '') return draft.changed ? draft.done(caret(at)) : null;
     const style = styleAt(block.runs, at.offset);
@@ -301,6 +387,8 @@ export function insertText(blocks: readonly KeyedBlock[], selection: TextSelecti
 
 /** A line break inside the block: a `\n` in its text */
 export function insertLineBreak(blocks: readonly KeyedBlock[], selection: TextSelection, settings: EditSettings): Edit | null {
+    //a table cell is one line
+    if (cellOf(blocks, selection) !== null) return null;
     return insertText(blocks, selection, '\n', settings);
 }
 
@@ -319,6 +407,8 @@ function continuation(block: Block, atEnd: boolean): Shape {
  * paragraph that is only ```` ``` ```` (with a language) becomes a code block and one that is only `---` a divider
  */
 export function splitBlock(blocks: readonly KeyedBlock[], selection: TextSelection, settings: EditSettings): Edit | null {
+    //Enter in a table cell goes to the cell below, adding a row at the end
+    if (cellOf(blocks, selection) !== null) return tableCommand(blocks, selection, 'down');
     const range = rangeOf(blocks, selection);
     if (range === null) return null;
     const draft = new Draft(blocks);
@@ -326,7 +416,7 @@ export function splitBlock(blocks: readonly KeyedBlock[], selection: TextSelecti
     const block = draft.get(at.block);
     const index = draft.index(block.key);
     const text = textOf(block);
-    if (block.type === 'divider') {
+    if (isAtomic(block)) {
         const paragraph = draft.insertAt(index + 1, { type: 'paragraph', runs: [] });
         return draft.done(caret({ block: paragraph.key, offset: 0 }));
     }
@@ -336,7 +426,7 @@ export function splitBlock(blocks: readonly KeyedBlock[], selection: TextSelecti
             const paragraph = draft.insertAt(index + 1, { type: 'paragraph', runs: [] });
             return draft.done(caret({ block: paragraph.key, offset: 0 }));
         }
-        if (settings.maxLength > 0 && textLength(draft.blocks) >= settings.maxLength) return draft.changed ? draft.done(caret(at)) : null;
+        if (roomIn(settings, textLength(draft.blocks)) <= 0) return draft.changed ? draft.done(caret(at)) : null;
         draft.put({ ...block, runs: insertRuns(block.runs, at.offset, [{ text: '\n' }]) });
         return draft.done(caret({ block: block.key, offset: at.offset + 1 }));
     }
@@ -374,9 +464,9 @@ export function splitBlock(blocks: readonly KeyedBlock[], selection: TextSelecti
 /** The caret after a divider at `index` is removed: the end of the block before it, else the start of the one after */
 function afterRemoval(draft: Draft, index: number): Point {
     const before = draft.blocks[index - 1];
-    if (before !== undefined) return { block: before.key, offset: before.type === 'divider' ? 0 : lengthOf(before) };
+    if (before !== undefined) return before.type === 'table' ? cellEdge(before, 'last') : { block: before.key, offset: isAtomic(before) ? 0 : lengthOf(before) };
     const after = draft.blocks[index];
-    if (after !== undefined) return { block: after.key, offset: 0 };
+    if (after !== undefined) return after.type === 'table' ? cellEdge(after, 'first') : { block: after.key, offset: 0 };
     const paragraph = draft.insertAt(0, { type: 'paragraph', runs: [] });
     return { block: paragraph.key, offset: 0 };
 }
@@ -395,18 +485,21 @@ function join(draft: Draft, first: KeyedBlock, second: KeyedBlock): Point {
  * paragraph onto the block before
  */
 export function deleteBackward(blocks: readonly KeyedBlock[], selection: TextSelection, unit: DeleteUnit): Edit | null {
+    const cell = cellOf(blocks, selection);
+    if (cell !== null) return viaCell(blocks, selection, cell, NO_LIMIT, (inner, at) => deleteBackward(inner, at, unit));
     const range = rangeOf(blocks, selection);
     if (range === null) return null;
     const draft = new Draft(blocks);
     if (!collapsed(range)) return draft.done(caret(removeRange(draft, range)));
     const { start } = range;
     const block = draft.get(start.block);
-    if (block.type === 'divider') {
+    if (isAtomic(block)) {
         draft.remove(block.key);
         return draft.done(caret(afterRemoval(draft, start.index)));
     }
     if (start.offset > 0) {
-        const from = previousBoundary(textOf(block), start.offset, unit);
+        const reach = previousBoundary(textOf(block), start.offset, unit);
+        const from = atomAround(block.runs, reach)?.from ?? reach;
         draft.put({ ...block, runs: deleteRuns(block.runs, from, start.offset) });
         return draft.done(caret({ block: block.key, offset: from }));
     }
@@ -420,6 +513,8 @@ export function deleteBackward(blocks: readonly KeyedBlock[], selection: TextSel
     }
     const previous = draft.blocks[start.index - 1];
     if (previous === undefined) return null;
+    //a table is not joined: the caret goes into its last cell
+    if (previous.type === 'table') return draft.done(caret(cellEdge(previous, 'last')));
     if (previous.type === 'divider') {
         draft.remove(previous.key);
         return draft.done(caret(start));
@@ -429,25 +524,29 @@ export function deleteBackward(blocks: readonly KeyedBlock[], selection: TextSel
 
 /** Delete (and its word and line forms): deletes the selection or the `unit` after the caret, joining the next block at the end */
 export function deleteForward(blocks: readonly KeyedBlock[], selection: TextSelection, unit: DeleteUnit): Edit | null {
+    const cell = cellOf(blocks, selection);
+    if (cell !== null) return viaCell(blocks, selection, cell, NO_LIMIT, (inner, at) => deleteForward(inner, at, unit));
     const range = rangeOf(blocks, selection);
     if (range === null) return null;
     const draft = new Draft(blocks);
     if (!collapsed(range)) return draft.done(caret(removeRange(draft, range)));
     const { start } = range;
     const block = draft.get(start.block);
-    if (block.type === 'divider') {
+    if (isAtomic(block)) {
         draft.remove(block.key);
         const after = draft.blocks[start.index];
         return draft.done(caret(after !== undefined ? { block: after.key, offset: 0 } : afterRemoval(draft, start.index)));
     }
     const text = textOf(block);
     if (start.offset < text.length) {
-        const to = nextBoundary(text, start.offset, unit);
+        const reach = nextBoundary(text, start.offset, unit);
+        const to = atomAround(block.runs, reach)?.to ?? reach;
         draft.put({ ...block, runs: deleteRuns(block.runs, start.offset, to) });
         return draft.done(caret(start));
     }
     const next = draft.blocks[start.index + 1];
     if (next === undefined) return null;
+    if (next.type === 'table') return draft.done(caret(cellEdge(next, 'first')));
     if (next.type === 'divider') {
         draft.remove(next.key);
         return draft.done(caret(start));
@@ -460,7 +559,7 @@ function stretches(blocks: readonly KeyedBlock[], range: { start: Bound; end: Bo
     const found: Array<{ block: KeyedBlock; from: number; to: number }> = [];
     for (let index = range.start.index; index <= range.end.index; index++) {
         const block = blocks[index] as KeyedBlock;
-        if (block.type === 'divider' || block.type === 'code') continue;
+        if (isAtomic(block) || block.type === 'code') continue;
         const from = index === range.start.index ? range.start.offset : 0;
         const to = index === range.end.index ? range.end.offset : lengthOf(block);
         if (from < to) found.push({ block, from, to });
@@ -470,6 +569,8 @@ function stretches(blocks: readonly KeyedBlock[], range: { start: Bound; end: Bo
 
 /** Adds `mark` to the selected text, or takes it off when all of it has it already. Null for a caret (the editor keeps the mark for the next typing) */
 export function toggleMark(blocks: readonly KeyedBlock[], selection: TextSelection, mark: Mark): Edit | null {
+    const cell = cellOf(blocks, selection);
+    if (cell !== null) return viaCell(blocks, selection, cell, NO_LIMIT, (inner, at) => toggleMark(inner, at, mark));
     const range = rangeOf(blocks, selection);
     if (range === null || collapsed(range)) return null;
     const parts = stretches(blocks, range);
@@ -487,10 +588,11 @@ function touched(blocks: readonly KeyedBlock[], range: { start: Bound; end: Boun
 
 /** Sets the kind of every selected block, or turns them back into paragraphs when all are of that kind already */
 export function setBlockKind(blocks: readonly KeyedBlock[], selection: TextSelection, kind: BlockKind, settings: EditSettings): Edit | null {
-    if (!allows(settings, kind.type) || kind.type === 'divider') return null;
+    if (cellOf(blocks, selection) !== null) return null;
+    if (!allows(settings, kind.type) || isAtomic(kind)) return null;
     const range = rangeOf(blocks, selection);
     if (range === null) return null;
-    const targets = touched(blocks, range).filter((block) => block.type !== 'divider');
+    const targets = touched(blocks, range).filter((block) => !isAtomic(block));
     if (targets.length === 0) return null;
     const level = kind.type === 'heading' ? Math.min(MAX_HEADING_LEVEL, Math.max(1, kind.level ?? 1)) : undefined;
     const already = targets.every((block) => block.type === kind.type && (level === undefined || block.level === level));
@@ -502,19 +604,21 @@ export function setBlockKind(blocks: readonly KeyedBlock[], selection: TextSelec
 /** Puts a divider after the caret's block (or turns an empty block into one) and moves the caret to the text after it */
 export function insertDivider(blocks: readonly KeyedBlock[], selection: TextSelection, settings: EditSettings): Edit | null {
     if (!allows(settings, 'divider')) return null;
+    const inCell = cellOf(blocks, selection);
+    if (inCell !== null) return insertDivider(blocks, caret({ block: inCell.table.key, offset: 0 }), settings);
     const range = rangeOf(blocks, selection);
     if (range === null) return null;
     const draft = new Draft(blocks);
     const at = removeRange(draft, range);
     const block = draft.get(at.block);
     let index = draft.index(block.key);
-    if (block.type !== 'divider' && textOf(block) === '') draft.put(reshape(block, { type: 'divider', runs: [] }));
+    if (!isAtomic(block) && textOf(block) === '') draft.put(reshape(block, { type: 'divider', runs: [] }));
     else {
         draft.insertAt(index + 1, { type: 'divider', runs: [] });
         index++;
     }
     const after = draft.blocks[index + 1];
-    const target = after !== undefined && after.type !== 'divider' ? after : draft.insertAt(index + 1, { type: 'paragraph', runs: [] });
+    const target = after !== undefined && !isAtomic(after) ? after : draft.insertAt(index + 1, { type: 'paragraph', runs: [] });
     return draft.done(caret({ block: target.key, offset: 0 }));
 }
 
@@ -552,13 +656,14 @@ function fitShapes(shapes: readonly Shape[], room: number): Shape[] {
     const fitted: Shape[] = [];
     let left = room;
     for (const shape of shapes) {
-        const length = plainText(shape.runs).length;
+        const length = blockLength(shape);
         if (length <= left) {
             fitted.push(shape);
             left -= length;
             continue;
         }
-        const cut = fit(plainText(shape.runs), left).length;
+        //a table is not cut
+        const cut = shape.type === 'table' ? 0 : fit(plainText(shape.runs), left).length;
         if (cut > 0) fitted.push({ ...shape, runs: sliceRuns(shape.runs, 0, cut) });
         break;
     }
@@ -580,18 +685,25 @@ function landed(shape: Shape, block: Block): Shape {
  * block per line. The text is cut to the room `maxLength` leaves, and no more blocks are added than `MAX_BLOCKS` allows
  */
 export function insertBlocks(blocks: readonly KeyedBlock[], selection: TextSelection, shapes: readonly Shape[], settings: EditSettings): Edit | null {
+    const cell = cellOf(blocks, selection);
+    if (cell !== null) {
+        //a cell takes the pasted text as one line, a table's cells joined
+        const lines = shapes.flatMap((shape) => (shape.type === 'table' ? (shape.rows ?? []).flatMap((row) => row.cells.map((one) => one.runs)) : isAtomic(shape) ? [] : [shape.runs]));
+        const runs = joinRunsOf(lines, ' ');
+        return viaCell(blocks, selection, cell, settings, (inner, at, room) => insertBlocks(inner, at, [{ type: 'paragraph', runs }], room));
+    }
     const range = rangeOf(blocks, selection);
     if (range === null) return null;
     if ((blocks[range.start.index] as KeyedBlock).type === 'code') {
-        const text = shapes.filter((shape) => shape.type !== 'divider').map((shape) => plainText(shape.runs)).join('\n');
+        const text = shapes.filter((shape) => !isAtomic(shape)).map((shape) => plainText(shape.runs)).join('\n');
         return insertText(blocks, selection, text, settings);
     }
     const draft = new Draft(blocks);
     const at = textPoint(draft, removeRange(draft, range));
     const block = draft.get(at.block);
-    const room = settings.maxLength > 0 ? settings.maxLength - textLength(draft.blocks) : Number.POSITIVE_INFINITY;
+    const room = roomIn(settings, textLength(draft.blocks));
     const fitted = fitShapes(shapes, room).slice(0, Math.max(1, MAX_BLOCKS - draft.blocks.length + 1));
-    const nothing = fitted.length === 0 || (fitted.length === 1 && fitted[0]?.type !== 'divider' && fitted[0]?.runs.length === 0);
+    const nothing = fitted.length === 0 || (fitted.length === 1 && fitted[0] !== undefined && !isAtomic(fitted[0]) && fitted[0].runs.length === 0);
     if (nothing) return draft.changed ? draft.done(caret(at)) : null;
     const length = lengthOf(block);
     const head = sliceRuns(block.runs, 0, at.offset);
@@ -600,8 +712,8 @@ export function insertBlocks(blocks: readonly KeyedBlock[], selection: TextSelec
     let index = draft.index(block.key);
     let pieces = rest;
 
-    if (first.type === 'divider') {
-        if (length === 0) draft.put(reshape(block, { type: 'divider', runs: [] }));
+    if (isAtomic(first)) {
+        if (length === 0) draft.put(reshape(block, first));
         else {
             draft.put({ ...block, runs: head });
             pieces = fitted;
@@ -617,7 +729,7 @@ export function insertBlocks(blocks: readonly KeyedBlock[], selection: TextSelec
     pieces.forEach((shape, position) => {
         const lastPiece = position === pieces.length - 1;
         const placed = landed(shape, block);
-        if (placed.type === 'divider') {
+        if (isAtomic(placed)) {
             draft.insertAt(++index, placed);
             if (lastPiece) {
                 const after = draft.insertAt(++index, { ...continuation(block, true), runs: tail });
@@ -633,6 +745,11 @@ export function insertBlocks(blocks: readonly KeyedBlock[], selection: TextSelec
 
 /** The link under the caret with its whole stretch selected, or the one link all of a selection has; null when there is none */
 export function linkAt(blocks: readonly KeyedBlock[], selection: TextSelection): { href: string; selection: TextSelection } | null {
+    const cell = cellOf(blocks, selection);
+    if (cell !== null) {
+        const found = linkAt([{ key: CELL_KEY, order: 'V', type: 'paragraph', runs: cell.runs }], intoCell(selection));
+        return found === null ? null : { href: found.href, selection: outOfCell(cell, found.selection) };
+    }
     const range = rangeOf(blocks, selection);
     if (range === null) return null;
     if (collapsed(range)) {
@@ -653,6 +770,8 @@ export function linkAt(blocks: readonly KeyedBlock[], selection: TextSelection):
  * `safeHref`; the run's own check drops it otherwise
  */
 export function setLink(blocks: readonly KeyedBlock[], selection: TextSelection, href: string | null, settings: EditSettings): Edit | null {
+    const cell = cellOf(blocks, selection);
+    if (cell !== null) return viaCell(blocks, selection, cell, settings, (inner, at, room) => setLink(inner, at, href, room));
     const range = rangeOf(blocks, selection);
     if (range === null) return null;
     if (collapsed(range)) {
@@ -680,11 +799,201 @@ export function linkTarget(typed: string): string | undefined {
     return safeHref(DOMAIN.test(text) ? `https://${text}` : text);
 }
 
+/** A new table's columns and rows (the first row is its header) */
+const NEW_TABLE = { columns: 3, rows: 3 };
+
+const emptyRow = (columns: number): Row => ({ cells: Array.from({ length: columns }, () => ({ runs: [] })) });
+
+/**
+ * Puts a new table (three columns, a header and two rows) in place of an empty block, or after the caret's block, with a
+ * paragraph after it, and moves the caret into its first cell
+ */
+export function insertTable(blocks: readonly KeyedBlock[], selection: TextSelection, settings: EditSettings): Edit | null {
+    if (!allows(settings, 'table')) return null;
+    const inCell = cellOf(blocks, selection);
+    if (inCell !== null) return insertTable(blocks, caret({ block: inCell.table.key, offset: 0 }), settings);
+    const range = rangeOf(blocks, selection);
+    if (range === null) return null;
+    const draft = new Draft(blocks);
+    const at = removeRange(draft, range);
+    const block = draft.get(at.block);
+    let index = draft.index(block.key);
+    const shape: Shape = { type: 'table', runs: [], rows: Array.from({ length: NEW_TABLE.rows }, () => emptyRow(NEW_TABLE.columns)) };
+    let table: KeyedBlock;
+    if (!isAtomic(block) && textOf(block) === '') table = draft.put(reshape(block, shape));
+    else {
+        table = draft.insertAt(index + 1, shape);
+        index++;
+    }
+    const after = draft.blocks[index + 1];
+    if (after === undefined || isAtomic(after)) draft.insertAt(index + 1, { type: 'paragraph', runs: [] });
+    return draft.done(caret(cellEdge(table, 'first')));
+}
+
+/** What a table command does: moves to the next or previous cell or the cell below, or adds or removes a row, a column or the table */
+export type TableCommand = 'next' | 'previous' | 'down' | 'addRow' | 'addColumn' | 'removeRow' | 'removeColumn' | 'removeTable';
+
+/**
+ * A table command at a caret in a cell. Tab (`next`) in the last cell and Enter (`down`) in the last row add a row;
+ * `previous` in the first cell stays. A row is added below the caret's and a column to its right, up to `MAX_ROWS` and
+ * `MAX_COLUMNS`. Removing the only row or column removes the table
+ */
+export function tableCommand(blocks: readonly KeyedBlock[], selection: TextSelection, command: TableCommand): Edit | null {
+    const at = cellOf(blocks, selection);
+    if (at === null) return null;
+    const { table, row, column } = at;
+    const rows = table.rows ?? [];
+    const columns = rows[0]?.cells.length ?? 0;
+    const draft = new Draft(blocks);
+    const point = (r: number, c: number, end = false): Point => ({ block: table.key, offset: end ? plainText(draft.get(table.key).rows?.[r]?.cells[c]?.runs ?? []).length : 0, cell: { row: r, column: c } });
+    const withRows = (next: Row[], align = table.align): KeyedBlock => {
+        const changed: KeyedBlock = { ...table, rows: next };
+        if (align === undefined) delete changed.align;
+        else changed.align = align;
+        return changed;
+    };
+    const addRow = (after: number): boolean => {
+        if (rows.length >= MAX_ROWS) return false;
+        draft.put(withRows([...rows.slice(0, after + 1), emptyRow(columns), ...rows.slice(after + 1)]));
+        return true;
+    };
+    const removeTable = (): Edit => {
+        const index = draft.index(table.key);
+        draft.remove(table.key);
+        return draft.done(caret(afterRemoval(draft, index)));
+    };
+    switch (command) {
+        case 'next': {
+            if (column + 1 < columns) return draft.done(caret(point(row, column + 1)));
+            if (row + 1 < rows.length) return draft.done(caret(point(row + 1, 0)));
+            return addRow(row) ? draft.done(caret(point(row + 1, 0))) : null;
+        }
+        case 'previous': {
+            if (column > 0) return draft.done(caret(point(row, column - 1, true)));
+            if (row > 0) return draft.done(caret(point(row - 1, columns - 1, true)));
+            return null;
+        }
+        case 'down': {
+            if (row + 1 < rows.length) return draft.done(caret(point(row + 1, column)));
+            return addRow(row) ? draft.done(caret(point(row + 1, column))) : null;
+        }
+        case 'addRow':
+            return addRow(row) ? draft.done(caret(point(row + 1, column))) : null;
+        case 'addColumn': {
+            if (columns >= MAX_COLUMNS) return null;
+            const next = rows.map((one) => ({ cells: [...one.cells.slice(0, column + 1), { runs: [] }, ...one.cells.slice(column + 1)] }));
+            const align = table.align === undefined ? undefined : [...table.align.slice(0, column + 1), '' as const, ...table.align.slice(column + 1)];
+            draft.put(withRows(next, align));
+            return draft.done(caret(point(row, column + 1)));
+        }
+        case 'removeRow': {
+            if (rows.length <= 1) return removeTable();
+            draft.put(withRows(rows.filter((_, index) => index !== row)));
+            return draft.done(caret(point(Math.min(row, rows.length - 2), column)));
+        }
+        case 'removeColumn': {
+            if (columns <= 1) return removeTable();
+            const next = rows.map((one) => ({ cells: one.cells.filter((_, index) => index !== column) }));
+            const align = table.align?.filter((_, index) => index !== column);
+            draft.put(withRows(next, align));
+            return draft.done(caret(point(row, Math.min(column, columns - 2))));
+        }
+        case 'removeTable':
+            return removeTable();
+    }
+}
+
+/**
+ * Puts a mention of `id` in at the selection, showing `@label`, with a space after it; in a code block it does nothing.
+ * The mention is cut to the room `maxLength` leaves like any text
+ */
+export function insertMention(blocks: readonly KeyedBlock[], selection: TextSelection, id: string, label: string, settings: EditSettings): Edit | null {
+    const cell = cellOf(blocks, selection);
+    const block = blocks.find((one) => one.key === selection.focus.block);
+    if (id === '' || label.trim() === '' || (cell === null && block?.type === 'code')) return null;
+    const runs: Run[] = [{ text: `@${label.trim()}`, mention: id }, { text: ' ' }];
+    const room = roomIn(settings, textLength(blocks));
+    if (room < plainText(runs).length) return null;
+    return insertBlocks(blocks, selection, [{ type: 'paragraph', runs }], settings);
+}
+
+/** The text a point is in: its block's, or its table cell's */
+function textAt(blocks: readonly KeyedBlock[], point: Point): { runs: Run[]; type: BlockType } | null {
+    const block = blocks.find((one) => one.key === point.block);
+    if (block === undefined) return null;
+    if (point.cell !== undefined) {
+        const cell = block.rows?.[point.cell.row]?.cells[point.cell.column];
+        return cell === undefined ? null : { runs: cell.runs, type: 'table' };
+    }
+    return isAtomic(block) ? null : { runs: block.runs, type: block.type };
+}
+
+/** The two pickers: `slash` for block commands, `mention` for people and records */
+export type PickerKind = 'slash' | 'mention';
+
+/** The character that opens each picker */
+export const PICKER_TRIGGERS: Readonly<Record<PickerKind, string>> = { slash: '/', mention: '@' };
+
+/** The longest query a picker follows; past it the picker closes */
+export const MAX_PICKER_QUERY = 64;
+
+/**
+ * Whether typing a picker's trigger at the caret `at` opens it: at the start of the text or after whitespace, not in a
+ * code block, and for `slash` not in a table cell
+ */
+export function opensPicker(blocks: readonly KeyedBlock[], at: Point, kind: PickerKind): boolean {
+    const text = textAt(blocks, at);
+    if (text === null || text.type === 'code' || (kind === 'slash' && text.type === 'table')) return false;
+    const before = plainText(text.runs).charAt(at.offset - 1);
+    return at.offset === 0 || /\s/u.test(before);
+}
+
+/**
+ * The query typed after a picker's trigger at `from` (the trigger's own offset): the text from after it to the caret, or
+ * null when the picker should close (the caret left the trigger's text or went before it, the trigger is gone, or the
+ * query holds a line break, a slash query a space, or is longer than `MAX_PICKER_QUERY`)
+ */
+export function pickerQuery(blocks: readonly KeyedBlock[], from: Point, selection: TextSelection, kind: PickerKind): string | null {
+    const { anchor, focus } = selection;
+    if (anchor.offset !== focus.offset || !sameCell(anchor, focus) || !sameCell(focus, from) || (from.cell === undefined) !== (focus.cell === undefined)) return null;
+    if (focus.offset <= from.offset) return null;
+    const text = textAt(blocks, focus);
+    if (text === null) return null;
+    const content = plainText(text.runs);
+    if (content.charAt(from.offset) !== PICKER_TRIGGERS[kind] || atomAround(text.runs, from.offset + 1) !== null) return null;
+    const query = content.slice(from.offset + 1, focus.offset);
+    if (query.length > MAX_PICKER_QUERY || query.includes('\n') || (kind === 'slash' && /\s/u.test(query))) return null;
+    return query;
+}
+
+/** Two edits made one after the other as one edit, so undo takes both back at once; `second` was made on `first`'s blocks */
+export function chainEdits(first: Edit, second: Edit | null): Edit {
+    if (second === null) return first;
+    const written = new Map(first.written);
+    for (const [key, block] of second.written) written.set(key, block);
+    const removed = new Set(first.removed);
+    for (const key of second.removed) {
+        written.delete(key);
+        removed.add(key);
+    }
+    const edit: Edit = { blocks: second.blocks, written, removed, selection: second.selection };
+    if (second.marks !== undefined) edit.marks = second.marks;
+    return edit;
+}
+
 /** A selection whose points are in the blocks: a point whose block is gone goes to the start of the first block, and offsets are clamped */
 export function clampSelection(blocks: readonly KeyedBlock[], selection: TextSelection): TextSelection {
     const clamp = (point: Point): Point => {
         const block = blocks.find((candidate) => candidate.key === point.block);
         if (block === undefined) return blocks[0] === undefined ? point : { block: blocks[0].key, offset: 0 };
+        if (block.type === 'table') {
+            const rows = block.rows ?? [];
+            const row = Math.max(0, Math.min(point.cell?.row ?? 0, rows.length - 1));
+            const cells = rows[row]?.cells ?? [];
+            const column = Math.max(0, Math.min(point.cell?.column ?? 0, cells.length - 1));
+            const length = plainText(cells[column]?.runs ?? []).length;
+            return { block: block.key, offset: point.cell === undefined ? 0 : Math.max(0, Math.min(point.offset, length)), cell: { row, column } };
+        }
         return { block: block.key, offset: Math.max(0, Math.min(point.offset, lengthOf(block))) };
     };
     return { anchor: clamp(selection.anchor), focus: clamp(selection.focus) };
@@ -692,6 +1001,8 @@ export function clampSelection(blocks: readonly KeyedBlock[], selection: TextSel
 
 /** What the toolbar shows as active: the marks all the selected text has (or the marks typing would take) and the focus block's kind */
 export function activeState(blocks: readonly KeyedBlock[], selection: TextSelection, pending: readonly Mark[] | null): { marks: Mark[]; kind: BlockKind | null } {
+    const cell = cellOf(blocks, selection);
+    if (cell !== null) return { marks: activeState([{ key: CELL_KEY, order: 'V', type: 'paragraph', runs: cell.runs }], intoCell(selection), pending).marks, kind: { type: 'table' } };
     const range = rangeOf(blocks, selection);
     if (range === null) return { marks: [], kind: null };
     const focus = blocks[range.end.index] as KeyedBlock;
@@ -706,10 +1017,20 @@ export function activeState(blocks: readonly KeyedBlock[], selection: TextSelect
 }
 
 /** A whole block's text replaced by `text` read back from the page (after an input method wrote it), keeping the marks around the change */
-export function replaceBlockText(blocks: readonly KeyedBlock[], key: string, text: string): { edit: Edit; offset: number } | null {
+export function replaceBlockText(blocks: readonly KeyedBlock[], key: string, text: string, cell?: CellPoint): { edit: Edit; offset: number } | null {
+    if (cell !== undefined) {
+        const at = cellOf(blocks, caret({ block: key, offset: 0, cell }));
+        if (at === null) return null;
+        const replaced = replaceBlockText([{ key: CELL_KEY, order: 'V', type: 'paragraph', runs: at.runs }], CELL_KEY, text.replace(/\n/g, ' '));
+        const written = replaced?.edit.blocks[0];
+        if (replaced === null || written === undefined) return null;
+        const draft = new Draft(blocks);
+        draft.put(withCell(at.table, at.row, at.column, written.runs));
+        return { edit: draft.done(caret({ block: key, offset: replaced.offset, cell })), offset: replaced.offset };
+    }
     const draft = new Draft(blocks);
     const block = draft.blocks[draft.index(key)];
-    if (block === undefined || block.type === 'divider') return null;
+    if (block === undefined || isAtomic(block)) return null;
     const old = textOf(block);
     if (old === text) return null;
     let prefix = 0;

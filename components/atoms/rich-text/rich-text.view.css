@@ -166,3 +166,39 @@
 .rich-text .link:hover {
     text-decoration-thickness: var(--ui-border-width-thick);
 }
+
+.rich-text .mention {
+    padding-inline: calc(var(--ui-space-gap-sm) / 2);
+    color: var(--ui-richtext-mention-color);
+    background: var(--ui-richtext-mention-background);
+    border-radius: var(--ui-radius-sm);
+    white-space: nowrap;
+}
+
+.rich-text table {
+    display: block;
+    max-inline-size: 100%;
+    overflow-x: auto;
+    border-collapse: collapse;
+}
+
+.rich-text th,
+.rich-text td {
+    padding: calc(var(--ui-space-gap-sm) / 2) var(--ui-space-gap-sm);
+    border: var(--ui-border-width-thin) solid var(--ui-color-border-base);
+    text-align: start;
+    vertical-align: top;
+}
+
+.rich-text th {
+    font-weight: var(--ui-text-heading-weight);
+    background: var(--ui-richtext-table-header);
+}
+
+.rich-text [data-align=center] {
+    text-align: center;
+}
+
+.rich-text [data-align=right] {
+    text-align: end;
+}

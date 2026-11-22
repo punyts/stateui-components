@@ -75,9 +75,22 @@ export function markRuns(runs: readonly Run[], from: number, to: number, mark: M
         else marks.delete(mark);
         const next: Run = { text: run.text, marks: MARKS.filter((known) => marks.has(known)) };
         if (run.link !== undefined) next.link = run.link;
+        if (run.mention !== undefined) next.mention = run.mention;
         return next;
     });
     return joinRuns(sliceRuns(runs, 0, from), middle, sliceRuns(runs, to, length));
+}
+
+/** The mention whose characters are on both sides of `offset`, as `[from, to)`; null when the offset is not inside one */
+export function atomAround(runs: readonly Run[], offset: number): { from: number; to: number } | null {
+    let at = 0;
+    for (const run of runs) {
+        const end = at + run.text.length;
+        if (run.mention !== undefined && at < offset && offset < end) return { from: at, to: end };
+        if (end >= offset) return null;
+        at = end;
+    }
+    return null;
 }
 
 /** Runs with every character in `[from, to)` linked to `href`, or unlinked when it is null; marks are kept */
@@ -86,7 +99,8 @@ export function linkRuns(runs: readonly Run[], from: number, to: number, href: s
     const middle = sliceRuns(runs, from, to).map((run) => {
         const next: Run = { text: run.text };
         if (run.marks !== undefined) next.marks = run.marks;
-        if (href !== null) next.link = href;
+        if (run.mention !== undefined) next.mention = run.mention;
+        else if (href !== null) next.link = href;
         return next;
     });
     return joinRuns(sliceRuns(runs, 0, from), middle, sliceRuns(runs, to, length));
