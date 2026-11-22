@@ -1,6 +1,7 @@
-<div class="trigger" onclick="{{ onTriggerClick }}" onkeydown="{{ onTriggerKeyDown }}">
+<div class="trigger" onclick="{{ onTriggerClick }}" onkeydown="{{ onTriggerKeyDown }}" oncontextmenu="{{ onContextMenu }}" onpointerdown="{{ onPointerDown }}" onpointermove="{{ onPointerMove }}" onpointerup="{{ onPointerEnd }}" onpointercancel="{{ onPointerEnd }}">
     <sui-node state=".trigger" if="{{ $.trigger }}"></sui-node>
 </div>
+<span class="point" aria-hidden="true"></span>
 <div class="popup" popover="manual" role="menu" aria-label="{{ $._label }}" onkeydown="{{ onKeyDown }}" onpress="{{ onPress }}">
     <sui-node if="{{ $.children }}" repeat="{{ $k,$i,$v in $.children }}" key="{{ $k }}" state="{{ $v }}"></sui-node>
 </div>

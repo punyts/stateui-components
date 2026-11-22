@@ -1,0 +1,15 @@
+<div class="group" role="group" aria-label="{{ $._label }}">
+    <button class="action" type="button" repeat="{{ $k,$i,$v in $.actions }}" key="{{ $k }}" hidden="{{ $.split &amp;&amp; $i &gt; 0 }}" data-key="{{ $k }}" disabled="{{ $.disabled || $v.disabled }}" onclick="{{ onAction }}">
+        <ui-icon class="glyph" size="sm" name="{{ $v.icon }}" if="{{ $v.icon }}"></ui-icon>
+        <span class="label">{{ $v._label || $k }}</span>
+    </button>
+    <button class="more" type="button" if="{{ $.split }}" aria-label="{{ $._more }}" aria-haspopup="menu" aria-expanded="{{ $.open ? 'true' : 'false' }}" aria-controls="menu" disabled="{{ $.disabled }}" onclick="{{ onToggle }}" onkeydown="{{ onMoreKeyDown }}">
+        <ui-icon size="sm" name="chevron-down"></ui-icon>
+    </button>
+</div>
+<div class="menu" id="menu" popover="manual" role="menu" aria-label="{{ $._more }}" onkeydown="{{ onMenuKeyDown }}">
+    <button class="item" type="button" role="menuitem" tabindex="-1" repeat="{{ $k,$i,$v in $.actions }}" key="{{ $k }}" hidden="{{ !$.split || $i === 0 }}" data-key="{{ $k }}" disabled="{{ $v.disabled }}" onclick="{{ onAction }}">
+        <ui-icon class="glyph" size="sm" name="{{ $v.icon }}" if="{{ $v.icon }}"></ui-icon>
+        <span class="label">{{ $v._label || $k }}</span>
+    </button>
+</div>

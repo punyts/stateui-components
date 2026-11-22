@@ -1,0 +1,3 @@
+<button class="display" type="button" hidden="{{ $.editing }}" disabled="{{ $.disabled }}" aria-describedby="hint" data-empty="{{ $.value === '' ? '' : null }}" onclick="{{ onEdit }}">{{ $.value || $._placeholder }}</button>
+<input class="input" type="text" hidden="{{ !$.editing }}" aria-label="{{ $._label }}" placeholder="{{ $._placeholder }}" maxlength="{{ $.maxLength &gt; 0 ? $.maxLength : null }}" value="{{ $.draft }}" bind="value" onkeydown="{{ onKeyDown }}" onblur="{{ onBlur }}" />
+<span class="hint" id="hint" hidden="">{{ $._hint }}</span>

@@ -1,0 +1,30 @@
+{
+    "summary": "Joined buttons for related actions, or a split button whose second half opens a menu of more actions",
+    "category": "forms",
+    "purposes": ["join related action buttons", "offer a main action with alternatives in a split button", "group save and save as", "show a primary action with a menu of variants"],
+    "events": ["action"],
+    "shared": { "tone": { "default": "accent" }, "variant": { "default": "outline", "values": ["solid", "soft", "outline", "ghost"] }, "size": { "default": "md" }, "corners": {} },
+    "tokenGroup": "buttongroup",
+    "tokens": {
+        "radius": "{radius.md}",
+        "padding": "{space.inset.md}",
+        "gap": "{space.gap.sm}",
+        "menu": { "padding": "{space.inset.sm}", "minwidth": "calc({size.control.md} * 5)", "radius": "{radius.md}" }
+    },
+    "properties": {
+        "actions": {
+            "type": "map",
+            "default": {},
+            "items": {
+                "_label": { "type": "string", "kind": "content" },
+                "icon": { "type": "icon", "default": "" },
+                "disabled": { "type": "boolean", "default": false }
+            }
+        },
+        "split": { "type": "boolean", "default": false, "reflect": true },
+        "disabled": { "type": "boolean", "default": false },
+        "open": { "type": "boolean", "default": false, "runtime": true, "reflect": true },
+        "_label": { "type": "string", "kind": "content", "default": "Actions" },
+        "_more": { "type": "string", "kind": "content", "default": "More actions" }
+    }
+}

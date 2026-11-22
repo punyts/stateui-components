@@ -1,2 +1,66 @@
 @include "control.css";
 @include "field.css";
+
+.box:has(.reveal) .control {
+    padding-inline-end: calc(var(--ui-size-control-md) + var(--ui-space-gap-sm));
+}
+
+.reveal {
+    position: absolute;
+    inset-inline-end: var(--ui-control-border);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--ui-size-control-md);
+    block-size: calc(100% - var(--ui-control-border) * 2);
+    margin: 0;
+    padding: 0;
+    font: inherit;
+    color: var(--ui-color-text-muted);
+    background: transparent;
+    border: 0;
+    border-radius: var(--ui-control-radius);
+    cursor: pointer;
+}
+
+.reveal:hover:not(:disabled) {
+    color: var(--ui-color-text-base);
+}
+
+.reveal:focus-visible {
+    outline: 2px solid var(--ui-color-focus);
+    outline-offset: -2px;
+}
+
+.reveal:disabled {
+    color: var(--ui-color-text-disabled);
+    cursor: not-allowed;
+}
+
+.strength {
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space-gap-sm);
+    margin-block-start: var(--ui-field-label-gap);
+    font-size: var(--ui-field-help-size);
+    color: var(--ui-color-text-muted);
+}
+
+.track {
+    flex: 1 1 auto;
+    block-size: 4px;
+    background: var(--ui-color-border-base);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.fill {
+    display: block;
+    block-size: 100%;
+    inline-size: calc(var(--sui-score, 0) * 25%);
+    background: var(--ui-field-selected-fill);
+}
+
+:host([level="weak"]) .fill {
+    background: var(--ui-field-error-color);
+}

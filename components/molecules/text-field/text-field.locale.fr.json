@@ -9,5 +9,8 @@
         "min": "Trop petit",
         "max": "Trop grand",
         "pattern": "Format non conforme"
-    }
+    },
+    "_reveal": "Afficher le mot de passe",
+    "_conceal": "Masquer le mot de passe",
+    "_strength": { "weak": "Mot de passe faible", "fair": "Mot de passe moyen", "good": "Bon mot de passe", "strong": "Mot de passe fort" }
 }

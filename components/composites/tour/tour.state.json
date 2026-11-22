@@ -1,0 +1,45 @@
+{
+    "summary": "A guided tour: steps shown one at a time beside the node each points at, with next, back and skip",
+    "category": "overlays",
+    "purposes": ["walk a new user through a screen", "point out a new feature on first visit", "explain the parts of a dashboard step by step", "onboard someone with a guided tour"],
+    "events": ["change", "finish"],
+    "commands": ["start", "next", "back", "skip"],
+    "tokenGroup": "tour",
+    "tokens": {
+        "radius": "{radius.md}",
+        "padding": "{space.inset.md}",
+        "gap": "{space.gap.sm}",
+        "width": "calc({size.control.md} * 8)",
+        "ring": "{color.accent.base}",
+        "next": { "fill": "{color.accent.base}", "on": "{color.accent.on}" },
+        "scrim": "{color.text.base}"
+    },
+    "properties": {
+        "steps": {
+            "type": "map",
+            "default": {},
+            "items": {
+                "target": { "type": "string", "default": "" },
+                "side": { "type": "string", "values": ["bottom", "top", "start", "end"], "default": "bottom" },
+                "_title": { "type": "string", "kind": "content" },
+                "_text": { "type": "string", "kind": "content" }
+            }
+        },
+        "step": { "type": "string", "default": "" },
+        "done": { "type": "boolean", "default": false },
+        "running": { "type": "boolean", "default": false, "runtime": true, "reflect": true },
+        "found": { "type": "boolean", "default": false, "runtime": true, "reflect": true },
+        "side": { "type": "string", "default": "bottom", "runtime": true, "reflect": true },
+        "first": { "type": "boolean", "default": true, "runtime": true },
+        "last": { "type": "boolean", "default": false, "runtime": true },
+        "title": { "type": "string", "default": "", "runtime": true },
+        "text": { "type": "string", "default": "", "runtime": true },
+        "progressText": { "type": "string", "default": "", "runtime": true },
+        "_label": { "type": "string", "kind": "content", "default": "Tour" },
+        "_next": { "type": "string", "kind": "content", "default": "Next" },
+        "_back": { "type": "string", "kind": "content", "default": "Back" },
+        "_skip": { "type": "string", "kind": "content", "default": "Skip tour" },
+        "_done": { "type": "string", "kind": "content", "default": "Done" },
+        "_progress": { "type": "string", "kind": "content", "default": "{index} of {count}" }
+    }
+}

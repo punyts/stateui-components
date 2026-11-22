@@ -1,0 +1,12 @@
+<div class="ring" popover="manual" aria-hidden="true"></div>
+<div class="card" popover="manual" role="dialog" aria-label="{{ $._label }}" aria-describedby="text" onkeydown="{{ onKeyDown }}">
+    <p class="progress">{{ $.progressText }}</p>
+    <h2 class="title" id="title">{{ $.title }}</h2>
+    <p class="text" id="text">{{ $.text }}</p>
+    <div class="actions">
+        <button class="skip" type="button" hidden="{{ $.last }}" onclick="{{ onSkip }}">{{ $._skip }}</button>
+        <span class="spacer"></span>
+        <button class="back" type="button" hidden="{{ $.first }}" onclick="{{ onBack }}">{{ $._back }}</button>
+        <button class="next" type="button" onclick="{{ onNext }}">{{ $.last ? $._done : $._next }}</button>
+    </div>
+</div>

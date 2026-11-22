@@ -21,6 +21,11 @@ export default function controller(context: ControllerContext) {
         ...field,
         optionKeyOf: options.optionKeyOf,
         labelOf: options.labelOf,
+        /** An option's description: its `_description` in a static map, else the `optionDescription` field of a record */
+        descriptionOf: (entry: Record<string, unknown>, name: string, content: unknown): string => {
+            const text = '_description' in entry ? content : entry[name];
+            return typeof text === 'string' ? text : '';
+        },
         onChange: () => {
             const chosen = radios().find((radio) => radio.checked);
             if (store.get<boolean>(`${basePath}.readonly`) === true || chosen === undefined) {

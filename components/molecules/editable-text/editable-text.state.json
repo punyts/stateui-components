@@ -1,0 +1,24 @@
+{
+    "summary": "Text that turns into an input on press and writes its value on Enter or blur; Escape cancels",
+    "category": "forms",
+    "purposes": ["rename a title in place", "edit a board column name inline", "change a label without opening a form", "click to edit a heading"],
+    "events": ["change"],
+    "commands": ["edit", "cancel"],
+    "tokenGroup": "editable",
+    "tokens": {
+        "padding": "{space.inset.sm}",
+        "radius": "{radius.sm}"
+    },
+    "properties": {
+        "value": { "type": "string", "default": "" },
+        "level": { "type": "string", "values": ["body", "title", "heading"], "default": "body", "reflect": true },
+        "required": { "type": "boolean", "default": false },
+        "maxLength": { "type": "integer", "default": 0, "validators": { "range": { "min": 0 } } },
+        "disabled": { "type": "boolean", "default": false },
+        "editing": { "type": "boolean", "default": false, "runtime": true, "reflect": true },
+        "draft": { "type": "string", "default": "", "runtime": true },
+        "_label": { "type": "string", "kind": "content", "default": "Text" },
+        "_placeholder": { "type": "string", "kind": "content", "default": "" },
+        "_hint": { "type": "string", "kind": "content", "default": "Press to edit" }
+    }
+}

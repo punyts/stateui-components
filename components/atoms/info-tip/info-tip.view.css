@@ -1,0 +1,64 @@
+:host {
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+}
+
+.toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    anchor-name: --i;
+    margin: 0;
+    padding: 2px;
+    font: inherit;
+    color: var(--ui-color-text-muted);
+    background: transparent;
+    border: 0;
+    border-radius: var(--ui-radius-full);
+    cursor: pointer;
+}
+
+.toggle:hover,
+:host([open]) .toggle {
+    color: var(--ui-infotip-active);
+}
+
+.toggle:focus-visible {
+    outline: 2px solid var(--ui-color-focus);
+    outline-offset: 1px;
+}
+
+.note {
+    box-sizing: border-box;
+    margin: var(--ui-space-gap-sm);
+    border: 0;
+    inset: auto;
+    inline-size: max-content;
+    max-inline-size: var(--ui-infotip-maxsize);
+    padding: var(--ui-infotip-padding);
+    overflow: visible;
+    position-anchor: --i;
+    position-area: top;
+    position-try-fallbacks: flip-block, flip-inline;
+    font-family: var(--ui-text-caption-family);
+    font-size: var(--ui-text-caption-size);
+    font-weight: var(--ui-text-caption-weight);
+    line-height: var(--ui-text-caption-leading);
+    color: var(--ui-color-text-inverse);
+    background: var(--ui-color-text-base);
+    border-radius: var(--ui-infotip-radius);
+    box-shadow: var(--ui-elevation-overlay-shadow);
+}
+
+:host([side="bottom"]) .note {
+    position-area: bottom;
+}
+
+:host([side="start"]) .note {
+    position-area: inline-start;
+}
+
+:host([side="end"]) .note {
+    position-area: inline-end;
+}

@@ -1,0 +1,176 @@
+:host {
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.group {
+    display: inline-flex;
+    align-items: stretch;
+    anchor-name: --g;
+}
+
+.action,
+.more {
+    position: relative;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--ui-buttongroup-gap);
+    min-block-size: var(--control-height, var(--ui-size-control-md));
+    margin: 0;
+    margin-inline-start: calc(var(--ui-border-width-thin) * -1);
+    padding-block: 0;
+    padding-inline: var(--ui-buttongroup-padding);
+    font-family: var(--ui-text-label-family);
+    font-size: calc(var(--ui-text-label-size) * var(--size-text-scale, 1));
+    font-weight: var(--ui-text-label-weight);
+    line-height: var(--ui-text-label-leading);
+    color: var(--tone);
+    background: transparent;
+    border: var(--ui-border-width-thin) solid var(--tone);
+    border-radius: 0;
+    cursor: pointer;
+}
+
+.group > :first-child {
+    margin-inline-start: 0;
+    border-start-start-radius: var(--corner-radius, var(--ui-buttongroup-radius));
+    border-end-start-radius: var(--corner-radius, var(--ui-buttongroup-radius));
+}
+
+.group > :last-child {
+    border-start-end-radius: var(--corner-radius, var(--ui-buttongroup-radius));
+    border-end-end-radius: var(--corner-radius, var(--ui-buttongroup-radius));
+}
+
+.more {
+    padding-inline: var(--ui-space-inset-sm);
+}
+
+.action[hidden] {
+    display: none;
+}
+
+:host([variant=solid]) .action,
+:host([variant=solid]) .more {
+    color: var(--tone-on);
+    background: var(--tone);
+    border-color: var(--tone-on);
+}
+
+:host([variant=solid]) .group > :first-child {
+    border-inline-start-color: var(--tone);
+}
+
+:host([variant=solid]) .group > :last-child {
+    border-inline-end-color: var(--tone);
+}
+
+:host([variant=soft]) .action,
+:host([variant=soft]) .more {
+    background: var(--tone-soft);
+    border-color: transparent;
+    border-inline-start-color: var(--tone);
+}
+
+:host([variant=soft]) .group > :first-child {
+    border-inline-start-color: transparent;
+}
+
+:host([variant=ghost]) .action,
+:host([variant=ghost]) .more {
+    border-color: transparent;
+}
+
+.action:hover:not(:disabled),
+.more:hover:not(:disabled),
+:host([open]) .more {
+    background: var(--tone-soft);
+}
+
+:host([variant=solid]) .action:hover:not(:disabled),
+:host([variant=solid]) .more:hover:not(:disabled),
+:host([variant=solid][open]) .more {
+    background: var(--tone);
+    filter: brightness(0.92);
+}
+
+.action:focus-visible,
+.more:focus-visible,
+.item:focus-visible {
+    z-index: 1;
+    outline: 2px solid var(--ui-color-focus);
+    outline-offset: 2px;
+}
+
+.action:disabled,
+.more:disabled {
+    color: var(--ui-color-text-disabled);
+    cursor: not-allowed;
+}
+
+.glyph {
+    flex: none;
+}
+
+.label {
+    white-space: nowrap;
+}
+
+.menu {
+    box-sizing: border-box;
+    margin: 0;
+    margin-block: var(--ui-buttongroup-gap);
+    border: 0;
+    inset: auto;
+    inline-size: max-content;
+    min-inline-size: var(--ui-buttongroup-menu-minwidth);
+    padding: var(--ui-buttongroup-menu-padding);
+    position-anchor: --g;
+    position-area: block-end span-inline-start;
+    position-try-fallbacks: flip-block, flip-inline;
+    color: var(--ui-color-text-base);
+    background: var(--ui-color-surface-raised);
+    border-radius: var(--ui-buttongroup-menu-radius);
+    box-shadow: var(--ui-elevation-overlay-shadow);
+    font-family: var(--ui-text-body-family);
+    font-size: var(--ui-text-body-size);
+    line-height: var(--ui-text-body-leading);
+}
+
+.menu:popover-open {
+    display: flex;
+    flex-direction: column;
+}
+
+.item {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: var(--ui-buttongroup-gap);
+    min-block-size: var(--ui-size-control-md);
+    margin: 0;
+    padding-inline: var(--ui-space-inset-sm);
+    font: inherit;
+    text-align: start;
+    color: inherit;
+    background: transparent;
+    border: 0;
+    border-radius: var(--ui-radius-sm);
+    cursor: pointer;
+}
+
+.item[hidden] {
+    display: none;
+}
+
+.item:hover:not(:disabled),
+.item:focus-visible {
+    background: var(--ui-color-surface-sunken);
+}
+
+.item:disabled {
+    color: var(--ui-color-text-disabled);
+    cursor: not-allowed;
+}

@@ -9,5 +9,8 @@
         "min": "Zu klein",
         "max": "Zu groß",
         "pattern": "Nicht im erwarteten Format"
-    }
+    },
+    "_reveal": "Passwort anzeigen",
+    "_conceal": "Passwort verbergen",
+    "_strength": { "weak": "Schwaches Passwort", "fair": "Mittelmäßiges Passwort", "good": "Gutes Passwort", "strong": "Starkes Passwort" }
 }

@@ -1,7 +1,7 @@
 {
-    "summary": "A labelled radio group of options from data or a translated static map, vertical or horizontal, with help and error text",
+    "summary": "A labelled radio group of options from data or a static map, as a list or as choice cards, with help and errors",
     "category": "forms",
-    "purposes": ["choose exactly one of a few visible options", "pick a plan or delivery method", "answer a single-choice question"],
+    "purposes": ["choose exactly one of a few visible options", "pick a plan or delivery method", "answer a single-choice question", "pick one of several choice cards"],
     "events": ["change", "invalid", "valid"],
     "commands": ["validate", "reset", "focus", "clear"],
     "tokenGroup": "field",
@@ -17,10 +17,12 @@
         "options": {
             "type": ["array", "map"],
             "default": [],
-            "items": { "_label": { "type": "string", "kind": "content" } }
+            "items": { "_label": { "type": "string", "kind": "content" }, "_description": { "type": "string", "kind": "content" } }
         },
         "optionValue": { "type": "string", "default": "value" },
         "optionLabel": { "type": "string", "default": "label" },
+        "optionDescription": { "type": "string", "default": "description" },
+        "appearance": { "type": "string", "values": ["list", "card"], "default": "list", "reflect": true },
         "orientation": { "type": "string", "values": ["vertical", "horizontal"], "default": "vertical", "reflect": true },
         "value": { "type": "any", "default": "" },
         "disabled": { "type": "boolean", "default": false },

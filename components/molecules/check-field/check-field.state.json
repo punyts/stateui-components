@@ -1,7 +1,7 @@
 {
-    "summary": "A labelled checkbox that validates and resets like every other field",
+    "summary": "A labelled checkbox that validates and resets like every other field, plain or as a choice card",
     "category": "forms",
-    "purposes": ["accept terms before going on", "opt in to a newsletter", "confirm a statement with a ticked box"],
+    "purposes": ["accept terms before going on", "opt in to a newsletter", "confirm a statement with a ticked box", "add an extra as a choice card"],
     "events": ["change", "invalid", "valid"],
     "commands": ["validate", "reset", "focus", "clear"],
     "tokenGroup": "field",
@@ -15,6 +15,7 @@
     "shared": { "size": { "default": "md" }, "density": {} },
     "properties": {
         "checked": { "type": "boolean", "default": false },
+        "appearance": { "type": "string", "values": ["plain", "card"], "default": "plain", "reflect": true },
         "disabled": { "type": "boolean", "default": false },
         "readonly": { "type": "boolean", "default": false },
         "required": { "type": "boolean", "default": false },
@@ -25,6 +26,7 @@
         "message": { "type": "string", "default": "", "runtime": true },
         "_label": { "type": "string", "kind": "content", "default": "Accept" },
         "_help": { "type": "string", "kind": "content", "default": "" },
+        "_description": { "type": "string", "kind": "content", "default": "" },
         "_errors": {
             "type": "map",
             "items": "string",

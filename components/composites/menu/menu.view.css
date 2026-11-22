@@ -34,3 +34,24 @@
     display: flex;
     flex-direction: column;
 }
+
+/* The point a context menu opens at: a box of no size at the pointer, which the popup is anchored to, so the flip
+   fallbacks keep it on screen near the edges */
+.point {
+    position: fixed;
+    left: var(--sui-x, 0);
+    top: var(--sui-y, 0);
+    inline-size: 0;
+    block-size: 0;
+    anchor-name: --mp;
+    pointer-events: none;
+}
+
+:host([anchor="pointer"]) .trigger {
+    display: block;
+    -webkit-touch-callout: none;
+}
+
+:host([anchor="pointer"]) {
+    display: block;
+}

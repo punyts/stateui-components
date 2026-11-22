@@ -1,0 +1,21 @@
+{
+    "summary": "An info button beside a label that shows a short note on press or keyboard focus, never on hover",
+    "category": "overlays",
+    "purposes": ["explain a field or heading in more detail", "show a note when an info icon is pressed", "define a term beside its label", "give a toggletip that works on touch"],
+    "events": ["open", "close"],
+    "commands": ["open", "close", "toggle"],
+    "tokenGroup": "infotip",
+    "tokens": {
+        "padding": "{space.inset.sm}",
+        "radius": "{radius.sm}",
+        "maxsize": "calc({size.control.md} * 8)",
+        "active": "{color.accent.base}"
+    },
+    "properties": {
+        "side": { "type": "string", "values": ["top", "bottom", "start", "end"], "default": "top", "reflect": true },
+        "icon": { "type": "icon", "default": "info-circle" },
+        "open": { "type": "boolean", "default": false, "runtime": true, "reflect": true },
+        "_label": { "type": "string", "kind": "content", "default": "More information" },
+        "_text": { "type": "string", "kind": "content", "default": "" }
+    }
+}

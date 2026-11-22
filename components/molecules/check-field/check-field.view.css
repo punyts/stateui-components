@@ -4,6 +4,7 @@
     grid-template-columns: auto minmax(0, 1fr);
     grid-template-areas:
         "box label"
+        ". description"
         ". messages";
     align-items: center;
     column-gap: var(--ui-field-label-gap);
@@ -77,4 +78,44 @@
 
 .toggle:disabled:checked {
     background: var(--ui-color-text-disabled);
+}
+
+.description {
+    grid-area: description;
+    margin: 0;
+    font-size: var(--ui-field-help-size);
+    color: var(--ui-color-text-muted);
+}
+
+/* A choice card: the field is a bordered card and a press anywhere on it toggles, through the label's cover */
+:host([appearance="card"]) .field {
+    position: relative;
+    align-items: start;
+    padding: var(--ui-control-padding-inline);
+    background: var(--ui-color-surface-base);
+    border: var(--ui-control-border) solid var(--ui-color-border-base);
+    border-radius: var(--ui-control-radius);
+}
+
+:host([appearance="card"]) .label {
+    font-weight: var(--ui-text-label-weight);
+}
+
+:host([appearance="card"]) .label::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+}
+
+:host([appearance="card"]) .box {
+    padding-block-start: 0.15em;
+}
+
+:host([appearance="card"]) .field:hover:not(:has(.toggle:disabled)) {
+    border-color: var(--ui-color-border-strong);
+}
+
+:host([appearance="card"]) .field:has(.toggle:checked) {
+    border-color: var(--ui-field-selected-fill);
+    box-shadow: inset 0 0 0 var(--ui-control-border) var(--ui-field-selected-fill);
 }

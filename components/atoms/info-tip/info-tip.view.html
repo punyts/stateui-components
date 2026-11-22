@@ -1,0 +1,4 @@
+<button class="toggle" type="button" aria-label="{{ $._label }}" aria-expanded="{{ $.open ? 'true' : 'false' }}" aria-controls="note" onpointerdown="{{ onPointerDown }}" onfocus="{{ onFocus }}" onblur="{{ onBlur }}" onclick="{{ onToggle }}">
+    <ui-icon name="{{ $.icon }}" size="sm"></ui-icon>
+</button>
+<div class="note" id="note" popover="manual" role="status">{{ $.open ? $._text : '' }}</div>

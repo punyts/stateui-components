@@ -9,5 +9,8 @@
         "min": "Demasiado pequeño",
         "max": "Demasiado grande",
         "pattern": "No tiene el formato esperado"
-    }
+    },
+    "_reveal": "Mostrar contraseña",
+    "_conceal": "Ocultar contraseña",
+    "_strength": { "weak": "Contraseña débil", "fair": "Contraseña aceptable", "good": "Contraseña buena", "strong": "Contraseña segura" }
 }

@@ -29,6 +29,8 @@ export const CORE_ICON_NAMES: readonly string[] = [
     'copy',
     'dots',
     'eraser',
+    'eye',
+    'eye-off',
     'grip-vertical',
     'h-1',
     'h-2',

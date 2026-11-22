@@ -73,3 +73,56 @@
 .options[aria-invalid="true"] .radio:not(:checked) {
     border-color: var(--ui-field-error-color);
 }
+
+.body {
+    display: flex;
+    flex-direction: column;
+    min-inline-size: 0;
+}
+
+.description {
+    font-size: var(--ui-field-help-size);
+    color: var(--ui-color-text-muted);
+}
+
+.description[hidden] {
+    display: none;
+}
+
+/* Choice cards: each option is a bordered card, the radio at its start; the chosen card takes the selected colour */
+:host([appearance="card"]) .options {
+    flex: 1 1 auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--ui-field-label-gap);
+}
+
+:host([appearance="card"][orientation="horizontal"]) .options {
+    grid-template-columns: repeat(auto-fit, minmax(calc(var(--ui-size-control-lg) * 4), 1fr));
+}
+
+:host([appearance="card"]) .option {
+    box-sizing: border-box;
+    align-items: flex-start;
+    padding: var(--ui-control-padding-inline);
+    background: var(--ui-color-surface-base);
+    border: var(--ui-control-border) solid var(--ui-color-border-base);
+    border-radius: var(--ui-control-radius);
+}
+
+:host([appearance="card"]) .option .radio {
+    margin-block-start: 0.15em;
+}
+
+:host([appearance="card"]) .option:hover:not(:has(.radio:disabled)) {
+    border-color: var(--ui-color-border-strong);
+}
+
+:host([appearance="card"]) .option:has(.radio:checked) {
+    border-color: var(--ui-field-selected-fill);
+    box-shadow: inset 0 0 0 var(--ui-control-border) var(--ui-field-selected-fill);
+}
+
+:host([appearance="card"]) .text {
+    font-weight: var(--ui-text-label-weight);
+}

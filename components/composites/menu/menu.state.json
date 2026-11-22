@@ -1,7 +1,7 @@
 {
-    "summary": "A popup list of menu items that a trigger opens, closed by Escape, an outside press or a choice",
+    "summary": "A popup list of menu items that a trigger opens, or a context menu at the pointer, closed by a choice or Escape",
     "category": "navigation",
-    "purposes": ["open a list of actions from a button", "show more actions behind an overflow button", "offer a context menu of commands"],
+    "purposes": ["open a list of actions from a button", "show more actions behind an overflow button", "offer a context menu of commands", "open actions on right-click or long-press"],
     "shared": { "elevation": { "default": "overlay" } },
     "events": ["select", "close"],
     "commands": ["open", "close", "toggle"],
@@ -13,7 +13,7 @@
     },
     "properties": {
         "open": { "type": "boolean", "default": false, "reflect": true },
-        "anchor": { "type": "string", "values": ["bottomStart", "bottomEnd", "topStart", "topEnd"], "default": "bottomStart", "reflect": true },
+        "anchor": { "type": "string", "values": ["bottomStart", "bottomEnd", "topStart", "topEnd", "pointer"], "default": "bottomStart", "reflect": true },
         "_label": { "type": "string", "kind": "content", "default": "Menu" },
         "trigger": { "type": "node" }
     }
