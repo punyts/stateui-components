@@ -10,5 +10,9 @@
         "step": "Pas autorisé",
         "number": "Pas un nombre",
         "pattern": "Pas au format attendu"
-    }
+    },
+    "_filterLabel": "Filtrer {column}",
+    "_filterAll": "Tous",
+    "_group": "{label} ({count})",
+    "_noValue": "Aucune valeur"
 }

@@ -93,6 +93,14 @@ export function readSortEntries(records: unknown, key: string, field: string): S
 /** Runs `run` later, once, and returns a function that cancels it */
 export type OrderScheduler = (run: () => void) => () => void;
 
+/** A step after the sort that filters or regroups the keys, with the record fields it reads */
+export interface OrderArrangement {
+    /** The (possibly dotted) fields the step reads, watched in every record */
+    fields: readonly string[];
+    /** The keys to show, from the record keys in sort order (or record order without a sort field) */
+    arrange(keys: string[]): string[];
+}
+
 /** What a sort order is made from */
 export interface SortOrderOptions {
     store: OrderStore;
@@ -107,6 +115,8 @@ export interface SortOrderOptions {
     direction: () => SortDirection;
     /** Coalesces the recomputes; a record view passes one animation frame */
     schedule: OrderScheduler;
+    /** The optional step after the sort, read again at each recompute and refresh; `undefined` for none */
+    arrange?: () => OrderArrangement | undefined;
 }
 
 /** The sorted key array of a record view, kept current from the store events */
@@ -124,10 +134,11 @@ export interface SortOrder {
  * array is never reordered). It listens to the records path (an insert, a delete, a reorder or a replace of the records)
  * and to one wildcard path `<records>.$every.<sortBy>` (a change of the sort field in one record), so a change to any
  * other field costs nothing. Changes are coalesced into one recompute per `schedule` call; the first order is written at
- * once, so a view mounts sorted
+ * once, so a view mounts sorted. With an `arrange` step the order is written even without a sort field: the step gets the
+ * keys in sort (or record) order and returns the keys to show, and the fields it names are watched too
  */
 export function createSortOrder(options: SortOrderOptions): SortOrder {
-    const { store, recordsPath, orderPath, key, sortBy, direction, schedule } = options;
+    const { store, recordsPath, orderPath, key, sortBy, direction, schedule, arrange } = options;
     let watched: string[] = [];
     let cancel: (() => void) | undefined;
 
@@ -135,11 +146,14 @@ export function createSortOrder(options: SortOrderOptions): SortOrder {
         cancel?.();
         cancel = undefined;
         const field = sortBy();
-        if (field === '') {
+        const arrangement = arrange?.();
+        if (field === '' && arrangement === undefined) {
             if (store.get<unknown>(orderPath) !== undefined) store.delete(orderPath);
             return;
         }
-        const keys = sortedKeys(readSortEntries(store.get<unknown>(recordsPath), key(), field), direction());
+        const entries = readSortEntries(store.get<unknown>(recordsPath), key(), field === '' ? key() : field);
+        const sorted = field === '' ? entries.map((entry) => entry.key) : sortedKeys(entries, direction());
+        const keys = arrangement === undefined ? sorted : arrangement.arrange(sorted);
         //`set` over an existing array writes it element by element, one event each; `replace` is one event
         if (Array.isArray(store.get<unknown>(orderPath))) store.replace(orderPath, keys);
         else store.set(orderPath, keys);
@@ -152,7 +166,9 @@ export function createSortOrder(options: SortOrderOptions): SortOrder {
     const listen = (): void => {
         if (watched.length > 0) store.off(watched, onRecords);
         const field = sortBy();
-        watched = field === '' ? [] : [recordsPath, `${recordsPath}.$every.${field}`];
+        const fields = new Set(arrange?.()?.fields ?? []);
+        if (field !== '') fields.add(field);
+        watched = fields.size === 0 ? [] : [recordsPath, ...[...fields].map((name) => `${recordsPath}.$every.${name}`)];
         if (watched.length > 0) store.on(watched, onRecords);
     };
 

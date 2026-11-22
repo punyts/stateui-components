@@ -210,3 +210,28 @@
     font-size: var(--ui-text-caption-size);
     white-space: nowrap;
 }
+
+/* The filter row sits under the column headers, one control per column with a filter */
+.filter-cell {
+    padding-block: var(--ui-space-inset-sm);
+}
+
+.filter {
+    box-sizing: border-box;
+    inline-size: 100%;
+    min-block-size: var(--ui-size-control-sm);
+    margin: 0;
+    padding-inline: var(--ui-space-inset-sm);
+    border: var(--ui-border-width-thin) solid var(--ui-table-border);
+    border-radius: var(--ui-radius-sm);
+    background: var(--ui-color-surface-base);
+    color: var(--ui-color-text-base);
+    font: inherit;
+    font-family: var(--ui-text-body-family);
+    font-size: var(--ui-text-body-size);
+}
+
+.filter:focus-visible {
+    outline: var(--ui-border-width-thick) solid var(--ui-color-focus);
+    outline-offset: 0;
+}

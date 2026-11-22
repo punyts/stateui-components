@@ -71,3 +71,54 @@
 .cell[data-editable] {
     cursor: text;
 }
+
+/* A group row of a grouped table: the group's label, count and toggle in one cell, and the totals in the others */
+.row[data-group] {
+    background: var(--ui-table-group-fill);
+    font-weight: var(--ui-text-label-weight);
+}
+
+.row[data-group] .cell[data-pin] {
+    background: var(--ui-table-group-fill);
+}
+
+.group-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ui-space-gap-sm);
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.group-toggle:focus-visible {
+    outline: var(--ui-border-width-thick) solid var(--ui-color-focus);
+    outline-offset: var(--ui-border-width-thick);
+}
+
+.chevron {
+    flex: none;
+    display: inline-block;
+    transition: transform var(--ui-motion-duration-fast) var(--ui-motion-easing-standard);
+}
+
+.chevron[data-collapsed] {
+    transform: rotate(-90deg);
+}
+
+:host(:dir(rtl)) .chevron[data-collapsed] {
+    transform: rotate(90deg);
+}
+
+.group-text {
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

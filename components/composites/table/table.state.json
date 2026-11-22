@@ -1,9 +1,9 @@
 {
     "summary": "A table over records: keyed columns, a virtual body, sortable, resizable and pinned columns, and row selection",
     "category": "data",
-    "purposes": ["list transactions in sortable columns", "show records in rows and columns", "select rows of a large data set", "keep a column in view while scrolling sideways", "edit values in a grid of records"],
-    "events": ["sort", "select", "activate", "columnResize", "edit"],
-    "commands": ["delete", "clearSelection", "selectAll"],
+    "purposes": ["list transactions in sortable columns", "show records in rows and columns", "select rows of a large data set", "keep a column in view while scrolling sideways", "edit values in a grid of records", "filter the rows of a grid by column", "group records with subtotals"],
+    "events": ["sort", "select", "activate", "columnResize", "edit", "filter", "groupToggle"],
+    "commands": ["delete", "clearSelection", "selectAll", "clearFilters"],
     "shared": { "density": {} },
     "tokenGroup": "table",
     "tokens": {
@@ -13,7 +13,8 @@
         "border": "{color.border.base}",
         "pin": { "fill": "{color.surface.base}", "width": "calc({size.control.md} * 5)" },
         "column": { "min": "calc({size.control.md} * 2)" },
-        "error": "{color.danger.base}"
+        "error": "{color.danger.base}",
+        "group": { "fill": "{color.surface.sunken}" }
     },
     "properties": {
         "key": { "type": "string", "validators": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" }, "default": "id" },
@@ -22,6 +23,10 @@
         "selectable": { "type": "string", "values": ["none", "single", "multi"], "default": "none", "reflect": true },
         "sortBy": { "type": "string", "validators": { "pattern": "^$|^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*$" }, "default": "" },
         "sortDir": { "type": "string", "values": ["asc", "desc"], "default": "asc" },
+        "filter": { "type": "string", "default": "" },
+        "filters": { "type": "map", "items": "string", "default": {} },
+        "groupBy": { "type": "string", "validators": { "pattern": "^$|^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*$" }, "default": "" },
+        "collapsedGroups": { "type": "array", "default": [] },
         "columns": {
             "type": "map",
             "items": {
@@ -43,7 +48,9 @@
                 "min": { "type": ["number", "string"] },
                 "max": { "type": ["number", "string"] },
                 "step": { "type": "number", "validators": { "range": { "min": 0 } } },
-                "pattern": { "type": "string", "validators": { "regex": 120 } }
+                "pattern": { "type": "string", "validators": { "regex": 120 } },
+                "filter": { "type": "string", "values": ["none", "text", "select"], "default": "none" },
+                "total": { "type": "string", "values": ["none", "sum", "average", "min", "max", "count"], "default": "none" }
             },
             "default": {}
         },
@@ -70,6 +77,11 @@
             }
         },
         "editing": { "type": "object", "default": { "column": "" }, "runtime": true },
+        "_filterLabel": { "type": "string", "kind": "content", "default": "Filter {column}" },
+        "_filterAll": { "type": "string", "kind": "content", "default": "All" },
+        "_group": { "type": "string", "kind": "content", "default": "{label} ({count})" },
+        "_noValue": { "type": "string", "kind": "content", "default": "No value" },
+        "filterRow": { "type": "object", "default": { "show": false, "cells": {} }, "runtime": true },
         "current": { "type": "object", "default": {}, "runtime": true, "exposed": true },
         "body": {
             "type": "object",

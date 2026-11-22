@@ -1,6 +1,10 @@
-<div class="row" data-odd="{{ ($.slotIndex % 2) === 1 ? '' : null }}">
-    <div class="cell" role="cell" if="{{ $.cells }}" repeat="{{ $k,$i,$v in $.cells }}" key="{{ $k }}" data-key="{{ $k }}" data-align="{{ $v.align || 'start' }}" data-pin="{{ ($v.pin === 'start' || $v.pin === 'end') ? $v.pin : null }}" data-editable="{{ $v.editable ? '' : null }}" style="--pin-at: var(--table-pin-{{ $i }}, 0px)">
-        <sui-node if="{{ $v.content }}" repeat="{{ $nk,$ni,$np in $v.content }}" key="{{ $nk }}" state="{{ $np }}"></sui-node>
-        <span class="text" if="{{ $v.text }}">{{ $v.text }}</span>
+<div class="row" data-odd="{{ ($.slotIndex % 2) === 1 ? '' : null }}" data-group="{{ $.group ? '' : null }}">
+    <div class="cell" role="cell" if="{{ $.cells }}" repeat="{{ $k,$i,$v in $.cells }}" key="{{ $k }}" data-key="{{ $k }}" data-align="{{ $v.align || 'start' }}" data-pin="{{ ($v.pin === 'start' || $v.pin === 'end') ? $v.pin : null }}" data-editable="{{ ($v.editable &amp;&amp; !$.group) ? '' : null }}" style="--pin-at: var(--table-pin-{{ $i }}, 0px)">
+        <button class="group-toggle" type="button" if="{{ $.group &amp;&amp; $.group.column === $k }}" aria-expanded="{{ $.group.collapsed ? 'false' : 'true' }}">
+            <span class="chevron" aria-hidden="true" data-collapsed="{{ $.group.collapsed ? '' : null }}">▾</span>
+            <span class="group-text">{{ $.group.text }}</span>
+        </button>
+        <sui-node if="{{ $v.content &amp;&amp; !$.group }}" repeat="{{ $nk,$ni,$np in $v.content }}" key="{{ $nk }}" state="{{ $np }}"></sui-node>
+        <span class="text" if="{{ $v.text &amp;&amp; !($.group &amp;&amp; $.group.column === $k) }}">{{ $v.text }}</span>
     </div>
 </div>

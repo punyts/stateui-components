@@ -10,5 +10,9 @@
         "step": "Kein erlaubter Schritt",
         "number": "Keine Zahl",
         "pattern": "Nicht im erwarteten Format"
-    }
+    },
+    "_filterLabel": "{column} filtern",
+    "_filterAll": "Alle",
+    "_group": "{label} ({count})",
+    "_noValue": "Kein Wert"
 }

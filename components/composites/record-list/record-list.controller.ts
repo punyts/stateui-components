@@ -37,6 +37,9 @@ const TEXT_ENTRY = new Set(['input', 'textarea', 'select']);
  * position with no record yet is a pending slot: a `skeleton` is shown in it and its `row` links to `$.runtime.empty` until the
  * source writes the record. `recordKeys()` lists only the loaded records. The view never fetches; `range` tells the source
  * which positions to load.
+ *
+ * Group rows: a group key in `order` (`table` grouped by a field) shows the record at `groups.<id>` in its slot, through the
+ * same row template; `recordKeys()` leaves group rows out.
  */
 export default function controller({ element, store, basePath }: ControllerContext) {
     const host = element as RecordViewElement;
@@ -105,6 +108,7 @@ export default function controller({ element, store, basePath }: ControllerConte
         recordsPath: `${basePath}.records`,
         orderPath: `${basePath}.order`,
         totalPath: `${basePath}.total`,
+        groupsPath: `${basePath}.groups`,
         key: text(keyPath, 'id'),
         onChange: (reload) => pool?.invalidate(reload)
     });

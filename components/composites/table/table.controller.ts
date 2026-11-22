@@ -7,6 +7,9 @@ import { createSelection, readSelectionMode } from '../shared/selection/selectio
 import { checkDraft, draftOf, editableColumns, readEditor } from '../shared/records/cellEdit.js';
 import type { CellEditor } from '../shared/records/cellEdit.js';
 import { fieldMessage } from '../shared/field/field.js';
+import { arrangeView, fillGroupText, GROUP_FIELD, optionLabels, readFilters, readViewColumns, recordLookup } from '../shared/records/tableView.js';
+import type { GroupRow } from '../shared/records/tableView.js';
+import { groupId, isGroupKey } from '../shared/records/placeholder.js';
 
 type Entry = Record<string, unknown>;
 
@@ -120,7 +123,8 @@ function rowTemplate(columns: unknown): Entry {
             cell['content'] = { node: copy(column['cell']) };
         } else {
             if (editor !== undefined) cell['editable'] = true;
-            if (editor?.kind === 'select') cell['options'] = editor.options;
+            const labels = optionLabels(column['options']);
+            if (Object.keys(labels).length > 0) cell['options'] = labels;
             const format = text(column['format']);
             if (FORMATS.has(format)) cell['format'] = format;
             const currency = text(column['currency']);
@@ -133,7 +137,7 @@ function rowTemplate(columns: unknown): Entry {
         }
         cells[key] = cell;
     }
-    return { component: 'tableRow', cells };
+    return { component: 'tableRow', cells, '<-group': `$row.${GROUP_FIELD}` };
 }
 
 /**
@@ -174,6 +178,19 @@ function rowTemplate(columns: unknown): Entry {
  * shows the `_errors` message for the rule and stays open; leaving the editor or scrolling the body writes a passing value
  * and drops a failing one. A write goes to the record's own path and raises `edit` with
  * `{ key, column, field, value, previous }`
+ *
+ * Filters and groups are state, so a paged source can serve them: `filter` is the quick filter (a record passes when the
+ * text of any column with a `field` holds it, ignoring case and accents), and `filters` holds a value per column. A
+ * column's `filter` (`text` or `select`, a select listing the column's `options`) puts a control in a filter row under
+ * the headers that writes `filters.<column>`; each change of `filter` or `filters` raises `filter` with
+ * `{ filter, filters }`, and `clearFilters` empties both. `groupBy` names a field: each group's records follow a group
+ * row (groups in the order of their value, empty last, and the sort direction when the table sorts by that field), whose
+ * label cell (the grouped column, or the first) holds a toggle with `_group` and the count, and whose other cells show
+ * each column's `total` (`sum`, `average`, `min`, `max`, `count`) over the group's records that pass the filters. A
+ * press, Enter or Space on a group row collapses or expands it, writes `collapsedGroups` (the group values) and raises
+ * `groupToggle` with `{ group, collapsed }`. Group rows are keys of the body's `order` that name records in the runtime
+ * `groups` map (`src/shared/records/tableView.ts`); they are never selected or edited. With `total` set nothing is
+ * filtered or grouped in the browser
  */
 export default function controller({ element, store, basePath }: ControllerContext) {
     const host = element as HTMLElement & CommandHost;
@@ -190,6 +207,12 @@ export default function controller({ element, store, basePath }: ControllerConte
     const currentPath = `${runtime}.current`;
     const currentAlias = `${basePath}.current`;
     const orderPath = `${runtime}.order`;
+    const groupsPath = `${runtime}.groups`;
+    const filterPath = `${basePath}.filter`;
+    const filtersPath = `${basePath}.filters`;
+    const groupByPath = `${basePath}.groupBy`;
+    const collapsedPath = `${basePath}.collapsedGroups`;
+    const filterRowPath = `${basePath}.filterRow`;
     const read = (path: string): unknown => store.get<unknown>(path);
     const linked: string[] = [];
     let disposed = false;
@@ -215,6 +238,8 @@ export default function controller({ element, store, basePath }: ControllerConte
         if (store.link(alias, `${basePath}.${source}`, { allowMissing: true })) linked.push(alias);
     }
     if (store.link(`${bodyPath}.order`, orderPath, { allowMissing: true })) linked.push(`${bodyPath}.order`);
+    if (read(groupsPath) === undefined) store.set(groupsPath, {});
+    if (store.link(`${bodyPath}.groups`, groupsPath, { allowMissing: true })) linked.push(`${bodyPath}.groups`);
 
     const syncSelectable = (): void => {
         if (disposed) return;
@@ -253,10 +278,92 @@ export default function controller({ element, store, basePath }: ControllerConte
         else store.replace(`${bodyPath}.row`, template);
     };
 
+    const filterRowShown = (): boolean => isEntry(read(filterRowPath)) && (read(filterRowPath) as Entry)['show'] === true;
     const syncCount = (): void => {
         if (disposed) return;
         const count = read(countPath);
-        host.setAttribute('aria-rowcount', String((typeof count === 'number' ? count : 0) + 1));
+        host.setAttribute('aria-rowcount', String((typeof count === 'number' ? count : 0) + (filterRowShown() ? 2 : 1)));
+    };
+
+    let filterRowJson = '';
+    /** Writes the filter row: one cell per column, with the control of a column that has a `filter` and its value in `filters` */
+    const syncFilterRow = (): void => {
+        if (disposed) return;
+        const columns = read(columnsPath);
+        const view = readViewColumns(columns);
+        const filters = readFilters(read(filtersPath));
+        const template = text(read(`${basePath}._filterLabel`));
+        const cells: Entry = {};
+        let show = false;
+        for (const [key, column] of Object.entries(isEntry(columns) ? columns : {})) {
+            if (!isEntry(column)) continue;
+            const viewColumn = view.find((candidate) => candidate.key === key);
+            const kind = viewColumn?.filter ?? 'none';
+            if (kind !== 'none') show = true;
+            const pin = pinOf(column);
+            cells[key] = {
+                kind,
+                value: filters[key] ?? '',
+                label: (template === '' ? 'Filter {column}' : template).split('{column}').join(text(column['_title'])),
+                options: kind === 'select' ? (viewColumn?.options ?? {}) : {},
+                ...(pin === '' ? {} : { pin })
+            };
+        }
+        const next = { show, cells };
+        const json = JSON.stringify(next);
+        if (json !== filterRowJson) {
+            filterRowJson = json;
+            if (read(filterRowPath) === undefined) store.set(filterRowPath, next);
+            else store.replace(filterRowPath, next);
+        }
+        const offset = show ? 2 : 1;
+        if (read(`${bodyPath}.rowIndexOffset`) !== offset) store.set(`${bodyPath}.rowIndexOffset`, offset);
+        syncCount();
+    };
+
+    let groupsJson = '{}';
+    const writeGroups = (groups: Record<string, GroupRow>): void => {
+        const json = JSON.stringify(groups);
+        if (json === groupsJson) return;
+        groupsJson = json;
+        store.replace(groupsPath, groups);
+    };
+    const collapsedValues = (): string[] => {
+        const value = read(collapsedPath);
+        return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+    };
+    /** The filter and group step of the order, or `undefined` (and no group rows) when nothing filters or groups or the source is paged */
+    const arrangement = () => {
+        const quick = text(read(filterPath));
+        const filters = readFilters(read(filtersPath));
+        const groupField = text(read(groupByPath));
+        const groupBy = FIELD.test(groupField) ? groupField : '';
+        if (paged() || (quick.trim() === '' && Object.keys(filters).length === 0 && groupBy === '')) {
+            writeGroups({});
+            return undefined;
+        }
+        const columns = readViewColumns(read(columnsPath));
+        const fields = [...new Set([...columns.map((column) => column.field), ...(groupBy === '' ? [] : [groupBy])])];
+        return {
+            fields,
+            arrange: (keys: string[]): string[] => {
+                const lookup = recordLookup(read(itemsPath), keyText());
+                const template = text(read(`${basePath}._group`));
+                const noValue = text(read(`${basePath}._noValue`));
+                const { order, groups } = arrangeView(keys, (key) => lookup.get(key), {
+                    columns,
+                    quick,
+                    filters,
+                    groupBy,
+                    groupDirection: text(read(sortByPath)) === groupBy ? readSortDirection(read(sortDirPath)) : 'asc',
+                    collapsed: new Set(collapsedValues()),
+                    emptyLabel: noValue === '' ? 'No value' : noValue,
+                    groupText: (label, count) => fillGroupText(template === '' ? '{label} ({count})' : template, label, count)
+                });
+                writeGroups(groups);
+                return order;
+            }
+        };
     };
 
     const selection = createSelection({
@@ -291,7 +398,8 @@ export default function controller({ element, store, basePath }: ControllerConte
         schedule: (run) => {
             const id = requestAnimationFrame(run);
             return () => cancelAnimationFrame(id);
-        }
+        },
+        arrange: arrangement
     });
 
     const onKey = (): void => {
@@ -306,14 +414,26 @@ export default function controller({ element, store, basePath }: ControllerConte
         selection.relocate();
     };
     const onSort = (): void => sort.refresh();
+    const onFilters = (): void => {
+        sort.refresh();
+        syncFilterRow();
+        host.dispatchEvent(new CustomEvent('filter', { detail: { filter: text(read(filterPath)), filters: readFilters(read(filtersPath)) }, bubbles: true, composed: true }));
+    };
+    const onColumns = (): void => {
+        syncColumns();
+        syncFilterRow();
+        sort.refresh();
+    };
     const onTotal = (): void => sort.refresh();
 
     host.setAttribute('role', 'table');
     syncColumns();
-    syncCount();
+    syncFilterRow();
     const columnPaths = [columnsPath, `${columnsPath}.$all`];
-    const sortPaths = [sortByPath, sortDirPath];
-    store.on(columnPaths, syncColumns);
+    const sortPaths = [sortByPath, sortDirPath, groupByPath, collapsedPath, `${collapsedPath}.$all`];
+    const filterPaths = [filterPath, filtersPath, `${filtersPath}.$all`];
+    store.on(columnPaths, onColumns);
+    store.on(filterPaths, onFilters);
     store.on([countPath], syncCount);
     store.on([keyPath], onKey);
     store.on([selectablePath], onSelectable);
@@ -387,7 +507,7 @@ export default function controller({ element, store, basePath }: ControllerConte
         const editor = readEditor(definition);
         const cell = cellOf(slotOfKey(key), column);
         const frame = element.shadowRoot?.querySelector<HTMLElement>('.table');
-        const record = body()?.locate?.(key);
+        const record = isGroupKey(key) ? undefined : body()?.locate?.(key);
         if (editor === undefined || editor.kind === 'check' || !cell || !frame || record === undefined || !isEntry(read(record))) return false;
         const path = `${record}.${editor.field}`;
         const previous = read(path);
@@ -464,6 +584,18 @@ export default function controller({ element, store, basePath }: ControllerConte
         }
         return undefined;
     };
+    /** Collapses or expands the group of a group row, writes `collapsedGroups` and raises `groupToggle` */
+    const toggleGroup = (key: string): void => {
+        const info = read(`${groupsPath}.${groupId(key) ?? ''}.${GROUP_FIELD}`);
+        if (!isEntry(info) || typeof info['value'] !== 'string') return;
+        const group = info['value'];
+        const values = collapsedValues();
+        const collapsed = !values.includes(group);
+        const next = collapsed ? [...values, group] : values.filter((value) => value !== group);
+        if (Array.isArray(read(collapsedPath))) store.replace(collapsedPath, next);
+        else store.set(collapsedPath, next);
+        host.dispatchEvent(new CustomEvent('groupToggle', { detail: { group, collapsed }, bubbles: true, composed: true }));
+    };
     const activate = (key: string): void => {
         host.dispatchEvent(new CustomEvent('activate', { detail: key, bubbles: true, composed: true }));
     };
@@ -474,23 +606,36 @@ export default function controller({ element, store, basePath }: ControllerConte
             if (!store.delete(row)) throw new Error(`table: the store refused to delete ${row}`);
         },
         clearSelection: () => selection.clear(),
+        clearFilters: () => {
+            if (read(filterPath) !== '') store.set(filterPath, '');
+            if (Object.keys(readFilters(read(filtersPath))).length > 0) store.replace(filtersPath, {});
+        },
         selectAll: () => selection.selectAll(body()?.recordKeys?.() ?? [])
     };
 
     return {
         onClick: (event: MouseEvent) => {
             const row = rowOf(event);
-            if (row?.pressable === true) selection.pick(row.key);
+            if (row !== undefined && isGroupKey(row.key)) toggleGroup(row.key);
+            else if (row?.pressable === true) selection.pick(row.key);
         },
         onDoubleClick: (event: MouseEvent) => {
             const row = rowOf(event);
+            if (row === undefined || isGroupKey(row.key)) return;
             const column = columnOf(event);
-            if (row !== undefined && column !== undefined && openEdit(row.key, column)) return;
+            if (column !== undefined && openEdit(row.key, column)) return;
             if (row?.pressable === true) activate(row.key);
         },
         onKeyDown: (event: KeyboardEvent) => {
             if (event.altKey || event.ctrlKey || event.metaKey || (event.key !== ' ' && event.key !== 'Enter' && event.key !== 'F2')) return;
             const row = rowOf(event);
+            if (row !== undefined && isGroupKey(row.key)) {
+                if (event.key !== 'F2' && event.composedPath()[0] === row.slot) {
+                    event.preventDefault();
+                    toggleGroup(row.key);
+                }
+                return;
+            }
             if (event.key === 'F2') {
                 const first = editableColumns(read(columnsPath))[0];
                 if (row !== undefined && event.composedPath()[0] === row.slot && first !== undefined && openEdit(row.key, first)) event.preventDefault();
@@ -500,6 +645,16 @@ export default function controller({ element, store, basePath }: ControllerConte
             event.preventDefault();
             if (event.key === 'Enter') activate(row.key);
             else selection.pick(row.key);
+        },
+        onFilterInput: (event: Event) => {
+            const control = event.currentTarget as HTMLInputElement | HTMLSelectElement | null;
+            const key = control?.dataset['key'];
+            if (!control || key === undefined) return;
+            const next: Record<string, string> = { ...readFilters(read(filtersPath)) };
+            if (control.value.trim() === '') delete next[key];
+            else next[key] = control.value;
+            if (isEntry(read(filtersPath))) store.replace(filtersPath, next);
+            else store.set(filtersPath, next);
         },
         onEditInput: (event: Event) => {
             const control = event.currentTarget as HTMLInputElement | HTMLSelectElement | null;
@@ -579,7 +734,8 @@ export default function controller({ element, store, basePath }: ControllerConte
         },
         dispose: () => {
             disposed = true;
-            store.off(columnPaths, syncColumns);
+            store.off(columnPaths, onColumns);
+            store.off(filterPaths, onFilters);
             store.off([countPath], syncCount);
             store.off(watchedRecords, relocateSoon);
             store.off([keyPath], onKey);

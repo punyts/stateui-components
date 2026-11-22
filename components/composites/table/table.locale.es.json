@@ -10,5 +10,9 @@
         "step": "No es un paso permitido",
         "number": "No es un número",
         "pattern": "No tiene el formato esperado"
-    }
+    },
+    "_filterLabel": "Filtrar {column}",
+    "_filterAll": "Todos",
+    "_group": "{label} ({count})",
+    "_noValue": "Sin valor"
 }

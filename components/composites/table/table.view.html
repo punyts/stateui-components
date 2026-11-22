@@ -10,6 +10,15 @@
                 <span class="resize" role="separator" aria-orientation="vertical" tabindex="0" if="{{ $.resizable }}" data-key="{{ $k }}" aria-label="{{ $._resize }} {{ $v._title }}" aria-valuemin="48" onpointerdown="{{ onResizeDown }}" onpointermove="{{ onResizeMove }}" onpointerup="{{ onResizeUp }}" onpointercancel="{{ onResizeUp }}" onkeydown="{{ onResizeKey }}" onfocus="{{ onResizeFocus }}"></span>
             </div>
         </div>
+        <div class="head-row filter-row" role="row" aria-rowindex="2" if="{{ $.filterRow.show }}">
+            <div class="head filter-cell" role="cell" if="{{ $.filterRow.cells }}" repeat="{{ $k,$i,$v in $.filterRow.cells }}" key="{{ $k }}" data-key="{{ $k }}" data-pin="{{ ($v.pin === 'start' || $v.pin === 'end') ? $v.pin : null }}" style="--pin-at: var(--table-pin-{{ $i }}, 0px)">
+                <input class="filter" type="search" if="{{ $v.kind === 'text' }}" data-key="{{ $k }}" value="{{ $v.value }}" aria-label="{{ $v.label }}" oninput="{{ onFilterInput }}"/>
+                <select class="filter" if="{{ $v.kind === 'select' }}" data-key="{{ $k }}" aria-label="{{ $v.label }}" oninput="{{ onFilterInput }}">
+                    <option value="" selected="{{ $v.value === '' }}">{{ $._filterAll }}</option>
+                    <option repeat="{{ $ok,$oi,$ov in $v.options }}" key="{{ $ok }}" value="{{ $ok }}" selected="{{ $ok === $v.value }}">{{ $ov }}</option>
+                </select>
+            </div>
+        </div>
     </div>
     <div class="editor" if="{{ $.editing.column }}" style="inset-block-start: {{ $.editing.top }}px; inset-inline-start: {{ $.editing.start }}px; inline-size: {{ $.editing.width }}px; block-size: {{ $.editing.height }}px">
         <input class="edit-control" if="{{ $.editing.kind !== 'select' }}" type="{{ $.editing.kind === 'number' ? 'number' : ($.editing.kind === 'date' ? 'date' : 'text') }}" value="{{ $.editing.draft }}" aria-label="{{ $.editing.label }}" aria-invalid="{{ $.editing.message ? 'true' : null }}" aria-describedby="{{ $.editing.message ? 'edit-error' : null }}" oninput="{{ onEditInput }}" onkeydown="{{ onEditKey }}" onblur="{{ onEditBlur }}"/>

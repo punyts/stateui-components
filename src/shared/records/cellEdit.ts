@@ -1,5 +1,6 @@
 import { failingRule, NUMBER_RULE } from '../field/rules.js';
 import type { FieldSettings } from '../field/rules.js';
+import { optionLabels } from './tableView.js';
 
 type Entry = Record<string, unknown>;
 
@@ -30,13 +31,7 @@ export function readEditor(column: unknown): CellEditor | undefined {
     const kind = text(column['edit']);
     const field = text(column['field']);
     if (!(EDIT_KINDS as readonly string[]).includes(kind) || !FIELD.test(field)) return undefined;
-    const options: Record<string, string> = {};
-    if (kind === 'select' && isEntry(column['options'])) {
-        for (const [key, option] of Object.entries(column['options'])) {
-            const label = isEntry(option) ? text(option['_label']) : '';
-            options[key] = label === '' ? key : label;
-        }
-    }
+    const options = kind === 'select' ? optionLabels(column['options']) : {};
     const step = column['step'];
     return {
         kind: kind as EditKind,

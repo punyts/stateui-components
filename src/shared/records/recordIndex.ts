@@ -1,6 +1,6 @@
 import type { ControllerContext } from '@punyts/stateui';
 import { RUNTIME_PATHS } from '@punyts/stateui-app/core';
-import { isPlaceholderKey } from './placeholder.js';
+import { groupId, isGroupKey, isPlaceholderKey, isVirtualKey } from './placeholder.js';
 
 /** The store a controller receives */
 export type RecordStore = ControllerContext['store'];
@@ -20,6 +20,8 @@ export interface RecordIndexOptions {
      * `size()` is the total, `order` is ignored and a position with no record has no key
      */
     totalPath?: string;
+    /** The optional path of `groups`, the records of the group rows that group keys in `order` name (`placeholder.ts`) */
+    groupsPath?: string;
     /**
      * Called after the positions or the keys changed, so a pool can show the new ones. `reload` is true when records moved
      * to other array indexes without the store announcing it, so the slots that show them must be pointed again even at the same path
@@ -70,10 +72,11 @@ const keyOf = (record: unknown, field: string): string | undefined =>
  * Keeps the key of every record and where it is. For an array it holds a key-to-index map that the store's change
  * events keep current (insert, delete, reorder, replace), so a window move never reads the array to find a record. For a
  * keyed map the key is the map key and the position is the order of the keys. `order` filters and sorts: the positions
- * are its entries that name a record, and its placeholder keys (`placeholder.ts`), which name no record
+ * are its entries that name a record, its placeholder keys (`placeholder.ts`), which name no record, and with `groupsPath`
+ * its group keys, which name a record in `groups`
  */
 export function createRecordIndex(options: RecordIndexOptions): RecordIndex {
-    const { store, recordsPath, orderPath, totalPath, onChange } = options;
+    const { store, recordsPath, orderPath, totalPath, groupsPath, onChange } = options;
     let field = options.key;
     let kind: Kind = 'none';
     const indexOfKey = new Map<string, number>();
@@ -130,7 +133,7 @@ export function createRecordIndex(options: RecordIndexOptions): RecordIndex {
         const keys: string[] = [];
         for (let index = 0; index < order.length; index++) {
             const key = keyText(order[index]);
-            if (key === undefined || !(has(key) || isPlaceholderKey(key))) continue;
+            if (key === undefined || !(has(key) || isPlaceholderKey(key) || (groupsPath !== undefined && isGroupKey(key)))) continue;
             if (!orderedAt.has(key)) orderedAt.set(key, keys.length);
             keys.push(key);
         }
@@ -243,6 +246,8 @@ export function createRecordIndex(options: RecordIndexOptions): RecordIndex {
             const at = indexOfKey.get(key);
             return at === undefined || at >= pagedTotal ? undefined : `${recordsPath}.${at}`;
         }
+        const group = groupsPath === undefined ? undefined : groupId(key);
+        if (group !== undefined) return store.get<unknown>(`${groupsPath}.${group}`) === undefined ? undefined : `${groupsPath}.${group}`;
         if (kind === 'array') {
             const index = indexOfKey.get(key);
             return index === undefined ? undefined : `${recordsPath}.${index}`;
@@ -283,7 +288,7 @@ export function createRecordIndex(options: RecordIndexOptions): RecordIndex {
                 const keys: string[] = [];
                 for (let position = 0; position < size(); position++) {
                     const key = keyAt(position);
-                    if (key !== undefined && !isPlaceholderKey(key)) keys.push(key);
+                    if (key !== undefined && !isVirtualKey(key)) keys.push(key);
                 }
                 return keys;
             }
