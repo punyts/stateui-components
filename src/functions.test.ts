@@ -21,4 +21,21 @@ describe('COMPONENT_FUNCTIONS', () => {
             { id: 'leaf', x: 152, y: 0, side: 1 }
         ]);
     });
+
+    it('should convert Markdown to a rich-text value and back with richText\'s two computes', () => {
+        // Arrange
+        const from = '$.components.richText.functions.fromMarkdown';
+        const to = '$.components.richText.functions.toMarkdown';
+        const table = new FunctionTable([COMPONENT_FUNCTIONS], 'server');
+
+        // Act
+        table.prepare([from, to]);
+        const read = table.compute(from)?.({ source: '# Title\n\nSome **bold** text' });
+        const written = table.compute(to)?.({ value: read?.['value'] ?? {} });
+
+        // Assert
+        expect(table.has(from, 'compute') && table.has(to, 'compute')).toBe(true);
+        expect(Object.values((read?.['value'] as { blocks: Record<string, { type: string }> }).blocks).map((block) => block.type)).toEqual(['heading', 'paragraph']);
+        expect(written).toEqual({ markdown: '# Title\n\nSome **bold** text' });
+    });
 });
