@@ -1,13 +1,11 @@
-import { compareSortValues, fieldValue } from '../order/sortOrder.js';
-import type { SortDirection } from '../order/sortOrder.js';
+import { FILTER_KINDS, FIELD_PATTERN, compareSortValues, fieldValue, foldText, optionLabels, passesFilters } from '@punyts/stateui-app/core';
+import type { FilterColumn, SortDirection } from '@punyts/stateui-app/core';
 import { groupKey } from './placeholder.js';
 
 type Entry = Record<string, unknown>;
 
-/** The filters a table column can show in its filter row */
-export const FILTER_KINDS = ['none', 'text', 'select'] as const;
-
-export type FilterKind = (typeof FILTER_KINDS)[number];
+export { FILTER_KINDS, foldText, optionLabels, passesFilters, readFilters } from '@punyts/stateui-app/core';
+export type { FilterKind } from '@punyts/stateui-app/core';
 
 /** The totals a table column can show on a group row */
 export const TOTAL_KINDS = ['none', 'sum', 'average', 'min', 'max', 'count'] as const;
@@ -17,31 +15,13 @@ export type TotalKind = (typeof TOTAL_KINDS)[number];
 /** The field of a group row that marks it and holds what the row shows; a hyphen keeps it apart from every column field */
 export const GROUP_FIELD = 'group-row';
 
-const FIELD = /^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$/;
-
 const isEntry = (value: unknown): value is Entry => value !== null && typeof value === 'object' && !Array.isArray(value);
 const text = (value: unknown): string => (typeof value === 'string' ? value : '');
 const pick = <T extends string>(value: unknown, kinds: readonly T[]): T => ((kinds as readonly unknown[]).includes(value) ? (value as T) : kinds[0]);
 
-/** A column as filtering, grouping and totals see it */
-export interface ViewColumn {
-    key: string;
-    field: string;
-    filter: FilterKind;
+/** A column as filtering, grouping and totals see it; a select column's `options` label its keys in filters and group rows */
+export interface ViewColumn extends FilterColumn {
     total: TotalKind;
-    /** A select column's labels by key, which a filter searches and a group row shows */
-    options: Record<string, string>;
-}
-
-/** A column's `options` as labels by key; an option without a `_label` is labelled by its key */
-export function optionLabels(options: unknown): Record<string, string> {
-    const labels: Record<string, string> = {};
-    if (!isEntry(options)) return labels;
-    for (const [option, entry] of Object.entries(options)) {
-        const label = isEntry(entry) ? text(entry['_label']) : '';
-        labels[option] = label === '' ? option : label;
-    }
-    return labels;
 }
 
 /** The columns that name a valid `field`, in key order */
@@ -49,43 +29,10 @@ export function readViewColumns(columns: unknown): ViewColumn[] {
     if (!isEntry(columns)) return [];
     const read: ViewColumn[] = [];
     for (const [key, column] of Object.entries(columns)) {
-        if (!isEntry(column) || !FIELD.test(text(column['field']))) continue;
+        if (!isEntry(column) || !FIELD_PATTERN.test(text(column['field']))) continue;
         read.push({ key, field: text(column['field']), filter: pick(column['filter'], FILTER_KINDS), total: pick(column['total'], TOTAL_KINDS), options: optionLabels(column['options']) });
     }
     return read;
-}
-
-/** The per-column filters that hold a value: column key to the text or option key typed or chosen */
-export function readFilters(value: unknown): Record<string, string> {
-    const filters: Record<string, string> = {};
-    if (!isEntry(value)) return filters;
-    for (const [key, wanted] of Object.entries(value)) if (typeof wanted === 'string' && wanted.trim() !== '') filters[key] = wanted;
-    return filters;
-}
-
-/** Text folded for a search that ignores case and accents */
-export const foldText = (value: string): string => value.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLocaleLowerCase();
-
-/** The text a value is searched as: a select column's label for its key, numbers and booleans as text, nothing for anything else */
-const searchText = (value: unknown, column: ViewColumn): string => {
-    if (typeof value === 'string') return column.options[value] ?? value;
-    return typeof value === 'number' || typeof value === 'boolean' ? String(value) : '';
-};
-
-/**
- * Whether a record passes the filters. The quick filter (folded) passes a record when any column's text holds it; a
- * `text` filter when its column's text holds the filter text; a `select` filter when the field holds the option key.
- * A filter on a column that is not listed is ignored
- */
-export function passesFilters(record: unknown, columns: readonly ViewColumn[], quick: string, filters: Readonly<Record<string, string>>): boolean {
-    if (quick !== '' && !columns.some((column) => foldText(searchText(fieldValue(record, column.field), column)).includes(quick))) return false;
-    for (const [key, wanted] of Object.entries(filters)) {
-        const column = columns.find((candidate) => candidate.key === key);
-        if (column === undefined || column.filter === 'none') continue;
-        const value = fieldValue(record, column.field);
-        if (column.filter === 'select' ? String(value ?? '') !== wanted : !foldText(searchText(value, column)).includes(foldText(wanted.trim()))) return false;
-    }
-    return true;
 }
 
 /** What a group row shows: the group's value and label, its count, whether it is collapsed and the column that shows the label */

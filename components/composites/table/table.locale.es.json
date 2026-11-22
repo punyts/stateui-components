@@ -14,5 +14,6 @@
     "_filterLabel": "Filtrar {column}",
     "_filterAll": "Todos",
     "_group": "{label} ({count})",
+    "_exportName": "Registros",
     "_noValue": "Sin valor"
 }

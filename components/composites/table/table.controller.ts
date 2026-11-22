@@ -1,5 +1,5 @@
 import type { ControllerContext } from '@punyts/stateui';
-import { runtimePath } from '@punyts/stateui-app/core';
+import { EXPORT_NAME_PATTERN, EXPORT_SOURCE_PATTERN, exportColumnsOf, runtimePath } from '@punyts/stateui-app/core';
 import { createSortOrder, readSortDirection } from '../shared/order/sortOrder.js';
 import { readTotal } from '../shared/records/recordIndex.js';
 import type { RecordViewElement } from '../shared/records/recordView.js';
@@ -42,6 +42,8 @@ const PX = /^(0|[1-9][0-9]*)(\.[0-9]+)?px$/;
 const PINS = new Set(['start', 'end']);
 /** The narrowest a column is resized to, in CSS pixels */
 const MIN_WIDTH = 48;
+/** The event that asks the host's `exportFile` hook for a CSV file of the records (C1; unanswered when there is none) */
+const FILE_EXPORT_EVENT = 'ui-file-export';
 /** How far an arrow key on a resize handle moves the column edge */
 const RESIZE_STEP = 16;
 const PIN_WIDTH = 'var(--ui-table-pin-width)';
@@ -183,7 +185,9 @@ function rowTemplate(columns: unknown): Entry {
  * text of any column with a `field` holds it, ignoring case and accents), and `filters` holds a value per column. A
  * column's `filter` (`text` or `select`, a select listing the column's `options`) puts a control in a filter row under
  * the headers that writes `filters.<column>`; each change of `filter` or `filters` raises `filter` with
- * `{ filter, filters }`, and `clearFilters` empties both. `groupBy` names a field: each group's records follow a group
+ * `{ filter, filters }`, and `clearFilters` empties both. The command `export` asks the host for a CSV of the records
+ * (`ui-file-export`: the resolved `items` path, the columns, filters and sort, never rows), sets `exporting` while it
+ * runs and raises `export` with the outcome. `groupBy` names a field: each group's records follow a group
  * row (groups in the order of their value, empty last, and the sort direction when the table sorts by that field), whose
  * label cell (the grouped column, or the first) holds a toggle with `_group` and the count, and whose other cells show
  * each column's `total` (`sum`, `average`, `min`, `max`, `count`) over the group's records that pass the filters. A
@@ -600,6 +604,47 @@ export default function controller({ element, store, basePath }: ControllerConte
         host.dispatchEvent(new CustomEvent('activate', { detail: key, bubbles: true, composed: true }));
     };
 
+    /** Whether an export is under way; a second `export` while one is waits for nothing and is refused */
+    const exportingPath = `${basePath}.exporting`;
+    const finishExport = (detail: { ok: true; rows: number } | { ok: false; code: string }): void => {
+        store.set(exportingPath, false);
+        host.dispatchEvent(new CustomEvent('export', { detail, bubbles: true, composed: true }));
+    };
+    /**
+     * Asks the host for a CSV file of the records: the resolved path `items` links to, the columns with a field, the
+     * filters and the sort. The authority builds the file from the persona's own instance, so rows that are not loaded
+     * are in it and no row leaves the browser for it
+     */
+    const exportRecords = (value: unknown): void => {
+        if (read(exportingPath) === true) return;
+        const source = store.resolve(itemsPath);
+        const wanted = typeof value === 'string' && value.trim() !== '' ? value.trim() : text(read(`${basePath}._exportName`)) || 'Records';
+        const name = `${wanted.replace(/[^\p{L}\p{N} ._-]/gu, '').slice(0, 96).trim() || 'Records'}.csv`;
+        if (!EXPORT_SOURCE_PATTERN.test(source) || !EXPORT_NAME_PATTERN.test(name)) {
+            finishExport({ ok: false, code: 'not_found' });
+            return;
+        }
+        const request = {
+            columns: exportColumnsOf(read(columnsPath)),
+            filter: text(read(filterPath)),
+            filters: readFilters(read(filtersPath)),
+            sortBy: text(read(`${basePath}.sortBy`)),
+            sortDir: readSortDirection(read(`${basePath}.sortDir`))
+        };
+        let answer: Promise<number> | undefined;
+        const detail = { source, name, request, respond: (result: Promise<number>) => (answer = result) };
+        host.dispatchEvent(new CustomEvent(FILE_EXPORT_EVENT, { detail, bubbles: true, composed: true }));
+        if (answer === undefined) {
+            finishExport({ ok: false, code: 'offline' });
+            return;
+        }
+        store.set(exportingPath, true);
+        answer.then(
+            (rows) => finishExport({ ok: true, rows }),
+            (error: unknown) => finishExport({ ok: false, code: typeof (error as { code?: unknown })?.code === 'string' ? (error as { code: string }).code : 'internal' })
+        );
+    };
+
     host.commands = {
         delete: (_value, _payload, row) => {
             if (typeof row !== 'string' || !isEntry(read(row))) throw new Error('table: delete needs the $row of a cell');
@@ -610,7 +655,8 @@ export default function controller({ element, store, basePath }: ControllerConte
             if (read(filterPath) !== '') store.set(filterPath, '');
             if (Object.keys(readFilters(read(filtersPath))).length > 0) store.replace(filtersPath, {});
         },
-        selectAll: () => selection.selectAll(body()?.recordKeys?.() ?? [])
+        selectAll: () => selection.selectAll(body()?.recordKeys?.() ?? []),
+        export: (value) => exportRecords(value)
     };
 
     return {

@@ -1,12 +1,12 @@
 import type { ControllerContext } from '@punyts/stateui';
+import { compareSortValues, fieldValue, isSortNothing } from '@punyts/stateui-app/core';
+import type { SortDirection } from '@punyts/stateui-app/core';
+
+export { SORT_DIRECTIONS, compareSortValues, fieldValue } from '@punyts/stateui-app/core';
+export type { SortDirection } from '@punyts/stateui-app/core';
 
 /** The store a controller receives */
 export type OrderStore = ControllerContext['store'];
-
-/** The directions a view sorts in */
-export const SORT_DIRECTIONS = ['asc', 'desc'] as const;
-
-export type SortDirection = (typeof SORT_DIRECTIONS)[number];
 
 /** The direction a stored `sortDir` value names; anything else is `asc` */
 export function readSortDirection(value: unknown): SortDirection {
@@ -19,36 +19,13 @@ export interface SortEntry {
     value: unknown;
 }
 
-const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
-
-/** Numbers and booleans sort as numbers, before text; nothing (`undefined`, `null`, `''`, `NaN`) is ranked last */
-const rank = (value: unknown): number => {
-    if (typeof value === 'number') return Number.isNaN(value) ? 2 : 0;
-    if (typeof value === 'boolean') return 0;
-    if (typeof value === 'string') return value === '' ? 2 : 1;
-    return value === undefined || value === null ? 2 : 1;
-};
-
-/**
- * Compares two field values for an ascending sort: numbers and booleans by value, then text with a numeric, case- and
- * accent-insensitive collation (`a2` before `a10`); anything else is compared as its text
- */
-export function compareSortValues(a: unknown, b: unknown): number {
-    const left = rank(a);
-    const right = rank(b);
-    if (left !== right) return left - right;
-    if (left === 2) return 0;
-    if (left === 0) return Number(a) - Number(b);
-    return collator.compare(String(a), String(b));
-}
-
 /**
  * The keys of `entries` sorted by value. The sort is stable, so equal values keep their record order in both directions,
  * and values that are nothing stay last in both directions
  */
 export function sortedKeys(entries: readonly SortEntry[], direction: SortDirection): string[] {
     const sign = direction === 'desc' ? -1 : 1;
-    const indexed = entries.map((entry, index) => ({ entry, index, empty: rank(entry.value) === 2 }));
+    const indexed = entries.map((entry, index) => ({ entry, index, empty: isSortNothing(entry.value) }));
     indexed.sort((a, b) => {
         if (a.empty !== b.empty) return a.empty ? 1 : -1;
         const compared = a.empty ? 0 : compareSortValues(a.entry.value, b.entry.value) * sign;
@@ -61,16 +38,6 @@ const keyText = (value: unknown): string | undefined => {
     if (typeof value === 'string') return value === '' ? undefined : value;
     return typeof value === 'number' && Number.isFinite(value) ? String(value) : undefined;
 };
-
-/** The value at a dotted `field` of a record, `undefined` when a step is missing */
-export function fieldValue(record: unknown, field: string): unknown {
-    let value: unknown = record;
-    for (const segment of field.split('.')) {
-        if (value === null || typeof value !== 'object') return undefined;
-        value = (value as Record<string, unknown>)[segment];
-    }
-    return value;
-}
 
 /**
  * The entries of an array (keyed by the `key` field; a record without a key is left out) or of a keyed map (keyed by its

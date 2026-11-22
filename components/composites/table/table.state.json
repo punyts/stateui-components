@@ -1,9 +1,9 @@
 {
     "summary": "A table over records: keyed columns, a virtual body, sortable, resizable and pinned columns, and row selection",
     "category": "data",
-    "purposes": ["list transactions in sortable columns", "show records in rows and columns", "select rows of a large data set", "keep a column in view while scrolling sideways", "edit values in a grid of records", "filter the rows of a grid by column", "group records with subtotals"],
-    "events": ["sort", "select", "activate", "columnResize", "edit", "filter", "groupToggle"],
-    "commands": ["delete", "clearSelection", "selectAll", "clearFilters"],
+    "purposes": ["list transactions in sortable columns", "show records in rows and columns", "select rows of a large data set", "keep a column in view while scrolling sideways", "edit values in a grid of records", "filter the rows of a grid by column", "group records with subtotals", "export the rows of a grid to a spreadsheet file"],
+    "events": ["sort", "select", "activate", "columnResize", "edit", "filter", "groupToggle", "export"],
+    "commands": ["delete", "clearSelection", "selectAll", "clearFilters", "export"],
     "shared": { "density": {} },
     "tokenGroup": "table",
     "tokens": {
@@ -80,6 +80,8 @@
         "_filterLabel": { "type": "string", "kind": "content", "default": "Filter {column}" },
         "_filterAll": { "type": "string", "kind": "content", "default": "All" },
         "_group": { "type": "string", "kind": "content", "default": "{label} ({count})" },
+        "_exportName": { "type": "string", "kind": "content", "default": "Records" },
+        "exporting": { "type": "boolean", "default": false, "runtime": true, "exposed": true },
         "_noValue": { "type": "string", "kind": "content", "default": "No value" },
         "filterRow": { "type": "object", "default": { "show": false, "cells": {} }, "runtime": true },
         "current": { "type": "object", "default": {}, "runtime": true, "exposed": true },

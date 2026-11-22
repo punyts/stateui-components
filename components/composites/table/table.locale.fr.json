@@ -14,5 +14,6 @@
     "_filterLabel": "Filtrer {column}",
     "_filterAll": "Tous",
     "_group": "{label} ({count})",
+    "_exportName": "Enregistrements",
     "_noValue": "Aucune valeur"
 }
