@@ -1,7 +1,7 @@
 <div class="field" style="--field-width: {{ widthOf($.width) }}">
     <label class="label" for="control">{{ $._label }}</label>
     <div class="box">
-        <input id="control" class="control" type="date" min="{{ $.min }}" max="{{ $.max }}" disabled="{{ $.disabled || $.locked }}" readonly="{{ $.readonly }}" aria-describedby="{{ describedBy($._help, $.message) }}" aria-invalid="{{ $.error !== '' ? 'true' : null }}" value="{{ $.value }}" bind="value" onblur="{{ onBlur }}" />
+        <input id="control" class="control" type="{{ $.precision === 'month' ? 'month' : ($.precision === 'year' ? 'number' : 'date') }}" step="{{ $.precision === 'year' ? 1 : null }}" inputmode="{{ $.precision === 'year' ? 'numeric' : null }}" min="{{ $.min }}" max="{{ $.max }}" disabled="{{ $.disabled || $.locked }}" readonly="{{ $.readonly }}" aria-describedby="{{ describedBy($._help, $.message) }}" aria-invalid="{{ $.error !== '' ? 'true' : null }}" value="{{ $.value }}" bind="value" onblur="{{ onBlur }}" />
     </div>
     <div class="messages">
         <p class="help" id="help" if="{{ $._help !== '' }}">{{ $._help }}</p>

@@ -1,7 +1,7 @@
 {
-    "summary": "A calendar of records: month, week and day views, arrow-key navigation and a range event for data providers",
+    "summary": "A calendar of records: month, week, day, agenda and resource timeline views, with a range event for providers",
     "category": "data",
-    "purposes": ["show bookings on each day of the month", "plan events by week or day", "see appointments on a schedule"],
+    "purposes": ["show bookings on each day of the month", "plan events by week or day", "see appointments on a schedule", "list upcoming appointments as an agenda", "schedule rooms or people on a timeline"],
     "tokenGroup": "calendar",
     "events": ["select", "open", "range"],
     "tokens": {
@@ -9,15 +9,19 @@
         "cell": "calc({size.control.md} * 3)",
         "hour": "calc({size.control.md} * 1.5)",
         "gutter": "calc({size.control.md} * 2)",
-        "radius": "{radius.md}"
+        "radius": "{radius.md}",
+        "lane": "{size.control.md}",
+        "column": "calc({size.control.md} * 2)"
     },
     "properties": {
-        "view": { "type": "string", "values": ["month", "week", "day"], "default": "month", "reflect": true },
+        "view": { "type": "string", "values": ["month", "week", "day", "agenda", "timeline"], "default": "month", "reflect": true },
         "date": { "type": "string", "validators": { "pattern": "^$|^[0-9]{4}-[0-9]{2}-[0-9]{2}$" }, "default": "" },
         "key": { "type": "string", "validators": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" }, "default": "id" },
         "startField": { "type": "string", "validators": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" }, "default": "start" },
         "endField": { "type": "string", "validators": { "pattern": "^$|^[A-Za-z_][A-Za-z0-9_]*$" }, "default": "end" },
         "titleField": { "type": "string", "validators": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" }, "default": "title" },
+        "resourceField": { "type": "string", "validators": { "pattern": "^$|^[A-Za-z_][A-Za-z0-9_]*$" }, "default": "resource" },
+        "resources": { "type": "map", "default": {}, "items": { "_label": { "type": "string", "kind": "content", "default": "" } } },
         "records": { "type": ["array", "object"] },
         "heading": { "type": "string", "default": "", "runtime": true },
         "weekdays": { "type": "object", "default": {}, "runtime": true },
@@ -26,10 +30,15 @@
         "days": { "type": "object", "default": {}, "runtime": true },
         "hours": { "type": "object", "default": {}, "runtime": true },
         "dayCount": { "type": "integer", "default": 7, "runtime": true },
+        "agenda": { "type": "object", "default": {}, "runtime": true },
+        "rows": { "type": "object", "default": {}, "runtime": true },
+        "empty": { "type": "boolean", "default": false, "runtime": true },
         "_previous": { "type": "string", "kind": "content", "default": "Previous" },
         "_next": { "type": "string", "kind": "content", "default": "Next" },
         "_today": { "type": "string", "kind": "content", "default": "Today" },
         "_more": { "type": "string", "kind": "content", "default": "+{count}" },
-        "_moreLabel": { "type": "string", "kind": "content", "default": "More records: {count}" }
+        "_moreLabel": { "type": "string", "kind": "content", "default": "More records: {count}" },
+        "_empty": { "type": "string", "kind": "content", "default": "Nothing scheduled" },
+        "_resource": { "type": "string", "kind": "content", "default": "Resource" }
     }
 }

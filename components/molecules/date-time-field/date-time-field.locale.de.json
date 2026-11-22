@@ -1,0 +1,10 @@
+{
+    "_label": "Datum und Uhrzeit",
+    "_help": "",
+    "_errors": {
+        "required": "Dieses Feld ist erforderlich",
+        "invalid": "Kein Datum mit Uhrzeit",
+        "min": "Zu früh",
+        "max": "Zu spät"
+    }
+}

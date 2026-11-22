@@ -9,12 +9,16 @@ export interface EventFields {
     /** Empty, or a record with no valid end, is a record that lasts as long as its start (a day, or an instant) */
     readonly endField: string;
     readonly titleField: string;
+    /** The field that names the resource (a room, a person) a record belongs to, for the timeline view; absent or empty reads none */
+    readonly resourceField?: string;
 }
 
 /** A record as a calendar shows it: its key, title and the days and minutes it covers */
 export interface CalendarEvent {
     readonly key: string;
     readonly title: string;
+    /** The resource the record belongs to, empty when it names none */
+    readonly resource: string;
     /** The position of the record in the data, which orders records that start together */
     readonly position: number;
     /** The first day, as a day number (`dayNumber`) */
@@ -53,14 +57,15 @@ export function toEvent(key: string, record: Record<string, unknown>, fields: Ev
     const title = record[fields.titleField];
     const text = typeof title === 'string' ? title : typeof title === 'number' && Number.isFinite(title) ? String(title) : '';
     const allDay = start.minute === undefined;
+    const resource = fields.resourceField ? (keyText(record[fields.resourceField]) ?? '') : '';
     if (allDay) {
         const lastDay = end !== undefined && end.day > start.day ? end.day : start.day;
-        return { key, title: text, position, firstDay: start.day, lastDay, allDay, startMinute: 0, endMinute: (lastDay - start.day + 1) * MINUTES_PER_DAY };
+        return { key, title: text, resource, position, firstDay: start.day, lastDay, allDay, startMinute: 0, endMinute: (lastDay - start.day + 1) * MINUTES_PER_DAY };
     }
     const begin = start.minute ?? 0;
     const endMinute = end !== undefined && minutesFrom(start.day, end) > begin ? minutesFrom(start.day, end) : begin;
     const lastDay = start.day + Math.floor(Math.max(endMinute - 1, begin) / MINUTES_PER_DAY);
-    return { key, title: text, position, firstDay: start.day, lastDay, allDay, startMinute: begin, endMinute };
+    return { key, title: text, resource, position, firstDay: start.day, lastDay, allDay, startMinute: begin, endMinute };
 }
 
 /** The records a calendar shows, in data order; records are an array keyed by the `key` field, or a keyed map. A record with no readable start is left out */

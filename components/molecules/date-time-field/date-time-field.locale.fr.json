@@ -1,0 +1,10 @@
+{
+    "_label": "Date et heure",
+    "_help": "",
+    "_errors": {
+        "required": "Ce champ est obligatoire",
+        "invalid": "Pas une date avec heure",
+        "min": "Trop tôt",
+        "max": "Trop tard"
+    }
+}

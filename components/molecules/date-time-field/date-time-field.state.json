@@ -1,0 +1,52 @@
+{
+    "summary": "A labelled date and time field that writes an ISO date-time with the offset of a named time zone",
+    "category": "forms",
+    "purposes": ["enter a date and a time together", "schedule a meeting in a time zone", "set when something starts or ends", "pick an appointment date and hour"],
+    "events": ["change", "invalid", "valid"],
+    "commands": ["validate", "reset", "focus", "clear"],
+    "tokenGroup": "field",
+    "tokens": {
+        "font": { "size": "{text.body.size}", "weight": "{text.body.weight}" },
+        "selected": { "fill": "{color.accent.base}", "on": "{color.accent.on}" },
+        "error": { "color": "{color.danger.base}" },
+        "label": { "gap": "{space.gap.sm}", "width": "calc({size.control.lg} * 3)" },
+        "help": { "size": "{text.caption.size}" }
+    },
+    "shared": { "variant": { "default": "outline", "values": ["outline", "soft", "ghost"] }, "corners": {}, "size": { "default": "md" }, "density": {} },
+    "properties": {
+        "value": { "type": "string", "default": "" },
+        "timeZone": { "type": "string", "default": "", "validators": { "pattern": "^$|^[A-Za-z][A-Za-z0-9_+-]*(?:/[A-Za-z0-9_+-]+)*$" } },
+        "min": { "type": "string", "default": "" },
+        "max": { "type": "string", "default": "" },
+        "step": { "type": "integer", "default": 60, "validators": { "range": { "min": 1 } } },
+        "showZone": { "type": "boolean", "default": true },
+        "disabled": { "type": "boolean", "default": false },
+        "readonly": { "type": "boolean", "default": false },
+        "titlePosition": { "type": "string", "values": ["top", "left", "inner", "hidden"], "default": "top", "reflect": true },
+        "width": { "type": ["string", "integer"], "default": "fill" },
+        "required": { "type": "boolean", "default": false },
+        "local": { "type": "string", "default": "", "runtime": true },
+        "localMin": { "type": "string", "default": "", "runtime": true },
+        "localMax": { "type": "string", "default": "", "runtime": true },
+        "zone": { "type": "string", "default": "", "runtime": true },
+        "zoneText": { "type": "string", "default": "", "runtime": true },
+        "error": { "type": "string", "default": "", "runtime": true },
+        "touched": { "type": "boolean", "default": false, "runtime": true },
+        "dirty": { "type": "boolean", "default": false, "runtime": true },
+        "locked": { "type": "boolean", "default": false, "runtime": true },
+        "message": { "type": "string", "default": "", "runtime": true },
+        "_label": { "type": "string", "kind": "content", "default": "Date and time" },
+        "_help": { "type": "string", "kind": "content", "default": "" },
+        "_errors": {
+            "type": "map",
+            "items": "string",
+            "kind": "content",
+            "default": {
+                "required": "This field is required",
+                "invalid": "Not a date and time",
+                "min": "Too early",
+                "max": "Too late"
+            }
+        }
+    }
+}

@@ -164,6 +164,19 @@ describe('dateField in Chromium', () => {
         expect(control(mounted.element).getAttribute('aria-invalid')).toBe('true');
     });
 
+    it('should offer a month control for month precision and a year number for year precision', () => {
+        // Arrange and Act
+        const month = mountComponent('dateField', { precision: 'month', value: '2026-11' });
+        const year = mountComponent('dateField', { precision: 'year', value: '2026' });
+
+        // Assert
+        expect(control(month.element).type).toBe('month');
+        expect(control(month.element).value).toBe('2026-11');
+        expect(control(year.element).type).toBe('number');
+        expect(control(year.element).value).toBe('2026');
+        expect(control(year.element).getAttribute('inputmode')).toBe('numeric');
+    });
+
     it('should show the German label and error after switching language', () => {
         // Arrange
         const mounted = mountComponent('dateField', { min: '2026-02-01', value: '2026-01-01' });

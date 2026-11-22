@@ -1,12 +1,14 @@
 import type { ControllerContext } from '@punyts/stateui';
 import { CALENDAR_VIEWS, buildMonth, buildTimeView, dateForKey, stepDate } from '../shared/dates/calendarModel.js';
 import type { CalendarView, MonthCell, TimeDay, VisibleRange } from '../shared/dates/calendarModel.js';
+import { buildAgenda, buildTimeline } from '../shared/dates/agendaModel.js';
+import type { TimelineResource } from '../shared/dates/agendaModel.js';
 import { readEvents } from '../shared/dates/events.js';
 import type { CalendarEvent } from '../shared/dates/events.js';
 import { isIsoDate, todayIso } from '../shared/dates/isoDate.js';
 import { firstDayOf } from '../shared/dates/weekStart.js';
 
-const FIELD_NAMES = ['key', 'startField', 'endField', 'titleField'] as const;
+const FIELD_NAMES = ['key', 'startField', 'endField', 'titleField', 'resourceField'] as const;
 const NAVIGATION_KEYS = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown']);
 
 const fill = (template: unknown, count: number | string): string => (typeof template === 'string' ? template : '').replace('{count}', String(count));
@@ -33,7 +35,14 @@ const fill = (template: unknown, count: number | string): string => (typeof temp
  * month (a year with Shift), Enter and Space raise `select`; every move writes `date`. A press on a day writes `date` and
  * raises `select` with the ISO date, a press on a record raises `open` with its key. `range` (`{ start, end }`, the first
  * and last day of the grid) is raised once whenever the visible range changes, however `date` or `view` changed, and not at
- * load: `visible` holds the current range for a data provider that needs it at the start
+ * load: `visible` holds the current range for a data provider that needs it at the start.
+ *
+ * `view: "agenda"` lists the days of the month of `date` that have records (`agenda`), each a button that selects the
+ * day and its records with their times; Page Up and Page Down move a month. `view: "timeline"` draws the day of `date`
+ * with a row per resource (`rows`) and its 24 hours across: `resources` (a keyed map of `_label`) names the rows in
+ * order, or, empty, the rows are the resources the day's records name in `resourceField`. A timed record is placed by
+ * `--sui-start` and `--sui-span` along the row, and records of a row that overlap take lanes (`--sui-lane`,
+ * `--sui-row-lanes`), so the row grows. Both show `_empty` when there is nothing to list
  */
 export default function controller({ element, store, basePath }: ControllerContext) {
     const path = (name: string): string => `${basePath}.${name}`;
@@ -67,7 +76,7 @@ export default function controller({ element, store, basePath }: ControllerConte
     let announced = '';
 
     const loadEvents = (): CalendarEvent[] => {
-        events ??= readEvents(read('records'), { key: text('key', 'id'), startField: text('startField', 'start'), endField: text('endField', ''), titleField: text('titleField', 'title') });
+        events ??= readEvents(read('records'), { key: text('key', 'id'), startField: text('startField', 'start'), endField: text('endField', ''), titleField: text('titleField', 'title'), resourceField: text('resourceField', '') });
         return events;
     };
 
@@ -119,9 +128,8 @@ export default function controller({ element, store, basePath }: ControllerConte
             });
             weeks[`r${row}`] = { days };
         });
+        clearOthers('month');
         store.set(path('heading'), model.heading);
-        store.set(path('days'), {});
-        store.set(path('hours'), {});
         store.set(path('weekdays'), weekdays);
         store.set(path('weeks'), weeks);
         return model.range;
@@ -137,19 +145,84 @@ export default function controller({ element, store, basePath }: ControllerConte
         model.hours.forEach((label, index) => {
             hours[`h${index}`] = { label };
         });
+        clearOthers('time');
         store.set(path('heading'), model.heading);
-        store.set(path('weekdays'), {});
-        store.set(path('weeks'), {});
         store.set(path('dayCount'), model.days.length);
         store.set(path('hours'), hours);
         store.set(path('days'), days);
         return model.range;
     };
 
+    /** The runtime properties each kind of view draws; drawing one kind empties the others' */
+    const OWN: Readonly<Record<'month' | 'time' | 'agenda' | 'timeline', readonly string[]>> = {
+        month: ['weekdays', 'weeks'],
+        time: ['days', 'hours'],
+        agenda: ['agenda'],
+        timeline: ['rows', 'hours']
+    };
+    const clearOthers = (kind: keyof typeof OWN): void => {
+        const kept = new Set(OWN[kind]);
+        for (const name of new Set(Object.values(OWN).flat())) if (!kept.has(name)) store.set(path(name), {});
+    };
+
+    const drawAgenda = (): VisibleRange => {
+        const model = buildAgenda({ focus: focus(), events: loadEvents(), locale: locale(), today: todayIso() });
+        const agenda: Record<string, unknown> = {};
+        model.days.forEach((day, index) => {
+            const records: Record<string, unknown> = {};
+            day.records.forEach((record, at) => {
+                records[`e${at}`] = { key: record.key, title: record.title, time: record.time, label: record.label };
+            });
+            agenda[`d${index}`] = { iso: day.iso, label: day.label, today: day.today, active: day.active, records };
+        });
+        clearOthers('agenda');
+        store.set(path('heading'), model.heading);
+        store.set(path('agenda'), agenda);
+        store.set(path('empty'), model.days.length === 0);
+        return model.range;
+    };
+
+    /** The resource rows from `resources` (a keyed map of `_label`, in key order); empty when the map is */
+    const resourceRows = (): TimelineResource[] => {
+        const map = read('resources');
+        if (typeof map !== 'object' || map === null || Array.isArray(map)) return [];
+        return Object.entries(map as Record<string, unknown>).map(([key, entry]) => {
+            const label = typeof entry === 'object' && entry !== null ? (entry as Record<string, unknown>)['_label'] : undefined;
+            return { key, label: typeof label === 'string' && label !== '' ? label : key };
+        });
+    };
+
+    const drawTimeline = (): VisibleRange => {
+        const model = buildTimeline({ focus: focus(), events: loadEvents(), locale: locale(), today: todayIso(), resources: resourceRows() });
+        const rows: Record<string, unknown> = {};
+        model.rows.forEach((row, index) => {
+            const records: Record<string, unknown> = {};
+            row.records.forEach((record, at) => {
+                records[`e${at}`] = { ...record };
+            });
+            const allDay: Record<string, unknown> = {};
+            row.allDay.forEach((record, at) => {
+                allDay[`a${at}`] = { ...record };
+            });
+            rows[`r${index}`] = { key: row.key, label: row.label, lanes: Math.max(1, ...row.records.map((record) => record.lanes)), records, allDay };
+        });
+        const hours: Record<string, unknown> = {};
+        model.hours.forEach((label, index) => {
+            hours[`h${index}`] = { label };
+        });
+        clearOthers('timeline');
+        store.set(path('heading'), model.heading);
+        store.set(path('hours'), hours);
+        store.set(path('rows'), rows);
+        store.set(path('empty'), model.rows.length === 0);
+        return model.range;
+    };
+
     const draw = (): void => {
         const current = view();
         const firstDay = firstDayOf(locale());
-        const range = current === 'month' ? drawMonth(firstDay) : drawTime(current, firstDay);
+        const range =
+            current === 'month' ? drawMonth(firstDay) : current === 'agenda' ? drawAgenda() : current === 'timeline' ? drawTimeline() : drawTime(current, firstDay);
         store.set(path('visible'), { start: range.start, end: range.end });
         announceRange(range);
     };
@@ -190,7 +263,7 @@ export default function controller({ element, store, basePath }: ControllerConte
         onRecords();
     };
     const fieldPaths = FIELD_NAMES.map(path);
-    const settingPaths = [path('date'), path('view'), path('_more'), path('_moreLabel'), '$.locale'];
+    const settingPaths = [path('date'), path('view'), path('_more'), path('_moreLabel'), path('resources'), `${path('resources')}.$all`, '$.locale'];
     store.on(watchedRecords, onRecords);
     store.on(fieldPaths, onFields);
     store.on(settingPaths, schedule);
@@ -241,6 +314,8 @@ export default function controller({ element, store, basePath }: ControllerConte
                 return;
             }
             if (!NAVIGATION_KEYS.has(event.key)) return;
+            // The agenda lists only days with records, so only a page (a month) is a move there
+            if (view() === 'agenda' && event.key !== 'PageUp' && event.key !== 'PageDown') return;
             const next = dateForKey(event.key, current, { view: view(), firstDay: firstDayOf(locale()), rtl: rtl(), shift: event.shiftKey });
             if (next === undefined) return;
             event.preventDefault();

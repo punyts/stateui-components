@@ -1,7 +1,7 @@
 {
-    "summary": "A labelled date field that writes an ISO date (YYYY-MM-DD), with optional earliest and latest dates",
+    "summary": "A labelled date field that writes an ISO date (YYYY-MM-DD), a month (YYYY-MM) or a year, with earliest and latest",
     "category": "forms",
-    "purposes": ["enter a single date", "pick a birthday or due date", "set a deadline with earliest and latest dates"],
+    "purposes": ["enter a single date", "pick a birthday or due date", "set a deadline with earliest and latest dates", "pick a month or a year"],
     "events": ["change", "invalid", "valid"],
     "commands": ["validate", "reset", "focus", "clear"],
     "tokenGroup": "field",
@@ -26,6 +26,12 @@
         "density": {}
     },
     "properties": {
+        "precision": {
+            "type": "string",
+            "values": ["day", "month", "year"],
+            "default": "day",
+            "reflect": true
+        },
         "value": {
             "type": "string",
             "default": ""

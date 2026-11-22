@@ -3,5 +3,7 @@
     "_next": "Weiter",
     "_today": "Heute",
     "_more": "+{count}",
-    "_moreLabel": "Weitere Einträge: {count}"
+    "_moreLabel": "Weitere Einträge: {count}",
+    "_empty": "Nichts geplant",
+    "_resource": "Ressource"
 }

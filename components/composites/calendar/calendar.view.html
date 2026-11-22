@@ -24,7 +24,7 @@
             </div>
         </div>
     </div>
-    <div class="schedule" if="{{ $.view !== 'month' }}" role="grid" aria-labelledby="heading" style="--sui-days: {{ $.dayCount }}" onclick="{{ onClick }}" onkeydown="{{ onKeyDown }}">
+    <div class="schedule" if="{{ $.view === 'week' || $.view === 'day' }}" role="grid" aria-labelledby="heading" style="--sui-days: {{ $.dayCount }}" onclick="{{ onClick }}" onkeydown="{{ onKeyDown }}">
         <div class="heads" role="row">
             <span class="corner"></span>
             <div class="dayhead" role="columnheader" repeat="{{ $dk,$di,$d in $.days }}" key="{{ $dk }}" aria-label="{{ $d.label }}" data-today="{{ $d.today ? '' : null }}">
@@ -43,6 +43,39 @@
                 <button class="record timed" type="button" repeat="{{ $rk,$ri,$r in $c.records }}" key="{{ $rk }}" data-record="{{ $r.key }}" tabindex="{{ $c.tab }}" aria-label="{{ $r.label }}" style="--sui-start: {{ $r.start }}; --sui-span: {{ $r.span }}; --sui-column: {{ $r.column }}; --sui-columns: {{ $r.columns }}">
                     <span class="name">{{ $r.title }}</span>
                     <span class="time" if="{{ $r.time !== '' }}">{{ $r.time }}</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="agenda" if="{{ $.view === 'agenda' }}" role="list" aria-labelledby="heading" onclick="{{ onClick }}" onkeydown="{{ onKeyDown }}">
+        <p class="empty" if="{{ $.empty }}">{{ $._empty }}</p>
+        <section class="agendaday" role="listitem" repeat="{{ $dk,$di,$d in $.agenda }}" key="{{ $dk }}" aria-label="{{ $d.label }}" data-today="{{ $d.today ? '' : null }}" data-active="{{ $d.active ? '' : null }}">
+            <button class="dayname" type="button" data-date="{{ $d.iso }}" aria-current="{{ $d.today ? 'date' : null }}">{{ $d.label }}</button>
+            <button class="record" type="button" repeat="{{ $ek,$ei,$e in $d.records }}" key="{{ $ek }}" data-record="{{ $e.key }}" aria-label="{{ $e.label }}">
+                <span class="time" if="{{ $e.time !== '' }}">{{ $e.time }}</span>
+                <span class="name">{{ $e.title }}</span>
+            </button>
+        </section>
+    </div>
+    <div class="timeline" if="{{ $.view === 'timeline' }}" role="grid" aria-labelledby="heading" onclick="{{ onClick }}" onkeydown="{{ onKeyDown }}">
+        <div class="lane heads" role="row">
+            <span class="resource corner" role="columnheader">{{ $._resource }}</span>
+            <div class="track hours" aria-hidden="true">
+                <span class="tick" repeat="{{ $hk,$hi,$h in $.hours }}" key="{{ $hk }}">{{ $h.label }}</span>
+            </div>
+        </div>
+        <p class="empty" if="{{ $.empty }}">{{ $._empty }}</p>
+        <div class="lane" role="row" repeat="{{ $rk,$ri,$r in $.rows }}" key="{{ $rk }}" data-resource="{{ $r.key }}" style="--sui-lanes: {{ $r.lanes }}">
+            <div class="resource" role="rowheader">
+                <span class="name">{{ $r.label }}</span>
+                <button class="record allday" type="button" repeat="{{ $ek,$ei,$e in $r.allDay }}" key="{{ $ek }}" data-record="{{ $e.key }}" aria-label="{{ $e.title }}">
+                    <span class="name">{{ $e.title }}</span>
+                </button>
+            </div>
+            <div class="track" role="gridcell" aria-label="{{ $r.label }}">
+                <button class="record placed" type="button" repeat="{{ $ek,$ei,$e in $r.records }}" key="{{ $ek }}" data-record="{{ $e.key }}" aria-label="{{ $e.label }}" style="--sui-start: {{ $e.start }}; --sui-span: {{ $e.span }}; --sui-lane: {{ $e.lane }}; --sui-row-lanes: {{ $e.lanes }}">
+                    <span class="name">{{ $e.title }}</span>
+                    <span class="time" if="{{ $e.time !== '' }}">{{ $e.time }}</span>
                 </button>
             </div>
         </div>

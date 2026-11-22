@@ -274,3 +274,131 @@
 .record.allday {
     padding-block: 0;
 }
+
+.empty {
+    margin: 0;
+    padding: var(--ui-space-inset-md);
+    color: var(--ui-color-text-muted);
+}
+
+/* The agenda: a day's name, then its records, one under another */
+.agenda {
+    display: flex;
+    flex-direction: column;
+    border: var(--ui-border-width-thin) solid var(--ui-color-border-base);
+    border-radius: var(--ui-calendar-radius);
+    overflow: hidden;
+}
+
+.agendaday {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--ui-space-gap-sm);
+    padding: var(--ui-space-inset-sm);
+}
+
+.agendaday + .agendaday {
+    border-block-start: var(--ui-border-width-thin) solid var(--ui-color-border-base);
+}
+
+.dayname {
+    align-self: flex-start;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--ui-color-text-base);
+    font: inherit;
+    font-weight: var(--ui-text-label-weight);
+    cursor: pointer;
+}
+
+.agendaday[data-today] .dayname {
+    color: var(--ui-calendar-selected-fill);
+}
+
+.dayname:focus-visible {
+    outline: 2px solid var(--ui-color-focus);
+    outline-offset: 2px;
+}
+
+.agendaday .record .time {
+    min-inline-size: calc(var(--ui-calendar-gutter) * 2);
+}
+
+/* The timeline: a row per resource, the day's 24 hours across, scrolling sideways when narrow */
+.timeline {
+    display: flex;
+    flex-direction: column;
+    overflow-x: auto;
+    border: var(--ui-border-width-thin) solid var(--ui-color-border-base);
+    border-radius: var(--ui-calendar-radius);
+}
+
+.lane {
+    display: grid;
+    grid-template-columns: calc(var(--ui-calendar-gutter) * 2) minmax(calc(var(--ui-calendar-column) * 24), 1fr);
+}
+
+.lane + .lane {
+    border-block-start: var(--ui-border-width-thin) solid var(--ui-color-border-base);
+}
+
+.lane.heads {
+    background: var(--ui-color-surface-sunken);
+}
+
+.resource {
+    position: sticky;
+    inset-inline-start: 0;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--ui-space-gap-sm);
+    min-inline-size: 0;
+    padding: var(--ui-space-inset-sm);
+    border-inline-end: var(--ui-border-width-thin) solid var(--ui-color-border-base);
+    background: var(--ui-color-surface-base);
+    font-weight: var(--ui-text-label-weight);
+}
+
+.lane.heads .resource {
+    background: var(--ui-color-surface-sunken);
+    color: var(--ui-color-text-muted);
+    font-size: var(--ui-text-caption-size);
+}
+
+.hours {
+    display: grid;
+    grid-template-columns: repeat(24, minmax(0, 1fr));
+}
+
+.tick {
+    padding: var(--ui-space-inset-sm);
+    color: var(--ui-color-text-muted);
+    font-size: var(--ui-text-caption-size);
+    white-space: nowrap;
+}
+
+.lane:not(.heads) .track {
+    position: relative;
+    block-size: calc(var(--ui-calendar-lane) * var(--sui-lanes, 1));
+    background-image: linear-gradient(to right, var(--ui-color-border-base) var(--ui-border-width-thin), transparent var(--ui-border-width-thin));
+    background-size: calc(100% / 24) 100%;
+}
+
+.record.placed {
+    position: absolute;
+    gap: var(--ui-space-gap-sm);
+    inset-inline-start: calc(var(--sui-start) / 1440 * 100%);
+    inline-size: calc(max(var(--sui-span), 15) / 1440 * 100%);
+    inset-block-start: calc(var(--sui-lane) / var(--sui-row-lanes) * 100%);
+    block-size: calc(100% / var(--sui-row-lanes));
+    overflow: hidden;
+    background: var(--ui-color-surface-base);
+    border-color: var(--ui-color-border-strong);
+}
+
+.record.placed:hover {
+    background: var(--ui-color-surface-sunken);
+}

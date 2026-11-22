@@ -3,5 +3,7 @@
     "_next": "Suivant",
     "_today": "Aujourd’hui",
     "_more": "+{count}",
-    "_moreLabel": "Autres enregistrements : {count}"
+    "_moreLabel": "Autres enregistrements : {count}",
+    "_empty": "Rien de prévu",
+    "_resource": "Ressource"
 }

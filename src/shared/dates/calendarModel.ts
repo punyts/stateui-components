@@ -1,10 +1,10 @@
 import { eventsOnDay, layoutOverlaps, segmentOn } from './events.js';
 import type { CalendarEvent, Segment } from './events.js';
-import { MINUTES_PER_DAY, addDays, addMonths, dayOf, isoOfDay, monthGrid, parseIsoDate, startOfWeekDay, weekdayOfDay } from './isoDate.js';
+import { MINUTES_PER_DAY, addDays, addMonths, dayOf, daysInMonth, isoOfDay, monthGrid, parseIsoDate, startOfWeekDay, toIso, weekdayOfDay } from './isoDate.js';
 import { formatDateRange, formatDayNumber, formatHour, formatLongDate, formatMonthYear, formatTime, weekdayNames } from './localeDates.js';
 
 /** The views of a calendar */
-export const CALENDAR_VIEWS = ['month', 'week', 'day'] as const;
+export const CALENDAR_VIEWS = ['month', 'week', 'day', 'agenda', 'timeline'] as const;
 
 export type CalendarView = (typeof CALENDAR_VIEWS)[number];
 
@@ -119,7 +119,10 @@ export function visibleRange(view: CalendarView, focus: string, firstDay: number
             const start = startOfWeekDay(days, firstDay);
             return { start: isoOfDay(start), end: isoOfDay(start + COLUMNS - 1) };
         }
+        case 'agenda':
+            return { start: toIso({ ...parts, day: 1 }), end: toIso({ ...parts, day: daysInMonth(parts.year, parts.month) }) };
         case 'day':
+        case 'timeline':
             return { start: focus, end: focus };
     }
 }
@@ -128,10 +131,12 @@ export function visibleRange(view: CalendarView, focus: string, firstDay: number
 export function stepDate(view: CalendarView, focus: string, direction: 1 | -1): string {
     switch (view) {
         case 'month':
+        case 'agenda':
             return addMonths(focus, direction);
         case 'week':
             return addDays(focus, direction * COLUMNS);
         case 'day':
+        case 'timeline':
             return addDays(focus, direction);
     }
 }
@@ -147,7 +152,7 @@ export interface KeyOptions {
 
 /**
  * The date a navigation key moves the focus to, or `undefined` for a key the view does not use. Left and Right move a day
- * in every view (swapped in right-to-left text). In the month view Up and Down move a week, Home and End go to the first
+ * in every view (swapped in right-to-left text). The agenda pages a month with Page Up and Page Down and the timeline a day. In the month view Up and Down move a week, Home and End go to the first
  * and last day of the week, and Page Up and Page Down move a month, with Shift a year; the day of the month is kept as far as
  * the new month reaches. In the week view Home and End do the same, Page Up and Page Down move a week, and Up and Down are
  * left to the page. In the day view Page Up and Page Down move a day and the other keys are left to the page
@@ -189,7 +194,10 @@ export function dateForKey(key: string, focus: string, options: KeyOptions): str
                 default:
                     return undefined;
             }
+        case 'agenda':
+            return key === 'PageUp' ? addMonths(focus, -1) : key === 'PageDown' ? addMonths(focus, 1) : undefined;
         case 'day':
+        case 'timeline':
             return key === 'PageUp' ? addDays(focus, -1) : key === 'PageDown' ? addDays(focus, 1) : undefined;
     }
 }
@@ -239,7 +247,7 @@ export interface TimeInput extends MonthInput {
 }
 
 /** The times of a record as a screen reader gets them: `9:30 AM – 10:00 AM`, or just the start for a record with no length */
-function timesOf(event: CalendarEvent, locale: string): string {
+export function timesOf(event: CalendarEvent, locale: string): string {
     const start = formatTime(event.startMinute % MINUTES_PER_DAY, locale);
     if (event.endMinute <= event.startMinute) return start;
     return `${start} – ${formatTime(event.endMinute % MINUTES_PER_DAY, locale)}`;
