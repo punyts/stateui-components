@@ -89,6 +89,13 @@
     stroke-width: var(--ui-border-width-thin);
 }
 
+/* A radar's rings */
+.web {
+    fill: transparent;
+    stroke: var(--ui-color-border-base);
+    stroke-width: var(--ui-border-width-thin);
+}
+
 .baseline {
     stroke: var(--ui-color-border-strong);
     stroke-width: var(--ui-border-width-thin);

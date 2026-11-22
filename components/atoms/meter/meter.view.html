@@ -1,0 +1,7 @@
+<div class="meter" role="meter" aria-label="{{ $._label }}" aria-valuemin="{{ $.min }}" aria-valuemax="{{ $.max }}" aria-valuenow="{{ $.value }}" aria-valuetext="{{ $.valueText }}">
+    <span class="label" aria-hidden="true">{{ $._label }}</span>
+    <span class="value" if="{{ $.showValue }}" aria-hidden="true">{{ $.valueText }}</span>
+    <div class="track">
+        <div class="fill"></div>
+    </div>
+</div>

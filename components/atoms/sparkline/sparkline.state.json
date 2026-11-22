@@ -1,0 +1,25 @@
+{
+    "summary": "A small word-sized trend drawn as a line, area or bars from a list of numbers, with no axes",
+    "category": "data",
+    "purposes": ["show a trend in a small inline line", "show recent history beside a number", "show a tiny trend in a table cell or stat"],
+    "tokenGroup": "sparkline",
+    "tokens": {
+        "width": "calc({size.control.md} * 3)",
+        "height": "{size.control.sm}",
+        "stroke": "{border.width.thick}"
+    },
+    "shared": { "tone": { "default": "accent" } },
+    "properties": {
+        "_label": { "type": "string", "kind": "content", "default": "Trend" },
+        "_summary": { "type": "string", "kind": "content", "default": "{count} values from {first} to {last}, lowest {min}, highest {max}" },
+        "values": { "type": "array", "default": [] },
+        "type": { "type": "string", "values": ["line", "area", "bar"], "default": "line", "reflect": true },
+        "format": { "type": "string", "values": ["number", "percent", "currency", "duration"], "default": "number" },
+        "currency": { "type": "string", "validators": { "pattern": "^[A-Z]{3}$" } },
+        "fractionDigits": { "type": "integer", "validators": { "range": { "min": 0, "max": 10 } } },
+        "line": { "type": "string", "default": "", "runtime": true },
+        "area": { "type": "string", "default": "", "runtime": true },
+        "bars": { "type": "object", "default": {}, "runtime": true },
+        "summaryText": { "type": "string", "default": "", "runtime": true }
+    }
+}

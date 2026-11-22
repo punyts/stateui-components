@@ -1,0 +1,7 @@
+<div class="sparkline" role="img" aria-label="{{ $._label }}: {{ $.summaryText }}">
+    <svg class="plot" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 32" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+        <path if="{{ $.type === 'area' }}" class="area" d="{{ $.area }}" />
+        <path if="{{ $.type !== 'bar' }}" class="line" d="{{ $.line }}" />
+        <rect if="{{ $.type === 'bar' }}" repeat="{{ $k,$i,$v in $.bars }}" key="{{ $k }}" class="bar" x="{{ $v.x }}" y="{{ $v.y }}" width="{{ $v.width }}" height="{{ $v.height }}" data-negative="{{ $v.negative ? '' : null }}" />
+    </svg>
+</div>

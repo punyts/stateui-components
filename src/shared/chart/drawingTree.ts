@@ -10,7 +10,7 @@ export const CHART_LAYERS = ['grid', 'axes', 'marks'] as const;
 const KINDS: Readonly<Record<Primitive['tag'], ShapeKind>> = { line: 'line', text: 'drawText', rect: 'rect', path: 'path', circle: 'circle' };
 
 /** The geometry attributes of a primitive that become numeric properties of its shape; `x1 y1 x2 y2` become `points` */
-const NUMERIC = ['x', 'y', 'width', 'height', 'cx', 'cy', 'r'] as const;
+const NUMERIC = ['x', 'y', 'width', 'height', 'cx', 'cy', 'r', 'opacity'] as const;
 const LINE_ENDS = ['x1', 'y1', 'x2', 'y2'] as const;
 
 /** The text offsets the scene writes as `dy`, as the `baseline` of `drawText` (written as `dominant-baseline`) */
@@ -54,6 +54,7 @@ function markPaint(kind: string, colour: string): Record<string, JsonValue> {
  */
 const PART_STYLE: Readonly<Record<string, Readonly<Record<string, JsonValue>>>> = {
     gridline: { stroke: '{color.border.base}', strokeWidth: THIN },
+    web: { fill: 'transparent', stroke: '{color.border.base}', strokeWidth: THIN },
     baseline: { stroke: '{color.border.strong}', strokeWidth: THIN },
     'tick y': { fill: '{color.text.muted}', anchor: 'end' },
     'tick x': { fill: '{color.text.muted}', anchor: 'middle' },

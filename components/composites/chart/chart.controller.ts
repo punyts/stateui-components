@@ -193,7 +193,9 @@ export default function controller({ element, store, basePath }: ControllerConte
     };
 
     const legendOf = (input: ChartInput, hidden: ReadonlySet<string>): LegendItem[] =>
-        input.type === 'donut'
+        input.type === 'heatmap'
+            ? []
+            : input.type === 'donut'
             ? input.categories.map((label, at) => ({ key: label, label, color: seriesClass(at), hidden: hidden.has(label) }))
             : input.series.map((entry, at) => ({ key: entry.key, label: entry.label, color: seriesClass(at), hidden: hidden.has(entry.key) }));
 
@@ -230,6 +232,7 @@ export default function controller({ element, store, basePath }: ControllerConte
             height,
             format,
             percent: (share) => formatValue(share, { ...shareOptions, format: 'percent' }),
+            formatX: (value) => formatValue(value, { format: 'number', locale: shareOptions.locale }),
             hidden,
             texts: { total: text(read('_total')), category: text(read('_category')), value: text(read('_value')), share: text(read('_share')) }
         };

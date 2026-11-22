@@ -1,14 +1,14 @@
 {
-    "summary": "SVG or canvas bar, line, area or donut chart over records; fractionDigits fixes decimals (0 drops currency cents)",
+    "summary": "SVG or canvas bar, line, area, donut, scatter, radar or heatmap chart over records; fractionDigits fixes decimals",
     "category": "data",
-    "purposes": ["draw how a total splits across categories", "plot a trend over time", "compare values as bars or a donut"],
+    "purposes": ["draw how a total splits across categories", "plot a trend over time", "compare values as bars or a donut", "plot how two measures relate as a scatter", "compare profiles across several measures on a radar", "show intensity across a grid as a heatmap"],
     "events": ["press"],
     "tokenGroup": "chart",
     "tokens": {
         "height": "calc({size.control.md} * 6)"
     },
     "properties": {
-        "type": { "type": "string", "values": ["bar", "line", "area", "donut"], "default": "bar", "reflect": true },
+        "type": { "type": "string", "values": ["bar", "line", "area", "donut", "scatter", "radar", "heatmap"], "default": "bar", "reflect": true },
         "x": { "type": "string", "validators": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" }, "default": "x" },
         "series": {
             "type": "map",

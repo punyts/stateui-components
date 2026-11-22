@@ -1,0 +1,31 @@
+:host {
+    display: inline-block;
+    vertical-align: middle;
+    inline-size: var(--ui-sparkline-width);
+    block-size: var(--ui-sparkline-height);
+}
+.sparkline,
+.plot {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    overflow: visible;
+}
+.line {
+    fill: transparent;
+    stroke: var(--tone);
+    stroke-width: var(--ui-sparkline-stroke);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+}
+.area {
+    fill: var(--tone-soft);
+    stroke: transparent;
+}
+.bar {
+    fill: var(--tone);
+}
+.bar[data-negative] {
+    fill: var(--ui-color-text-muted);
+}

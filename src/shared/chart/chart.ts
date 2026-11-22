@@ -1,8 +1,20 @@
 import { buildDonut } from './donut.js';
 import { buildCartesian } from './geometry.js';
+import { buildHeatmap, buildRadar, buildScatter } from './polar.js';
 import type { ChartInput, Scene } from './scene.js';
 
-/** The scene of a chart of any type: a donut has its own layout, the others share axes */
+/** The scene of a chart of any type: bar, line and area share a category axis, the others have their own layout */
 export function buildScene(input: ChartInput): Scene {
-    return input.type === 'donut' ? buildDonut(input) : buildCartesian(input);
+    switch (input.type) {
+        case 'donut':
+            return buildDonut(input);
+        case 'scatter':
+            return buildScatter(input);
+        case 'radar':
+            return buildRadar(input);
+        case 'heatmap':
+            return buildHeatmap(input);
+        default:
+            return buildCartesian(input);
+    }
 }

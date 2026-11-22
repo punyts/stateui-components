@@ -1,7 +1,7 @@
 import type { TickFormatter } from './scale.js';
 
-/** The chart types: the three that share axes, and the donut, which has a ring instead */
-export const CHART_TYPES = ['bar', 'line', 'area', 'donut'] as const;
+/** The chart types: the three that share a category axis, the donut, and the scatter, radar and heatmap of C3 */
+export const CHART_TYPES = ['bar', 'line', 'area', 'donut', 'scatter', 'radar', 'heatmap'] as const;
 
 export type ChartType = (typeof CHART_TYPES)[number];
 
@@ -42,6 +42,8 @@ export interface ChartInput {
     readonly format: TickFormatter;
     /** Formats a share from 0 to 1 */
     readonly percent: TickFormatter;
+    /** Formats a scatter chart's x value, a plain number in the chart's locale; `String` when absent */
+    readonly formatX?: TickFormatter;
     /** The series keys, or for a donut the slice labels, that the user hid with the legend */
     readonly hidden: ReadonlySet<string>;
     readonly texts: ChartTexts;

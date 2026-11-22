@@ -1,0 +1,39 @@
+:host {
+    display: block;
+    --meter-colour: var(--ui-meter-good);
+}
+:host([level='warning']) { --meter-colour: var(--ui-meter-warning); }
+:host([level='danger']) { --meter-colour: var(--ui-meter-danger); }
+.meter {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: baseline;
+    row-gap: var(--ui-meter-gap);
+    column-gap: var(--ui-meter-gap);
+}
+.label,
+.value {
+    color: var(--ui-color-text-muted);
+    font-family: var(--ui-text-caption-family);
+    font-size: var(--ui-text-caption-size);
+    font-weight: var(--ui-text-caption-weight);
+}
+.value {
+    color: var(--ui-color-text-base);
+    font-variant-numeric: tabular-nums;
+}
+.track {
+    grid-column: 1 / -1;
+    overflow: hidden;
+    block-size: var(--ui-meter-height);
+    border-radius: var(--ui-radius-full);
+    background: var(--ui-meter-track);
+}
+.fill {
+    --fill: {{ $.share * 100 }};
+    block-size: 100%;
+    inline-size: calc(var(--fill) * 1%);
+    border-radius: var(--ui-radius-full);
+    background: var(--meter-colour);
+    transition: inline-size var(--ui-motion-duration-base) var(--ui-motion-easing-standard), background-color var(--ui-motion-duration-base) var(--ui-motion-easing-standard);
+}

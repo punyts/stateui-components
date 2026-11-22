@@ -1,0 +1,30 @@
+{
+    "summary": "A bar that shows a measurement within a known range, coloured by whether it is in its good, warning or danger range",
+    "category": "data",
+    "purposes": ["show a measurement against its good and bad ranges", "show a score or level as a gauge", "warn when a level is too high or too low", "show a battery, disk or capacity level"],
+    "tokenGroup": "meter",
+    "tokens": {
+        "track": "{color.surface.sunken}",
+        "good": "{color.success.base}",
+        "warning": "{color.warning.base}",
+        "danger": "{color.danger.base}",
+        "height": "calc({size.control.sm} / 4)",
+        "gap": "{space.gap.sm}"
+    },
+    "properties": {
+        "_label": { "type": "string", "kind": "content", "default": "Meter" },
+        "value": { "type": "number", "default": 0 },
+        "min": { "type": "number", "default": 0 },
+        "max": { "type": "number", "default": 100 },
+        "low": { "type": "number" },
+        "high": { "type": "number" },
+        "optimum": { "type": "number" },
+        "format": { "type": "string", "values": ["number", "percent", "currency", "duration"], "default": "number" },
+        "currency": { "type": "string", "validators": { "pattern": "^[A-Z]{3}$" } },
+        "fractionDigits": { "type": "integer", "validators": { "range": { "min": 0, "max": 10 } } },
+        "showValue": { "type": "boolean", "default": true },
+        "level": { "type": "string", "values": ["good", "warning", "danger"], "default": "good", "reflect": true, "runtime": true },
+        "share": { "type": "number", "default": 0, "runtime": true },
+        "valueText": { "type": "string", "default": "", "runtime": true }
+    }
+}
