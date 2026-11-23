@@ -32,6 +32,8 @@ export interface SceneLoopOptions {
     /** The animation frame (`requestAnimationFrame` and `cancelAnimationFrame` in the page) */
     frame(callback: (time: number) => void): number;
     cancel(handle: number): void;
+    /** Told when bodies start moving (true) and when all are at rest or the game stops (false), once per change */
+    moving(on: boolean): void;
 }
 
 /** The values the loop last wrote or read of a body, as JSON text, to tell its own writes from logic's */
@@ -53,6 +55,8 @@ export class SceneLoop {
     private last: number | undefined;
     private spare = 0;
     private disposed = false;
+    /** What `moving` was last told */
+    private told = false;
 
     constructor(private readonly options: SceneLoopOptions) {}
 
@@ -124,6 +128,14 @@ export class SceneLoop {
         this.world = undefined;
     }
 
+    /** Tells `moving` when whether a frame is asked for changed */
+    private tell(): void {
+        const on = this.handle !== undefined;
+        if (on === this.told) return;
+        this.told = on;
+        this.options.moving(on);
+    }
+
     /** Ends the game: every body's position and velocity are written once, so state holds where it stopped */
     private stop(): void {
         const world = this.world as PlayWorld;
@@ -136,6 +148,7 @@ export class SceneLoop {
         this.spare = 0;
         for (const body of world.bodies) this.save(body);
         this.known.clear();
+        this.tell();
     }
 
     /** Asks for a frame when something moves and none is asked for; when nothing moves, saves what came to rest */
@@ -144,6 +157,7 @@ export class SceneLoop {
         if (this.disposed || world === undefined || this.handle !== undefined) return;
         if (world.anyMoves(this.held)) {
             this.handle = this.options.frame((time) => this.onFrame(time));
+            this.tell();
             return;
         }
         for (const path of world.settle(this.held)) {
@@ -182,6 +196,7 @@ export class SceneLoop {
         }
         for (const contact of contacts) this.options.contact(contact);
         if (this.world === world && moving) this.wake();
+        this.tell();
     }
 
     /**

@@ -121,7 +121,7 @@ describe.skipIf(script === '')('scene3d play with the real 3D renderer chunk in 
         expect(mounted.store.get('$.raised.app.children.ball.contact')).toEqual({ key: 'ball', with: 'floor', side: 'bottom' });
     });
 
-    it('should move a body while its control key is held, write it once when it rests, and take the key without raising key', async () => {
+    it('should move a body while its control key is held, write it once when it rests, mark the scene moving meanwhile, and take the key without raising key', async () => {
         // Arrange
         remove = answerWith(chunk);
         const paddle = { component: 'mesh', position: [0, 0.5, 0], geometry: { kind: 'box' }, body: { solid: true, control: { ArrowRight: [4, 0, 0] } } };
@@ -136,6 +136,7 @@ describe.skipIf(script === '')('scene3d play with the real 3D renderer chunk in 
         const down = key(box, 'keydown', 'ArrowRight');
         for (let at = 0; at < 20; at += 1) await frame();
         const during = writesTo(set, `${ROOT}.paddle.position`).length;
+        const marked = mounted.element.getAttribute('data-play');
         key(box, 'keyup', 'ArrowRight');
         await until(() => writesTo(set, `${ROOT}.paddle.position`).length > 0);
 
@@ -147,6 +148,8 @@ describe.skipIf(script === '')('scene3d play with the real 3D renderer chunk in 
         expect((mounted.store.get<number[]>(`${ROOT}.paddle.position`) as number[])[0]).toBeGreaterThan(0.5);
         expect(writesTo(set, `${ROOT}.paddle.position`)).toHaveLength(1);
         expect(mounted.contacts).toEqual([]);
+        expect(marked).toBe('moving');
+        expect(mounted.element.hasAttribute('data-play')).toBe(false);
     });
 
     it('should take a velocity logic sets while the game runs, and write every body where it is when the game stops', async () => {

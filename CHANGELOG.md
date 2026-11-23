@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- **A scene marks itself `data-play="moving"` while its game moves bodies** (docs/design/stateui-game-loop.md, F3).
+  `SceneLoop` takes a `moving(on)` option, told once when it starts asking for frames and once when every body rests
+  or the game stops; the `scene3d` controller sets and removes the attribute, so a check (stateui-mcp's `ui_interact`)
+  can wait for the game to come to rest. Test: `test/composites/scene3d-play.browser.test.ts` (the held key).
 - **`repeat3d` copies are bodies of the game loop; spheres; a grid of still solids** (docs/design/stateui-game-loop.md,
   F2). A copy whose row has a `body` moves, collides and rests as a node does, keyed by its record: the loop writes its
   `position` and `velocity` to the record fields its `"<-position": "$row.<field>"` and `<-velocity` links name

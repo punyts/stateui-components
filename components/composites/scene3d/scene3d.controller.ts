@@ -142,7 +142,8 @@ const THEME_PATHS = ['$.theme.active', '$.theme.active.$all'];
  * contact raises `contact` with `detail: { shape, key, with, repeat?, side }` on each of the two bodies (one for a side
  * of its `bounds`; `repeat` names the other's `repeat3d` when it is a copy), after both bodies' `position` and
  * `velocity` are written. A `repeat3d` copy with a `body` writes them to the record fields its `$row` links name. The keys a `control` names are taken as `keys`
- * are (the scene box is focusable and names them), held while down, and let go when focus leaves the scene
+ * are (the scene box is focusable and names them), held while down, and let go when focus leaves the scene. While bodies
+ * move the element has `data-play="moving"`
  */
 /** The category of the scene's reports, for stateui-3d too (it has no reporter): the chunk loaded, the scene made and disposed, each issue */
 const CATEGORY = 'stateui-components.scene3d';
@@ -192,7 +193,13 @@ export default function controller({ element, store, basePath }: ControllerConte
             fail(reason, at);
         },
         frame: (callback) => requestAnimationFrame(callback),
-        cancel: (handle) => cancelAnimationFrame(handle)
+        cancel: (handle) => cancelAnimationFrame(handle),
+        // `data-play="moving"` while bodies move, so a check (ui_interact) can wait for the game to come to rest
+        moving: (on) => {
+            if (disposed) return;
+            if (on) element.setAttribute('data-play', 'moving');
+            else element.removeAttribute('data-play');
+        }
     });
 
     /** The keys the scene takes: those `keys` lists and those a body's `control` names while the game runs */
