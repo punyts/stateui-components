@@ -7,8 +7,10 @@ import { readStoredFile } from '../shared/field/files.js';
 import { isReducedMotion } from '../shared/drawing/scheduler.js';
 import { requestScene3dChunk } from '../shared/scene3d/load.js';
 import { Repeat3dFeeder } from '../shared/scene3d/repeat.js';
-import { readSceneKeys, takenKey } from '../shared/scene3d/keys.js';
+import { keyName, readSceneKeys, takenKey } from '../shared/scene3d/keys.js';
 import { SceneExport } from '../shared/scene3d/glbExport.js';
+import { SceneLoop } from '../shared/play/loop.js';
+import type { PlayContact, Vec3 } from '../shared/play/play.js';
 import type { Load3dFailure, Scene3dChunk } from '../shared/scene3d/load.js';
 import { isScene3dError, readScene3dTree } from '../shared/scene3d/tree.js';
 import type { ColorResolver, Scene3d, Scene3dIssue, Scene3dSettings, Scene3dStatus } from '../shared/scene3d/tree.js';
@@ -19,7 +21,7 @@ import type { Scene3dEvent, Scene3dTree } from '../shared/scene3d/tree.js';
 const hasInteractive = (nodes: readonly Scene3dTree[]): boolean => nodes.some((node) => node.properties.interactive === true || hasInteractive(node.children));
 
 /** The scene's own properties; a change at or below one of them, or below `children`, redraws the scene */
-const SCENE_PROPERTIES = ['children', 'background', 'environment', 'fog', 'controls'] as const;
+const SCENE_PROPERTIES = ['children', 'background', 'environment', 'fog', 'controls', 'play'] as const;
 
 /** The token the scene's background is when `background` is unset */
 const BACKGROUND_TOKEN = '{scene3d.background}';
@@ -132,6 +134,14 @@ const THEME_PATHS = ['$.theme.active', '$.theme.active.$all'];
  * scroll) and raised as a bubbling, composed `key` with `detail: { key }`; a held key repeats. Alt, Control or Meta held,
  * or Enter or Space on a proxy button, leave the press alone. The dispatcher records it at `$.raised.<path>.key`, so a
  * rule triggered there runs on every press
+ *
+ * The game loop (docs/design/stateui-game-loop.md): while `play.running` is true, the nodes with a `body` (a `mesh`,
+ * `group3d` or `model`) move by their `velocity`, the keys held on their `control` and `play.gravity` (`SceneLoop` of
+ * `src/shared/play/`, stepping 60 times a second on the animation frame while something moves). The scene draws each
+ * frame's positions; the store hears of a body only at a contact, when it comes to rest and when the game stops. A
+ * contact raises `contact` with `detail: { shape, key, with, side }` on each of the two bodies (one for a side of its
+ * `bounds`), after both bodies' `position` and `velocity` are written. The keys a `control` names are taken as `keys`
+ * are (the scene box is focusable and names them), held while down, and let go when focus leaves the scene
  */
 /** The category of the scene's reports, for stateui-3d too (it has no reporter): the chunk loaded, the scene made and disposed, each issue */
 const CATEGORY = 'stateui-components.scene3d';
@@ -152,6 +162,35 @@ export default function controller({ element, store, basePath }: ControllerConte
     /** True when the controller gave the scene box its `tabindex` for `keys` */
     let ownTabIndex = false;
     const exportWatched = [`${basePath}.exportRequest`, `${basePath}.exportRequest.$all`];
+
+    /** The game loop of `play` and the nodes' `body` (docs/design/stateui-game-loop.md) */
+    const loop = new SceneLoop({
+        write: (path, value) => store.set(repeats.writeTarget(path) ?? path, value),
+        contact: (contact: PlayContact) => {
+            if (disposed) return;
+            const detail = { shape: contact.path, key: contact.key, with: contact.with, side: contact.side };
+            element.dispatchEvent(new CustomEvent('contact', { detail, bubbles: true, composed: true }));
+        },
+        draw: (tree) => {
+            if (!disposed) scene?.update(tree);
+        },
+        measure: (path) => {
+            const box = scene?.boundsOf(path);
+            return box === undefined ? undefined : (box.max.map((max, axis) => (max - (box.min[axis] as number)) / 2) as Vec3);
+        },
+        problem: (reason, path) => {
+            const at = path === '' ? basePath : path;
+            const key = `${at}\u0000${reason}`;
+            if (reported.has(key)) return;
+            reported.add(key);
+            fail(reason, at);
+        },
+        frame: (callback) => requestAnimationFrame(callback),
+        cancel: (handle) => cancelAnimationFrame(handle)
+    });
+
+    /** The keys the scene takes: those `keys` lists and those a body's `control` names while the game runs */
+    const takenKeys = (): string[] => [...new Set([...readSceneKeys(read(keysPath)), ...loop.controlKeys()])];
 
     /** Raises `ui-file-transfer`; the promise rejects with `offline` when nothing answers (the host has no hook) */
     const hand = (file: File, signal: AbortSignal): Promise<unknown> =>
@@ -188,7 +227,7 @@ export default function controller({ element, store, basePath }: ControllerConte
     const syncKeys = (): void => {
         const box = element.shadowRoot?.querySelector<HTMLElement>('.scene');
         if (disposed || !box) return;
-        const keys = readSceneKeys(read(keysPath));
+        const keys = takenKeys();
         if (keys.length > 0) {
             if (!box.hasAttribute('tabindex')) {
                 box.setAttribute('tabindex', '0');
@@ -203,15 +242,29 @@ export default function controller({ element, store, basePath }: ControllerConte
         box.removeAttribute('aria-keyshortcuts');
     };
 
-    /** Takes a listed key on its way down to the scene and raises `key` for the dispatcher */
+    /**
+     * Takes a listed key on its way down to the scene and raises `key` for the dispatcher; a key a body's `control`
+     * names is held for the game loop as well
+     */
     const onKeyDown = (event: KeyboardEvent): void => {
         if (disposed) return;
         const origin = event.composedPath()[0];
-        const name = takenKey(event, readSceneKeys(read(keysPath)), origin instanceof HTMLButtonElement);
+        const name = takenKey(event, takenKeys(), origin instanceof HTMLButtonElement);
         if (name === undefined) return;
         event.preventDefault();
         event.stopPropagation();
-        element.dispatchEvent(new CustomEvent('key', { detail: { key: name }, bubbles: true, composed: true }));
+        loop.keyDown(name);
+        if (readSceneKeys(read(keysPath)).includes(name)) element.dispatchEvent(new CustomEvent('key', { detail: { key: name }, bubbles: true, composed: true }));
+    };
+
+    /** A key the game loop holds came up */
+    const onKeyUp = (event: KeyboardEvent): void => {
+        if (!disposed) loop.keyUp(keyName(event.key));
+    };
+
+    /** Focus left the scene: the loop lets go of every key */
+    const onFocusOut = (event: FocusEvent): void => {
+        if (!disposed && !(event.relatedTarget instanceof Node && element.contains(event.relatedTarget))) loop.releaseAll();
     };
 
     const fail = (reason: string, path = basePath): void => {
@@ -324,7 +377,7 @@ export default function controller({ element, store, basePath }: ControllerConte
         }
         const expanded = repeats.expand(nodes);
         syncRole(expanded);
-        scene.update(expanded, settings());
+        scene.update(loop.sync(expanded, read(`${basePath}.play`)), settings());
         // The camera controls give back a `tabindex` they set when they are turned off, which `keys` may still need
         syncKeys();
         readyAfterFrame();
@@ -443,6 +496,8 @@ export default function controller({ element, store, basePath }: ControllerConte
 
     //the element is in the page once the controller has returned, so the request bubbles to the dispatcher a microtask later
     element.addEventListener('keydown', onKeyDown, true);
+    element.addEventListener('keyup', onKeyUp, true);
+    element.addEventListener('focusout', onFocusOut);
     store.on(keysWatched, syncKeys);
 
     queueMicrotask(() => {
@@ -466,6 +521,9 @@ export default function controller({ element, store, basePath }: ControllerConte
         dispose: () => {
             disposed = true;
             element.removeEventListener('keydown', onKeyDown, true);
+            element.removeEventListener('keyup', onKeyUp, true);
+            element.removeEventListener('focusout', onFocusOut);
+            loop.dispose();
             store.off(keysWatched, syncKeys);
             store.off(watched, request);
             store.off(THEME_PATHS, onTheme);

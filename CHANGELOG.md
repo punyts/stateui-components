@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- **`scene3d` runs a game loop: `play`, and `velocity` and `body` on the 3D nodes** (docs/design/stateui-game-loop.md,
+  F1). While `play.running` is true the scene moves the nodes with a `body` by their `velocity`, the keys held on their
+  `control` and `play.gravity`, 60 steps a second on the animation frame, as boxes that stop, bounce or pass at solids of
+  the same parent and stay in their `bounds`. The renderer draws each frame; the store is written only at a contact (both
+  bodies' `position` and `velocity`, then the new event `contact` with `{ shape, key, with, side }`), at rest and when the
+  game stops, and a value logic sets while it runs is taken up. `PlayWorld` and `SceneLoop` in `src/shared/play/`.
+  Tests: `src/shared/play/play.test.ts`, `test/composites/scene3d-play.browser.test.ts`, `test/graphics3d.test.ts`.
 - **`toastRegion` shows `syncRequested`: content `_requestedText`** (docs/design/statenet-requests.md, R2). With no
   message of that key, `show` with `syncRequested` gives an `info` toast of `_requestedText` ("Sent for approval.", in
   de, es and fr too), which the runtime shows for a change that waits for the owner. Test:

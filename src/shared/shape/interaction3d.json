@@ -16,7 +16,19 @@
         },
         "step": { "type": "number", "validators": { "range": { "min": 0 } }, "default": 1 },
         "snap": { "type": "boolean", "default": false },
-        "gizmo": { "type": "string", "values": ["none", "move", "rotate", "scale"], "default": "none" }
+        "gizmo": { "type": "string", "values": ["none", "move", "rotate", "scale"], "default": "none" },
+        "velocity": { "type": "array", "validators": { "vector": 3 }, "default": [0, 0, 0] },
+        "body": {
+            "type": "object",
+            "validators": {
+                "fields": {
+                    "control": { "type": "object" },
+                    "falls": { "type": "boolean" },
+                    "solid": { "type": "boolean" },
+                    "onContact": { "type": "string", "values": ["stop", "bounce", "pass"] }
+                }
+            }
+        }
     },
-    "events": ["press", "hover", "dragEnd"]
+    "events": ["press", "hover", "dragEnd", "contact"]
 }

@@ -20,7 +20,7 @@ const NODES = {
 } as const;
 
 /** The properties every 3D node has: the partials `transform3d`, `interaction3d` and `motion3d` */
-const COMMON = ['position', 'rotation', 'scale', 'visible', 'interactive', '_label', 'transition', 'animate'];
+const COMMON = ['position', 'rotation', 'scale', 'visible', 'interactive', '_label', 'transition', 'animate', 'velocity', 'body'];
 
 const GLB = { id: '0b5e3c1a-4d2f-4e8a-9c7b-1f2e3d4c5b6a', name: 'chair.glb', size: 18_000, type: 'model/gltf-binary' };
 const PNG = { id: '7c6d5e4f-3a2b-4c1d-8e9f-0a1b2c3d4e5f', name: 'wood.png', size: 2_000, type: 'image/png' };
@@ -74,7 +74,7 @@ describe('scene3d and the 3D nodes in the catalog', () => {
         expect(entry.size).toBe('composite');
         expect(entry.category).toBe('graphics');
         expect(entry.purposes?.length).toBeGreaterThanOrEqual(3);
-        expect(entry.own).toEqual(['background', 'environment', 'fog', 'controls', 'keys', 'exportRequest', 'exported', '_title', '_description', '_fallback']);
+        expect(entry.own).toEqual(['background', 'environment', 'fog', 'controls', 'keys', 'play', 'exportRequest', 'exported', '_title', '_description', '_fallback']);
         expect(entry.shape.properties.environment?.values).toEqual(['none', 'studio', 'daylight', 'neutral']);
         expect(entry.shape.properties.controls?.values).toEqual(['none', 'orbit', 'pan']);
         expect(entry.shape.properties.controls?.default).toBe('none');
@@ -87,7 +87,7 @@ describe('scene3d and the 3D nodes in the catalog', () => {
         expect(entry.locales).toEqual(['de', 'es', 'fr']);
     });
 
-    it.each(Object.entries(NODES))('should hold %s as a shape of size %s with the shared 3D properties and the events press, hover and dragEnd', (name, size) => {
+    it.each(Object.entries(NODES))('should hold %s as a shape of size %s with the shared 3D properties and the events press, hover, dragEnd and contact', (name, size) => {
         // Arrange
         const entry = catalog.components.find((candidate) => candidate.name === name) as ShapeCatalogEntry;
 
@@ -96,7 +96,8 @@ describe('scene3d and the 3D nodes in the catalog', () => {
         expect(entry.size).toBe(size);
         expect(entry.category).toBe('graphics');
         expect(entry.purposes?.length).toBeGreaterThanOrEqual(3);
-        expect(entry.events).toEqual(['press', 'hover', 'dragEnd']);
+        expect(entry.events).toEqual(['press', 'hover', 'dragEnd', 'contact']);
+        expect(entry.shape.properties.body?.validators.fields?.onContact?.values).toEqual(['stop', 'bounce', 'pass']);
         expect(Object.keys(entry.shape.properties)).toEqual(expect.arrayContaining(COMMON));
         expect(entry.shape.properties.position?.validators).toEqual({ vector: 3 });
         expect(entry.shape.properties.animate?.validators.fields?.name?.values).toEqual(['spin', 'bob', 'pulse']);

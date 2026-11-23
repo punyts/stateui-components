@@ -176,7 +176,7 @@ export interface ReadScene3dTreeOptions {
 }
 
 /** The properties of the shared 3D partials (`transform3d`, `interaction3d`, `motion3d`) every 3D node merges in, and the shared `hidden` */
-const SHARED_PROPERTIES = ['position', 'rotation', 'scale', 'visible', 'interactive', '_label', 'transition', 'animate', 'hidden', 'draggable', 'bounds', 'step', 'snap', 'gizmo'] as const;
+const SHARED_PROPERTIES = ['position', 'rotation', 'scale', 'visible', 'interactive', '_label', 'transition', 'animate', 'hidden', 'draggable', 'bounds', 'step', 'snap', 'gizmo', 'velocity', 'body'] as const;
 
 /**
  * The properties each 3D node declares (its own and the partials'), `children` left out. A test compares it with the
