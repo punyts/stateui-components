@@ -43,6 +43,7 @@ function fakeChunk(create?: () => never): { scenes: FakeScene[]; remove: () => v
         return {
             update: (tree: readonly Scene3dTree[], settings?: Scene3dSettings) => void scene.updates.push({ tree, settings }),
             drawn: () => new Promise<void>((resolve) => waiting.push(resolve)),
+            info: () => ({ editing: 0 }),
             dispose: () => void (scene.disposed = true),
             hit: () => undefined,
             boundsOf: () => undefined,

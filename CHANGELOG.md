@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- **Moving a mesh's pick, with undo** (docs/design/stateui-mesh-editor.md, V3). The scene3d controller passes the
+  renderer an `onGeometry` that writes `<path>.geometry` once per moved pick and records it in `MeshHistory`
+  (`src/shared/scene3d/history.ts`, 100 edits, kept in the page). Ctrl+Z and Ctrl+Shift+Z (Cmd on macOS) undo and redo
+  while the scene has focus, skipping an edit whose mesh changed since. A scene with a mesh in edit mode is focusable.
+  Tests: `test/composites/scene3d-events.browser.test.ts`, `src/shared/scene3d/history.test.ts`.
 - **Picking a custom mesh's vertices, edges and faces** (docs/design/stateui-mesh-editor.md, V2). `mesh` gains
   `edit` (`{ mode, picked }`, `mode` `none`, `vertex`, `edge` or `face`). The scene3d controller passes the renderer
   an `onPick` that writes `<path>.edit.picked` once per press that changes it, through a `<-edit` link too. Tests:

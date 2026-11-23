@@ -583,4 +583,36 @@ describe.skipIf(script === '')('scene3d press and hover with the real 3D rendere
         // Assert: the front corner at the top right
         expect(mounted.store.get('$.data.ui.edit.picked')).toEqual([2]);
     });
+    it('should write the geometry once when the gizmo moves a pick, undo it with Ctrl+Z and redo it with Ctrl+Shift+Z (mesh editor, V3)', async () => {
+        // Arrange
+        remove = answerWith(chunk);
+        const mounted = await mountScene({ _title: 'Shaper', background: '#000000', environment: 'none', children: { eye, sun, shape: { ...cube(), gizmo: 'move', snap: true, step: 0.5, edit: { mode: 'vertex', picked: [2] } } } });
+        const { width, height } = canvasOf(mounted).getBoundingClientRect();
+        const [fx, fy] = cornerAt(mounted);
+        // 0.6 units along x at the corner (z = 1, 4 from the camera), snapped to 0.5
+        const reach = (0.6 * height) / (2 * 4 * Math.tan((25 * Math.PI) / 180)) / width;
+        const vertex = (): unknown => (mounted.store.get('$.app.children.shape.geometry.vertices') as number[][])[2]?.slice();
+        const set = vi.spyOn(mounted.store, 'set');
+
+        // Act
+        const start = fx + 30 / width;
+        pointer(mounted, 'pointerdown', start, fy, 1);
+        for (const step of [0.25, 0.5, 0.75, 1]) pointer(mounted, 'pointermove', start + reach * step, fy, 1);
+        pointer(mounted, 'pointerup', start + reach, fy, 0);
+        const moved = vertex();
+        await frame();
+        const box = boxOf(mounted);
+        press(box, 'z', { ctrlKey: true });
+        const undone = vertex();
+        press(box, 'z', { ctrlKey: true, shiftKey: true });
+
+        // Assert
+        expect(moved).toEqual([1.5, 1, 1]);
+        expect(undone).toEqual([1, 1, 1]);
+        expect(vertex()).toEqual([1.5, 1, 1]);
+        expect(set.mock.calls.filter(([path]) => String(path).endsWith('.geometry'))).toHaveLength(3);
+        expect(set.mock.calls.filter(([path]) => String(path).endsWith('.position'))).toEqual([]);
+        expect(box.getAttribute('tabindex')).toBe('0');
+        expect(box.getAttribute('aria-keyshortcuts')).toBe('Control+Z Control+Shift+Z');
+    });
 });

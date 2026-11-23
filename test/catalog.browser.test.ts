@@ -62,7 +62,7 @@ function rendered(root: ParentNode, tag: string): boolean {
  * the chunk but not what an example mounted in a full host does
  */
 const answerLoad3d = (event: Event): void => {
-    const scene = { update: () => undefined, drawn: () => Promise.resolve(), dispose: () => undefined };
+    const scene = { update: () => undefined, drawn: () => Promise.resolve(), info: () => ({ editing: 0 }), dispose: () => undefined };
     (event as CustomEvent<{ respond: (result: Promise<unknown>) => void }>).detail.respond(Promise.resolve({ version: '0.0.0', createScene3d: () => scene }));
 };
 

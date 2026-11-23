@@ -8,13 +8,14 @@ import { isReducedMotion } from '../shared/drawing/scheduler.js';
 import { requestScene3dChunk } from '../shared/scene3d/load.js';
 import { Repeat3dFeeder } from '../shared/scene3d/repeat.js';
 import { keyName, readSceneKeys, takenKey } from '../shared/scene3d/keys.js';
+import { MeshHistory, historyKey } from '../shared/scene3d/history.js';
 import { SceneExport } from '../shared/scene3d/glbExport.js';
 import { SceneLoop } from '../shared/play/loop.js';
 import type { PlayContact, Vec3 } from '../shared/play/play.js';
 import type { Load3dFailure, Scene3dChunk } from '../shared/scene3d/load.js';
 import { isScene3dError, readScene3dTree } from '../shared/scene3d/tree.js';
 import type { ColorResolver, Scene3d, Scene3dIssue, Scene3dSettings, Scene3dStatus } from '../shared/scene3d/tree.js';
-import type { CameraMove, MeshPick, NodeMove } from '../shared/scene3d/tree.js';
+import type { CameraMove, MeshGeometry, MeshPick, NodeMove } from '../shared/scene3d/tree.js';
 import type { Scene3dEvent, Scene3dTree } from '../shared/scene3d/tree.js';
 
 /** True when a node of the tree (a group's children and a repeat's copies included) has `interactive: true` (G3.8) */
@@ -132,7 +133,10 @@ const THEME_PATHS = ['$.theme.active', '$.theme.active.$all'];
  * `vertex`, `edge` or `face` shows its vertices and edges over it, the picked ones in a fixed pick colour. A press picks
  * the nearest element of the mode in front (a vertex within 10 pixels, an edge within 8, or the face hit), Shift adds or
  * takes one out, and a press beside it clears the pick; the controller writes `<path>.edit.picked` once per press. Such a
- * mesh raises no `press` and is not dragged
+ * mesh raises no `press` and is not dragged. With a pick, its `gizmo` moves, turns or scales the picked vertices about
+ * their centre on the mesh's own axes; on release the controller writes `<path>.geometry` once and keeps the edit, which
+ * Ctrl+Z and Ctrl+Shift+Z (Cmd on macOS) undo and redo while the scene has focus (`MeshHistory`, 100 edits; an edit
+ * whose mesh changed since is skipped). While a mesh is in edit mode the scene box is focusable
  *
  * Keys (docs/design/stateui-game-input.md): while `keys` lists key names (`SCENE_KEYS`), the scene box is focusable
  * (`tabindex="0"`, unless it had one) and names them in `aria-keyshortcuts`. A listed key pressed while focus is in the
@@ -159,6 +163,8 @@ export default function controller({ element, store, basePath }: ControllerConte
     const watched = SCENE_PROPERTIES.flatMap((name) => [`${basePath}.${name}`, `${basePath}.${name}.$all`]);
     const reported = new Set<string>();
     let scene: Scene3d | undefined;
+    /** The geometry edits made in this page, to undo (docs/design/stateui-mesh-editor.md, V3) */
+    const history = new MeshHistory();
     let disposed = false;
     let scheduled = false;
     let generation = 0;
@@ -247,12 +253,14 @@ export default function controller({ element, store, basePath }: ControllerConte
         const box = element.shadowRoot?.querySelector<HTMLElement>('.scene');
         if (disposed || !box) return;
         const keys = takenKeys();
-        if (keys.length > 0) {
+        // A mesh in edit mode takes the undo keys, so the scene takes focus
+        const editing = (scene?.info().editing ?? 0) > 0;
+        if (keys.length > 0 || editing) {
             if (!box.hasAttribute('tabindex')) {
                 box.setAttribute('tabindex', '0');
                 ownTabIndex = true;
             }
-            const names = keys.join(' ');
+            const names = [...keys, ...(editing ? ['Control+Z', 'Control+Shift+Z'] : [])].join(' ');
             if (box.getAttribute('aria-keyshortcuts') !== names) box.setAttribute('aria-keyshortcuts', names);
             return;
         }
@@ -267,6 +275,14 @@ export default function controller({ element, store, basePath }: ControllerConte
      */
     const onKeyDown = (event: KeyboardEvent): void => {
         if (disposed) return;
+        const step = historyKey(event);
+        if (step !== undefined && history.has(step)) {
+            event.preventDefault();
+            event.stopPropagation();
+            const done = step === 'undo' ? history.undo(read) : history.redo(read);
+            if (done !== undefined) store.set(done.path, done.value);
+            return;
+        }
         const origin = event.composedPath()[0];
         const name = takenKey(event, takenKeys(), origin instanceof HTMLButtonElement);
         if (name === undefined) return;
@@ -355,6 +371,14 @@ export default function controller({ element, store, basePath }: ControllerConte
     const onPick = (pick: MeshPick): void => {
         if (disposed) return;
         store.set(`${pick.path}.edit.picked`, pick.picked.map((element) => (typeof element === 'number' ? element : [...element])));
+    };
+
+    /** Writes a mesh's new `geometry` once per moved pick, and keeps the edit to undo; through a `<-geometry` link it reaches the link's target */
+    const onGeometry = (change: MeshGeometry): void => {
+        if (disposed) return;
+        const path = `${change.path}.geometry`;
+        history.record(path, read(path), change.geometry);
+        store.set(path, change.geometry);
     };
 
     /** Raises a node's `press`, `hover` or `dragEnd` on the element, for the dispatcher (`detail.shape` names the node, G3.8) */
@@ -498,7 +522,7 @@ export default function controller({ element, store, basePath }: ControllerConte
             return resolved.kind === 'color' ? resolved.computed : undefined;
         };
         try {
-            scene = chunk.createScene3d(surface, { resolveColor: resolve, reducedMotion: readReducedMotion(), onStatus, readFile, onIssue, onCamera, keyTarget: box, onEvent, onMove, onPick });
+            scene = chunk.createScene3d(surface, { resolveColor: resolve, reducedMotion: readReducedMotion(), onStatus, readFile, onIssue, onCamera, keyTarget: box, onEvent, onMove, onPick, onGeometry });
         } catch (error) {
             report(CATEGORY, 'Could not make the scene %s: %s', [basePath, isScene3dError(error) ? error.code : 'script_error']);
             showFallback(isScene3dError(error) ? error.code : `script_error: ${error instanceof Error ? error.message : String(error)}`);

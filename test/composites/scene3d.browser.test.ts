@@ -10,7 +10,7 @@ const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve,
 
 /** A fake of the renderer's createScene3d that draws nothing (the drawing is tested in scene3d-draw.browser.test.ts) */
 function fakeScene(): { create: () => unknown } {
-    return { create: () => ({ update: () => undefined, drawn: () => Promise.resolve(), dispose: () => undefined }) };
+    return { create: () => ({ update: () => undefined, drawn: () => Promise.resolve(), info: () => ({ editing: 0 }), dispose: () => undefined }) };
 }
 
 /** Answers `ui-load-3d` on the document with a fake chunk (the dispatcher's `load3d` hook is G3.3) until removed */

@@ -49,6 +49,7 @@ function fakeChunk(): { updates: (readonly Scene3dTree[])[]; remove: () => void 
     const createScene3d = (_host: Element, options?: Scene3dOptions) => ({
         update: (tree: readonly Scene3dTree[], _settings?: Scene3dSettings) => void updates.push(tree),
         drawn: () => Promise.resolve(),
+        info: () => ({ editing: 0 }),
         dispose: () => undefined,
         hit: () => undefined,
         boundsOf: () => undefined,

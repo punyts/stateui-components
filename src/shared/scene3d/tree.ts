@@ -107,6 +107,8 @@ export interface Scene3dOptions {
     readonly onMove?: (move: NodeMove) => void;
     /** Told a mesh's new `edit.picked` once per press that changes it (docs/design/stateui-mesh-editor.md); without it no mesh is in edit mode */
     readonly onPick?: (pick: MeshPick) => void;
+    /** Told a mesh's new `geometry` once when a gizmo that moved its pick is let go (docs/design/stateui-mesh-editor.md, V3) */
+    readonly onGeometry?: (change: MeshGeometry) => void;
     /** Reads the font family of a `label3d` (G3.6b); default the host's computed `font-family` (the page font) */
     readonly readFont?: () => string | undefined;
 }
@@ -116,6 +118,12 @@ export interface Scene3dOptions {
 export interface MeshPick {
     readonly path: string;
     readonly picked: readonly (number | readonly [number, number])[];
+}
+
+/** A mesh's new `geometry` with its moved vertices (`MeshGeometry` of `@punyts/stateui-3d`) */
+export interface MeshGeometry {
+    readonly path: string;
+    readonly geometry: JsonValue;
 }
 
 /** A node's new `position` (its parent's space), `rotation` (degrees) or `scale`, by its state path (`NodeMove` of `@punyts/stateui-3d`) */
@@ -152,6 +160,8 @@ export interface Scene3d {
     drawn(): Promise<void>;
     /** A binary glTF 2.0 file of what the scene draws now: its meshes and repeat instances with world matrices and plain materials */
     exportGlb(): ArrayBuffer;
+    /** What the scene holds now; this package reads only the meshes in edit mode (docs/design/stateui-mesh-editor.md) */
+    info(): { readonly editing: number };
     dispose(): void;
 }
 
