@@ -122,7 +122,8 @@ const THEME_PATHS = ['$.theme.active', '$.theme.active.$all'];
  * Drag (docs/design/stateui-3d-drag.md): an interactive node with `draggable` (`x`, `z` or `ground`) is dragged on its
  * parent's x-z plane in the renderer, kept in `bounds` and on multiples of `step` with `snap`; on release, or for an
  * arrow key on its proxy, the scene hands the new `position` to `onMove`, the controller writes it once to
- * `<path>.position`, and the scene raises `dragEnd` (`{ shape, key, point }`). A `repeat3d` copy is not dragged
+ * `<path>.position`, and the scene raises `dragEnd` (`{ shape, key, point }`). A node of a `repeat3d` copy writes the
+ * record field its `"<-position": "$row.<field>"` names (docs/design/stateui-3d-drag-copies.md)
  *
  * Keys (docs/design/stateui-game-input.md): while `keys` lists key names (`SCENE_KEYS`), the scene box is focusable
  * (`tabindex="0"`, unless it had one) and names them in `aria-keyshortcuts`. A listed key pressed while focus is in the
@@ -234,11 +235,13 @@ export default function controller({ element, store, basePath }: ControllerConte
 
     /**
      * Writes a dragged node's `position` once, at the end of its drag (docs/design/stateui-3d-drag.md): a `<-position`
-     * link on the node is an alias, so the write reaches the link's target. The scene raises `dragEnd` after it
+     * link on the node is an alias, so the write reaches the link's target. A node of a `repeat3d` copy is not a node of
+     * the store: its position goes to the record field its `$row` link names (docs/design/stateui-3d-drag-copies.md).
+     * The scene raises `dragEnd` after it
      */
     const onMove = (move: NodeMove): void => {
         if (disposed) return;
-        store.set(`${move.path}.position`, [...move.position]);
+        store.set(repeats.positionTarget(move.path) ?? `${move.path}.position`, [...move.position]);
     };
 
     /** Raises a node's `press`, `hover` or `dragEnd` on the element, for the dispatcher (`detail.shape` names the node, G3.8) */

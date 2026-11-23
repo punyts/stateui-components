@@ -1,7 +1,8 @@
 import { buildError } from '@punyts/stateui-app/core';
 import type { BuildError, JsonObject, JsonValue } from '@punyts/stateui-app/core';
-import { createRowBinder } from '../drawing/rows.js';
+import { createRowBinder, targetOf } from '../drawing/rows.js';
 import type { RowBinding } from '../drawing/rows.js';
+import type { ShapeTree } from '../drawing/tree.js';
 import { NODE3D_PROPERTIES, isNode3dKind } from './tree.js';
 import type { Node3dKind, Scene3dTree } from './tree.js';
 
@@ -119,12 +120,19 @@ export interface BoundRepeat3d {
     readonly binding: RowBinding;
     /** The shared properties the copies differ in (`mixedProperties`) */
     readonly mixed: readonly string[];
+    /** True when a draggable node of the row has no record field for its `position`, so it lost `draggable` */
+    readonly locked: boolean;
 }
 
 /** What `expandRepeats3d` gives: the nodes with each repeat's copies as its `children`, and each repeat's binding */
 export interface ExpandedScene3d {
     readonly nodes: readonly Scene3dTree[];
     readonly repeats: readonly BoundRepeat3d[];
+    /**
+     * The record path a draggable node of a copy writes its `position` to, by the node's path (the field its
+     * `"<-position": "$row.<field>"` names; docs/design/stateui-3d-drag-copies.md)
+     */
+    readonly targets: ReadonlyMap<string, string>;
 }
 
 export interface ExpandRepeats3dOptions {
@@ -145,14 +153,31 @@ interface BoundCopy {
     readonly children: readonly BoundCopy[];
 }
 
-/** A copy the row binder made, as a 3D node, with the nodes of a `group3d` row below it */
-const asNode = (copy: BoundCopy): Scene3dTree => ({
-    kind: copy.kind as Node3dKind,
-    key: copy.key,
-    path: copy.path,
-    properties: copy.properties,
-    children: copy.children.map(asNode)
-});
+/** Where the draggable nodes of a repeat's copies write: their record paths, and whether one had none */
+interface CopyDrag {
+    readonly targets: Map<string, string>;
+    locked: boolean;
+}
+
+/**
+ * A copy the row binder made, as a 3D node, with the nodes of a `group3d` row below it. With `drag`, a draggable node's
+ * record path for `position` goes to its `targets`; a draggable node with none (a literal `position`, or a link to
+ * anything but `$row`) is drawn without `draggable` and sets `locked`
+ */
+const asNode = (copy: BoundCopy, drag?: CopyDrag): Scene3dTree => {
+    let properties = copy.properties;
+    if (drag !== undefined && properties.draggable !== undefined) {
+        const target = targetOf(copy as unknown as ShapeTree, 'position');
+        if (target !== undefined) {
+            drag.targets.set(copy.path, target);
+        } else {
+            const { draggable: _, ...rest } = properties;
+            properties = rest;
+            drag.locked = true;
+        }
+    }
+    return { kind: copy.kind as Node3dKind, key: copy.key, path: copy.path, properties, children: copy.children.map((child) => asNode(child, drag)) };
+};
 
 /**
  * Binds every `repeat3d` of a 3D node tree (at the top or inside a `group3d`) with the row binder of the 2D repeats
@@ -166,6 +191,7 @@ const asNode = (copy: BoundCopy): Scene3dTree => ({
  */
 export function expandRepeats3d(nodes: readonly Scene3dTree[], options: ExpandRepeats3dOptions): ExpandedScene3d {
     const repeats: BoundRepeat3d[] = [];
+    const targets = new Map<string, string>();
     const visit = (node: Scene3dTree): Scene3dTree => {
         if (node.kind === 'repeat3d') {
             const binder = createRowBinder(options.read(`${node.path}.row`), {
@@ -179,8 +205,9 @@ export function expandRepeats3d(nodes: readonly Scene3dTree[], options: ExpandRe
                 properties: (kind: string) => (isNode3dKind(kind) ? NODE3D_PROPERTIES[kind] : [])
             });
             const binding = binder.bind(options.read(`${node.path}.records`));
-            const copies = binding.copies.map(asNode);
-            repeats.push({ path: node.path, binding, mixed: mixedProperties(copies) });
+            const drag: CopyDrag = { targets, locked: false };
+            const copies = binding.copies.map((copy) => asNode(copy, drag));
+            repeats.push({ path: node.path, binding, mixed: mixedProperties(copies), locked: drag.locked });
             return { ...node, children: copies };
         }
         if (node.kind !== 'group3d') return node;
@@ -192,7 +219,7 @@ export function expandRepeats3d(nodes: readonly Scene3dTree[], options: ExpandRe
         });
         return changed ? { ...node, children } : node;
     };
-    return { nodes: nodes.map(visit), repeats };
+    return { nodes: nodes.map(visit), repeats, targets };
 }
 
 /** What a `Repeat3dFeeder` is made with: how it reads the store, watches paths and reports */
@@ -218,15 +245,17 @@ export class Repeat3dFeeder {
     private watched: string[] = [];
     private readonly reported = new Set<string>();
     private readonly cut = new Set<string>();
+    private targets: ReadonlyMap<string, string> = new Map();
 
     constructor(private readonly options: Repeat3dFeederOptions) {}
 
     /** The tree with each repeat's copies, its watches and reports brought up to date */
     expand(nodes: readonly Scene3dTree[]): readonly Scene3dTree[] {
-        const { nodes: expanded, repeats } = expandRepeats3d(nodes, this.options);
+        const { nodes: expanded, repeats, targets } = expandRepeats3d(nodes, this.options);
+        this.targets = targets;
         const paths = new Set<string>();
         const stillCut = new Set<string>();
-        for (const { path, binding, mixed } of repeats) {
+        for (const { path, binding, mixed, locked } of repeats) {
             for (const watch of [binding.recordsPath, ...binding.watch]) paths.add(watch).add(`${watch}.$all`);
             for (const node of binding.unknown) {
                 const what = node.component === '' ? 'it is not a node' : `component "${node.component}" is neither a mesh nor a group3d`;
@@ -238,6 +267,10 @@ export class Repeat3dFeeder {
             for (const surplus of surplusParts(first === undefined ? undefined : asNode(first), `${path}.row`)) {
                 const reason = `a repeat3d's row draws at most ${REPEAT3D_MAX_PARTS} meshes, so this one is not drawn`;
                 this.once(`${surplus}\u0000parts`, buildError('SUI-RUN-3D', { component: 'repeat3d', path: surplus, reason, statePath: surplus }), surplus);
+            }
+            if (locked) {
+                const reason = `a draggable node of the row has a "position" not linked to a field of its record ($row), so its copies cannot be dragged`;
+                this.once(`${path}\u0000locked`, buildError('SUI-RUN-DRAW', { path, reason, statePath: path }), path);
             }
             for (const property of mixed) {
                 const reason = `the row's "${property}" differs between records, but every instance of a repeat3d shares it, so the first record's is drawn for all`;
@@ -257,6 +290,11 @@ export class Repeat3dFeeder {
         if (added.length > 0) this.options.on(added);
         this.watched = next;
         return expanded;
+    }
+
+    /** The record path a dragged node of a copy writes its `position` to, from the last `expand`; undefined for any other path */
+    positionTarget(path: string): string | undefined {
+        return this.targets.get(path);
     }
 
     /** Stops every watch */

@@ -433,4 +433,98 @@ describe.skipIf(script === '')('scene3d press and hover with the real 3D rendere
         expect(mounted.store.get(`${PIECE}.position`)).toEqual([-9, 0, 0]);
         expect(mounted.store.get('$.data.ui.hovered')).toBe('dropped');
     });
+
+    // Dragging repeat3d copies (docs/design/stateui-3d-drag-copies.md) ---------------------------------------------
+
+    /** A board with a repeat of draggable crates whose position links their record's `at`, the row's dragEnd recording the record */
+    const crates = (records: unknown[], row: Record<string, unknown> = {}) => ({
+        node: {
+            _title: 'Crates',
+            background: '#000000',
+            environment: 'none',
+            controls: 'orbit',
+            children: {
+                eye: { component: 'camera', position: [0, 8, 4], target: [0, 0, 0] },
+                sun,
+                crates: {
+                    component: 'repeat3d',
+                    '<-records': '$.data.crates',
+                    row: { component: 'mesh', geometry: { kind: 'box' }, '<-position': '$row.at', interactive: true, '<-_label': '$row.name', draggable: 'ground', on: { dragEnd: { command: 'set', target: '$.data.ui.part', value: '$row.name' } }, ...row }
+                }
+            }
+        },
+        options: { data: { ui: { part: '', hovered: '' }, crates: records } }
+    });
+
+    it('should drag a repeat3d copy, write its record field once on release, run the row dragEnd with $row at the record, and leave the other copy', async () => {
+        // Arrange: the left crate under the centre of the canvas
+        remove = answerWith(chunk);
+        const { node, options } = crates([
+            { id: 'left', at: [0, 0, 0], name: 'Left' },
+            { id: 'right', at: [-2.5, 0, 0], name: 'Right' }
+        ]);
+        const mounted = await mountScene(node, options);
+        const set = vi.spyOn(mounted.store, 'set');
+
+        // Act
+        pointer(mounted, 'pointerdown', 0.5, 0.5, 1);
+        for (const fx of [0.55, 0.6, 0.65, 0.7]) pointer(mounted, 'pointermove', fx, 0.5, 1);
+        await frame();
+        const during = set.mock.calls.length;
+        pointer(mounted, 'pointerup', 0.7, 0.5, 0);
+        await frame();
+
+        // Assert
+        const left = mounted.store.get('$.data.crates.0.at') as number[];
+        expect(during).toBe(0);
+        expect(set.mock.calls.filter(([path]) => path === '$.data.crates.0.at')).toHaveLength(1);
+        expect(left[0]).toBeGreaterThan(0.5);
+        expect(left[1]).toBe(0);
+        expect(left[2]).toBeCloseTo(0, 5);
+        expect(mounted.store.get('$.data.crates.1.at')).toEqual([-2.5, 0, 0]);
+        expect(mounted.store.get('$.data.ui.part')).toBe('Left');
+        expect(set.mock.calls.filter(([path]) => String(path).startsWith('$.app.children.eye'))).toEqual([]);
+    });
+
+    it('should put a dragged copy back and write nothing on Escape, and move a copy by its step for an arrow key on its proxy', async () => {
+        // Arrange
+        remove = answerWith(chunk);
+        const { node, options } = crates([{ id: 'left', at: [0, 0, 0], name: 'Left' }]);
+        const mounted = await mountScene(node, options);
+        const set = vi.spyOn(mounted.store, 'set');
+        pointer(mounted, 'pointerdown', 0.5, 0.5, 1);
+        for (const fx of [0.6, 0.7]) pointer(mounted, 'pointermove', fx, 0.5, 1);
+
+        // Act
+        press(canvasOf(mounted), 'Escape');
+        pointer(mounted, 'pointerup', 0.7, 0.5, 0);
+        await frame();
+        const writesAfterEscape = set.mock.calls.length;
+        press(proxyOf(mounted, `${ROOT}.crates.rows.left`) as HTMLButtonElement, 'ArrowRight');
+        await frame();
+
+        // Assert
+        expect(writesAfterEscape).toBe(0);
+        expect(mounted.store.get('$.data.crates.0.at')).toEqual([1, 0, 0]);
+    });
+
+    it('should not drag a copy whose position is not linked to its record, and report the repeat', async () => {
+        // Arrange
+        remove = answerWith(chunk);
+        const errors = vi.spyOn(report, 'error');
+        const { node, options } = crates([{ id: 'left', name: 'Left' }], { position: [0, 0, 0] });
+        delete (node.children.crates.row as Record<string, unknown>)['<-position'];
+        const mounted = await mountScene(node, options);
+        const set = vi.spyOn(mounted.store, 'set');
+
+        // Act
+        pointer(mounted, 'pointerdown', 0.5, 0.5, 1);
+        for (const fx of [0.6, 0.7]) pointer(mounted, 'pointermove', fx, 0.5, 1);
+        pointer(mounted, 'pointerup', 0.7, 0.5, 0);
+        await frame();
+
+        // Assert: the gesture turns the camera instead, as on any node that is not draggable
+        expect(set.mock.calls.filter(([path]) => String(path).startsWith('$.data.crates') || String(path).includes('.rows.'))).toEqual([]);
+        expect(errors.mock.calls.some(([, context]) => (context as { code?: string } | undefined)?.code === 'SUI-RUN-DRAW')).toBe(true);
+    });
 });

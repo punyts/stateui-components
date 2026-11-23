@@ -297,3 +297,56 @@ describe('a group3d row (docs/design/stateui-3d-group-rows.md)', () => {
         ]);
     });
 });
+
+describe('dragging copies (docs/design/stateui-3d-drag-copies.md)', () => {
+    const records = [
+        { id: 'a', at: [1, 0, 0], paint: { color: '#ff0000' }, name: 'Crate A' },
+        { id: 'b', at: [2, 0, 0], paint: { color: '#00ff00' }, name: 'Crate B' }
+    ];
+
+    it('should give each draggable copy the record path of its position, and keep it draggable', () => {
+        // Arrange
+        const store = sceneStore(records, { ...crate, draggable: 'ground' });
+
+        // Act
+        const { nodes, repeats, targets } = expand(store);
+
+        // Assert
+        expect([...targets]).toEqual([
+            [`${REPEAT}.rows.a`, '$.data.crates.0.at'],
+            [`${REPEAT}.rows.b`, '$.data.crates.1.at']
+        ]);
+        expect(nodes[0]?.children[0]?.properties.draggable).toBe('ground');
+        expect(repeats[0]?.locked).toBe(false);
+    });
+
+    it('should give a draggable node inside a group row the record path of its own position', () => {
+        // Arrange
+        const row = { component: 'group3d', '<-position': '$row.at', children: { head: { component: 'mesh', '<-position': '$row.head', draggable: 'x', interactive: true, _label: 'Head' } } };
+        const store = sceneStore([{ id: 'a', at: [0, 0, 0], head: [0, 1, 0] }], row);
+
+        // Act
+        const { targets } = expand(store);
+
+        // Assert
+        expect([...targets]).toEqual([[`${REPEAT}.rows.a.children.head`, '$.data.crates.0.head']]);
+    });
+
+    it('should draw a draggable copy whose position is not a $row link without draggable, and report the repeat once', () => {
+        // Arrange
+        const { '<-position': _, ...fixed } = crate;
+        const store = sceneStore(records, { ...fixed, position: [0, 0, 0], draggable: 'ground' });
+        const reports: [string, string][] = [];
+        const read = (path: string): JsonValue | undefined => store.get<JsonValue | undefined>(path) ?? undefined;
+        const feeder = new Repeat3dFeeder({ read, resolve: (path) => store.resolve(path), on: () => undefined, off: () => undefined, report: (error, path) => void reports.push([error.code, path]) });
+
+        // Act
+        const first = feeder.expand(readScene3dTree(read(CHILDREN), CHILDREN, { read }).nodes);
+        feeder.expand(readScene3dTree(read(CHILDREN), CHILDREN, { read }).nodes);
+
+        // Assert
+        expect(first[0]?.children[0]?.properties.draggable).toBeUndefined();
+        expect(feeder.positionTarget(`${REPEAT}.rows.a`)).toBeUndefined();
+        expect(reports).toEqual([['SUI-RUN-DRAW', REPEAT]]);
+    });
+});
