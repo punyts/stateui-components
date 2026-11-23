@@ -131,29 +131,80 @@
     touch-action: none;
 }
 
-/* physical edges: the resize grows the placement's width and height to the right and down in every direction of text */
-.edge-e {
+/* physical edges: a placement's x, y, width and height are physical, whatever the direction of text */
+.edge-n,
+.edge-s {
+    right: 12px;
+    left: 12px;
+    block-size: 6px;
+    cursor: ns-resize;
+}
+
+.edge-n {
     top: 0;
-    right: 0;
+}
+
+.edge-s {
+    bottom: 0;
+}
+
+.edge-e,
+.edge-w {
+    top: 12px;
     bottom: 12px;
     inline-size: 6px;
     cursor: ew-resize;
 }
 
-.edge-s {
-    right: 12px;
-    bottom: 0;
+.edge-e {
+    right: 0;
+}
+
+.edge-w {
     left: 0;
-    block-size: 6px;
-    cursor: ns-resize;
 }
 
 .corner {
-    right: 0;
-    bottom: 0;
     inline-size: 12px;
     block-size: 12px;
+}
+
+.corner-ne {
+    top: 0;
+    right: 0;
+    cursor: nesw-resize;
+}
+
+.corner-nw {
+    top: 0;
+    left: 0;
     cursor: nwse-resize;
+}
+
+.corner-se {
+    right: 0;
+    bottom: 0;
+    cursor: nwse-resize;
+}
+
+.corner-sw {
+    bottom: 0;
+    left: 0;
+    cursor: nesw-resize;
+}
+
+/* where a move dropped now would snap; placed by the controller from the window's own box */
+.snap-preview {
+    position: absolute;
+    box-sizing: border-box;
+    pointer-events: none;
+    background: color-mix(in srgb, var(--ui-color-focus) 14%, transparent);
+    border: 2px solid var(--ui-color-focus);
+    border-radius: var(--ui-window-radius);
+}
+
+.snap-preview[hidden] {
+    display: none;
 }
 
 :host(:not([resizable])) .grip,

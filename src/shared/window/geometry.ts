@@ -23,8 +23,10 @@ export interface MinSize {
     readonly height: number;
 }
 
-/** The edge a resize grip drags: the right edge, the bottom edge or the bottom-right corner */
-export type Edge = 'e' | 's' | 'se';
+/** The edge or corner a resize grip drags, by compass point: the north and west ones move the window as well */
+export type Edge = 'n' | 'e' | 's' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
+
+export const EDGES: readonly Edge[] = ['n', 'e', 's', 'w', 'ne', 'nw', 'se', 'sw'];
 
 /** How much of the title bar stays inside the layout box, in pixels */
 export const KEEP_VISIBLE = 48;
@@ -58,17 +60,53 @@ export function moveBy(start: Box, dx: number, dy: number, area: Area): Box {
 }
 
 /**
- * The box resized at `edge` by `dx` and `dy` from `start`: never under `min`, and never past the right or bottom edge
- * of the area (unless the window already reaches past it, when it keeps its size there)
+ * The box resized at `edge` by `dx` and `dy` from `start`: never under `min`, and never past an edge of the area
+ * (unless the window already reaches past it, when it keeps its size there). A north or west edge moves the window, so
+ * the opposite edge stays where it was
  */
 export function resizeBy(start: Box, edge: Edge, dx: number, dy: number, area: Area, min: MinSize): Box {
     const size = (from: number, delta: number, room: number, least: number): number =>
         Math.min(Math.max(from + delta, least), Math.max(room, from, least));
-    return {
-        ...start,
-        width: round(edge === 's' ? start.width : size(start.width, dx, area.width - start.x, min.width)),
-        height: round(edge === 'e' ? start.height : size(start.height, dy, area.height - start.y, min.height))
-    };
+    const right = start.x + start.width;
+    const bottom = start.y + start.height;
+    let { x, y, width, height } = start;
+    if (edge.includes('e')) width = size(start.width, dx, area.width - start.x, min.width);
+    if (edge.includes('w')) {
+        width = size(start.width, -dx, right - Math.min(0, start.x), min.width);
+        x = right - width;
+    }
+    if (edge.includes('s')) height = size(start.height, dy, area.height - start.y, min.height);
+    if (edge.includes('n')) {
+        height = size(start.height, -dy, bottom, min.height);
+        y = bottom - height;
+    }
+    return { x: round(x), y: round(y), width: round(width), height: round(height) };
+}
+
+/** What a move dropped at an edge of the area asks for: a half at a side, the whole area at the top */
+export type SnapTarget = 'snapLeft' | 'snapRight' | 'maximize';
+
+/** How close to an edge of the area the pointer has to be for a move to snap, in pixels */
+export const SNAP_ZONE = 12;
+
+/**
+ * Where a move snaps with the pointer at `px`, `py` (from the top left of the area): the left or right edge to that
+ * half, the top edge to the whole area, the sides first. Only to what the window's frame buttons offer (`shown`), so a
+ * window without a snap button never snaps
+ */
+export function snapTarget(px: number, py: number, area: Area, shown: Record<Control, boolean>): SnapTarget | undefined {
+    if (px <= SNAP_ZONE && shown.snapLeft) return 'snapLeft';
+    if (px >= area.width - SNAP_ZONE && shown.snapRight) return 'snapRight';
+    if (py <= SNAP_ZONE && shown.maximize) return 'maximize';
+    return undefined;
+}
+
+/** The box a snap target covers in the area, which the drag shows as a preview */
+export function snapBox(target: SnapTarget, area: Area): Box {
+    const half = Math.floor(area.width / 2);
+    if (target === 'snapLeft') return { x: 0, y: 0, width: half, height: area.height };
+    if (target === 'snapRight') return { x: half, y: 0, width: area.width - half, height: area.height };
+    return { x: 0, y: 0, width: area.width, height: area.height };
 }
 
 /** What an arrow key does: a move without Shift and a resize of the bottom-right corner with it; undefined for other keys */

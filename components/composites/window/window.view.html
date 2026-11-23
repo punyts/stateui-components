@@ -23,7 +23,13 @@
     <div class="body" layout-host="">
         <sui-node if="{{ $.children }}" repeat="{{ $k,$i,$v in $.children }}" key="{{ $k }}" state="{{ $v }}"></sui-node>
     </div>
+    <div class="grip edge-n" data-edge="n" aria-hidden="true" onpointerdown="{{ onGripPointerDown }}" onpointermove="{{ onPointerMove }}" onpointerup="{{ onPointerUp }}" onpointercancel="{{ onPointerCancel }}"></div>
     <div class="grip edge-e" data-edge="e" aria-hidden="true" onpointerdown="{{ onGripPointerDown }}" onpointermove="{{ onPointerMove }}" onpointerup="{{ onPointerUp }}" onpointercancel="{{ onPointerCancel }}"></div>
     <div class="grip edge-s" data-edge="s" aria-hidden="true" onpointerdown="{{ onGripPointerDown }}" onpointermove="{{ onPointerMove }}" onpointerup="{{ onPointerUp }}" onpointercancel="{{ onPointerCancel }}"></div>
-    <div class="grip corner" data-edge="se" aria-hidden="true" onpointerdown="{{ onGripPointerDown }}" onpointermove="{{ onPointerMove }}" onpointerup="{{ onPointerUp }}" onpointercancel="{{ onPointerCancel }}"></div>
+    <div class="grip edge-w" data-edge="w" aria-hidden="true" onpointerdown="{{ onGripPointerDown }}" onpointermove="{{ onPointerMove }}" onpointerup="{{ onPointerUp }}" onpointercancel="{{ onPointerCancel }}"></div>
+    <div class="grip corner corner-ne" data-edge="ne" aria-hidden="true" onpointerdown="{{ onGripPointerDown }}" onpointermove="{{ onPointerMove }}" onpointerup="{{ onPointerUp }}" onpointercancel="{{ onPointerCancel }}"></div>
+    <div class="grip corner corner-nw" data-edge="nw" aria-hidden="true" onpointerdown="{{ onGripPointerDown }}" onpointermove="{{ onPointerMove }}" onpointerup="{{ onPointerUp }}" onpointercancel="{{ onPointerCancel }}"></div>
+    <div class="grip corner corner-se" data-edge="se" aria-hidden="true" onpointerdown="{{ onGripPointerDown }}" onpointermove="{{ onPointerMove }}" onpointerup="{{ onPointerUp }}" onpointercancel="{{ onPointerCancel }}"></div>
+    <div class="grip corner corner-sw" data-edge="sw" aria-hidden="true" onpointerdown="{{ onGripPointerDown }}" onpointermove="{{ onPointerMove }}" onpointerup="{{ onPointerUp }}" onpointercancel="{{ onPointerCancel }}"></div>
 </section>
+<div class="snap-preview" aria-hidden="true" hidden=""></div>

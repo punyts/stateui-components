@@ -1,7 +1,7 @@
 import type { ControllerContext } from '@punyts/stateui';
 import { passedThreshold } from '../shared/drag/drag.js';
-import { isMovablePlacement, keyStep, moveBy, placementOf, resizeBy, sameBox, shownControls } from '../shared/window/geometry.js';
-import type { Area, Box, Control, Edge } from '../shared/window/geometry.js';
+import { EDGES, isMovablePlacement, keyStep, moveBy, placementOf, resizeBy, sameBox, shownControls, snapBox, snapTarget } from '../shared/window/geometry.js';
+import type { Area, Box, Control, Edge, SnapTarget } from '../shared/window/geometry.js';
 
 interface Drag {
     readonly kind: 'move' | 'resize';
@@ -12,10 +12,14 @@ interface Drag {
     readonly startY: number;
     readonly start: Box;
     readonly area: Area;
+    /** Where the area's content box starts on the page, to place the pointer in it */
+    readonly origin: { readonly left: number; readonly top: number };
     /** A move starts once the pointer has passed the drag threshold; a resize at once */
     started: boolean;
     /** The box the window shows now; written to `placement` once, on pointer up */
     live: Box;
+    /** The snap a move would ask for if dropped now: the pointer is at an edge of the area */
+    snap: SnapTarget | undefined;
 }
 
 const CONTROL_NAMES: readonly string[] = ['snapLeft', 'snapRight', 'minimize', 'maximize', 'close'];
@@ -23,11 +27,14 @@ const CONTROL_NAMES: readonly string[] = ['snapLeft', 'snapRight', 'minimize', '
 /**
  * A window on an `adhoc` layout. The frame buttons raise their events (`snapLeft`, `snapRight`, `minimize`, `maximize`,
  * `close`) and do nothing else: the app decides what they mean. A pointer down anywhere in the window, or focus moving
- * into it from outside, raises `activate` once. A drag of the title bar moves the window and a drag of the right edge,
- * bottom edge or corner resizes it; while it runs only the element's inline `translate`, `width` and `height` change,
+ * into it from outside, raises `activate` once. A drag of the title bar moves the window and a drag of any edge or corner
+ * resizes it (the north and west ones move it too); while it runs only the element's inline `translate`, `width` and
+ * `height` change,
  * and on release the new box is written to the node's `placement` as pixels (one write, which reaches the data when the
  * placement is linked) and one `move` or `resize` is raised with `{ x, y, width, height }`. Escape or a cancelled
- * pointer puts the window back. Arrow keys on the focused title move it by 16 px and Shift with an arrow resizes it,
+ * pointer puts the window back. A move dropped with the pointer at the left or right edge of the area raises `snapLeft`
+ * or `snapRight`, and at the top edge `maximize`, instead of writing, when that frame button shows; an outline shows
+ * where while the pointer is there. Arrow keys on the focused title move it by 16 px and Shift with an arrow resizes it,
  * writing at once; Enter and a double click on the title bar raise `maximize`. A window whose placement has no `x` and
  * `y` (one not in an `adhoc` layout), a `maximized` one, or one with `movable` or `resizable` off, is not dragged
  */
@@ -76,18 +83,36 @@ export default function controller({ element, store, basePath }: ControllerConte
     const canDrag = (kind: 'move' | 'resize'): boolean =>
         read('maximized') !== true && read(kind === 'move' ? 'movable' : 'resizable') !== false && isMovablePlacement(read('placement')) && layoutBox() !== null;
     /** The window's box and the area, measured: a placement in percent or any length becomes pixels */
-    const measure = (): { box: Box; area: Area } | undefined => {
+    const measure = (): { box: Box; area: Area; origin: { left: number; top: number } } | undefined => {
         const parent = layoutBox();
         if (!parent) return undefined;
         const outer = parent.getBoundingClientRect();
         const inner = host.getBoundingClientRect();
         return {
+            origin: { left: outer.left + parent.clientLeft, top: outer.top + parent.clientTop },
             box: { x: inner.left - outer.left - parent.clientLeft, y: inner.top - outer.top - parent.clientTop, width: inner.width, height: inner.height },
             area: { width: parent.clientWidth, height: parent.clientHeight }
         };
     };
     const minSize = () => ({ width: Number(read('minWidth')) || 0, height: Number(read('minHeight')) || 0 });
 
+    /** The outline of a snap, beside the window's frame and placed from the window's own box */
+    const preview = (): HTMLElement | null => host.shadowRoot?.querySelector<HTMLElement>('.snap-preview') ?? null;
+    const showSnap = (drag: Drag): void => {
+        const outline = preview();
+        if (!outline) return;
+        if (drag.snap === undefined) {
+            outline.hidden = true;
+            return;
+        }
+        const box = snapBox(drag.snap, drag.area);
+        outline.style.left = `${box.x - drag.live.x}px`;
+        outline.style.top = `${box.y - drag.live.y}px`;
+        outline.style.width = `${box.width}px`;
+        outline.style.height = `${box.height}px`;
+        outline.dataset['snap'] = drag.snap;
+        outline.hidden = false;
+    };
     /** Shows a box without writing it */
     const show = (drag: Drag, box: Box): void => {
         host.style.translate = `${box.x - drag.start.x}px ${box.y - drag.start.y}px`;
@@ -100,6 +125,11 @@ export default function controller({ element, store, basePath }: ControllerConte
         host.style.removeProperty('translate');
         host.style.removeProperty('width');
         host.style.removeProperty('height');
+        const outline = preview();
+        if (outline) {
+            outline.hidden = true;
+            delete outline.dataset['snap'];
+        }
     };
     /** Writes the box into the placement (keeping its other fields, such as `z`) and raises `move` or `resize` */
     const commit = (kind: 'move' | 'resize', box: Box): void => {
@@ -137,8 +167,10 @@ export default function controller({ element, store, basePath }: ControllerConte
             startY: event.clientY,
             start: measured.box,
             area: measured.area,
+            origin: measured.origin,
             started: kind === 'resize',
-            live: measured.box
+            live: measured.box,
+            snap: undefined
         };
         document.addEventListener('keydown', onEscape, true);
     };
@@ -184,7 +216,8 @@ export default function controller({ element, store, basePath }: ControllerConte
             begin(event, 'move', 'se');
         },
         onGripPointerDown: (event: PointerEvent) => {
-            const edge = (event.currentTarget as HTMLElement | null)?.dataset['edge'] as Edge | undefined;
+            const named = (event.currentTarget as HTMLElement | null)?.dataset['edge'];
+            const edge = EDGES.find((candidate) => candidate === named);
             if (event.button !== 0 || edge === undefined || !canDrag('resize')) return;
             event.preventDefault();
             begin(event, 'resize', edge);
@@ -199,10 +232,20 @@ export default function controller({ element, store, basePath }: ControllerConte
             const dy = event.clientY - drag.startY;
             drag.live = drag.kind === 'move' ? moveBy(drag.start, dx, dy, drag.area) : resizeBy(drag.start, drag.edge, dx, dy, drag.area, minSize());
             show(drag, drag.live);
+            if (drag.kind === 'move') {
+                drag.snap = snapTarget(event.clientX - drag.origin.left, event.clientY - drag.origin.top, drag.area, shownControls(read('controls')));
+                showSnap(drag);
+            }
         },
         onPointerUp: (event: PointerEvent) => {
             const ended = finish(event);
             if (!ended) return;
+            if (ended.snap !== undefined) {
+                // the app answers the snap as it answers the frame button; the window goes back until it does
+                unshow();
+                raise(ended.snap);
+                return;
+            }
             // the placement is written first, so the box never jumps back between the two
             if (ended.started && !sameBox(ended.live, ended.start)) commit(ended.kind, ended.live);
             unshow();

@@ -60,6 +60,13 @@ const dragFrom = async (target: HTMLElement, dx: number, dy: number, release = t
     if (release) pointer(target, 'pointerup', x + dx, y + dy);
     await flush();
 };
+/** Drags the title to a point of the layout box (from its top left), and releases there or not */
+const dragTitleTo = async (mounted: Mounted, px: number, py: number, release = true): Promise<void> => {
+    const title = part(win(mounted), '.title');
+    const rect = title.getBoundingClientRect();
+    const origin = area(mounted).getBoundingClientRect();
+    await dragFrom(title, origin.left + px - (rect.left + Math.min(20, rect.width / 2)), origin.top + py - (rect.top + rect.height / 2), release);
+};
 
 describe('window in Chromium', () => {
     beforeAll(async () => {
@@ -138,8 +145,8 @@ describe('window in Chromium', () => {
     });
 
     it('should keep the title bar inside the layout box', async () => {
-        // Arrange
-        const mounted = await mount();
+        // Arrange: no snap button and no maximize, so the edges do not snap
+        const mounted = await mount({ controls: ['close'] });
 
         // Act
         await dragFrom(part(win(mounted), '.title'), -1000, -500);
@@ -154,7 +161,7 @@ describe('window in Chromium', () => {
         const seen = events(win(mounted), ['resize']);
 
         // Act
-        await dragFrom(part(win(mounted), '.corner'), 50, 30);
+        await dragFrom(part(win(mounted), '.corner-se'), 50, 30);
         await dragFrom(part(win(mounted), '.edge-e'), -400, 0);
         await dragFrom(part(win(mounted), '.edge-s'), 0, 10);
 
@@ -165,6 +172,67 @@ describe('window in Chromium', () => {
             { x: 100, y: 50, width: 240, height: 240 }
         ]);
         expect(boxOf(mounted)).toEqual({ x: 100, y: 50, width: 240, height: 240 });
+    });
+
+    it('should resize from the west and north edges and corners, moving the window so the opposite edge stays', async () => {
+        // Arrange
+        const mounted = await mount();
+        const seen = events(win(mounted), ['resize']);
+
+        // Act
+        await dragFrom(part(win(mounted), '.edge-w'), -50, 0);
+        await dragFrom(part(win(mounted), '.corner-nw'), 30, 20);
+        await dragFrom(part(win(mounted), '.edge-n'), 0, -500);
+
+        // Assert
+        expect(seen.map((event) => event.detail)).toEqual([
+            { x: 50, y: 50, width: 350, height: 200 },
+            { x: 80, y: 70, width: 320, height: 180 },
+            { x: 80, y: 0, width: 320, height: 250 }
+        ]);
+        expect(mounted.store.get(PLACEMENT)).toEqual({ x: '80px', y: '0px', width: '320px', height: '250px', z: 2 });
+        expect(boxOf(mounted)).toEqual({ x: 80, y: 0, width: 320, height: 250 });
+    });
+
+    it('should show where a move would snap at an edge, and raise the snap on release instead of moving', async () => {
+        // Arrange
+        const mounted = await mount({ controls: ['snapLeft', 'snapRight', 'maximize', 'close'] });
+        const element = win(mounted);
+        const outline = part(element, '.snap-preview');
+        const seen = events(element, ['move', 'snapLeft', 'snapRight', 'maximize']);
+        const outlineBox = (): { x: number; y: number; width: number; height: number } => {
+            const outer = area(mounted).getBoundingClientRect();
+            const inner = outline.getBoundingClientRect();
+            return { x: Math.round(inner.left - outer.left), y: Math.round(inner.top - outer.top), width: Math.round(inner.width), height: Math.round(inner.height) };
+        };
+
+        // Act: held at the left edge, then dropped there; then at the right edge and the top
+        await dragTitleTo(mounted, 4, 300, false);
+        const held = { hidden: outline.hidden, box: outlineBox() };
+        pointer(part(element, '.title'), 'pointerup', 0, 0);
+        await flush();
+        await dragTitleTo(mounted, area(mounted).clientWidth - 3, 300);
+        await dragTitleTo(mounted, 450, 2);
+
+        // Assert
+        expect(held).toEqual({ hidden: false, box: { x: 0, y: 0, width: Math.floor(area(mounted).clientWidth / 2), height: 600 } });
+        expect(seen.map((event) => event.name)).toEqual(['snapLeft', 'snapRight', 'maximize']);
+        expect(outline.hidden).toBe(true);
+        expect(mounted.store.get(PLACEMENT)).toEqual({ x: '100px', y: '50px', width: '300px', height: '200px', z: 2 });
+        expect(element.style.translate).toBe('');
+    });
+
+    it('should snap only to what the frame buttons offer, and move as usual away from the edges', async () => {
+        // Arrange: the default buttons, which have no snap to a side
+        const mounted = await mount();
+        const seen = events(win(mounted), ['move', 'snapLeft', 'maximize']);
+
+        // Act
+        await dragTitleTo(mounted, 4, 300);
+        await dragTitleTo(mounted, 450, 2);
+
+        // Assert
+        expect(seen.map((event) => event.name)).toEqual(['move', 'maximize']);
     });
 
     it('should put the window back on Escape during a drag and write nothing', async () => {

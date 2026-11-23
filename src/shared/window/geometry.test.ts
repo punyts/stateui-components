@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { KEEP_VISIBLE, clampMove, isMovablePlacement, keyStep, moveBy, placementOf, resizeBy, sameBox, shownControls } from './geometry.js';
+import { KEEP_VISIBLE, SNAP_ZONE, clampMove, isMovablePlacement, keyStep, moveBy, placementOf, resizeBy, sameBox, shownControls, snapBox, snapTarget } from './geometry.js';
 
 const area = { width: 1000, height: 700 };
 const start = { x: 100, y: 50, width: 400, height: 300 };
@@ -42,6 +42,55 @@ describe('resizeBy', () => {
 
         expect(resizeBy(wide, 'e', 100, 0, area, min).width).toBe(400);
         expect(resizeBy(wide, 'e', -100, 0, area, min).width).toBe(300);
+    });
+});
+
+describe('resizeBy at the north and west edges', () => {
+    it('should move the window so the opposite edge stays where it was', () => {
+        expect(resizeBy(start, 'w', -50, 0, area, min)).toEqual({ x: 50, y: 50, width: 450, height: 300 });
+        expect(resizeBy(start, 'n', 0, 30, area, min)).toEqual({ x: 100, y: 80, width: 400, height: 270 });
+        expect(resizeBy(start, 'nw', 20, -20, area, min)).toEqual({ x: 120, y: 30, width: 380, height: 320 });
+        expect(resizeBy(start, 'ne', 20, -20, area, min)).toEqual({ x: 100, y: 30, width: 420, height: 320 });
+        expect(resizeBy(start, 'sw', -20, 20, area, min)).toEqual({ x: 80, y: 50, width: 420, height: 320 });
+    });
+
+    it('should stop at the left and top edges of the area, and at the minimum size', () => {
+        expect(resizeBy(start, 'nw', -5000, -5000, area, min)).toEqual({ x: 0, y: 0, width: 500, height: 350 });
+        expect(resizeBy(start, 'nw', 5000, 5000, area, min)).toEqual({ x: 260, y: 190, width: 240, height: 160 });
+    });
+
+    it('should let a window that already hangs off the left shrink there, but not grow', () => {
+        const off = { x: -100, y: 0, width: 400, height: 300 };
+
+        expect(resizeBy(off, 'w', -50, 0, area, min)).toEqual(off);
+        expect(resizeBy(off, 'w', 50, 0, area, min)).toEqual({ ...off, x: -50, width: 350 });
+    });
+});
+
+describe('snapTarget and snapBox', () => {
+    const all = shownControls(['snapLeft', 'snapRight', 'maximize']);
+
+    it('should snap at the sides to a half and at the top to the whole area, the sides first', () => {
+        expect(snapTarget(SNAP_ZONE, 300, area, all)).toBe('snapLeft');
+        expect(snapTarget(-40, 0, area, all)).toBe('snapLeft');
+        expect(snapTarget(1000 - SNAP_ZONE, 300, area, all)).toBe('snapRight');
+        expect(snapTarget(500, 0, area, all)).toBe('maximize');
+        expect(snapTarget(500, 300, area, all)).toBeUndefined();
+        expect(snapTarget(SNAP_ZONE + 1, SNAP_ZONE + 1, area, all)).toBeUndefined();
+    });
+
+    it('should snap only to what the frame buttons offer', () => {
+        expect(snapTarget(0, 300, area, shownControls(undefined))).toBeUndefined();
+        expect(snapTarget(0, 0, area, shownControls(undefined))).toBe('maximize');
+        expect(snapTarget(500, 0, area, shownControls(['close']))).toBeUndefined();
+    });
+
+    it('should cover the left half, the right half or the whole area', () => {
+        const odd = { width: 1001, height: 700 };
+
+        expect(snapBox('snapLeft', odd)).toEqual({ x: 0, y: 0, width: 500, height: 700 });
+        expect(snapBox('snapRight', odd)).toEqual({ x: 500, y: 0, width: 501, height: 700 });
+        expect(snapBox('maximize', odd)).toEqual({ x: 0, y: 0, width: 1001, height: 700 });
     });
 });
 
