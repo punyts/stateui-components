@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- **`mesh` takes custom geometry** (docs/design/stateui-mesh-editor.md, V1). `geometry.kind` gains `custom`, with
+  `vertices`, `faces` and `shading` (`flat` or `smooth`), checked by stateui-app's new `polyMesh` validator
+  (`SUI-STATE-INVALID`). The controller reports the renderer's `geometry` issues (a face it cannot draw, a map on a
+  custom geometry) as `SUI-RUN-3D` at the node's path. The game loop's box of a custom mesh is the box about its origin
+  that holds every vertex. Tests: `test/graphics3d.test.ts`, `src/shared/play/play.test.ts`,
+  `test/composites/scene3d-texture.browser.test.ts` ("custom square").
 - **A scene marks itself `data-play="moving"` while its game moves bodies** (docs/design/stateui-game-loop.md, F3).
   `SceneLoop` takes a `moving(on)` option, told once when it starts asking for frames and once when every body rests
   or the game stops; the `scene3d` controller sets and removes the attribute, so a check (stateui-mcp's `ui_interact`)

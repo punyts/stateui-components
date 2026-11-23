@@ -183,6 +183,27 @@ describe.skipIf(script === '')('scene3d mesh material.map from a picture file wi
         expect(read.reads).toEqual([IDS.gone, IDS.text]);
     });
 
+    it('should draw a custom square in its colour, read no map for it and report SUI-RUN-3D no_uvs at the mesh path (mesh editor, V1)', async () => {
+        // Arrange: the 2 by 2 plane made as a custom geometry of one face
+        remove = answerWith(chunk);
+        const spy = vi.spyOn(report, 'error').mockImplementation(() => undefined);
+        const read = fakeRead({ [IDS.plan]: await quadrants() });
+        const document = viewer({ map: reference(IDS.plan), color: '#00ffff' });
+        const wall = (document.children as Record<string, Record<string, unknown>>).wall as Record<string, unknown>;
+        wall.geometry = { kind: 'custom', vertices: [[-1, -1, 0], [1, -1, 0], [1, 1, 0], [-1, 1, 0]], faces: [[0, 1, 2, 3]] };
+
+        // Act
+        const mounted = mountComponent('scene3d', document, { hooks: { readFile: read.readFile } });
+        const { topLeft, bottomRight } = await ready(mounted);
+
+        // Assert
+        expectColor(topLeft, [0, 255, 255]);
+        expectColor(bottomRight, [0, 255, 255]);
+        expect(read.reads).toEqual([]);
+        expect(spy.mock.calls.map((call) => call[1])).toEqual([{ code: 'SUI-RUN-3D', path: WALL }]);
+        expect(String(spy.mock.calls[0]?.[0])).toContain('no_uvs');
+    });
+
     it('should refuse a map that is a GLB or a text file as SUI-STATE-INVALID and read nothing', () => {
         // Arrange
         remove = answerWith(chunk);

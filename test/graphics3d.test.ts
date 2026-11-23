@@ -112,7 +112,7 @@ describe('scene3d and the 3D nodes in the catalog', () => {
         expect(shape('camera').properties.target?.validators).toEqual({ vector: 3 });
         expect(shape('light').properties.intensity?.validators).toEqual({ range: { min: 0, max: 100 } });
         expect(shape('light').properties.kind?.values).toEqual(['ambient', 'directional', 'point', 'spot']);
-        expect(shape('mesh').properties.geometry?.validators.fields?.kind?.values).toEqual(['box', 'sphere', 'cylinder', 'cone', 'plane', 'torus', 'capsule']);
+        expect(shape('mesh').properties.geometry?.validators.fields?.kind?.values).toEqual(['box', 'sphere', 'cylinder', 'cone', 'plane', 'torus', 'capsule', 'custom']);
         expect(Object.keys(shape('mesh').properties.material?.validators.fields ?? {})).toEqual(['color', 'metalness', 'roughness', 'opacity', 'emissive', 'map']);
         expect(shape('mesh').properties.material?.validators.fields?.map?.validators?.fileRef).toEqual({ types: ['image/png', 'image/jpeg', 'image/gif', 'image/webp'] });
         expect(shape('model').properties.src?.validators).toEqual({ fileRef: { types: ['model/gltf-binary'] } });
@@ -232,6 +232,29 @@ describe('a 3D scene document', () => {
             ['SUI-STATE-INVALID', '$.app.children.sizeless.geometry'],
             ['SUI-STATE-INVALID', '$.app.children.muddy.material'],
             ['SUI-STATE-INVALID', '$.app.children.fader.animate']
+        ]);
+    });
+
+    it('should take a custom geometry of vertices and faces, and refuse one whose faces cannot be drawn (mesh editor, V1)', () => {
+        // Arrange
+        const vertices = [[0, 0, 0], [1, 0, 0], [0, 1, 0]];
+
+        // Act
+        const found = codesAt(
+            sceneDocument({
+                tri: { component: 'mesh', geometry: { kind: 'custom', vertices, faces: [[0, 1, 2]], shading: 'smooth' } },
+                empty: { component: 'mesh', geometry: { kind: 'custom', vertices: [], faces: [] } },
+                outside: { component: 'mesh', geometry: { kind: 'custom', vertices, faces: [[0, 1, 3]] } },
+                faceless: { component: 'mesh', geometry: { kind: 'custom', vertices } },
+                glossy: { component: 'mesh', geometry: { kind: 'custom', vertices, faces: [], shading: 'glossy' } }
+            })
+        );
+
+        // Assert
+        expect(found).toEqual([
+            ['SUI-STATE-INVALID', '$.app.children.outside.geometry'],
+            ['SUI-STATE-INVALID', '$.app.children.faceless.geometry'],
+            ['SUI-STATE-INVALID', '$.app.children.glossy.geometry']
         ]);
     });
 

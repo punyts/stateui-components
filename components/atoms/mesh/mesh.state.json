@@ -1,14 +1,14 @@
 {
-    "summary": "A primitive 3D object (box, sphere, cylinder, cone, plane, torus, capsule) with a material",
+    "summary": "A 3D object with a material: a primitive (box, sphere, cylinder, cone, plane, torus, capsule) or custom faces",
     "category": "graphics",
-    "purposes": ["draw a box or sphere in 3D", "place a primitive 3D object", "draw a floor or plane in a 3D scene", "make a pressable 3D hotspot"],
+    "purposes": ["draw a box or sphere in 3D", "place a primitive 3D object", "draw a floor or plane in a 3D scene", "make a pressable 3D hotspot", "model a custom 3D shape from vertices and faces"],
     "includes": ["transform3d", "interaction3d", "motion3d"],
     "properties": {
         "geometry": {
             "type": "object",
             "validators": {
                 "fields": {
-                    "kind": { "type": "string", "required": true, "values": ["box", "sphere", "cylinder", "cone", "plane", "torus", "capsule"] },
+                    "kind": { "type": "string", "required": true, "values": ["box", "sphere", "cylinder", "cone", "plane", "torus", "capsule", "custom"] },
                     "width": { "type": "number", "validators": { "range": { "min": 0 } } },
                     "height": { "type": "number", "validators": { "range": { "min": 0 } } },
                     "depth": { "type": "number", "validators": { "range": { "min": 0 } } },
@@ -16,8 +16,12 @@
                     "radiusTop": { "type": "number", "validators": { "range": { "min": 0 } } },
                     "radiusBottom": { "type": "number", "validators": { "range": { "min": 0 } } },
                     "tube": { "type": "number", "validators": { "range": { "min": 0 } } },
-                    "segments": { "type": "number", "validators": { "range": { "min": 3, "max": 128 } } }
-                }
+                    "segments": { "type": "number", "validators": { "range": { "min": 3, "max": 128 } } },
+                    "vertices": { "type": "array" },
+                    "faces": { "type": "array" },
+                    "shading": { "type": "string", "values": ["flat", "smooth"] }
+                },
+                "polyMesh": true
             }
         },
         "material": {

@@ -71,10 +71,12 @@ export type Scene3dStatus = 'pending' | 'lost' | 'failed';
  * cannot be had (`no_file` for an empty `src`, else the read's code), reported as `SUI-RUN-FILE`; `model` when its bytes
  * cannot be drawn (`not_glb`, `draco`, `meshopt`, `ktx2`, `external_uri`, `invalid_glb`, with what in the file it is
  * about), reported as `SUI-RUN-3D`. A `mesh`'s `material.map` (G3.7c) is a `file` issue too (the read's code,
- * `not_an_image` or `unsupported_type`), with `node` `mesh`, or `repeat3d` at the repeat's path
+ * `not_an_image` or `unsupported_type`), with `node` `mesh`, or `repeat3d` at the repeat's path. `geometry` when a
+ * `custom` geometry has a face that cannot be drawn (`bad_face: <index>`) or a `material.map` (`no_uvs`), reported as
+ * `SUI-RUN-3D`
  */
 export interface Scene3dIssue {
-    readonly kind: 'file' | 'model';
+    readonly kind: 'file' | 'model' | 'geometry';
     readonly path: string;
     readonly reason: string;
     /** The kind of node it is about; unset for a `model` */

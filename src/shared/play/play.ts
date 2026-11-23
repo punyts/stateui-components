@@ -161,7 +161,8 @@ const size = (geometry: Record<string, JsonValue>, name: string, fallback: numbe
 /**
  * Half the size of a mesh's geometry along its own x, y and z, with the defaults the renderer draws
  * (`geometryParams` of `@punyts/stateui-3d`): a box of its width, height and depth, a sphere of its radius, a plane flat
- * in x-y (no depth), a torus around z. A value that names no kind is a unit box, as it is drawn
+ * in x-y (no depth), a torus around z, a `custom` geometry the box about its origin that holds all its vertices. A value
+ * that names no kind is a unit box, as it is drawn
  */
 export function geometryHalf(value: JsonValue | undefined): Vec3 {
     const geometry = isRecord(value) ? value : {};
@@ -189,6 +190,17 @@ export function geometryHalf(value: JsonValue | undefined): Vec3 {
         case 'capsule': {
             const radius = size(geometry, 'radius', 0.25);
             return [radius, size(geometry, 'height', 0.5) / 2 + radius, radius];
+        }
+        case 'custom': {
+            const half: Vec3 = [0, 0, 0];
+            for (const vertex of Array.isArray(geometry.vertices) ? geometry.vertices : []) {
+                if (!Array.isArray(vertex)) continue;
+                for (let axis = 0; axis < 3; axis += 1) {
+                    const at = vertex[axis];
+                    if (finite(at)) half[axis] = Math.max(half[axis] as number, Math.abs(at));
+                }
+            }
+            return half;
         }
         default:
             return [size(geometry, 'width', 1) / 2, size(geometry, 'height', 1) / 2, size(geometry, 'depth', 1) / 2];

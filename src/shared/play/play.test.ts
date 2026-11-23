@@ -45,6 +45,8 @@ describe('reading a body', () => {
         expect(geometryHalf({ kind: 'plane', width: 10, height: 8 })).toEqual([5, 4, 0]);
         expect(geometryHalf({ kind: 'capsule' })).toEqual([0.25, 0.5, 0.25]);
         expect(geometryHalf(undefined)).toEqual([0.5, 0.5, 0.5]);
+        // A custom geometry is the box about its origin that holds every vertex
+        expect(geometryHalf({ kind: 'custom', vertices: [[-1, 0, 0.5], [2, 3, -0.25], 'x'], faces: [] })).toEqual([2, 3, 0.5]);
         // A plane turned flat (-90° about x) is a floor: wide in x and z, no height
         expect(turnedHalf([5, 4, 0], [1, 1, 1], [-90, 0, 0])).toEqual([5, 0, 4]);
         expect(turnedHalf([1, 2, 3], [2, 1, 1], [0, 0, 0])).toEqual([2, 2, 3]);
