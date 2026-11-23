@@ -258,6 +258,27 @@ describe('a 3D scene document', () => {
         ]);
     });
 
+    it('should take an edit mode and a pick on a mesh, and refuse a mode it does not know (mesh editor, V2)', () => {
+        // Arrange
+        const geometry = { kind: 'custom', vertices: [[0, 0, 0], [1, 0, 0], [0, 1, 0]], faces: [[0, 1, 2]] };
+
+        // Act
+        const found = codesAt(
+            sceneDocument({
+                picking: { component: 'mesh', geometry, edit: { mode: 'edge', picked: [[0, 1]] } },
+                resting: { component: 'mesh', geometry, edit: { mode: 'none' } },
+                carving: { component: 'mesh', geometry, edit: { mode: 'carve' } },
+                listless: { component: 'mesh', geometry, edit: { mode: 'vertex', picked: 2 } }
+            })
+        );
+
+        // Assert
+        expect(found).toEqual([
+            ['SUI-STATE-INVALID', '$.app.children.carving.edit'],
+            ['SUI-STATE-INVALID', '$.app.children.listless.edit']
+        ]);
+    });
+
     it('should take a GLB file for model.src and an image file for material.map, and refuse the other way round', () => {
         // Act
         const found = codesAt(

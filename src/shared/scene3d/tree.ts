@@ -105,11 +105,19 @@ export interface Scene3dOptions {
      * no gizmo is shown
      */
     readonly onMove?: (move: NodeMove) => void;
+    /** Told a mesh's new `edit.picked` once per press that changes it (docs/design/stateui-mesh-editor.md); without it no mesh is in edit mode */
+    readonly onPick?: (pick: MeshPick) => void;
     /** Reads the font family of a `label3d` (G3.6b); default the host's computed `font-family` (the page font) */
     readonly readFont?: () => string | undefined;
 }
 
 /**
+/** A mesh's new pick (`MeshPick` of `@punyts/stateui-3d`): the vertex or face indices, or the edges as `[a, b]`, of its `edit.mode` */
+export interface MeshPick {
+    readonly path: string;
+    readonly picked: readonly (number | readonly [number, number])[];
+}
+
 /** A node's new `position` (its parent's space), `rotation` (degrees) or `scale`, by its state path (`NodeMove` of `@punyts/stateui-3d`) */
 export interface NodeMove {
     readonly path: string;
@@ -189,7 +197,7 @@ export const NODE3D_PROPERTIES: Readonly<Record<Node3dKind, readonly string[]>> 
     const own: Record<Node3dKind, readonly string[]> = {
         camera: ['kind', 'target', 'fov', 'active'],
         light: ['kind', 'color', 'intensity', 'target', 'shadows'],
-        mesh: ['geometry', 'material', 'castShadow', 'receiveShadow'],
+        mesh: ['geometry', 'material', 'castShadow', 'receiveShadow', 'edit'],
         model: ['src', 'animation', 'playing'],
         group3d: [],
         repeat3d: ['records'],

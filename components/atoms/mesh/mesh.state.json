@@ -37,6 +37,15 @@
                 }
             }
         },
+        "edit": {
+            "type": "object",
+            "validators": {
+                "fields": {
+                    "mode": { "type": "string", "values": ["none", "vertex", "edge", "face"] },
+                    "picked": { "type": "array" }
+                }
+            }
+        },
         "castShadow": { "type": "boolean", "default": false },
         "receiveShadow": { "type": "boolean", "default": false }
     }

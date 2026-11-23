@@ -14,7 +14,7 @@ import type { PlayContact, Vec3 } from '../shared/play/play.js';
 import type { Load3dFailure, Scene3dChunk } from '../shared/scene3d/load.js';
 import { isScene3dError, readScene3dTree } from '../shared/scene3d/tree.js';
 import type { ColorResolver, Scene3d, Scene3dIssue, Scene3dSettings, Scene3dStatus } from '../shared/scene3d/tree.js';
-import type { CameraMove, NodeMove } from '../shared/scene3d/tree.js';
+import type { CameraMove, MeshPick, NodeMove } from '../shared/scene3d/tree.js';
 import type { Scene3dEvent, Scene3dTree } from '../shared/scene3d/tree.js';
 
 /** True when a node of the tree (a group's children and a repeat's copies included) has `interactive: true` (G3.8) */
@@ -127,6 +127,12 @@ const THEME_PATHS = ['$.theme.active', '$.theme.active.$all'];
  * arrow key on its proxy, the scene hands the new `position` to `onMove`, the controller writes it once to
  * `<path>.position`, and the scene raises `dragEnd` (`{ shape, key, point }`). A node of a `repeat3d` copy writes the
  * record field its `"<-position": "$row.<field>"` names (docs/design/stateui-3d-drag-copies.md)
+ *
+ * Editing a mesh (docs/design/stateui-mesh-editor.md): an interactive `mesh` of `custom` geometry whose `edit.mode` is
+ * `vertex`, `edge` or `face` shows its vertices and edges over it, the picked ones in a fixed pick colour. A press picks
+ * the nearest element of the mode in front (a vertex within 10 pixels, an edge within 8, or the face hit), Shift adds or
+ * takes one out, and a press beside it clears the pick; the controller writes `<path>.edit.picked` once per press. Such a
+ * mesh raises no `press` and is not dragged
  *
  * Keys (docs/design/stateui-game-input.md): while `keys` lists key names (`SCENE_KEYS`), the scene box is focusable
  * (`tabindex="0"`, unless it had one) and names them in `aria-keyshortcuts`. A listed key pressed while focus is in the
@@ -345,6 +351,12 @@ export default function controller({ element, store, basePath }: ControllerConte
         store.set(repeats.writeTarget(path) ?? path, [...move.value]);
     };
 
+    /** Writes a mesh's new `edit.picked` once per press that changes it; through a `<-edit` link it reaches the link's target */
+    const onPick = (pick: MeshPick): void => {
+        if (disposed) return;
+        store.set(`${pick.path}.edit.picked`, pick.picked.map((element) => (typeof element === 'number' ? element : [...element])));
+    };
+
     /** Raises a node's `press`, `hover` or `dragEnd` on the element, for the dispatcher (`detail.shape` names the node, G3.8) */
     const onEvent = (event: Scene3dEvent): void => {
         if (disposed) return;
@@ -486,7 +498,7 @@ export default function controller({ element, store, basePath }: ControllerConte
             return resolved.kind === 'color' ? resolved.computed : undefined;
         };
         try {
-            scene = chunk.createScene3d(surface, { resolveColor: resolve, reducedMotion: readReducedMotion(), onStatus, readFile, onIssue, onCamera, keyTarget: box, onEvent, onMove });
+            scene = chunk.createScene3d(surface, { resolveColor: resolve, reducedMotion: readReducedMotion(), onStatus, readFile, onIssue, onCamera, keyTarget: box, onEvent, onMove, onPick });
         } catch (error) {
             report(CATEGORY, 'Could not make the scene %s: %s', [basePath, isScene3dError(error) ? error.code : 'script_error']);
             showFallback(isScene3dError(error) ? error.code : `script_error: ${error instanceof Error ? error.message : String(error)}`);

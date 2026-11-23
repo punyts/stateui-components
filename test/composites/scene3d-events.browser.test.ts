@@ -65,6 +65,24 @@ const pressOn = (part: string) => ({ press: { command: 'set', target: '$.data.ui
 const eye = { component: 'camera', position: [0, 0, 5], target: [0, 0, 0] };
 const sun = { component: 'light', kind: 'directional', position: [0, 0, 10], target: [0, 0, 0] };
 
+/** A cube of side 2 about the origin as custom geometry: vertices 0 to 3 its front (z = 1), the front face first */
+const cube = (): Record<string, unknown> => ({
+    component: 'mesh',
+    interactive: true,
+    geometry: {
+        kind: 'custom',
+        vertices: [[-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1], [-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1]],
+        faces: [[0, 1, 2, 3], [5, 4, 7, 6], [4, 0, 3, 7], [1, 5, 6, 2], [3, 2, 6, 7], [4, 5, 1, 0]]
+    }
+});
+
+/** Where the cube's front top-right corner (1, 1, 1) is drawn, as fractions of the canvas, seen by the camera at z = 5 (fov 50) */
+function cornerAt(mounted: MountedComponent): [number, number] {
+    const { width, height } = canvasOf(mounted).getBoundingClientRect();
+    const half = 4 * Math.tan((25 * Math.PI) / 180);
+    return [0.5 + 0.5 / (half * (width / height)), 0.5 - 0.5 / half];
+}
+
 /** A titled scene with an interactive box at the origin and a plain box to its right, each with a press entry */
 const parts = (own: Record<string, unknown> = {}): NodeState => ({
     _title: 'Parts',
@@ -526,5 +544,43 @@ describe.skipIf(script === '')('scene3d press and hover with the real 3D rendere
         // Assert: the gesture turns the camera instead, as on any node that is not draggable
         expect(set.mock.calls.filter(([path]) => String(path).startsWith('$.data.crates') || String(path).includes('.rows.'))).toEqual([]);
         expect(errors.mock.calls.some(([, context]) => (context as { code?: string } | undefined)?.code === 'SUI-RUN-DRAW')).toBe(true);
+    });
+    it('should write the picked face of a custom mesh in edit mode once per press, raise no press, and clear it for a press beside it (mesh editor, V2)', async () => {
+        // Arrange
+        remove = answerWith(chunk);
+        const mounted = await mountScene({ _title: 'Shaper', background: '#000000', environment: 'none', children: { eye, sun, shape: { ...cube(), edit: { mode: 'face', picked: [] }, on: pressOn('shape') } } });
+        const set = vi.spyOn(mounted.store, 'set');
+
+        // Act
+        pointer(mounted, 'pointerdown', 0.5, 0.5, 1);
+        pointer(mounted, 'pointerup', 0.5, 0.5, 0);
+        const picked = [...(mounted.store.get('$.app.children.shape.edit.picked') as number[])];
+        await frame();
+        pointer(mounted, 'pointerdown', 0.02, 0.02, 1);
+        pointer(mounted, 'pointerup', 0.02, 0.02, 0);
+
+        // Assert: the front face is the first
+        expect(picked).toEqual([0]);
+        expect(mounted.store.get('$.app.children.shape.edit.picked')).toEqual([]);
+        expect(set.mock.calls.filter(([path]) => String(path).endsWith('.edit.picked'))).toHaveLength(2);
+        expect(mounted.raised.filter((event) => event.type === 'press')).toEqual([]);
+        expect(mounted.store.get('$.data.ui.part')).toBe('');
+    });
+
+    it('should write the pick through a linked edit to the state it names', async () => {
+        // Arrange
+        remove = answerWith(chunk);
+        const mounted = await mountScene(
+            { _title: 'Shaper', background: '#000000', environment: 'none', children: { eye, sun, shape: { ...cube(), '<-edit': '$.data.ui.edit' } } },
+            { data: { ui: { part: '', hovered: '', edit: { mode: 'vertex', picked: [] } } } }
+        );
+        const corner = cornerAt(mounted);
+
+        // Act
+        pointer(mounted, 'pointerdown', corner[0], corner[1], 1);
+        pointer(mounted, 'pointerup', corner[0], corner[1], 0);
+
+        // Assert: the front corner at the top right
+        expect(mounted.store.get('$.data.ui.edit.picked')).toEqual([2]);
     });
 });

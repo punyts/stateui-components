@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- **Picking a custom mesh's vertices, edges and faces** (docs/design/stateui-mesh-editor.md, V2). `mesh` gains
+  `edit` (`{ mode, picked }`, `mode` `none`, `vertex`, `edge` or `face`). The scene3d controller passes the renderer
+  an `onPick` that writes `<path>.edit.picked` once per press that changes it, through a `<-edit` link too. Tests:
+  `test/composites/scene3d-events.browser.test.ts`, `test/graphics3d.test.ts`.
 - **`mesh` takes custom geometry** (docs/design/stateui-mesh-editor.md, V1). `geometry.kind` gains `custom`, with
   `vertices`, `faces` and `shading` (`flat` or `smooth`), checked by stateui-app's new `polyMesh` validator
   (`SUI-STATE-INVALID`). The controller reports the renderer's `geometry` issues (a face it cannot draw, a map on a
