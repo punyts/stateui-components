@@ -64,7 +64,7 @@ const validate = (document: Record<string, unknown>) => validateDocument(documen
 const codesAt = (document: Record<string, unknown>): string[][] => validate(document).errors.map((error) => [error.code, error.statePath ?? '']);
 
 describe('scene3d and the 3D nodes in the catalog', () => {
-    it('should hold scene3d as a root composite with its properties, its key event, tokens and German title', () => {
+    it('should hold scene3d as a root composite with its properties, its key and exported events, tokens and German title', () => {
         // Arrange
         const entry = catalog.components.find((candidate) => candidate.name === 'scene3d') as RootCatalogEntry;
 
@@ -74,12 +74,13 @@ describe('scene3d and the 3D nodes in the catalog', () => {
         expect(entry.size).toBe('composite');
         expect(entry.category).toBe('graphics');
         expect(entry.purposes?.length).toBeGreaterThanOrEqual(3);
-        expect(entry.own).toEqual(['background', 'environment', 'fog', 'controls', 'keys', '_title', '_description', '_fallback']);
+        expect(entry.own).toEqual(['background', 'environment', 'fog', 'controls', 'keys', 'exportRequest', 'exported', '_title', '_description', '_fallback']);
         expect(entry.shape.properties.environment?.values).toEqual(['none', 'studio', 'daylight', 'neutral']);
         expect(entry.shape.properties.controls?.values).toEqual(['none', 'orbit', 'pan']);
         expect(entry.shape.properties.controls?.default).toBe('none');
         expect(entry.shape.properties.keys?.default).toEqual([]);
-        expect(entry.shape.events).toEqual(['key']);
+        expect(entry.shape.events).toEqual(['key', 'exported']);
+        expect(entry.shape.properties.exported?.default).toEqual({});
         expect(Object.keys(entry.shape.properties.fog?.validators.fields ?? {})).toEqual(['color', 'near', 'far']);
         expect(entry.shape.childComponents).toEqual(Object.keys(NODES));
         expect((entry.tokens ?? []).map((token) => token.path)).toEqual(['scene3d.background', 'scene3d.ambient', 'scene3d.height']);

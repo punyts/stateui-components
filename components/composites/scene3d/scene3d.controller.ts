@@ -8,6 +8,7 @@ import { isReducedMotion } from '../shared/drawing/scheduler.js';
 import { requestScene3dChunk } from '../shared/scene3d/load.js';
 import { Repeat3dFeeder } from '../shared/scene3d/repeat.js';
 import { readSceneKeys, takenKey } from '../shared/scene3d/keys.js';
+import { SceneExport } from '../shared/scene3d/glbExport.js';
 import type { Load3dFailure, Scene3dChunk } from '../shared/scene3d/load.js';
 import { isScene3dError, readScene3dTree } from '../shared/scene3d/tree.js';
 import type { ColorResolver, Scene3d, Scene3dIssue, Scene3dSettings, Scene3dStatus } from '../shared/scene3d/tree.js';
@@ -150,6 +151,38 @@ export default function controller({ element, store, basePath }: ControllerConte
     const keysWatched = [keysPath, `${keysPath}.$all`];
     /** True when the controller gave the scene box its `tabindex` for `keys` */
     let ownTabIndex = false;
+    const exportWatched = [`${basePath}.exportRequest`, `${basePath}.exportRequest.$all`];
+
+    /** Raises `ui-file-transfer`; the promise rejects with `offline` when nothing answers (the host has no hook) */
+    const hand = (file: File, signal: AbortSignal): Promise<unknown> =>
+        new Promise((resolve, reject) => {
+            let answered = false;
+            const detail = {
+                file,
+                signal,
+                respond: (result: Promise<unknown>): void => {
+                    answered = true;
+                    result.then(resolve, reject);
+                }
+            };
+            element.dispatchEvent(new CustomEvent('ui-file-transfer', { detail, bubbles: true, composed: true }));
+            if (!answered) reject({ code: 'offline' });
+        });
+
+    /** The GLB export of `exportRequest` (docs/design/stateui-3d-glb-export.md) */
+    const exporter = new SceneExport({
+        request: () => read(`${basePath}.exportRequest`),
+        exported: () => read(`${basePath}.exported`),
+        title: () => read(`${basePath}._title`),
+        scene: () => (disposed ? undefined : scene),
+        hand,
+        write: (value) => store.set(`${basePath}.exported`, value),
+        raise: (file) => {
+            report(CATEGORY, 'Exported the scene %s as a GLB of %s bytes', [basePath, file.size]);
+            element.dispatchEvent(new CustomEvent('exported', { detail: { file }, bubbles: true, composed: true }));
+        }
+    });
+    const syncExport = (): void => exporter.sync();
 
     /** Makes the scene box focusable and names the keys while `keys` lists some; gives back a `tabindex` it set */
     const syncKeys = (): void => {
@@ -400,6 +433,8 @@ export default function controller({ element, store, basePath }: ControllerConte
         store.on(watched, request);
         store.on(THEME_PATHS, onTheme);
         request();
+        store.on(exportWatched, syncExport);
+        syncExport();
     };
 
     element.setAttribute('data-render', 'pending');
@@ -432,6 +467,8 @@ export default function controller({ element, store, basePath }: ControllerConte
             store.off(keysWatched, syncKeys);
             store.off(watched, request);
             store.off(THEME_PATHS, onTheme);
+            store.off(exportWatched, syncExport);
+            exporter.dispose();
             repeats.dispose();
             surfaceOf?.removeEventListener('webglcontextlost', onContextLost, true);
             surfaceOf?.removeEventListener('webglcontextrestored', onContextRestored, true);

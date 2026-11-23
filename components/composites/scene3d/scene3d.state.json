@@ -1,8 +1,8 @@
 {
     "summary": "A WebGL 3D scene of camera, light, mesh, model, label3d, group3d and repeat3d nodes, checked in a screenshot",
     "category": "graphics",
-    "purposes": ["show a 3D product model", "build a 3D scene from state", "let people orbit a 3D model", "light and display a GLB model", "move a 3D game piece with the keyboard"],
-    "events": ["key"],
+    "purposes": ["show a 3D product model", "build a 3D scene from state", "let people orbit a 3D model", "light and display a GLB model", "move a 3D game piece with the keyboard", "export a 3D scene as a GLB file"],
+    "events": ["key", "exported"],
     "tokenGroup": "scene3d",
     "tokens": {
         "background": "{color.surface.base}",
@@ -31,6 +31,8 @@
                 "eachOf": ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space", "Enter", "Escape", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
             }
         },
+        "exportRequest": { "type": "any" },
+        "exported": { "type": "object", "default": {} },
         "_title": { "type": "string", "kind": "content", "default": "3D scene" },
         "_description": { "type": "string", "kind": "content", "default": "" },
         "_fallback": { "type": "string", "kind": "content", "default": "This 3D scene cannot be shown in this browser." }

@@ -135,6 +135,8 @@ export interface Scene3d {
     setReducedMotion(reduced: boolean): void;
     readonly reducedMotion: boolean;
     drawn(): Promise<void>;
+    /** A binary glTF 2.0 file of what the scene draws now: its meshes and repeat instances with world matrices and plain materials */
+    exportGlb(): ArrayBuffer;
     dispose(): void;
 }
 
