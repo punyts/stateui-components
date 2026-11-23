@@ -648,3 +648,133 @@ describe('richTextField in Chromium', () => {
         expect(mounted.store.get('$.app.picker')).toBe('mention');
     });
 });
+
+describe('richTextField comments in Chromium', () => {
+    afterEach(() => {
+        mountComponent.unmountAll();
+    });
+
+    const ADA = { id: 'u1', label: 'Ada' };
+    const BO = { id: 'u2', label: 'Bo' };
+    const commentPanel = (element: Element): HTMLElement => part(element, '#commentPanel');
+    const panelButton = (element: Element, action: string, thread?: string): HTMLButtonElement =>
+        commentPanel(element).querySelector(`button[data-action="${action}"]${thread === undefined ? '' : `[data-thread="${thread}"]`}`) as HTMLButtonElement;
+    const COMMENTED = {
+        blocks: { bOne: { order: 'a', type: 'paragraph', runs: [{ text: 'see ' }, { text: 'this', comments: ['cOne'] }, { text: ' here' }] } }
+    };
+    const THREAD = { cOne: { author: BO, text: 'Why this?', at: '2026-11-20T10:00:00.000Z' } };
+
+    it('should write a thread into the linked map and anchor it on the selection as one undo step', async () => {
+        // Arrange
+        const mounted = await mountFocused({ '<-value': '$.data.note', '<-comments': '$.data.comments', commentAuthor: ADA }, { data: { note: VALUE, comments: {} } });
+        const raised = events(mounted.element, 'comment');
+        await userEvent.keyboard('{Control>}{Home}{/Control}{Shift>}{End}{/Shift}');
+        await flush();
+
+        // Act
+        await userEvent.keyboard('{Control>}{Alt>}m{/Alt}{/Control}');
+        await flush();
+        const opened = commentPanel(mounted.element).matches(':popover-open');
+        await userEvent.keyboard('Check the name');
+        await userEvent.click(panelButton(mounted.element, 'add'));
+        await flush();
+        const threads = mounted.store.get('$.data.comments') as Record<string, { author: unknown; text: string; at: string }>;
+        const [id] = Object.keys(threads);
+        const runs = readRichText(mounted.store.get('$.data.note'))[0]?.runs;
+        const highlighted = editor(mounted.element).querySelector<HTMLElement>('.commented')?.dataset['comments'];
+        await userEvent.keyboard('{Control>}z{/Control}');
+        await flush();
+
+        // Assert
+        expect(opened).toBe(true);
+        expect(id).toMatch(/^c[0-9A-Za-z]{8}$/);
+        expect(threads[id as string]).toMatchObject({ author: ADA, text: 'Check the name' });
+        expect(runs).toEqual([{ text: 'first', comments: [id] }]);
+        expect(highlighted).toBe(id);
+        expect(raised).toEqual([{ thread: id, kind: 'add' }]);
+        expect(readRichText(mounted.store.get('$.data.note'))[0]?.runs).toEqual([{ text: 'first' }]);
+        expect(Object.keys(mounted.store.get('$.data.comments') as object)).toEqual([id]);
+        expect(editor(mounted.element).querySelector('.commented')).toBeNull();
+    });
+
+    it('should open the threads of pressed text, and reply, resolve and reopen there', async () => {
+        // Arrange
+        const mounted = mountComponent('richTextField', { '<-comments': '$.data.comments', commentAuthor: ADA, value: COMMENTED }, { data: { comments: structuredClone(THREAD) } });
+        const raised = events(mounted.element, 'comment');
+        await flush();
+
+        // Act
+        await userEvent.click(editor(mounted.element).querySelector('.commented') as HTMLElement);
+        await flush();
+        const shown = commentPanel(mounted.element).querySelector('.thread .body')?.textContent;
+        const active = editor(mounted.element).querySelector('.commented')?.classList.contains('active');
+        const anchoredUnder = editor(mounted.element).querySelector<HTMLElement>('.block.anchored')?.dataset['key'];
+        await userEvent.keyboard('Because{Control>}{Enter}{/Control}');
+        await flush();
+        const replies = Object.values((mounted.store.get('$.data.comments.cOne.replies') ?? {}) as Record<string, { author: unknown; text: string }>);
+        const drawnReplies = Array.from(commentPanel(mounted.element).querySelectorAll('.reply .body')).map((one) => one.textContent);
+        const leftInBox = commentPanel(mounted.element).querySelector<HTMLTextAreaElement>('textarea[data-thread="cOne"]')?.value;
+        await userEvent.click(panelButton(mounted.element, 'resolve', 'cOne'));
+        await flush();
+        const resolved = mounted.store.get('$.data.comments.cOne.resolved');
+        const hidden = editor(mounted.element).querySelector('.commented') === null;
+        const underResolved = commentPanel(mounted.element).querySelector('.resolvedHeading') !== null;
+        await userEvent.click(panelButton(mounted.element, 'reopen', 'cOne'));
+        await flush();
+
+        // Assert
+        expect(shown).toBe('Why this?');
+        expect(active).toBe(true);
+        expect(anchoredUnder).toBe('bOne');
+        expect(replies).toEqual([expect.objectContaining({ author: ADA, text: 'Because' })]);
+        expect(drawnReplies).toEqual(['Because']);
+        expect(leftInBox).toBe('');
+        expect(resolved).toBe(true);
+        expect(hidden).toBe(true);
+        expect(underResolved).toBe(true);
+        expect(mounted.store.get('$.data.comments.cOne.resolved')).toBeUndefined();
+        expect(editor(mounted.element).querySelector('.commented')).not.toBeNull();
+        expect(raised).toEqual([{ thread: 'cOne', kind: 'reply' }, { thread: 'cOne', kind: 'resolve' }, { thread: 'cOne', kind: 'reopen' }]);
+    });
+
+    it('should let only the author delete a thread, taking its anchor off the text', async () => {
+        // Arrange
+        const mounted = mountComponent('richTextField', { commentAuthor: ADA, value: COMMENTED, comments: structuredClone(THREAD) });
+        await flush();
+        await userEvent.click(editor(mounted.element).querySelector('.commented') as HTMLElement);
+        await flush();
+        const othersDelete = panelButton(mounted.element, 'delete', 'cOne');
+
+        // Act
+        mounted.store.set('$.app.commentAuthor', BO as never);
+        await flush();
+        await userEvent.click(panelButton(mounted.element, 'delete', 'cOne'));
+        await flush();
+
+        // Assert
+        expect(othersDelete).toBeNull();
+        expect(mounted.store.get('$.app.comments')).toEqual({});
+        expect(readRichText(stored(mounted))[0]?.runs).toEqual([{ text: 'see this here' }]);
+        expect(commentPanel(mounted.element).matches(':popover-open')).toBe(false);
+    });
+
+    it('should show no comment tool or highlight without an author, and let a readonly field reply but not add', async () => {
+        // Arrange
+        const without = mountComponent('richTextField', { value: COMMENTED, comments: structuredClone(THREAD) });
+        const readonly = mountComponent('richTextField', { commentAuthor: ADA, readonly: true, value: COMMENTED, comments: structuredClone(THREAD) });
+        await flush();
+
+        // Act
+        await userEvent.click(editor(readonly.element).querySelector('.commented') as HTMLElement);
+        await flush();
+        const adding = commentPanel(readonly.element).querySelector('.thread.new');
+        const replyBox = commentPanel(readonly.element).querySelector('textarea[data-thread="cOne"]');
+
+        // Assert
+        expect(tool(without.element, 'comment')).toBeNull();
+        expect(editor(without.element).querySelector('.commented')).toBeNull();
+        expect(adding).toBeNull();
+        expect(replyBox).not.toBeNull();
+        expect(tool(readonly.element, 'comment').disabled).toBe(false);
+    });
+});

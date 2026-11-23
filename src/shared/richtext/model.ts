@@ -30,6 +30,9 @@ export const MAX_COLUMNS = 20;
 export const MAX_ROWS = 500;
 /** The longest id a mention keeps */
 export const MAX_MENTION_ID = 128;
+/** A run carries at most this many comment threads; a thread id is at most this long */
+export const MAX_RUN_COMMENTS = 8;
+export const MAX_THREAD_ID = 32;
 
 export interface Run {
     text: string;
@@ -37,6 +40,8 @@ export interface Run {
     link?: string;
     /** The id of the person or record a mention names; the run's text is what it shows (`@Ada`). A mention is edited whole */
     mention?: string;
+    /** The ids of the comment threads on this text, sorted; left out when there are none */
+    comments?: string[];
 }
 
 /** A table cell: one line of runs */
@@ -111,6 +116,21 @@ const sameMarks = (a: readonly Mark[] | undefined, b: readonly Mark[] | undefine
     return left.length === right.length && left.every((mark, index) => mark === right[index]);
 };
 
+/** Whether an id may name a comment thread: a block key of at most `MAX_THREAD_ID` characters */
+export const isThreadId = (id: unknown): id is string => typeof id === 'string' && id.length <= MAX_THREAD_ID && isBlockKey(id);
+
+/** The thread ids of a stored run that are well formed, once each, sorted, at most `MAX_RUN_COMMENTS` */
+export function readComments(value: unknown): string[] {
+    if (!Array.isArray(value)) return [];
+    return [...new Set(value.filter(isThreadId))].sort().slice(0, MAX_RUN_COMMENTS);
+}
+
+export const sameComments = (a: readonly string[] | undefined, b: readonly string[] | undefined): boolean => {
+    const left = a ?? [];
+    const right = b ?? [];
+    return left.length === right.length && left.every((id, index) => id === right[index]);
+};
+
 /** The marks of a stored run that are known, once each, in `MARKS` order */
 export function readMarks(value: unknown): Mark[] {
     if (!Array.isArray(value)) return [];
@@ -119,7 +139,8 @@ export function readMarks(value: unknown): Mark[] {
 
 /**
  * Runs in their one form: unknown marks and unsafe links dropped, empty runs dropped, and neighbours with the same marks
- * and link joined (a mention is never joined). A run keeps `marks`, `link` and `mention` only when it has them
+ * link and comments joined (a mention is never joined). A run keeps `marks`, `link`, `mention` and `comments` only when
+ * it has them
  */
 export function normalizeRuns(value: unknown): Run[] {
     if (!Array.isArray(value)) return [];
@@ -131,8 +152,9 @@ export function normalizeRuns(value: unknown): Run[] {
         const mention = typeof mentioned === 'string' && mentioned !== '' && mentioned.length <= MAX_MENTION_ID ? mentioned : undefined;
         //a mention is its own target, so it carries no link
         const link = mention === undefined && typeof item['link'] === 'string' ? safeHref(item['link']) : undefined;
+        const comments = readComments(item['comments']);
         const last = runs[runs.length - 1];
-        if (last !== undefined && mention === undefined && last.mention === undefined && sameMarks(last.marks, marks) && last.link === link) {
+        if (last !== undefined && mention === undefined && last.mention === undefined && sameMarks(last.marks, marks) && last.link === link && sameComments(last.comments, comments)) {
             last.text += item['text'];
             continue;
         }
@@ -140,6 +162,7 @@ export function normalizeRuns(value: unknown): Run[] {
         if (marks.length > 0) run.marks = marks;
         if (link !== undefined) run.link = link;
         if (mention !== undefined) run.mention = mention;
+        if (comments.length > 0) run.comments = comments;
         runs.push(run);
     }
     return runs;
@@ -196,8 +219,8 @@ export function readBlock(value: unknown): Block | undefined {
     if (LIST_TYPES.includes(block.type)) block.indent = clampInteger(value['indent'], 0, MAX_INDENT, 0);
     if (type === 'check') block.checked = value['checked'] === true;
     if (type === 'code') {
-        //code keeps its characters only; marks and links have no meaning in it
-        block.runs = block.runs.length === 0 ? [] : [{ text: plainText(block.runs) }];
+        //code keeps its characters and comments only; marks and links have no meaning in it
+        block.runs = normalizeRuns(block.runs.map((run) => (run.comments === undefined ? { text: run.text } : { text: run.text, comments: run.comments })));
         if (typeof value['language'] === 'string' && value['language'] !== '') block.language = value['language'].slice(0, 32);
     }
     if (type === 'table') readTable(value, block);

@@ -15,7 +15,9 @@ import type { CellPoint, Point, TextSelection } from './edit.js';
  * link is `span.link` with `data-href`. An empty block, and a block whose text ends in a line break, end in a `br` so the
  * caret has a line. A check item's box is in `span.marker`, which is not editable; a divider's block is not editable. A
  * mention is `span.mention`, not editable, so the caret goes around it. A table's block holds a `table` whose cells
- * (`data-row`, `data-column`) each hold a `span.text`; a point in a table names its cell
+ * (`data-row`, `data-column`) each hold a `span.text`; a point in a table names its cell. Text under a comment thread
+ * the options show is in `span.commented` with `data-comments` (the shown ids), and `.active` when it holds the active
+ * thread
  */
 
 export interface EditorView {
@@ -40,6 +42,29 @@ export interface EditorView {
 export interface EditorViewOptions {
     /** The accessible name of a check item's box */
     readonly checkLabel: () => string;
+    /** The comment threads whose text is highlighted (the open ones); none when left out */
+    readonly shownComments?: () => ReadonlySet<string>;
+    /** The thread the comment panel shows, drawn as active */
+    readonly activeComment?: () => string;
+}
+
+/** Which comment threads a redraw highlights */
+interface CommentShow {
+    readonly shown: ReadonlySet<string>;
+    readonly active: string;
+}
+
+const NO_COMMENTS: CommentShow = { shown: new Set(), active: '' };
+
+/** A run's node, inside `span.commented` when it carries a shown thread */
+function commented(document: Document, run: Run, node: Node, show: CommentShow): Node {
+    const ids = (run.comments ?? []).filter((id) => show.shown.has(id));
+    if (ids.length === 0) return node;
+    const element = document.createElement('span');
+    element.className = ids.includes(show.active) ? 'commented active' : 'commented';
+    element.dataset['comments'] = ids.join(' ');
+    element.appendChild(node);
+    return element;
 }
 
 interface Drawn {
@@ -82,10 +107,9 @@ function textNodes(element: HTMLElement): Text[] {
 /** The element of a table's cell */
 const cellElement = (block: HTMLElement, cell: CellPoint): HTMLElement | null => block.querySelector<HTMLElement>(`[data-row="${cell.row}"][data-column="${cell.column}"]`);
 
-function appendRuns(document: Document, parent: HTMLElement, type: KeyedBlock['type'], runs: readonly Run[]): void {
+function appendRuns(document: Document, parent: HTMLElement, type: KeyedBlock['type'], runs: readonly Run[], show: CommentShow): void {
     if (type === 'code') {
-        const text = plainText(runs);
-        if (text !== '') parent.appendChild(document.createTextNode(text));
+        for (const run of runs) parent.appendChild(commented(document, run, document.createTextNode(run.text), show));
         return;
     }
     let at = 0;
@@ -93,13 +117,13 @@ function appendRuns(document: Document, parent: HTMLElement, type: KeyedBlock['t
         if (runs[at]?.mention !== undefined) {
             const mention = mentionNode(document, runs[at] as Run);
             mention.contentEditable = 'false';
-            parent.appendChild(mention);
+            parent.appendChild(commented(document, runs[at] as Run, mention, show));
             at++;
             continue;
         }
         const link = runs[at]?.link;
         if (link === undefined) {
-            parent.appendChild(markedNode(document, runs[at] as Run));
+            parent.appendChild(commented(document, runs[at] as Run, markedNode(document, runs[at] as Run), show));
             at++;
             continue;
         }
@@ -107,14 +131,14 @@ function appendRuns(document: Document, parent: HTMLElement, type: KeyedBlock['t
         element.className = 'link';
         element.dataset['href'] = link;
         while (at < runs.length && runs[at]?.link === link) {
-            element.appendChild(markedNode(document, runs[at] as Run));
+            element.appendChild(commented(document, runs[at] as Run, markedNode(document, runs[at] as Run), show));
             at++;
         }
         parent.appendChild(element);
     }
 }
 
-function blockElement(document: Document, block: KeyedBlock, number: number | undefined, options: EditorViewOptions): HTMLElement {
+function blockElement(document: Document, block: KeyedBlock, number: number | undefined, options: EditorViewOptions, show: CommentShow): HTMLElement {
     const element = document.createElement('div');
     element.className = 'block';
     element.dataset['key'] = block.key;
@@ -128,7 +152,7 @@ function blockElement(document: Document, block: KeyedBlock, number: number | un
         element.appendChild(tableElement(document, block, (cell, content) => {
             const text = document.createElement('span');
             text.className = 'text';
-            appendRuns(document, text, 'paragraph', content.runs);
+            appendRuns(document, text, 'paragraph', content.runs, show);
             if (content.runs.length === 0) text.appendChild(document.createElement('br'));
             cell.appendChild(text);
         }));
@@ -153,15 +177,23 @@ function blockElement(document: Document, block: KeyedBlock, number: number | un
     }
     const text = document.createElement('span');
     text.className = 'text';
-    appendRuns(document, text, block.type, block.runs);
+    appendRuns(document, text, block.type, block.runs, show);
     const content = plainText(block.runs);
     if (content === '' || content.endsWith('\n')) text.appendChild(document.createElement('br'));
     element.appendChild(text);
     return element;
 }
 
-const signatureOf = (block: KeyedBlock, number: number | undefined): string =>
-    JSON.stringify([block.type, block.level, block.indent, block.checked, block.language, block.runs, block.rows, block.align, number]);
+/** The threads of a block's runs (and its cells' runs) that a redraw highlights, with the active one marked */
+function shownIn(block: KeyedBlock, show: CommentShow): string {
+    if (show.shown.size === 0) return '';
+    const runs = block.rows === undefined ? block.runs : block.rows.flatMap((row) => row.cells.flatMap((cell) => cell.runs));
+    const ids = new Set(runs.flatMap((run) => run.comments ?? []).filter((id) => show.shown.has(id)));
+    return [...ids].sort().map((id) => (id === show.active ? `${id}*` : id)).join(' ');
+}
+
+const signatureOf = (block: KeyedBlock, number: number | undefined, show: CommentShow): string =>
+    JSON.stringify([block.type, block.level, block.indent, block.checked, block.language, block.runs, block.rows, block.align, number, shownIn(block, show)]);
 
 /** The selection a shadow root holds: Chromium answers it on the root; elsewhere the document's composed range is read */
 function shadowSelection(root: HTMLElement): { anchorNode: Node | null; anchorOffset: number; focusNode: Node | null; focusOffset: number } | null {
@@ -270,14 +302,15 @@ export function createEditorView(root: HTMLElement, options: EditorViewOptions):
     return {
         render: (blocks, stale) => {
             const numbers = numbering(blocks);
+            const show: CommentShow = options.shownComments === undefined ? NO_COMMENTS : { shown: options.shownComments(), active: options.activeComment?.() ?? '' };
             const kept = new Set<string>();
             let previous: Node | null = null;
             for (const block of blocks) {
                 const number = numbers.get(block.key);
-                const signature = signatureOf(block, number);
+                const signature = signatureOf(block, number, show);
                 let entry = drawn.get(block.key);
                 if (entry === undefined || entry.signature !== signature || stale?.has(block.key) === true) {
-                    const element = blockElement(document, block, number, options);
+                    const element = blockElement(document, block, number, options, show);
                     if (entry !== undefined && entry.element.parentNode === root) entry.element.replaceWith(element);
                     entry = { element, signature };
                     drawn.set(block.key, entry);

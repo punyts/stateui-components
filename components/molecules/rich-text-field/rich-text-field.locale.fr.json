@@ -39,6 +39,17 @@
         "removeColumn": "Supprimer la colonne",
         "removeTable": "Supprimer le tableau",
         "commands": "Insérer un bloc",
-        "mentions": "Mentionner"
+        "mentions": "Mentionner",
+        "comment": "Commentaire",
+        "comments": "Commentaires",
+        "commentText": "Ajouter un commentaire",
+        "saveComment": "Commenter",
+        "cancelComment": "Annuler",
+        "reply": "Répondre",
+        "replyText": "Réponse",
+        "resolve": "Résoudre",
+        "reopen": "Rouvrir",
+        "resolved": "Résolus",
+        "deleteComment": "Supprimer"
     }
 }

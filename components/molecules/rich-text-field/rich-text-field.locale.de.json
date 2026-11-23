@@ -39,6 +39,17 @@
         "removeColumn": "Spalte entfernen",
         "removeTable": "Tabelle entfernen",
         "commands": "Block einfügen",
-        "mentions": "Erwähnen"
+        "mentions": "Erwähnen",
+        "comment": "Kommentar",
+        "comments": "Kommentare",
+        "commentText": "Kommentar hinzufügen",
+        "saveComment": "Kommentieren",
+        "cancelComment": "Abbrechen",
+        "reply": "Antworten",
+        "replyText": "Antwort",
+        "resolve": "Erledigen",
+        "reopen": "Wieder öffnen",
+        "resolved": "Erledigt",
+        "deleteComment": "Löschen"
     }
 }

@@ -1,8 +1,8 @@
 {
     "summary": "A labelled rich-text editor writing block JSON: headings, lists, checks, quotes, code, tables, mentions and marks",
     "category": "forms",
-    "purposes": ["write formatted notes with headings and lists", "write text with links pasted from documents", "edit a rich-text description or article", "write a formatted comment with bold and italic", "keep a checklist inside a form field", "mention people with @ in a note", "insert blocks and tables from a slash menu"],
-    "events": ["change", "invalid", "valid", "mentionQuery"],
+    "purposes": ["write formatted notes with headings and lists", "write text with links pasted from documents", "edit a rich-text description or article", "write a formatted comment with bold and italic", "keep a checklist inside a form field", "mention people with @ in a note", "insert blocks and tables from a slash menu", "review a document with comments on its text"],
+    "events": ["change", "invalid", "valid", "mentionQuery", "comment"],
     "commands": ["validate", "reset", "focus", "clear"],
     "tokenGroup": "richtextfield",
     "tokens": {
@@ -13,7 +13,8 @@
         "link": { "width": "calc({size.control.md} * 9)" },
         "mention": { "color": "{color.accent.base}", "background": "{color.surface.sunken}" },
         "table": { "header": "{color.surface.sunken}" },
-        "picker": { "active": "{color.accent.base}", "on": "{color.accent.on}" }
+        "picker": { "active": "{color.accent.base}", "on": "{color.accent.on}" },
+        "comment": { "background": "{color.warning.soft}", "active": "{color.warning.base}" }
     },
     "shared": {
         "variant": { "default": "outline", "values": ["outline", "soft", "ghost"] },
@@ -32,6 +33,8 @@
         "mentions": { "type": "array", "default": [] },
         "mentionValue": { "type": "string", "default": "value" },
         "mentionLabel": { "type": "string", "default": "label" },
+        "comments": { "type": "object", "default": {} },
+        "commentAuthor": { "type": "object", "default": {} },
         "rows": { "type": "integer", "default": 4, "validators": { "range": { "min": 1, "max": 50 } } },
         "disabled": { "type": "boolean", "default": false },
         "readonly": { "type": "boolean", "default": false },
@@ -53,6 +56,7 @@
         "link": { "type": "string", "values": ["", "new", "edit"], "default": "", "runtime": true },
         "linkInvalid": { "type": "boolean", "default": false, "runtime": true },
         "picker": { "type": "string", "values": ["", "slash", "mention"], "default": "", "runtime": true },
+        "comment": { "type": "string", "values": ["", "new", "open"], "default": "", "runtime": true },
         "_label": { "type": "string", "kind": "content", "default": "Label" },
         "_placeholder": { "type": "string", "kind": "content", "default": "" },
         "_help": { "type": "string", "kind": "content", "default": "" },
@@ -102,7 +106,18 @@
                 "removeColumn": "Remove column",
                 "removeTable": "Remove table",
                 "commands": "Insert block",
-                "mentions": "Mention"
+                "mentions": "Mention",
+                "comment": "Comment",
+                "comments": "Comments",
+                "commentText": "Add a comment",
+                "saveComment": "Comment",
+                "cancelComment": "Cancel",
+                "reply": "Reply",
+                "replyText": "Reply",
+                "resolve": "Resolve",
+                "reopen": "Reopen",
+                "resolved": "Resolved",
+                "deleteComment": "Delete"
             }
         }
     }

@@ -50,6 +50,7 @@ export const CORE_ICON_NAMES: readonly string[] = [
     'map-pin',
     'maximize',
     'menu-2',
+    'message-plus',
     'minimize',
     'minus',
     'oval',

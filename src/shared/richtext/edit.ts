@@ -2,7 +2,7 @@ import { ATOMIC_TYPES, LIST_TYPES, MARKS, MAX_BLOCKS, MAX_COLUMNS, MAX_HEADING_L
 import type { Block, BlockType, KeyedBlock, Mark, Row, Run } from './model.js';
 import { safeHref } from '../markdown/links.js';
 import { orderBetween } from './order.js';
-import { atomAround, deleteRuns, hasMark, insertRuns, joinRuns, linkExtent, linkRuns, markRuns, nextBoundary, previousBoundary, sliceRuns, styleAt } from './runs.js';
+import { atomAround, commentRuns, commentsIn, deleteRuns, hasMark, insertRuns, joinRuns, linkExtent, linkRuns, markRuns, nextBoundary, previousBoundary, sliceRuns, styleAt, styledRun, uncommentRuns } from './runs.js';
 import type { DeleteUnit } from './runs.js';
 
 /**
@@ -357,10 +357,8 @@ export function insertText(blocks: readonly KeyedBlock[], selection: TextSelecti
     const typed = fit(text, room);
     if (typed === '') return draft.changed ? draft.done(caret(at)) : null;
     const style = styleAt(block.runs, at.offset);
-    const marks = block.type === 'code' ? [] : MARKS.filter((mark) => (options.marks ?? style.marks).includes(mark));
-    const run: Run = { text: typed };
-    if (marks.length > 0) run.marks = marks;
-    if (style.link !== undefined && block.type !== 'code') run.link = style.link;
+    const marks = MARKS.filter((mark) => (options.marks ?? style.marks).includes(mark));
+    const run = styledRun(typed, { ...style, marks }, block.type === 'code');
     let written = draft.put({ ...block, runs: insertRuns(block.runs, at.offset, [run]) });
     const end: Point = { block: block.key, offset: at.offset + typed.length };
     if (options.shortcuts !== true || block.type === 'code') return draft.done(caret(end));
@@ -565,6 +563,65 @@ function stretches(blocks: readonly KeyedBlock[], range: { start: Bound; end: Bo
         if (from < to) found.push({ block, from, to });
     }
     return found;
+}
+
+/**
+ * Puts comment thread `id` on the selected text. A selection that reaches into a table (or out of a cell) takes every
+ * cell of it; a code block takes it as any text does. Null for a caret or a selection with no text
+ */
+export function commentSelection(blocks: readonly KeyedBlock[], selection: TextSelection, id: string): Edit | null {
+    const cell = cellOf(blocks, selection);
+    if (cell !== null) return viaCell(blocks, selection, cell, NO_LIMIT, (inner, at) => commentSelection(inner, at, id));
+    const range = rangeOf(blocks, selection);
+    if (range === null || collapsed(range)) return null;
+    const draft = new Draft(blocks);
+    for (let index = range.start.index; index <= range.end.index; index++) {
+        const block = blocks[index] as KeyedBlock;
+        if (block.type === 'table') {
+            const rows = (block.rows ?? []).map((row) => ({ cells: row.cells.map((one) => ({ runs: commentRuns(one.runs, 0, plainText(one.runs).length, id, true) })) }));
+            draft.put({ ...block, rows });
+            continue;
+        }
+        if (isAtomic(block)) continue;
+        const from = index === range.start.index ? range.start.offset : 0;
+        const to = index === range.end.index ? range.end.offset : lengthOf(block);
+        if (from < to) draft.put({ ...block, runs: commentRuns(block.runs, from, to, id, true) });
+    }
+    return draft.changed ? draft.done(selection) : null;
+}
+
+/** Takes comment thread `id` off every block (and every table cell) that carries it; null when none does */
+export function removeComment(blocks: readonly KeyedBlock[], id: string, selection: TextSelection): Edit | null {
+    const draft = new Draft(blocks);
+    for (const block of blocks) {
+        if (block.type === 'table') {
+            draft.put({ ...block, rows: (block.rows ?? []).map((row) => ({ cells: row.cells.map((one) => ({ runs: uncommentRuns(one.runs, id) })) })) });
+        } else if (!isAtomic(block)) {
+            draft.put({ ...block, runs: uncommentRuns(block.runs, id) });
+        }
+    }
+    return draft.changed ? draft.done(selection) : null;
+}
+
+/** The comment threads on the selected text, or on the characters on either side of a caret */
+export function commentsAt(blocks: readonly KeyedBlock[], selection: TextSelection): string[] {
+    const cell = cellOf(blocks, selection);
+    if (cell !== null) return commentsIn(cell.runs, Math.min(selection.anchor.offset, selection.focus.offset), Math.max(selection.anchor.offset, selection.focus.offset));
+    const range = rangeOf(blocks, selection);
+    if (range === null) return [];
+    if (collapsed(range)) {
+        const block = blocks[range.start.index] as KeyedBlock;
+        return isAtomic(block) ? [] : commentsIn(block.runs, range.start.offset, range.start.offset);
+    }
+    const found = new Set<string>();
+    for (let index = range.start.index; index <= range.end.index; index++) {
+        const block = blocks[index] as KeyedBlock;
+        if (isAtomic(block)) continue;
+        const from = index === range.start.index ? range.start.offset : 0;
+        const to = index === range.end.index ? range.end.offset : lengthOf(block);
+        for (const id of commentsIn(block.runs, from, to)) found.add(id);
+    }
+    return [...found].sort();
 }
 
 /** Adds `mark` to the selected text, or takes it off when all of it has it already. Null for a caret (the editor keeps the mark for the next typing) */
@@ -1038,10 +1095,7 @@ export function replaceBlockText(blocks: readonly KeyedBlock[], key: string, tex
     let suffix = 0;
     while (suffix < old.length - prefix && suffix < text.length - prefix && old.charCodeAt(old.length - 1 - suffix) === text.charCodeAt(text.length - 1 - suffix)) suffix++;
     const inserted = text.slice(prefix, text.length - suffix);
-    const style = styleAt(block.runs, prefix);
-    const run: Run = { text: inserted };
-    if (style.marks.length > 0 && block.type !== 'code') run.marks = style.marks;
-    if (style.link !== undefined && block.type !== 'code') run.link = style.link;
+    const run = styledRun(inserted, styleAt(block.runs, prefix), block.type === 'code');
     const runs = insertRuns(deleteRuns(block.runs, prefix, old.length - suffix), prefix, inserted === '' ? [] : [run]);
     draft.put({ ...block, runs });
     const offset = prefix + inserted.length;

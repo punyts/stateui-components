@@ -1,4 +1,4 @@
-import { MARKS, normalizeRuns, plainText } from './model.js';
+import { MARKS, MAX_RUN_COMMENTS, normalizeRuns, plainText } from './model.js';
 import type { Mark, Run } from './model.js';
 
 /**
@@ -48,16 +48,35 @@ function runAt(runs: readonly Run[], index: number): Run | undefined {
     return undefined;
 }
 
+/** What typed text takes at an offset; `link` and `comments` are left out when there are none */
+export interface Style {
+    marks: Mark[];
+    link?: string;
+    comments?: string[];
+}
+
 /**
  * What typed text at `offset` takes: the marks of the character before it (of the first character at the start), and a
- * link only when the characters on both sides share it, so typing at the end of a link does not lengthen it
+ * link and comments only when the characters on both sides share them, so typing at the end of a link or a commented
+ * stretch does not lengthen it
  */
-export function styleAt(runs: readonly Run[], offset: number): { marks: Mark[]; link?: string } {
+export function styleAt(runs: readonly Run[], offset: number): Style {
     const before = offset > 0 ? runAt(runs, offset - 1) : runAt(runs, 0);
     const after = runAt(runs, offset);
-    const marks = [...(before?.marks ?? [])];
-    const link = offset > 0 && before?.link !== undefined && before.link === after?.link ? before.link : undefined;
-    return link === undefined ? { marks } : { marks, link };
+    const style: Style = { marks: [...(before?.marks ?? [])] };
+    if (offset > 0 && before?.link !== undefined && before.link === after?.link) style.link = before.link;
+    const comments = offset > 0 ? (before?.comments ?? []).filter((id) => after?.comments?.includes(id) === true) : [];
+    if (comments.length > 0) style.comments = comments;
+    return style;
+}
+
+/** A run of typed text in `style`: its marks and link unless `plain` (code has neither), and its comments */
+export function styledRun(text: string, style: Style, plain: boolean): Run {
+    const run: Run = { text };
+    if (!plain && style.marks.length > 0) run.marks = [...style.marks];
+    if (!plain && style.link !== undefined) run.link = style.link;
+    if (style.comments !== undefined) run.comments = [...style.comments];
+    return run;
 }
 
 /** Whether every character in `[from, to)` has `mark`; an empty range has it when the style at `from` has it */
@@ -76,9 +95,46 @@ export function markRuns(runs: readonly Run[], from: number, to: number, mark: M
         const next: Run = { text: run.text, marks: MARKS.filter((known) => marks.has(known)) };
         if (run.link !== undefined) next.link = run.link;
         if (run.mention !== undefined) next.mention = run.mention;
+        if (run.comments !== undefined) next.comments = run.comments;
         return next;
     });
     return joinRuns(sliceRuns(runs, 0, from), middle, sliceRuns(runs, to, length));
+}
+
+/**
+ * Runs with thread `id` put on (or, with `on` false, taken off) every character in `[from, to)`. A run that already
+ * carries `MAX_RUN_COMMENTS` threads takes no more
+ */
+export function commentRuns(runs: readonly Run[], from: number, to: number, id: string, on: boolean): Run[] {
+    const length = plainText(runs).length;
+    const middle = sliceRuns(runs, from, to).map((run) => {
+        const ids = new Set(run.comments ?? []);
+        if (on && ids.size < MAX_RUN_COMMENTS) ids.add(id);
+        if (!on) ids.delete(id);
+        const next: Run = { ...run };
+        delete next.comments;
+        if (ids.size > 0) next.comments = [...ids].sort();
+        return next;
+    });
+    return joinRuns(sliceRuns(runs, 0, from), middle, sliceRuns(runs, to, length));
+}
+
+/** Runs with thread `id` taken off every character */
+export function uncommentRuns(runs: readonly Run[], id: string): Run[] {
+    return runs.some((run) => run.comments?.includes(id) === true) ? commentRuns(runs, 0, plainText(runs).length, id, false) : [...runs];
+}
+
+/** The threads on the characters of `[from, to)`; for an empty range, on the characters on either side of `from` */
+export function commentsIn(runs: readonly Run[], from: number, to: number): string[] {
+    const found = new Set<string>();
+    const take = (run: Run | undefined): void => run?.comments?.forEach((id) => found.add(id));
+    if (from >= to) {
+        if (from > 0) take(runAt(runs, from - 1));
+        take(runAt(runs, from));
+    } else {
+        for (const run of sliceRuns(runs, from, to)) take(run);
+    }
+    return [...found].sort();
 }
 
 /** The mention whose characters are on both sides of `offset`, as `[from, to)`; null when the offset is not inside one */
@@ -101,6 +157,7 @@ export function linkRuns(runs: readonly Run[], from: number, to: number, href: s
         if (run.marks !== undefined) next.marks = run.marks;
         if (run.mention !== undefined) next.mention = run.mention;
         else if (href !== null) next.link = href;
+        if (run.comments !== undefined) next.comments = run.comments;
         return next;
     });
     return joinRuns(sliceRuns(runs, 0, from), middle, sliceRuns(runs, to, length));
