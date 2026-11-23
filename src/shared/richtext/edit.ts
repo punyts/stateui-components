@@ -1,5 +1,5 @@
-import { ATOMIC_TYPES, LIST_TYPES, MARKS, MAX_BLOCKS, MAX_COLUMNS, MAX_HEADING_LEVEL, MAX_INDENT, MAX_ROWS, blockLength, joinRunsOf, newBlockKey, plainText, readBlock, textLength } from './model.js';
-import type { Block, BlockType, KeyedBlock, Mark, Row, Run } from './model.js';
+import { ATOMIC_TYPES, IMAGE_WIDTHS, LIST_TYPES, MARKS, MAX_IMAGES, MAX_BLOCKS, MAX_COLUMNS, MAX_HEADING_LEVEL, MAX_INDENT, MAX_ROWS, blockLength, imageFile, imageText, joinRunsOf, newBlockKey, plainText, readBlock, textLength } from './model.js';
+import type { Block, BlockType, ImageWidth, KeyedBlock, Mark, Row, Run } from './model.js';
 import { safeHref } from '../markdown/links.js';
 import { orderBetween } from './order.js';
 import { atomAround, commentRuns, commentsIn, deleteRuns, hasMark, insertRuns, joinRuns, linkExtent, linkRuns, markRuns, nextBoundary, previousBoundary, sliceRuns, styleAt, styledRun, uncommentRuns } from './runs.js';
@@ -513,6 +513,8 @@ export function deleteBackward(blocks: readonly KeyedBlock[], selection: TextSel
     if (previous === undefined) return null;
     //a table is not joined: the caret goes into its last cell
     if (previous.type === 'table') return draft.done(caret(cellEdge(previous, 'last')));
+    //an image is selected first, so one Backspace never removes a picture unseen
+    if (previous.type === 'image') return draft.done(caret({ block: previous.key, offset: 0 }));
     if (previous.type === 'divider') {
         draft.remove(previous.key);
         return draft.done(caret(start));
@@ -545,6 +547,7 @@ export function deleteForward(blocks: readonly KeyedBlock[], selection: TextSele
     const next = draft.blocks[start.index + 1];
     if (next === undefined) return null;
     if (next.type === 'table') return draft.done(caret(cellEdge(next, 'first')));
+    if (next.type === 'image') return draft.done(caret({ block: next.key, offset: 0 }));
     if (next.type === 'divider') {
         draft.remove(next.key);
         return draft.done(caret(start));
@@ -677,6 +680,68 @@ export function insertDivider(blocks: readonly KeyedBlock[], selection: TextSele
     const after = draft.blocks[index + 1];
     const target = after !== undefined && !isAtomic(after) ? after : draft.insertAt(index + 1, { type: 'paragraph', runs: [] });
     return draft.done(caret({ block: target.key, offset: 0 }));
+}
+
+/** The number of image blocks */
+export const imageCount = (blocks: readonly KeyedBlock[]): number => blocks.filter((block) => block.type === 'image').length;
+
+/**
+ * Puts an image of a stored picture after the block `after` (at the end when that block is gone; an empty text block
+ * becomes the image), with a paragraph after it unless a text block follows, and moves the caret there. Null when the
+ * field leaves images out, already holds `MAX_IMAGES` or the file is not a picture
+ */
+export function insertImage(blocks: readonly KeyedBlock[], after: string | null, file: unknown, settings: EditSettings): Edit | null {
+    const picture = imageFile(file);
+    if (picture === undefined || !allows(settings, 'image') || imageCount(blocks) >= MAX_IMAGES) return null;
+    const draft = new Draft(blocks);
+    const shape: Shape = { type: 'image', runs: [], file: picture };
+    let index = after === null ? -1 : draft.index(after);
+    const block = index < 0 ? undefined : draft.blocks[index];
+    if (block !== undefined && !isAtomic(block) && block.type !== 'code' && textOf(block) === '') draft.put(reshape(block, shape));
+    else {
+        index = index < 0 ? draft.blocks.length : index + 1;
+        draft.insertAt(index, shape);
+    }
+    const next = draft.blocks[index + 1];
+    const target = next !== undefined && !isAtomic(next) ? next : draft.insertAt(index + 1, { type: 'paragraph', runs: [] });
+    return draft.done(caret({ block: target.key, offset: 0 }));
+}
+
+/** The changes `setImage` takes: alt text and caption (one line; empty removes it) and the width */
+export interface ImageChange {
+    alt?: string;
+    caption?: string;
+    width?: ImageWidth;
+}
+
+/** Changes an image's alt text, caption or width; the caret stays on the image. Null when nothing changes */
+export function setImage(blocks: readonly KeyedBlock[], key: string, change: ImageChange): Edit | null {
+    const block = blocks.find((one) => one.key === key);
+    if (block === undefined || block.type !== 'image') return null;
+    const next: KeyedBlock = { ...block };
+    for (const name of ['alt', 'caption'] as const) {
+        if (change[name] === undefined) continue;
+        const text = imageText(change[name]).trim();
+        if (text === '') delete next[name];
+        else next[name] = text;
+    }
+    if (change.width !== undefined) {
+        if (change.width === 'full') delete next.width;
+        else if ((IMAGE_WIDTHS as readonly string[]).includes(change.width)) next.width = change.width;
+    }
+    if (next.alt === block.alt && next.caption === block.caption && next.width === block.width) return null;
+    const draft = new Draft(blocks);
+    draft.put(next);
+    return draft.done(caret({ block: key, offset: 0 }));
+}
+
+/** Removes an image (or any block the caret does not type into) and puts the caret where its removal leaves it */
+export function removeBlock(blocks: readonly KeyedBlock[], key: string): Edit | null {
+    const draft = new Draft(blocks);
+    const index = draft.index(key);
+    if (index < 0) return null;
+    draft.remove(key);
+    return draft.done(caret(afterRemoval(draft, index)));
 }
 
 /** Whether the selection touches a list item, where Tab indents */

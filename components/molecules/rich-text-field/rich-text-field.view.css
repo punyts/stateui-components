@@ -546,3 +546,119 @@
     color: var(--ui-field-error-color);
     font-size: var(--ui-text-caption-size);
 }
+
+/* An image: drawn at a share of the text's width (data-width), never wider than its own pixels */
+figure.image {
+    margin: var(--ui-space-gap-sm) 0;
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--ui-space-gap-sm) / 2);
+}
+
+figure.image[data-width=small] {
+    inline-size: 33%;
+}
+
+figure.image[data-width=medium] {
+    inline-size: 67%;
+}
+
+figure.image img {
+    display: block;
+    max-inline-size: 100%;
+    block-size: auto;
+    border-radius: var(--ui-radius-sm);
+}
+
+figure.image .missing {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-block-size: calc(var(--ui-size-control-md) * 2);
+    padding: var(--ui-space-inset-sm);
+    color: var(--ui-color-text-muted);
+    background: var(--ui-richtextfield-image-missing);
+    border: var(--ui-border-width-thin) dashed var(--ui-color-border-base);
+    border-radius: var(--ui-radius-sm);
+    overflow-wrap: anywhere;
+}
+
+figure.image figcaption {
+    color: var(--ui-color-text-muted);
+    font-size: var(--ui-text-caption-size);
+}
+
+.block[data-type=image] {
+    cursor: pointer;
+}
+
+/* The selected image, whose panel is open */
+.block[data-type=image].anchored figure.image {
+    outline: 2px solid var(--ui-richtextfield-image-selected);
+    outline-offset: 2px;
+    border-radius: var(--ui-radius-sm);
+}
+
+.upload {
+    margin: 0;
+    padding: calc(var(--ui-space-gap-sm) / 2) var(--ui-space-gap-sm);
+    color: var(--ui-color-text-muted);
+    font-size: var(--ui-text-caption-size);
+    border-block-end: var(--ui-border-width-thin) solid var(--ui-color-border-base);
+}
+
+.upload[data-failed=true] {
+    color: var(--ui-field-error-color);
+}
+
+.imagePanel {
+    box-sizing: border-box;
+    margin: 0;
+    margin-block: var(--ui-space-gap-sm);
+    border: var(--ui-border-width-thin) solid var(--ui-color-border-base);
+    inset: auto;
+    inline-size: var(--ui-richtextfield-link-width);
+    max-inline-size: calc(100vw - 2 * var(--ui-space-gap-sm));
+    padding: var(--ui-space-gap-sm);
+    display: none;
+    flex-direction: column;
+    gap: var(--ui-space-gap-sm);
+    position-try-fallbacks: flip-block, flip-inline;
+    color: var(--ui-color-text-base);
+    background: var(--ui-color-surface-raised);
+    border-radius: var(--ui-control-radius);
+    box-shadow: var(--ui-elevation-overlay-shadow);
+    font: inherit;
+}
+
+.imagePanel:popover-open {
+    display: flex;
+}
+
+.imageField {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--ui-space-gap-sm) / 2);
+    font-size: var(--ui-text-caption-size);
+}
+
+.imageField .linkInput {
+    flex: none;
+    font-size: var(--ui-text-body-size);
+}
+
+.imageWidths {
+    display: flex;
+    gap: calc(var(--ui-space-gap-sm) / 2);
+}
+
+.imageWidths .linkButton[aria-pressed=true] {
+    color: var(--ui-richtextfield-picker-on);
+    background: var(--ui-richtextfield-picker-active);
+    border-color: var(--ui-richtextfield-picker-active);
+}
+
+.imagePanel > .linkButton {
+    align-self: flex-start;
+}

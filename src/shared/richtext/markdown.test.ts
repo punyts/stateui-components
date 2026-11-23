@@ -206,3 +206,24 @@ describe('tables in Markdown', () => {
         expect(written).toBe('| a\\|b |\n| --- |\n\n@Ada');
     });
 });
+
+describe('images in Markdown', () => {
+    it('should write an image as a file reference with its alt text and its caption as an italic line', () => {
+        // Arrange
+        const value = { blocks: { a: { order: 'V', type: 'image', file: { id: 'f1', name: 'p.png', size: 1, type: 'image/png' }, alt: 'a [chart]', caption: 'Sales by month' } } };
+
+        // Act
+        const text = toMarkdown(value);
+
+        // Assert
+        expect(text).toBe('![a \\[chart\\]](file:f1)\n*Sales by month*');
+    });
+
+    it('should make no image from Markdown', () => {
+        // Act
+        const blocks = shape(fromMarkdown('![a chart](file:f1)'));
+
+        // Assert
+        expect(blocks.some((block) => block.type === 'image')).toBe(false);
+    });
+});

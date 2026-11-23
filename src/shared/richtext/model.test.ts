@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_INDENT, isBlockKey, newBlockKey, normalizeRuns, plainText, readRichText, textLength, valueOf } from './model.js';
+import { MAX_IMAGES, MAX_IMAGE_TEXT, MAX_INDENT, isBlockKey, newBlockKey, normalizeRuns, plainText, readRichText, textLength, valueOf } from './model.js';
 import type { KeyedBlock } from './model.js';
 
 describe('normalizeRuns', () => {
@@ -131,5 +131,50 @@ describe('tables and mentions', () => {
 
         // Assert
         expect(runs).toEqual([{ text: '@Ada', mention: 'u1' }, { text: '@Bo', mention: 'u2' }, { text: 'xy' }]);
+    });
+});
+
+describe('images', () => {
+    const photo = { id: 'f1', name: 'photo.png', size: 2048, type: 'image/png', extra: 'dropped' };
+
+    it('should read an image with its file, one-line alt text and caption, and a known width, and no runs', () => {
+        // Arrange
+        const value = { blocks: { a: { order: 'V', type: 'image', file: photo, alt: 'a\nchart', caption: 'x'.repeat(MAX_IMAGE_TEXT + 5), width: 'small', runs: [{ text: 'no' }] } } };
+
+        // Act
+        const [image] = readRichText(value);
+
+        // Assert
+        expect(image).toEqual({ key: 'a', order: 'V', type: 'image', runs: [], file: { id: 'f1', name: 'photo.png', size: 2048, type: 'image/png' }, alt: 'a chart', caption: 'x'.repeat(MAX_IMAGE_TEXT), width: 'small' });
+    });
+
+    it('should drop an image whose file is missing or not a picture, and leave out an unknown width', () => {
+        // Arrange
+        const value = {
+            blocks: {
+                a: { order: 'V', type: 'image' },
+                b: { order: 'W', type: 'image', file: { ...photo, type: 'text/html' } },
+                c: { order: 'X', type: 'image', file: photo, width: 'huge' }
+            }
+        };
+
+        // Act
+        const blocks = readRichText(value);
+
+        // Assert
+        expect(blocks.map((one) => one.key)).toEqual(['c']);
+        expect(blocks[0]?.width).toBeUndefined();
+    });
+
+    it('should keep at most the first images a field holds', () => {
+        // Arrange
+        const entries = Array.from({ length: MAX_IMAGES + 2 }, (_, index) => [`i${String.fromCharCode(97 + index)}`, { order: `V${String.fromCharCode(97 + index)}`, type: 'image', file: photo }]);
+
+        // Act
+        const blocks = readRichText({ blocks: Object.fromEntries(entries) });
+
+        // Assert
+        expect(blocks).toHaveLength(MAX_IMAGES);
+        expect(blocks.at(-1)?.key).toBe(`i${String.fromCharCode(97 + MAX_IMAGES - 1)}`);
     });
 });

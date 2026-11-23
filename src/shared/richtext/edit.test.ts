@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BLOCK_TYPES, plainText, readBlock } from './model.js';
+import { BLOCK_TYPES, MAX_IMAGES, plainText, readBlock } from './model.js';
 import type { Block, KeyedBlock } from './model.js';
 import {
     activeState,
@@ -9,6 +9,9 @@ import {
     deleteForward,
     indent,
     insertDivider,
+    insertImage,
+    removeBlock,
+    setImage,
     insertBlocks,
     insertMention,
     insertTable,
@@ -813,5 +816,107 @@ describe('pickers', () => {
         expect(shapes(chained)).toEqual(['table:', 'paragraph:']);
         expect(chained.written.size).toBe(2);
         expect(chained.removed.size).toBe(0);
+    });
+});
+
+describe('images', () => {
+    const photo = { id: 'f1', name: 'photo.png', size: 2048, type: 'image/png' };
+    const image = (key: string, order: string, extra: Partial<Block> = {}): KeyedBlock => block(key, order, { type: 'image', file: photo, ...extra });
+
+    it('should put an image after the block and the caret in a paragraph after it', () => {
+        // Act
+        const edit = insertImage([block('a', 'V', { text: 'x' })], 'a', photo, all);
+
+        // Assert
+        expect(shapes(edit)).toEqual(['paragraph:x', 'image:', 'paragraph:']);
+        expect(edit?.blocks[1]?.file).toEqual(photo);
+        expect(edit?.selection.focus.block).toBe(edit?.blocks[2]?.key);
+    });
+
+    it('should turn an empty block into the image and move the caret into the text after it', () => {
+        // Act
+        const edit = insertImage([block('a', 'V', {}), block('b', 'W', { text: 'next' })], 'a', photo, all);
+
+        // Assert
+        expect(shapes(edit)).toEqual(['image:', 'paragraph:next']);
+        expect(edit?.blocks[0]?.key).toBe('a');
+        expect(edit?.selection).toEqual(at('b', 0));
+    });
+
+    it('should put the image at the end when its block is gone', () => {
+        // Act
+        const edit = insertImage([block('a', 'V', { text: 'x' })], 'gone', photo, all);
+
+        // Assert
+        expect(shapes(edit)).toEqual(['paragraph:x', 'image:', 'paragraph:']);
+    });
+
+    it('should refuse a file that is not a picture, a field without images and one already full', () => {
+        // Arrange
+        const full = Array.from({ length: MAX_IMAGES }, (_, index) => image(`i${String.fromCharCode(97 + index)}`, `V${String.fromCharCode(97 + index)}`));
+
+        // Act
+        const notPicture = insertImage([block('a', 'V', {})], 'a', { ...photo, type: 'application/pdf' }, all);
+        const notAllowed = insertImage([block('a', 'V', {})], 'a', photo, { allowed: ['paragraph'], maxLength: 0 });
+        const tooMany = insertImage(full, null, photo, all);
+
+        // Assert
+        expect(notPicture).toBeNull();
+        expect(notAllowed).toBeNull();
+        expect(tooMany).toBeNull();
+    });
+
+    it('should set alt text and caption as one trimmed line, set the width and leave out what is empty or full', () => {
+        // Arrange
+        const blocks = [image('a', 'V', { alt: 'old', width: 'small' })];
+
+        // Act
+        const edit = setImage(blocks, 'a', { alt: '  a\nchart ', caption: 'Sales', width: 'medium' });
+        const cleared = setImage(edit?.blocks ?? [], 'a', { alt: ' ', width: 'full' });
+
+        // Assert
+        expect(edit?.blocks[0]).toMatchObject({ alt: 'a chart', caption: 'Sales', width: 'medium' });
+        expect(edit?.selection).toEqual(at('a', 0));
+        expect(cleared?.blocks[0]?.alt).toBeUndefined();
+        expect(cleared?.blocks[0]?.width).toBeUndefined();
+        expect(cleared?.blocks[0]?.caption).toBe('Sales');
+    });
+
+    it('should change nothing when the image is missing or the change keeps it as it is', () => {
+        // Arrange
+        const blocks = [image('a', 'V', { alt: 'same' })];
+
+        // Act
+        const missing = setImage(blocks, 'b', { alt: 'x' });
+        const same = setImage(blocks, 'a', { alt: 'same', width: 'full' });
+
+        // Assert
+        expect(missing).toBeNull();
+        expect(same).toBeNull();
+    });
+
+    it('should remove an image and put the caret where it was', () => {
+        // Act
+        const edit = removeBlock([block('a', 'V', { text: 'x' }), image('b', 'W'), block('c', 'X', { text: 'y' })], 'b');
+
+        // Assert
+        expect(shapes(edit)).toEqual(['paragraph:x', 'paragraph:y']);
+        expect(edit?.removed.has('b')).toBe(true);
+    });
+
+    it('should select the image before or after the caret on Backspace or Delete, and remove it on the next press', () => {
+        // Arrange
+        const blocks = [block('a', 'V', { text: 'x' }), image('b', 'W'), block('c', 'X', { text: 'y' })];
+
+        // Act
+        const backward = deleteBackward(blocks, at('c', 0), 'character');
+        const forward = deleteForward(blocks, at('a', 1), 'character');
+        const removed = deleteBackward(blocks, at('b', 0), 'character');
+
+        // Assert
+        expect(backward?.selection).toEqual(at('b', 0));
+        expect(backward?.written.size).toBe(0);
+        expect(forward?.selection).toEqual(at('b', 0));
+        expect(shapes(removed)).toEqual(['paragraph:x', 'paragraph:y']);
     });
 });

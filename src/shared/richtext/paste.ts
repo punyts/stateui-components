@@ -136,6 +136,12 @@ export function htmlToShapes(document: Document): Shape[] {
         if (node.nodeType !== 1) return;
         const element = node as Element;
         const tag = element.localName;
+        //an image of another site is never kept (docs/design/stateui-text-editor.md, T7): its alt text stays as text
+        if (tag === 'img') {
+            const alt = (element.getAttribute('alt') ?? '').replace(/\s+/gu, ' ').trim();
+            if (alt !== '') append(alt, context);
+            return;
+        }
         if (SKIPPED.has(tag)) return;
         const children = (inner: Context, innerPre = pre): void => {
             for (const child of Array.from(element.childNodes)) walk(child, inner, innerPre);

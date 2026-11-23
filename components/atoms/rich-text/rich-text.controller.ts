@@ -1,4 +1,5 @@
 import type { ControllerContext } from '@punyts/stateui';
+import { storedFileUrl } from '../shared/field/files.js';
 import { readRichText } from '../shared/richtext/model.js';
 import { renderRichText } from '../shared/richtext/render.js';
 
@@ -39,7 +40,7 @@ export default function controller({ element, store, basePath }: ControllerConte
             target.replaceChildren(...(empty === '' ? [] : [note]));
             return;
         }
-        renderRichText(target, blocks, { headingOffset });
+        renderRichText(target, blocks, { headingOffset, fileUrl: (id) => storedFileUrl(element, id) });
     };
     const schedule = (): void => {
         if (scheduled || disposed) return;

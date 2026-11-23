@@ -10,11 +10,12 @@ import { describe, expect, it } from 'vitest';
  * editing model, view and undo history add about 13 KB (stateui-text-editor.md, T2), and to 263,957 when the editor's paste,
  * link panel, tables and mentions (T3, T4), the table's pinned and resizable columns and `actionBar` (stateui-component-gaps.md, C1) did,
  * and to 280,681 when the conversation molecules (C2), the three chart types, `meter` and `sparkline` (C3) did, and to 305,532 when the date and time views (C4), the smaller controls (C5) and the media components (C6: the
- * `qrCode` encoder, `lightbox`, `mediaPlayer` and `fileField`'s crop step) did. Component functions add to this
+ * `qrCode` encoder, `lightbox`, `mediaPlayer` and `fileField`'s crop step) did, and to 323,941 when the editor's comments (T6) and
+ * images (T7) did. Component functions add to this
  * bundle, so it has a gate like stateui-3d's chunk: the test fails when it is more than 5% above the measure. A component
  * that needs more raises the measure in the same commit, with the reason
  */
-const MEASURED_GZIP_BYTES = 305_532;
+const MEASURED_GZIP_BYTES = 323_941;
 const GZIP_LIMIT = Math.floor(MEASURED_GZIP_BYTES * 1.05);
 
 describe('the components bundle', () => {

@@ -1,3 +1,5 @@
+import { IMAGE_FILE_TYPES, bareType, isFileRef } from '../field/files.js';
+import type { FileRef } from '../field/files.js';
 import { safeHref } from '../markdown/links.js';
 import { orderKeys } from './order.js';
 
@@ -8,7 +10,7 @@ import { orderKeys } from './order.js';
  * field checked; `normalizeRuns` gives equal content one form
  */
 
-export const BLOCK_TYPES = ['paragraph', 'heading', 'bullet', 'numbered', 'check', 'quote', 'code', 'divider', 'table'] as const;
+export const BLOCK_TYPES = ['paragraph', 'heading', 'bullet', 'numbered', 'check', 'quote', 'code', 'divider', 'table', 'image'] as const;
 export type BlockType = (typeof BLOCK_TYPES)[number];
 
 /** The marks in the order they are stored and nested: code innermost, bold outermost */
@@ -17,7 +19,7 @@ export type Mark = (typeof MARKS)[number];
 
 export const LIST_TYPES: readonly BlockType[] = ['bullet', 'numbered', 'check'];
 /** Blocks with no text of their own: the caret cannot sit in their runs (a table's text is in its cells) */
-export const ATOMIC_TYPES: readonly BlockType[] = ['divider', 'table'];
+export const ATOMIC_TYPES: readonly BlockType[] = ['divider', 'table', 'image'];
 export const ALIGNS = ['left', 'center', 'right'] as const;
 export type Align = (typeof ALIGNS)[number];
 
@@ -33,6 +35,13 @@ export const MAX_MENTION_ID = 128;
 /** A run carries at most this many comment threads; a thread id is at most this long */
 export const MAX_RUN_COMMENTS = 8;
 export const MAX_THREAD_ID = 32;
+/** An image's alt text and caption are one line of at most this many characters */
+export const MAX_IMAGE_TEXT = 300;
+/** A field holds at most this many images */
+export const MAX_IMAGES = 20;
+/** The widths an image is drawn at: a third, two thirds or all of the text's width; `full` is the default and left out */
+export const IMAGE_WIDTHS = ['small', 'medium', 'full'] as const;
+export type ImageWidth = (typeof IMAGE_WIDTHS)[number];
 
 export interface Run {
     text: string;
@@ -70,6 +79,14 @@ export interface Block {
     rows?: Row[];
     /** A table's column alignment, one per column (`''` for none); left out when no column has one */
     align?: Array<Align | ''>;
+    /** An image's stored file: a PNG, JPEG, GIF or WebP of the app */
+    file?: FileRef;
+    /** An image's alt text, one line */
+    alt?: string;
+    /** An image's caption, one line */
+    caption?: string;
+    /** An image's width; left out for `full` */
+    width?: ImageWidth;
 }
 
 export interface RichTextValue {
@@ -202,6 +219,30 @@ function readTable(value: Record<string, unknown>, block: Block): void {
     if (aligned.some((one) => one !== '')) block.align = aligned;
 }
 
+/** One line of an image's text: line breaks become spaces, cut to `MAX_IMAGE_TEXT` */
+export function imageText(value: unknown): string {
+    return typeof value === 'string' ? value.replace(/[\r\n\t]+/gu, ' ').slice(0, MAX_IMAGE_TEXT) : '';
+}
+
+/** A stored file's reference that an image may show: a picture type, kept to its four fields */
+export function imageFile(value: unknown): FileRef | undefined {
+    if (!isFileRef(value) || !IMAGE_FILE_TYPES.includes(bareType(value.type))) return undefined;
+    return { id: value.id, name: value.name, size: value.size, type: value.type };
+}
+
+/** An image's file, alt text, caption and width, checked; false when its file is not a picture of the app */
+function readImage(value: Record<string, unknown>, block: Block): boolean {
+    const file = imageFile(value['file']);
+    if (file === undefined) return false;
+    block.file = file;
+    const alt = imageText(value['alt']);
+    if (alt !== '') block.alt = alt;
+    const caption = imageText(value['caption']);
+    if (caption !== '') block.caption = caption;
+    if (value['width'] === 'small' || value['width'] === 'medium') block.width = value['width'];
+    return true;
+}
+
 /** The text of every cell of a table, or of a block's runs */
 export function blockLength(block: Pick<Block, 'runs' | 'rows'>): number {
     if (block.rows === undefined) return plainText(block.runs).length;
@@ -214,7 +255,7 @@ export function readBlock(value: unknown): Block | undefined {
     const type = value['type'];
     if (typeof type !== 'string' || !(BLOCK_TYPES as readonly string[]).includes(type)) return undefined;
     const order = typeof value['order'] === 'string' ? value['order'] : '';
-    const block: Block = { order, type: type as BlockType, runs: type === 'divider' || type === 'table' ? [] : normalizeRuns(value['runs']) };
+    const block: Block = { order, type: type as BlockType, runs: (ATOMIC_TYPES as readonly string[]).includes(type) ? [] : normalizeRuns(value['runs']) };
     if (type === 'heading') block.level = clampInteger(value['level'], 1, MAX_HEADING_LEVEL, 1);
     if (LIST_TYPES.includes(block.type)) block.indent = clampInteger(value['indent'], 0, MAX_INDENT, 0);
     if (type === 'check') block.checked = value['checked'] === true;
@@ -224,6 +265,7 @@ export function readBlock(value: unknown): Block | undefined {
         if (typeof value['language'] === 'string' && value['language'] !== '') block.language = value['language'].slice(0, 32);
     }
     if (type === 'table') readTable(value, block);
+    if (type === 'image' && !readImage(value, block)) return undefined;
     return block;
 }
 
@@ -232,7 +274,7 @@ export const compareBlocks = (a: KeyedBlock, b: KeyedBlock): number => (a.order 
 
 /**
  * The blocks of a value in order. Anything that is not a block, or whose key is not a block key, is dropped, as is every
- * block past `MAX_BLOCKS`
+ * block past `MAX_BLOCKS` and every image past `MAX_IMAGES`
  */
 export function readRichText(value: unknown): KeyedBlock[] {
     const blocks = isRecord(value) ? value['blocks'] : undefined;
@@ -243,7 +285,9 @@ export function readRichText(value: unknown): KeyedBlock[] {
         const block = readBlock(stored);
         if (block !== undefined) read.push({ key, ...block });
     }
-    return read.sort(compareBlocks).slice(0, MAX_BLOCKS);
+    let images = 0;
+    //images past MAX_IMAGES are dropped, so a field never shows more
+    return read.sort(compareBlocks).slice(0, MAX_BLOCKS).filter((block) => block.type !== 'image' || ++images <= MAX_IMAGES);
 }
 
 /** Blocks in the order given, as a value: each gets a new key and an order key that keeps that order */

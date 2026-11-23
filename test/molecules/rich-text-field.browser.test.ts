@@ -778,3 +778,205 @@ describe('richTextField comments in Chromium', () => {
         expect(tool(readonly.element, 'comment').disabled).toBe(false);
     });
 });
+
+/** A one-pixel PNG, as the host's URL for a stored picture */
+const PIXEL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+const PHOTO = { id: 'f1', name: 'photo.png', size: 2048, type: 'image/png' };
+const WITH_IMAGE = {
+    blocks: {
+        bOne: { order: 'a', type: 'paragraph', runs: [{ text: 'first' }] },
+        bPic: { order: 'b', type: 'image', file: PHOTO, alt: 'A chart', caption: 'Sales' },
+        bTwo: { order: 'c', type: 'paragraph', runs: [{ text: 'last' }] }
+    }
+};
+
+/** Answers `ui-file-url` with the pixel for every id */
+const serveFiles = (element: Element): void => {
+    element.addEventListener('ui-file-url', (event) => (event as CustomEvent<{ respond: (url: string) => void }>).detail.respond(PIXEL));
+};
+
+/** Answers `ui-file-transfer` with a reference once `finish` is called, reporting a quarter done first */
+const takeUploads = (element: Element): { names: string[]; finish: () => void } => {
+    const names: string[] = [];
+    const waiting: Array<() => void> = [];
+    element.addEventListener('ui-file-transfer', (event) => {
+        const detail = (event as CustomEvent).detail as { file: File; onProgress: (progress: { loaded: number; total: number }) => void; respond: (result: Promise<unknown>) => void };
+        names.push(detail.file.name);
+        const id = `f${names.length}`;
+        detail.onProgress({ loaded: 1, total: 4 });
+        detail.respond(new Promise((resolve) => waiting.push(() => resolve({ id, name: detail.file.name, size: detail.file.size, type: detail.file.type }))));
+    });
+    return { names, finish: () => waiting.splice(0).forEach((resolve) => resolve()) };
+};
+const png = (name: string): File => new File([new Uint8Array([137, 80, 78, 71])], name, { type: 'image/png' });
+
+describe('richTextField images in Chromium', () => {
+    afterEach(() => {
+        mountComponent.unmountAll();
+    });
+
+    it("should draw an image from the host's URL with its alt text and caption, and a box with the alt text without one", async () => {
+        // Arrange
+        const served = mountComponent('richTextField', { value: WITH_IMAGE });
+        serveFiles(served.element);
+        const unserved = mountComponent('richTextField', { value: WITH_IMAGE });
+
+        // Act
+        await flush();
+
+        // Assert
+        const figure = editor(served.element).querySelector<HTMLElement>('.block[data-type="image"] figure.image');
+        expect(figure?.closest('.block')?.getAttribute('contenteditable')).toBe('false');
+        expect(figure?.querySelector('img')?.getAttribute('src')).toBe(PIXEL);
+        expect(figure?.querySelector('img')?.getAttribute('alt')).toBe('A chart');
+        expect(figure?.querySelector('figcaption')?.textContent).toBe('Sales');
+        expect(editor(unserved.element).querySelector('figure.image .missing')?.textContent).toBe('A chart');
+        expect(editor(unserved.element).querySelector('figure.image img')).toBeNull();
+    });
+
+    it('should upload a chosen picture with its progress shown and put the image after the caret as one undo step', async () => {
+        // Arrange
+        const mounted = await mountFocused({ value: VALUE });
+        const uploads = takeUploads(mounted.element);
+        await userEvent.click(editor(mounted.element).querySelector('.block[data-key="bOne"] .text') as HTMLElement);
+        await flush();
+
+        // Act
+        tool(mounted.element, 'image').click();
+        await userEvent.upload(part<HTMLInputElement>(mounted.element, '#imageFile'), png('photo.png'));
+        await flush();
+        const during = part(mounted.element, '.upload')?.textContent;
+        uploads.finish();
+        await flush();
+        await flush();
+        const blocks = readRichText(stored(mounted));
+        await userEvent.click(editor(mounted.element).querySelector('.block[data-key="bOne"] .text') as HTMLElement);
+        await userEvent.keyboard('{Control>}z{/Control}');
+        await flush();
+
+        // Assert
+        expect(uploads.names).toEqual(['photo.png']);
+        expect(during).toBe('Uploading photo.png 25%');
+        expect(part(mounted.element, '.upload')).toBeNull();
+        expect(blocks.map((block) => block.type)).toEqual(['paragraph', 'image', 'bullet']);
+        expect(blocks[1]?.file).toEqual({ id: 'f1', name: 'photo.png', size: 4, type: 'image/png' });
+        expect(shapes(stored(mounted))).toEqual(['paragraph:first', 'bullet:item']);
+    });
+
+    it('should upload a pasted screenshot and dropped pictures, but paste the text of a copy that carries a picture too', async () => {
+        // Arrange
+        const mounted = await mountFocused({ value: VALUE });
+        const uploads = takeUploads(mounted.element);
+        const screenshot = new DataTransfer();
+        screenshot.items.add(png('shot.png'));
+        const copied = new DataTransfer();
+        copied.setData('text/plain', 'words');
+        copied.items.add(png('render.png'));
+        const dropped = new DataTransfer();
+        dropped.items.add(png('a.png'));
+        dropped.items.add(png('b.png'));
+
+        // Act
+        const paste = new ClipboardEvent('paste', { clipboardData: screenshot, bubbles: true, cancelable: true, composed: true });
+        editor(mounted.element).dispatchEvent(paste);
+        const textPaste = new ClipboardEvent('paste', { clipboardData: copied, bubbles: true, cancelable: true, composed: true });
+        editor(mounted.element).dispatchEvent(textPaste);
+        const drop = new DragEvent('drop', { dataTransfer: dropped, bubbles: true, cancelable: true, composed: true });
+        editor(mounted.element).querySelector('.block[data-key="bOne"] .text')?.dispatchEvent(drop);
+        uploads.finish();
+        await flush();
+        await flush();
+
+        // Assert
+        expect(paste.defaultPrevented).toBe(true);
+        expect(textPaste.defaultPrevented).toBe(false);
+        expect(drop.defaultPrevented).toBe(true);
+        expect(uploads.names).toEqual(['shot.png', 'a.png', 'b.png']);
+        expect(readRichText(stored(mounted)).map((block) => block.file?.name ?? block.type)).toEqual(['paragraph', 'a.png', 'b.png', 'bullet', 'shot.png', 'paragraph']);
+    });
+
+    it('should refuse a file that is not a picture with a notice naming it, and offer no images when the field leaves them out', async () => {
+        // Arrange
+        const mounted = await mountFocused({ value: VALUE });
+        const uploads = takeUploads(mounted.element);
+        const limited = mountComponent('richTextField', { blocks: ['paragraph', 'bullet'] });
+        await flush();
+
+        // Act
+        tool(mounted.element, 'image').click();
+        await userEvent.upload(part<HTMLInputElement>(mounted.element, '#imageFile'), new File(['x'], 'notes.pdf', { type: 'application/pdf' }));
+        await flush();
+
+        // Assert
+        expect(uploads.names).toEqual([]);
+        expect(part(mounted.element, '.upload')?.textContent).toBe('notes.pdf is not a PNG, JPEG, GIF or WebP image of at most 10 MB');
+        expect(part(mounted.element, '.upload')?.getAttribute('data-failed')).toBe('true');
+        expect(tool(limited.element, 'image')).toBeNull();
+    });
+
+    it('should open the image panel on a press and write alt text, caption and width, and remove the image with undo bringing it back', async () => {
+        // Arrange
+        const mounted = await mountFocused({ value: WITH_IMAGE });
+        serveFiles(mounted.element);
+
+        // Act
+        await userEvent.click(editor(mounted.element).querySelector('figure.image') as HTMLElement);
+        await flush();
+        const opened = mounted.store.get('$.app.image');
+        const filled = part<HTMLInputElement>(mounted.element, 'input[data-image="caption"]').value;
+        const alt = part<HTMLInputElement>(mounted.element, 'input[data-image="alt"]');
+        await userEvent.fill(alt, 'Sales by month');
+        alt.dispatchEvent(new Event('change', { bubbles: true }));
+        part<HTMLButtonElement>(mounted.element, 'button[data-width="small"]').click();
+        await flush();
+        const changed = mounted.store.get('$.app.value.blocks.bPic');
+        const pressed = part<HTMLButtonElement>(mounted.element, 'button[data-width="small"]').getAttribute('aria-pressed');
+        part<HTMLButtonElement>(mounted.element, '#imagePanel button[data-action="remove"]').click();
+        await flush();
+        const removed = shapes(stored(mounted));
+        await userEvent.keyboard('{Control>}z{/Control}');
+        await flush();
+
+        // Assert
+        expect(opened).toBe('open');
+        expect(filled).toBe('Sales');
+        expect(changed).toMatchObject({ alt: 'Sales by month', caption: 'Sales', width: 'small' });
+        expect(pressed).toBe('true');
+        expect(removed).toEqual(['paragraph:first', 'paragraph:last']);
+        expect(shapes(stored(mounted))).toEqual(['paragraph:first', 'image:', 'paragraph:last']);
+    });
+
+    it('should select the image on Backspace after it, opening its panel, and remove it on the next Backspace', async () => {
+        // Arrange
+        const mounted = await mountFocused({ value: WITH_IMAGE });
+        await userEvent.click(editor(mounted.element).querySelector('.block[data-key="bTwo"] .text') as HTMLElement);
+        await userEvent.keyboard('{Home}');
+        await flush();
+
+        // Act
+        await userEvent.keyboard('{Backspace}');
+        await flush();
+        const selected = { panel: mounted.store.get('$.app.image'), blocks: shapes(stored(mounted)) };
+        await userEvent.keyboard('{Backspace}');
+        await flush();
+
+        // Assert
+        expect(selected).toEqual({ panel: 'open', blocks: ['paragraph:first', 'image:', 'paragraph:last'] });
+        expect(shapes(stored(mounted))).toEqual(['paragraph:first', 'paragraph:last']);
+        expect(mounted.store.get('$.app.image')).toBe('');
+    });
+
+    it('should draw images but open no panel when readonly', async () => {
+        // Arrange
+        const mounted = mountComponent('richTextField', { value: WITH_IMAGE, readonly: true });
+        await flush();
+
+        // Act
+        await userEvent.click(editor(mounted.element).querySelector('figure.image') as HTMLElement);
+        await flush();
+
+        // Assert
+        expect(editor(mounted.element).querySelector('figure.image')).not.toBeNull();
+        expect(mounted.store.get('$.app.image')).toBe('');
+    });
+});

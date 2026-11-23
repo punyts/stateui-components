@@ -50,6 +50,18 @@
         "resolve": "Erledigen",
         "reopen": "Wieder öffnen",
         "resolved": "Erledigt",
-        "deleteComment": "Löschen"
+        "deleteComment": "Löschen",
+        "image": "Bild",
+        "imageAlt": "Alternativtext",
+        "imageCaption": "Bildunterschrift",
+        "imageWidth": "Breite",
+        "imageSmall": "Klein",
+        "imageMedium": "Mittel",
+        "imageFull": "Voll",
+        "removeImage": "Bild entfernen",
+        "uploading": "Wird hochgeladen: {files}",
+        "uploadFailed": "{name} konnte nicht hochgeladen werden",
+        "imageRefused": "{name} ist kein PNG-, JPEG-, GIF- oder WebP-Bild bis 10 MB",
+        "imageLimit": "{name} wurde nicht eingefügt: Das Feld fasst höchstens 20 Bilder"
     }
 }

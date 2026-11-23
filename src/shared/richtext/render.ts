@@ -13,6 +13,43 @@ import type { Block, Cell, KeyedBlock, Mark, Run } from './model.js';
 export interface RichTextRenderOptions {
     /** Added to a heading's level: with 1, a level 1 heading is an `h2`. The result is at most 6 */
     headingOffset: number;
+    /** The URL a stored file is read from (the runtime's `fileUrl` hook); an image without one is drawn as its alt text */
+    fileUrl?: (id: string) => string | undefined;
+}
+
+/**
+ * An image block as a `figure`: the `img` read from `url` with its alt text, drawn at its width (`data-width`), and the
+ * caption as a `figcaption`. Without a URL, or once the picture fails to load, the figure shows a box with the alt text
+ * (or the file's name) instead (`.missing`)
+ */
+export function imageFigure(document: Document, block: Pick<Block, 'file' | 'alt' | 'caption' | 'width'>, url: string | undefined): HTMLElement {
+    const figure = document.createElement('figure');
+    figure.className = 'image';
+    figure.dataset['width'] = block.width ?? 'full';
+    const missing = (): void => {
+        const box = document.createElement('span');
+        box.className = 'missing';
+        box.setAttribute('role', 'img');
+        box.setAttribute('aria-label', block.alt || block.file?.name || '');
+        box.textContent = block.alt || block.file?.name || '';
+        figure.querySelector('img')?.remove();
+        figure.prepend(box);
+    };
+    if (url === undefined) missing();
+    else {
+        const image = document.createElement('img');
+        image.src = url;
+        image.alt = block.alt ?? '';
+        image.decoding = 'async';
+        image.addEventListener('error', missing, { once: true });
+        figure.appendChild(image);
+    }
+    if (block.caption !== undefined) {
+        const caption = document.createElement('figcaption');
+        caption.textContent = block.caption;
+        figure.appendChild(caption);
+    }
+    return figure;
 }
 
 const MARK_TAGS: Readonly<Record<Mark, string>> = { code: 'code', strike: 's', italic: 'em', bold: 'strong' };
@@ -117,6 +154,9 @@ function blockElement(document: Document, block: KeyedBlock, options: RichTextRe
             break;
         case 'table':
             element = tableElement(document, block, (cell, content) => renderRuns(document, cell, content.runs));
+            break;
+        case 'image':
+            element = imageFigure(document, block, block.file === undefined ? undefined : options.fileUrl?.(block.file.id));
             break;
         default:
             element = document.createElement('p');

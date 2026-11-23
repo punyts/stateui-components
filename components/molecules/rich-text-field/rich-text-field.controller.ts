@@ -3,8 +3,9 @@ import { QUERY_DELAY_MS, filterComboOptions, readComboOptions } from '../shared/
 import { createField } from '../shared/field/field.js';
 import { createPopover } from '../shared/popover/popover.js';
 import type { PopoverHandle } from '../shared/popover/popover.js';
-import { BLOCK_TYPES, MARKS, compareBlocks, isThreadId, newBlockKey, readRichText, textLength } from '../shared/richtext/model.js';
-import type { Block, BlockType, KeyedBlock, Mark } from '../shared/richtext/model.js';
+import { IMAGE_FILE_TYPES, MAX_FILE_SIZE, isFileRef, mediaTypeOf, percentOf, storedFileUrl } from '../shared/field/files.js';
+import { BLOCK_TYPES, IMAGE_WIDTHS, MARKS, MAX_IMAGES, compareBlocks, isThreadId, newBlockKey, readRichText, textLength } from '../shared/richtext/model.js';
+import type { Block, BlockType, ImageWidth, KeyedBlock, Mark } from '../shared/richtext/model.js';
 import {
     PICKER_TRIGGERS,
     activeState,
@@ -14,9 +15,11 @@ import {
     commentsAt,
     deleteBackward,
     deleteForward,
+    imageCount,
     indent,
     insertBlocks,
     insertDivider,
+    insertImage,
     insertLineBreak,
     insertMention,
     insertTable,
@@ -25,9 +28,11 @@ import {
     linkTarget,
     opensPicker,
     pickerQuery,
+    removeBlock,
     removeComment,
     replaceBlockText,
     setBlockKind,
+    setImage,
     setLink,
     splitBlock,
     tableCommand,
@@ -87,7 +92,8 @@ const SLASH_COMMANDS: ReadonlyArray<{ name: string; type: BlockType }> = [
     { name: 'quote', type: 'quote' },
     { name: 'codeBlock', type: 'code' },
     { name: 'divider', type: 'divider' },
-    { name: 'table', type: 'table' }
+    { name: 'table', type: 'table' },
+    { name: 'image', type: 'image' }
 ];
 
 const TABLE_COMMANDS: ReadonlySet<string> = new Set(['addRow', 'addColumn', 'removeRow', 'removeColumn', 'removeTable']);
@@ -116,6 +122,28 @@ const isRecord = (value: unknown): value is Record<string, unknown> => typeof va
 const stored = (block: KeyedBlock): Block => {
     const { key: _key, ...rest } = block;
     return rest;
+};
+
+const FILE_TRANSFER_EVENT = 'ui-file-transfer';
+/** The most images that upload at once, and how long a refused or failed upload's notice shows */
+const MAX_IMAGE_UPLOADS = 5;
+const NOTICE_MS = 4000;
+
+interface ImageUpload {
+    name: string;
+    loaded: number;
+    total: number;
+    abort: AbortController;
+}
+
+/**
+ * The files a paste or drop brings that the field uploads as images: only when it brings no text or HTML, so a copy
+ * from a document (which carries a picture of itself beside its text) pastes its text
+ */
+const imageFilesOf = (data: DataTransfer | null): File[] => {
+    if (data === null || data.files.length === 0) return [];
+    const types = [...data.types];
+    return types.includes('text/plain') || types.includes('text/html') ? [] : [...data.files];
 };
 
 /** The longest comment or reply, and the most replies a thread and threads a field keep */
@@ -381,7 +409,7 @@ export default function controller(context: ControllerContext) {
         pickerPanel.close();
         editor?.removeAttribute('aria-activedescendant');
         editor?.removeAttribute('aria-controls');
-        if (read('link') === '' && read('comment') === '') anchorTo(null);
+        if (read('link') === '' && read('comment') === '' && imageKey === null) anchorTo(null);
     };
 
     const closePicker = (): void => {
@@ -440,7 +468,11 @@ export default function controller(context: ControllerContext) {
         if (open.kind === 'mention') next = insertMention(removed.blocks, removed.selection, item.id, item.label, current);
         else if (item.id === 'divider') next = insertDivider(removed.blocks, removed.selection, current);
         else if (item.id === 'table') next = insertTable(removed.blocks, removed.selection, current);
-        else {
+        else if (item.id === 'image') {
+            apply(removed);
+            chooseImages();
+            return;
+        } else {
             const kind = BLOCK_COMMANDS[item.id];
             next = kind === undefined ? null : setBlockKind(removed.blocks, removed.selection, kind, current);
         }
@@ -456,6 +488,7 @@ export default function controller(context: ControllerContext) {
         showSelection();
         publish();
         followPicker();
+        followImage();
     };
 
     const apply = (edit: Edit | null, kind: EditKind = 'other'): boolean => {
@@ -467,6 +500,7 @@ export default function controller(context: ControllerContext) {
             put('selection', selection);
             updateActive();
             followPicker();
+            followImage();
             return true;
         }
         history.record(blocks, edit, selection ?? edit.selection, kind, Date.now());
@@ -538,6 +572,10 @@ export default function controller(context: ControllerContext) {
             openLink();
             return;
         }
+        if (name === 'image') {
+            chooseImages();
+            return;
+        }
         const current = settings();
         if (name === 'undo') undo();
         else if (name === 'redo') redo();
@@ -586,7 +624,7 @@ export default function controller(context: ControllerContext) {
     const openLink = (): void => {
         if (selection === null || view === null || linkPanel === null || linkInput === null) return;
         const block = blocks.find((candidate) => candidate.key === selection?.focus.block);
-        if (block === undefined || block.type === 'code' || block.type === 'divider' || (block.type === 'table' && selection.focus.cell === undefined)) return;
+        if (block === undefined || block.type === 'code' || block.type === 'divider' || block.type === 'image' || (block.type === 'table' && selection.focus.cell === undefined)) return;
         closePicker();
         const found = linkAt(blocks, selection);
         linkRange = found?.selection ?? selection;
@@ -619,8 +657,197 @@ export default function controller(context: ControllerContext) {
         finishLink(href);
     };
 
+    /** The image panel and the image it edits (null when closed) */
+    let imagePanel: PopoverHandle | null = null;
+    let imageBox: HTMLElement | null = null;
+    let imageKey: string | null = null;
+    let fileInput: HTMLInputElement | null = null;
+    /** The block the file chooser's images go after: the caret's block when the chooser opened */
+    let chooserAfter: string | null = null;
+    const uploads = new Map<string, ImageUpload>();
+    let uploadCounter = 0;
+    let notice = '';
+    let noticeTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const imageInput = (name: 'alt' | 'caption'): HTMLInputElement | null => imageBox?.querySelector<HTMLInputElement>(`input[data-image="${name}"]`) ?? null;
+    const lastKey = (): string | null => blocks[blocks.length - 1]?.key ?? null;
+    const takesImages = (): boolean => !isLocked() && settings().allowed.includes('image');
+
+    /** Shows the uploads under way (name and progress), else the last notice */
+    const drawUploads = (): void => {
+        if (uploads.size > 0) {
+            const files = [...uploads.values()].map((upload) => `${upload.name} ${percentOf(upload.loaded, upload.total)}%`).join(', ');
+            put('upload', (tool('uploading') || '{files}').replace('{files}', files));
+            put('uploadFailed', false);
+            return;
+        }
+        put('upload', notice);
+        put('uploadFailed', notice !== '');
+    };
+
+    /** A refused or failed upload: the notice names the file, never its content, and clears after a few seconds */
+    const notify = (template: string, name: string): void => {
+        notice = (tool(template) || '{name}').replace('{name}', name);
+        clearTimeout(noticeTimer);
+        noticeTimer = setTimeout(() => {
+            notice = '';
+            if (!disposed) drawUploads();
+        }, NOTICE_MS);
+        drawUploads();
+    };
+
+    /** Raises `ui-file-transfer`; the promise rejects when nothing answers (the host has no hook) */
+    const handFile = (file: File, upload: ImageUpload): Promise<unknown> =>
+        new Promise((resolve, reject) => {
+            let answered = false;
+            const detail = {
+                file,
+                signal: upload.abort.signal,
+                onProgress: (progress: { loaded: number; total: number }): void => {
+                    upload.loaded = progress.loaded;
+                    upload.total = progress.total;
+                    drawUploads();
+                },
+                respond: (result: Promise<unknown>): void => {
+                    answered = true;
+                    result.then(resolve, reject);
+                }
+            };
+            element.dispatchEvent(new CustomEvent(FILE_TRANSFER_EVENT, { detail, bubbles: true, composed: true }));
+            if (!answered) reject(new Error('offline'));
+        });
+
+    /** Uploads one image; when it ends the image goes in after `place.after`, which then moves to it so a batch keeps its order */
+    const startUpload = (file: File, type: string, place: { after: string | null }): void => {
+        const key = `u${uploadCounter}`;
+        uploadCounter += 1;
+        const upload: ImageUpload = { name: file.name, loaded: 0, total: file.size, abort: new AbortController() };
+        uploads.set(key, upload);
+        drawUploads();
+        //a file the browser gave no type is sent with the type of its extension, because the host refuses a file with none
+        const sent = file.type === '' ? new File([file], file.name, { type }) : file;
+        handFile(sent, upload).then(
+            (result) => {
+                if (!uploads.delete(key) || disposed) return;
+                const edit = isLocked() || !isFileRef(result) ? null : insertImage(blocks, place.after, result, settings());
+                if (edit === null) {
+                    notify(isFileRef(result) && !isLocked() ? 'imageLimit' : 'uploadFailed', file.name);
+                    return;
+                }
+                const image = [...edit.written.values()].find((block) => block.type === 'image' && block.file?.id === result.id);
+                apply(edit);
+                if (image !== undefined) place.after = image.key;
+                drawUploads();
+            },
+            () => {
+                if (!uploads.delete(key) || disposed) return;
+                notify('uploadFailed', file.name);
+            }
+        );
+    };
+
+    /** Uploads image files to go in after the block `after`; a file of another type, too large or past the limits is refused */
+    const uploadImages = (files: readonly File[], after: string | null): void => {
+        if (!takesImages()) return;
+        const place = { after };
+        for (const file of files) {
+            const type = mediaTypeOf(file);
+            if (!IMAGE_FILE_TYPES.includes(type) || file.size > MAX_FILE_SIZE) notify('imageRefused', file.name);
+            else if (uploads.size >= MAX_IMAGE_UPLOADS || imageCount(blocks) + uploads.size >= MAX_IMAGES) notify('imageLimit', file.name);
+            else startUpload(file, type, place);
+        }
+    };
+
+    /** Opens the file chooser; its images go after the caret's block */
+    const chooseImages = (): void => {
+        if (!takesImages() || fileInput === null) return;
+        chooserAfter = selection?.focus.block ?? lastKey();
+        fileInput.click();
+    };
+
+    /** Closes the image panel; with `refocus`, the editor takes the focus back with the image selected */
+    const closeImage = (refocus: boolean): void => {
+        if (imageKey === null) return;
+        imageKey = null;
+        imagePanel?.close();
+        put('image', '');
+        if (read('link') === '' && read('comment') === '' && picker === null) anchorTo(null);
+        if (refocus && editor !== null) {
+            editor.focus();
+            showSelection();
+        }
+    };
+
+    /** Opens the image panel under an image, filled with its alt text, caption and width (a box being typed in keeps its text) */
+    const openImage = (block: KeyedBlock): void => {
+        if (imagePanel === null) return;
+        closePicker();
+        imageKey = block.key;
+        anchorTo(block.key);
+        const active = element.shadowRoot?.activeElement ?? null;
+        for (const name of ['alt', 'caption'] as const) {
+            const input = imageInput(name);
+            if (input !== null && input !== active) input.value = block[name] ?? '';
+        }
+        put('imageWidth', block.width ?? 'full');
+        put('image', 'open');
+        imagePanel.open();
+    };
+
+    /** A caret on an image (and nothing else) opens its panel; any other selection closes it */
+    const followImage = (): void => {
+        const collapsedOn = selection !== null && samePoint({ anchor: selection.anchor, focus: selection.anchor }, selection) ? selection.focus.block : null;
+        const block = collapsedOn === null || isLocked() ? undefined : blocks.find((candidate) => candidate.key === collapsedOn);
+        if (block?.type === 'image') {
+            if (imageKey !== block.key) movedOffImage = false;
+            openImage(block);
+        } else closeImage(false);
+    };
+
+    /** Moves the caret off a selected image to the start or end of its neighbour */
+    const leaveImage = (key: string, forward: boolean): void => {
+        const index = blocks.findIndex((block) => block.key === key);
+        const target = blocks[index + (forward ? 1 : -1)];
+        if (target === undefined) return;
+        const point = { block: target.key, offset: forward ? 0 : Number.MAX_SAFE_INTEGER };
+        selection = clampSelection(blocks, { anchor: point, focus: point });
+        showSelection();
+        put('selection', selection);
+        updateActive();
+        followImage();
+    };
+
+    /**
+     * The keys on a selected image, where the page holds no range and the browser raises no input: Backspace and Delete
+     * remove it, Enter puts a paragraph after it, the arrows leave it, and a typed character starts a paragraph after it
+     */
+    const imageKeys = (event: KeyboardEvent): boolean => {
+        const at = selection;
+        if (at === null || isLocked()) return false;
+        const key = at.focus.block;
+        if (event.key === 'Backspace' || event.key === 'Delete') apply(deleteBackward(blocks, at, 'character'));
+        else if (event.key === 'Enter') apply(splitBlock(blocks, at, settings()));
+        else if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') leaveImage(key, false);
+        else if (event.key === 'ArrowDown' || event.key === 'ArrowRight') leaveImage(key, true);
+        else if (event.key.length === 1) apply(insertText(blocks, at, event.key, settings()), 'typing');
+        else return false;
+        event.preventDefault();
+        return true;
+    };
+
+    const changeImage = (change: { alt?: string; caption?: string; width?: ImageWidth }): void => {
+        if (imageKey === null || isLocked()) return;
+        apply(setImage(blocks, imageKey, change));
+    };
+
+    /** Whether the user pressed the editor, or a key the selected image does not take, since an image was selected */
+    let movedOffImage = true;
+    const holdsImage = (): boolean => imageKey !== null && selection !== null && selection.focus.block === imageKey && selection.anchor.block === imageKey;
+
     const onSelectionChange = (): void => {
         if (!focused || composing !== null || view === null) return;
+        //the page holds no range on a selected image; a caret the browser puts back on its own is not a move
+        if (holdsImage() && !movedOffImage) return;
         const next = view.readSelection();
         if (next === null || samePoint(next, selection)) return;
         selection = next;
@@ -629,6 +856,7 @@ export default function controller(context: ControllerContext) {
         put('selection', next);
         updateActive();
         followPicker();
+        followImage();
     };
     const document = element.ownerDocument;
     document.addEventListener('selectionchange', onSelectionChange);
@@ -950,7 +1178,10 @@ export default function controller(context: ControllerContext) {
         if (pickerList !== null) pickerPanel = createPopover({ element: pickerList, placement: 'bottomStart', anchor: LINK_ANCHOR, onDismiss: () => closePicker() });
         commentBox = element.shadowRoot?.querySelector<HTMLElement>('#commentPanel') ?? null;
         if (commentBox !== null) commentPanel = createPopover({ element: commentBox, placement: 'bottomStart', anchor: LINK_ANCHOR, onDismiss: (reason) => closeComments(reason === 'escape') });
-        view = createEditorView(found, { checkLabel: () => tool('checkItem'), shownComments: openThreads, activeComment: () => activeThread });
+        imageBox = element.shadowRoot?.querySelector<HTMLElement>('#imagePanel') ?? null;
+        if (imageBox !== null) imagePanel = createPopover({ element: imageBox, placement: 'bottomStart', anchor: LINK_ANCHOR, onDismiss: (reason) => closeImage(reason === 'escape') });
+        fileInput = element.shadowRoot?.querySelector<HTMLInputElement>('#imageFile') ?? null;
+        view = createEditorView(found, { checkLabel: () => tool('checkItem'), shownComments: openThreads, activeComment: () => activeThread, fileUrl: (id) => storedFileUrl(element, id) });
         sync();
     };
     queueMicrotask(() => start(8));
@@ -1055,6 +1286,8 @@ export default function controller(context: ControllerContext) {
                     return;
                 }
             }
+            if (holdsImage() && !modifier && !event.altKey && imageKeys(event)) return;
+            movedOffImage = true;
             const key = event.key.toLowerCase();
             if (modifier && event.altKey && !event.shiftKey && (key === 'm' || event.code === 'KeyM')) {
                 event.preventDefault();
@@ -1105,11 +1338,26 @@ export default function controller(context: ControllerContext) {
             scheduleSync();
         },
         onEditorDown: (event: MouseEvent) => {
-            //a press on a check item's box must not move the caret
-            if (event.target instanceof Element && event.target.closest('.marker') !== null) event.preventDefault();
+            movedOffImage = true;
+            //a press on a check item's box must not move the caret, nor one on an image (the click selects it)
+            if (event.target instanceof Element && event.target.closest('.marker, figure.image') !== null) event.preventDefault();
         },
         onEditorClick: (event: MouseEvent) => {
             const box = event.target instanceof Element ? event.target.closest('.marker') : null;
+            const figure = event.target instanceof Element ? event.target.closest('figure.image') : null;
+            if (figure !== null && view !== null) {
+                //a press on an image selects it, which opens its panel
+                const key = view.blockOf(figure);
+                if (key === null || isLocked()) return;
+                editor?.focus();
+                selection = { anchor: { block: key, offset: 0 }, focus: { block: key, offset: 0 } };
+                showSelection();
+                put('selection', selection);
+                updateActive();
+                followImage();
+                movedOffImage = false;
+                return;
+            }
             if (box === null && event.target instanceof Element && event.target.closest('.commented') !== null && view !== null && author() !== null) {
                 //a press on commented text opens its threads (a drag that selected text does not)
                 const at = currentSelection();
@@ -1187,6 +1435,54 @@ export default function controller(context: ControllerContext) {
             if (box.dataset['box'] === 'new') addComment();
             else if (box.dataset['thread'] !== undefined) replyTo(box.dataset['thread']);
         },
+        onPaste: (event: ClipboardEvent) => {
+            const files = imageFilesOf(event.clipboardData);
+            if (files.length === 0 || view === null || !settings().allowed.includes('image')) return;
+            event.preventDefault();
+            uploadImages(files, currentSelection()?.focus.block ?? lastKey());
+        },
+        onDragOver: (event: DragEvent) => {
+            if (event.dataTransfer?.types.includes('Files') === true && takesImages()) event.preventDefault();
+        },
+        onDrop: (event: DragEvent) => {
+            const files = imageFilesOf(event.dataTransfer);
+            if (files.length === 0 || view === null || !settings().allowed.includes('image')) return;
+            event.preventDefault();
+            const target = event.target instanceof Node ? view.blockOf(event.target) : null;
+            uploadImages(files, target ?? currentSelection()?.focus.block ?? lastKey());
+        },
+        onImageFiles: () => {
+            const files = fileInput?.files === null || fileInput?.files === undefined ? [] : [...fileInput.files];
+            if (fileInput !== null) fileInput.value = '';
+            uploadImages(files, chooserAfter);
+        },
+        onImageChange: (event: Event) => {
+            const input = event.target instanceof HTMLInputElement ? event.target : null;
+            const name = input?.dataset['image'];
+            if (input !== null && (name === 'alt' || name === 'caption')) changeImage({ [name]: input.value });
+        },
+        onImageKey: (event: KeyboardEvent) => {
+            const input = event.target instanceof HTMLInputElement ? event.target : null;
+            const name = input?.dataset['image'];
+            if (input === null || event.key !== 'Enter' || (name !== 'alt' && name !== 'caption')) return;
+            event.preventDefault();
+            changeImage({ [name]: input.value });
+            closeImage(true);
+        },
+        onImageClick: (event: MouseEvent) => {
+            const pressed = event.target instanceof Element ? event.target.closest<HTMLButtonElement>('button') : null;
+            if (pressed === null || imageKey === null) return;
+            const width = pressed.dataset['width'];
+            if (width !== undefined && (IMAGE_WIDTHS as readonly string[]).includes(width)) {
+                changeImage({ width: width as ImageWidth });
+                put('imageWidth', width);
+                return;
+            }
+            if (pressed.dataset['action'] !== 'remove' || isLocked()) return;
+            const key = imageKey;
+            closeImage(true);
+            apply(removeBlock(blocks, key));
+        },
         onLinkInput: () => put('linkInvalid', false),
         onApplyLink: () => applyLink(),
         onRemoveLink: () => finishLink(null),
@@ -1199,6 +1495,11 @@ export default function controller(context: ControllerContext) {
             pickerPanel = null;
             commentPanel?.dispose();
             commentPanel = null;
+            imagePanel?.dispose();
+            imagePanel = null;
+            clearTimeout(noticeTimer);
+            for (const upload of uploads.values()) upload.abort.abort();
+            uploads.clear();
             store.off(commentPaths, onComments);
             store.off(mentionPaths, onMentions);
             document.removeEventListener('selectionchange', onSelectionChange);

@@ -202,3 +202,45 @@
 .rich-text [data-align=right] {
     text-align: end;
 }
+
+/* An image: drawn at a share of the text's width (data-width), never wider than its own pixels */
+.rich-text figure.image {
+    margin: var(--ui-space-gap-sm) 0;
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--ui-space-gap-sm) / 2);
+}
+
+.rich-text figure.image[data-width=small] {
+    inline-size: 33%;
+}
+
+.rich-text figure.image[data-width=medium] {
+    inline-size: 67%;
+}
+
+.rich-text figure.image img {
+    display: block;
+    max-inline-size: 100%;
+    block-size: auto;
+    border-radius: var(--ui-radius-sm);
+}
+
+.rich-text figure.image .missing {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-block-size: calc(var(--ui-size-control-md) * 2);
+    padding: var(--ui-space-inset-sm);
+    color: var(--ui-color-text-muted);
+    background: var(--ui-richtext-image-missing);
+    border: var(--ui-border-width-thin) dashed var(--ui-color-border-base);
+    border-radius: var(--ui-radius-sm);
+    overflow-wrap: anywhere;
+}
+
+.rich-text figure.image figcaption {
+    color: var(--ui-color-text-muted);
+    font-size: var(--ui-text-caption-size);
+}

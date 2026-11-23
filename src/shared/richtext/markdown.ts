@@ -302,6 +302,10 @@ export function toMarkdown(value: unknown): string {
             case 'divider':
                 lines.push('---');
                 break;
+            case 'image':
+                //where an image was: its alt text and file id, and the caption as an italic line; text cannot carry the file back
+                lines.push(`![${escapeText(current.alt ?? '')}](file:${current.file?.id ?? ''})${current.caption === undefined ? '' : `\n*${escapeText(current.caption)}*`}`);
+                break;
             case 'table':
                 lines.push(tableMarkdown(current));
                 break;

@@ -50,6 +50,18 @@
         "resolve": "Resolver",
         "reopen": "Reabrir",
         "resolved": "Resueltos",
-        "deleteComment": "Eliminar"
+        "deleteComment": "Eliminar",
+        "image": "Imagen",
+        "imageAlt": "Texto alternativo",
+        "imageCaption": "Pie de foto",
+        "imageWidth": "Ancho",
+        "imageSmall": "Pequeño",
+        "imageMedium": "Mediano",
+        "imageFull": "Completo",
+        "removeImage": "Quitar imagen",
+        "uploading": "Subiendo {files}",
+        "uploadFailed": "No se pudo subir {name}",
+        "imageRefused": "{name} no es una imagen PNG, JPEG, GIF o WebP de 10 MB como máximo",
+        "imageLimit": "{name} no se añadió: el campo admite como máximo 20 imágenes"
     }
 }

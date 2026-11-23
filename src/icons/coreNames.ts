@@ -55,6 +55,7 @@ export const CORE_ICON_NAMES: readonly string[] = [
     'minus',
     'oval',
     'paperclip',
+    'photo',
     'player-pause',
     'player-play',
     'plus',

@@ -1,7 +1,7 @@
 {
-    "summary": "A labelled rich-text editor writing block JSON: headings, lists, checks, quotes, code, tables, mentions and marks",
+    "summary": "A labelled rich-text editor writing block JSON: headings, lists, checks, quotes, code, tables, images and mentions",
     "category": "forms",
-    "purposes": ["write formatted notes with headings and lists", "write text with links pasted from documents", "edit a rich-text description or article", "write a formatted comment with bold and italic", "keep a checklist inside a form field", "mention people with @ in a note", "insert blocks and tables from a slash menu", "review a document with comments on its text"],
+    "purposes": ["write formatted notes with headings and lists", "write text with links pasted from documents", "edit a rich-text article with pictures and captions", "write a formatted comment with bold and italic", "keep a checklist inside a form field", "mention people with @ in a note", "insert blocks and tables from a slash menu", "review a document with comments on its text"],
     "events": ["change", "invalid", "valid", "mentionQuery", "comment"],
     "commands": ["validate", "reset", "focus", "clear"],
     "tokenGroup": "richtextfield",
@@ -14,7 +14,8 @@
         "mention": { "color": "{color.accent.base}", "background": "{color.surface.sunken}" },
         "table": { "header": "{color.surface.sunken}" },
         "picker": { "active": "{color.accent.base}", "on": "{color.accent.on}" },
-        "comment": { "background": "{color.warning.soft}", "active": "{color.warning.base}" }
+        "comment": { "background": "{color.warning.soft}", "active": "{color.warning.base}" },
+        "image": { "selected": "{color.accent.base}", "missing": "{color.surface.sunken}" }
     },
     "shared": {
         "variant": { "default": "outline", "values": ["outline", "soft", "ghost"] },
@@ -28,7 +29,7 @@
         "blocks": {
             "type": "array",
             "default": [],
-            "validators": { "eachOf": ["paragraph", "heading", "bullet", "numbered", "check", "quote", "code", "divider", "table"] }
+            "validators": { "eachOf": ["paragraph", "heading", "bullet", "numbered", "check", "quote", "code", "divider", "table", "image"] }
         },
         "mentions": { "type": "array", "default": [] },
         "mentionValue": { "type": "string", "default": "value" },
@@ -57,6 +58,10 @@
         "linkInvalid": { "type": "boolean", "default": false, "runtime": true },
         "picker": { "type": "string", "values": ["", "slash", "mention"], "default": "", "runtime": true },
         "comment": { "type": "string", "values": ["", "new", "open"], "default": "", "runtime": true },
+        "image": { "type": "string", "values": ["", "open"], "default": "", "runtime": true },
+        "imageWidth": { "type": "string", "values": ["small", "medium", "full"], "default": "full", "runtime": true },
+        "upload": { "type": "string", "default": "", "runtime": true },
+        "uploadFailed": { "type": "boolean", "default": false, "runtime": true },
         "_label": { "type": "string", "kind": "content", "default": "Label" },
         "_placeholder": { "type": "string", "kind": "content", "default": "" },
         "_help": { "type": "string", "kind": "content", "default": "" },
@@ -117,7 +122,19 @@
                 "resolve": "Resolve",
                 "reopen": "Reopen",
                 "resolved": "Resolved",
-                "deleteComment": "Delete"
+                "deleteComment": "Delete",
+                "image": "Image",
+                "imageAlt": "Alt text",
+                "imageCaption": "Caption",
+                "imageWidth": "Width",
+                "imageSmall": "Small",
+                "imageMedium": "Medium",
+                "imageFull": "Full",
+                "removeImage": "Remove image",
+                "uploading": "Uploading {files}",
+                "uploadFailed": "{name} could not be uploaded",
+                "imageRefused": "{name} is not a PNG, JPEG, GIF or WebP image of at most 10 MB",
+                "imageLimit": "{name} was not added: the field holds at most 20 images"
             }
         }
     }

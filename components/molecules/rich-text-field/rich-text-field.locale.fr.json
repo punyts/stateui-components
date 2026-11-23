@@ -50,6 +50,18 @@
         "resolve": "Résoudre",
         "reopen": "Rouvrir",
         "resolved": "Résolus",
-        "deleteComment": "Supprimer"
+        "deleteComment": "Supprimer",
+        "image": "Image",
+        "imageAlt": "Texte alternatif",
+        "imageCaption": "Légende",
+        "imageWidth": "Largeur",
+        "imageSmall": "Petite",
+        "imageMedium": "Moyenne",
+        "imageFull": "Pleine",
+        "removeImage": "Retirer l'image",
+        "uploading": "Envoi de {files}",
+        "uploadFailed": "{name} n'a pas pu être envoyé",
+        "imageRefused": "{name} n'est pas une image PNG, JPEG, GIF ou WebP de 10 Mo au plus",
+        "imageLimit": "{name} n'a pas été ajouté : le champ contient au plus 20 images"
     }
 }

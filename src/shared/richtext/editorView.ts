@@ -1,6 +1,6 @@
 import { LIST_TYPES, plainText } from './model.js';
 import type { KeyedBlock, Run } from './model.js';
-import { markedNode, mentionNode, tableElement } from './render.js';
+import { imageFigure, markedNode, mentionNode, tableElement } from './render.js';
 import type { CellPoint, Point, TextSelection } from './edit.js';
 
 /**
@@ -46,6 +46,8 @@ export interface EditorViewOptions {
     readonly shownComments?: () => ReadonlySet<string>;
     /** The thread the comment panel shows, drawn as active */
     readonly activeComment?: () => string;
+    /** The URL a stored file is read from, for an image block; an image without one is drawn as its alt text */
+    readonly fileUrl?: (id: string) => string | undefined;
 }
 
 /** Which comment threads a redraw highlights */
@@ -148,6 +150,11 @@ function blockElement(document: Document, block: KeyedBlock, number: number | un
         element.appendChild(document.createElement('hr'));
         return element;
     }
+    if (block.type === 'image') {
+        element.contentEditable = 'false';
+        element.appendChild(imageFigure(document, block, block.file === undefined ? undefined : options.fileUrl?.(block.file.id)));
+        return element;
+    }
     if (block.type === 'table') {
         element.appendChild(tableElement(document, block, (cell, content) => {
             const text = document.createElement('span');
@@ -193,7 +200,7 @@ function shownIn(block: KeyedBlock, show: CommentShow): string {
 }
 
 const signatureOf = (block: KeyedBlock, number: number | undefined, show: CommentShow): string =>
-    JSON.stringify([block.type, block.level, block.indent, block.checked, block.language, block.runs, block.rows, block.align, number, shownIn(block, show)]);
+    JSON.stringify([block.type, block.level, block.indent, block.checked, block.language, block.runs, block.rows, block.align, block.file?.id, block.alt, block.caption, block.width, number, shownIn(block, show)]);
 
 /** The selection a shadow root holds: Chromium answers it on the root; elsewhere the document's composed range is read */
 function shadowSelection(root: HTMLElement): { anchorNode: Node | null; anchorOffset: number; focusNode: Node | null; focusOffset: number } | null {
@@ -240,7 +247,7 @@ export function createEditorView(root: HTMLElement, options: EditorViewOptions):
         const block = blockElementOf(node);
         if (block === null) return null;
         const key = block.dataset['key'] as string;
-        if (block.dataset['type'] === 'divider') return { block: key, offset: 0 };
+        if (block.dataset['type'] === 'divider' || block.dataset['type'] === 'image') return { block: key, offset: 0 };
         if (block.dataset['type'] === 'table') {
             const element = node instanceof Element ? node : node.parentElement;
             const cell = element?.closest<HTMLElement>('[data-row]');
@@ -278,7 +285,7 @@ export function createEditorView(root: HTMLElement, options: EditorViewOptions):
     const domPoint = (point: Point): { node: Node; offset: number } | null => {
         const element = drawn.get(point.block)?.element;
         if (element === undefined || element.parentElement !== root) return null;
-        if (element.dataset['type'] === 'divider') return { node: root, offset: Array.prototype.indexOf.call(root.childNodes, element) };
+        if (element.dataset['type'] === 'divider' || element.dataset['type'] === 'image') return { node: root, offset: Array.prototype.indexOf.call(root.childNodes, element) };
         const container = element.dataset['type'] === 'table' ? cellElement(element, point.cell ?? { row: 0, column: 0 }) : element;
         if (container === null) return null;
         let rest = Math.max(0, point.offset);
@@ -337,7 +344,10 @@ export function createEditorView(root: HTMLElement, options: EditorViewOptions):
             const focus = domPoint(selection.focus);
             const page = document.getSelection();
             if (anchor === null || focus === null || page === null) return;
-            page.setBaseAndExtent(anchor.node, anchor.offset, focus.node, focus.offset);
+            //a caret cannot rest in an image, which is not editable (the browser moves it into the text beside it): the page holds
+            //no range while an image is selected, and the field handles its keys
+            if (anchor.node === root && JSON.stringify(selection.anchor) === JSON.stringify(selection.focus) && drawn.get(selection.focus.block)?.element.dataset['type'] === 'image') page.removeAllRanges();
+            else page.setBaseAndExtent(anchor.node, anchor.offset, focus.node, focus.offset);
         },
         readSelection: () => {
             const selection = shadowSelection(root);

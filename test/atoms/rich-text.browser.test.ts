@@ -135,3 +135,34 @@ describe('richText in Chromium', () => {
         expect(one(mounted.element, 'p.empty').textContent).toBe('Nothing here');
     });
 });
+
+describe('richText images in Chromium', () => {
+    afterEach(() => {
+        mountComponent.unmountAll();
+    });
+
+    it("should draw an image as a figure from the host's URL at its width, with its caption", async () => {
+        // Arrange
+        const pixel = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+        const value = { blocks: { bPic: { order: 'a', type: 'image', file: { id: 'f1', name: 'photo.png', size: 1, type: 'image/png' }, alt: 'A chart', caption: 'Sales', width: 'medium' } } };
+        const asked: string[] = [];
+
+        // Act
+        const mounted = mountComponent('richText', { value });
+        mounted.element.addEventListener('ui-file-url', (event) => {
+            const detail = (event as CustomEvent<{ id: string; respond: (url: string) => void }>).detail;
+            asked.push(detail.id);
+            detail.respond(pixel);
+        });
+        mounted.store.set('$.app.value.blocks.bPic.caption', 'Sales by month');
+        await flush();
+
+        // Assert
+        const figure = one(mounted.element, 'figure.image');
+        expect(asked).toContain('f1');
+        expect(figure.dataset['width']).toBe('medium');
+        expect(figure.querySelector('img')?.getAttribute('src')).toBe(pixel);
+        expect(figure.querySelector('img')?.getAttribute('alt')).toBe('A chart');
+        expect(figure.querySelector('figcaption')?.textContent).toBe('Sales by month');
+    });
+});

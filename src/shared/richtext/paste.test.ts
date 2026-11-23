@@ -71,12 +71,21 @@ describe('htmlToShapes', () => {
         expect(shapes[0]?.runs).toEqual([{ text: 'safe', link: 'https://x.example/a' }, { text: ' bad' }]);
     });
 
-    it('should leave out scripts, styles and images, and keep no other attribute', () => {
+    it('should leave out scripts and styles, and keep no other attribute', () => {
         // Act
-        const shapes = htmlToShapes(parse('<style>p{}</style><p onclick="x()" class="c">text<script>alert(1)</script><img src="x.png" alt="pic"></p>'));
+        const shapes = htmlToShapes(parse('<style>p{}</style><p onclick="x()" class="c">text<script>alert(1)</script></p>'));
 
         // Assert
         expect(shapes).toEqual([{ type: 'paragraph', runs: [{ text: 'text' }] }]);
+    });
+
+    it("should keep an image's alt text as text and never its address", () => {
+        // Act
+        const shapes = htmlToShapes(parse('<p>see <img src="https://elsewhere.example/x.png" alt="  the\n chart "><img src="y.png"></p>'));
+
+        // Assert
+        expect(shapes).toEqual([{ type: 'paragraph', runs: [{ text: 'see the chart' }] }]);
+        expect(JSON.stringify(shapes)).not.toContain('elsewhere');
     });
 
     it('should collapse white space, keep line breaks and make divs into paragraphs', () => {

@@ -9,7 +9,8 @@
         "code": { "background": "{color.surface.sunken}" },
         "check": { "fill": "{color.accent.base}" },
         "mention": { "color": "{color.accent.base}", "background": "{color.surface.sunken}" },
-        "table": { "header": "{color.surface.sunken}" }
+        "table": { "header": "{color.surface.sunken}" },
+        "image": { "missing": "{color.surface.sunken}" }
     },
     "properties": {
         "value": { "type": "object", "default": {} },
