@@ -7,6 +7,7 @@ import { readStoredFile } from '../shared/field/files.js';
 import { isReducedMotion } from '../shared/drawing/scheduler.js';
 import { requestScene3dChunk } from '../shared/scene3d/load.js';
 import { Repeat3dFeeder } from '../shared/scene3d/repeat.js';
+import { readSceneKeys, takenKey } from '../shared/scene3d/keys.js';
 import type { Load3dFailure, Scene3dChunk } from '../shared/scene3d/load.js';
 import { isScene3dError, readScene3dTree } from '../shared/scene3d/tree.js';
 import type { ColorResolver, Scene3d, Scene3dIssue, Scene3dSettings, Scene3dStatus } from '../shared/scene3d/tree.js';
@@ -117,6 +118,13 @@ const THEME_PATHS = ['$.theme.active', '$.theme.active.$all'];
  * record), as for a 2D shape. Each interactive node has a hidden proxy button over its projected box, in tree order,
  * named by `_label`, so the keyboard (Enter, Space), a screen reader and `ui_interact` reach it; while any node is
  * interactive the scene box's role is `group` (its buttons are reached), else `img`
+ *
+ * Keys (docs/design/stateui-game-input.md): while `keys` lists key names (`SCENE_KEYS`), the scene box is focusable
+ * (`tabindex="0"`, unless it had one) and names them in `aria-keyshortcuts`. A listed key pressed while focus is in the
+ * scene is heard on the element on the way down, stopped there (the camera controls do not see it, the page does not
+ * scroll) and raised as a bubbling, composed `key` with `detail: { key }`; a held key repeats. Alt, Control or Meta held,
+ * or Enter or Space on a proxy button, leave the press alone. The dispatcher records it at `$.raised.<path>.key`, so a
+ * rule triggered there runs on every press
  */
 /** The category of the scene's reports, for stateui-3d too (it has no reporter): the chunk loaded, the scene made and disposed, each issue */
 const CATEGORY = 'stateui-components.scene3d';
@@ -132,6 +140,40 @@ export default function controller({ element, store, basePath }: ControllerConte
     /** True from a `webglcontextlost` of the scene's canvas until its `webglcontextrestored` */
     let lost = false;
     let surfaceOf: HTMLElement | undefined;
+    const keysPath = `${basePath}.keys`;
+    const keysWatched = [keysPath, `${keysPath}.$all`];
+    /** True when the controller gave the scene box its `tabindex` for `keys` */
+    let ownTabIndex = false;
+
+    /** Makes the scene box focusable and names the keys while `keys` lists some; gives back a `tabindex` it set */
+    const syncKeys = (): void => {
+        const box = element.shadowRoot?.querySelector<HTMLElement>('.scene');
+        if (disposed || !box) return;
+        const keys = readSceneKeys(read(keysPath));
+        if (keys.length > 0) {
+            if (!box.hasAttribute('tabindex')) {
+                box.setAttribute('tabindex', '0');
+                ownTabIndex = true;
+            }
+            const names = keys.join(' ');
+            if (box.getAttribute('aria-keyshortcuts') !== names) box.setAttribute('aria-keyshortcuts', names);
+            return;
+        }
+        if (ownTabIndex) box.removeAttribute('tabindex');
+        ownTabIndex = false;
+        box.removeAttribute('aria-keyshortcuts');
+    };
+
+    /** Takes a listed key on its way down to the scene and raises `key` for the dispatcher */
+    const onKeyDown = (event: KeyboardEvent): void => {
+        if (disposed) return;
+        const origin = event.composedPath()[0];
+        const name = takenKey(event, readSceneKeys(read(keysPath)), origin instanceof HTMLButtonElement);
+        if (name === undefined) return;
+        event.preventDefault();
+        event.stopPropagation();
+        element.dispatchEvent(new CustomEvent('key', { detail: { key: name }, bubbles: true, composed: true }));
+    };
 
     const fail = (reason: string, path = basePath): void => {
         const error = buildError('SUI-RUN-3D', { component: 'scene3d', path, reason, statePath: path });
@@ -231,6 +273,8 @@ export default function controller({ element, store, basePath }: ControllerConte
         const expanded = repeats.expand(nodes);
         syncRole(expanded);
         scene.update(expanded, settings());
+        // The camera controls give back a `tabindex` they set when they are turned off, which `keys` may still need
+        syncKeys();
         readyAfterFrame();
     };
 
@@ -344,8 +388,12 @@ export default function controller({ element, store, basePath }: ControllerConte
     element.setAttribute('data-render', 'pending');
 
     //the element is in the page once the controller has returned, so the request bubbles to the dispatcher a microtask later
+    element.addEventListener('keydown', onKeyDown, true);
+    store.on(keysWatched, syncKeys);
+
     queueMicrotask(() => {
         if (disposed) return;
+        syncKeys();
         const asked = performance.now();
         const took = (): number => Math.round((performance.now() - asked) * 10) / 10;
         requestScene3dChunk(element).then(
@@ -363,6 +411,8 @@ export default function controller({ element, store, basePath }: ControllerConte
     return {
         dispose: () => {
             disposed = true;
+            element.removeEventListener('keydown', onKeyDown, true);
+            store.off(keysWatched, syncKeys);
             store.off(watched, request);
             store.off(THEME_PATHS, onTheme);
             repeats.dispose();

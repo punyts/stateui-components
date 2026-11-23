@@ -42,6 +42,14 @@ async function mountScene(node: NodeState, options: MountOptions = {}): Promise<
 
 const canvasOf = (mounted: MountedComponent): HTMLCanvasElement => mounted.element.shadowRoot?.querySelector('.surface canvas') as HTMLCanvasElement;
 const proxyOf = (mounted: MountedComponent, path: string): HTMLButtonElement | null => mounted.element.shadowRoot?.querySelector<HTMLButtonElement>(`.proxies > button[data-shape-path="${path}"]`) ?? null;
+const boxOf = (mounted: MountedComponent): HTMLElement => mounted.element.shadowRoot?.querySelector('.scene') as HTMLElement;
+
+/** Dispatches a keydown of `key` on `target`, as a press with the focus there, and gives it back */
+function press(target: EventTarget, key: string, held: KeyboardEventInit = {}): KeyboardEvent {
+    const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, composed: true, ...held });
+    target.dispatchEvent(event);
+    return event;
+}
 const roleOf = (mounted: MountedComponent): string | null | undefined => mounted.element.shadowRoot?.querySelector('.scene')?.getAttribute('role');
 
 /** Dispatches a mouse pointer event on the scene's canvas at a fraction of its size */
@@ -240,5 +248,63 @@ describe.skipIf(script === '')('scene3d press and hover with the real 3D rendere
             [`${ROOT}.crates.rows.left`, 'Left'],
             [`${ROOT}.crates.rows.right`, 'Right']
         ]);
+    });
+
+    it('should take the listed keys while focused, raise key for the dispatcher and record every press, and leave the rest to the controls', async () => {
+        // Arrange
+        remove = answerWith(chunk);
+        const mounted = await mountScene(parts({ controls: 'orbit', keys: ['ArrowLeft', 'w', 'Space'], on: { key: { command: 'set', target: '$.data.ui.part', value: 'key' } } }));
+        const keyed: string[] = [];
+        mounted.element.addEventListener('key', (event) => keyed.push((event as CustomEvent<{ key: string }>).detail.key));
+        const set = vi.spyOn(mounted.store, 'set');
+        const box = boxOf(mounted);
+        box.focus();
+        const camera = (): unknown => JSON.stringify(mounted.store.get('$.app.children.eye.position'));
+        const before = camera();
+
+        // Act
+        const arrow = press(box, 'ArrowLeft');
+        press(box, 'ArrowLeft');
+        const upper = press(box, 'W');
+        const chord = press(box, 'w', { ctrlKey: true });
+        box.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowLeft', bubbles: true, composed: true }));
+        const afterTaken = camera();
+        const other = press(box, 'ArrowRight', { code: 'ArrowRight' });
+        box.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight', code: 'ArrowRight', bubbles: true, composed: true }));
+        await frame();
+
+        // Assert
+        expect(box.getAttribute('tabindex')).toBe('0');
+        expect(box.getAttribute('aria-keyshortcuts')).toBe('ArrowLeft w Space');
+        expect(keyed).toEqual(['ArrowLeft', 'ArrowLeft', 'w']);
+        expect([arrow.defaultPrevented, upper.defaultPrevented, chord.defaultPrevented, other.defaultPrevented]).toEqual([true, true, false, true]);
+        expect(mounted.store.get('$.data.ui.part')).toBe('key');
+        expect(mounted.store.get('$.raised.app.key')).toEqual({ key: 'w' });
+        expect(set.mock.calls.filter(([path, , options]) => String(path).startsWith('$.raised') && (options as { always?: boolean } | undefined)?.always === true)).toHaveLength(3);
+        expect(afterTaken).toBe(before);
+        expect(camera()).not.toBe(before);
+    });
+
+    it('should give back the tabindex it set when keys are cleared, and leave Enter on a proxy button to the press', async () => {
+        // Arrange
+        remove = answerWith(chunk);
+        const mounted = await mountScene(parts({ keys: ['Enter'] }));
+        const keyed: string[] = [];
+        mounted.element.addEventListener('key', (event) => keyed.push((event as CustomEvent<{ key: string }>).detail.key));
+        const box = boxOf(mounted);
+        const focusable = box.getAttribute('tabindex');
+
+        // Act
+        press(proxyOf(mounted, `${ROOT}.lid`) as HTMLButtonElement, 'Enter');
+        press(box, 'Enter');
+        mounted.store.set('$.app.keys', []);
+        await frame();
+
+        // Assert
+        expect(focusable).toBe('0');
+        expect(mounted.store.get('$.data.ui.part')).toBe('lid');
+        expect(keyed).toEqual(['Enter']);
+        expect(box.hasAttribute('tabindex')).toBe(false);
+        expect(box.hasAttribute('aria-keyshortcuts')).toBe(false);
     });
 });
