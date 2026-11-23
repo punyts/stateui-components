@@ -15,6 +15,10 @@ const until = async (check: () => boolean, timeout = 3000): Promise<void> => {
 /** A silent 4 second WAV and an English caption file that the browser test server serves from the project */
 const SILENCE = '/test/fixtures/silence-4s.wav';
 const CAPTIONS = '/test/fixtures/captions.en.vtt';
+/** A path the test server does not serve, as a file URL whose grant ran out answers */
+const MISSING = '/test/fixtures/missing-clip.wav';
+/** A stored file's reference, as a fileField writes it */
+const CLIP = { id: '0b6e8c1a-3f1e-4a52-9a43-2f4f1c8f2d10', name: 'briefing.wav', size: 64044, type: 'audio/wav' };
 
 describe('mediaPlayer in Chromium', () => {
     afterEach(() => {
@@ -92,5 +96,43 @@ describe('mediaPlayer in Chromium', () => {
         expect(mounted.store.get('$.app.source')).toBe('');
         expect(part<HTMLVideoElement>(mounted.element, 'video').hasAttribute('src')).toBe(false);
         expect(part<HTMLButtonElement>(mounted.element, '.play').disabled).toBe(true);
+    });
+
+    it('should play a stored file at the URL the host gives, and play nothing without a host that gives one', async () => {
+        // Arrange
+        const asked: string[] = [];
+        const fileUrl = (id: string): string | undefined => {
+            asked.push(id);
+            return id === CLIP.id ? SILENCE : undefined;
+        };
+
+        // Act
+        const mounted = mountComponent('mediaPlayer', { kind: 'audio', file: CLIP, src: 'https://example.com/other.mp3' }, { hooks: { fileUrl } });
+        await until(() => mounted.store.get('$.app.duration') === 4);
+        const bare = mountComponent('mediaPlayer', { kind: 'audio', file: CLIP });
+
+        // Assert
+        expect(asked).toEqual([CLIP.id]);
+        expect(mounted.store.get('$.app.source')).toBe(SILENCE);
+        expect(bare.store.get('$.app.source')).toBe('');
+        expect(part<HTMLButtonElement>(bare.element, '.play').disabled).toBe(true);
+    });
+
+    it('should ask for a failed file URL once more and play on, and show the failure when the URL stays the same', async () => {
+        // Arrange
+        let answer = MISSING;
+        const fileUrl = (): string => answer;
+        const mounted = mountComponent('mediaPlayer', { kind: 'audio', file: CLIP }, { hooks: { fileUrl } });
+        const stuck = mountComponent('mediaPlayer', { kind: 'audio', file: CLIP }, { hooks: { fileUrl: () => MISSING } });
+
+        // Act
+        answer = SILENCE;
+        await until(() => mounted.store.get('$.app.duration') === 4);
+        await until(() => stuck.store.get('$.app.failed') === true);
+
+        // Assert
+        expect(mounted.store.get('$.app.source')).toBe(SILENCE);
+        expect(mounted.store.get('$.app.failed')).toBe(false);
+        expect(part(stuck.element, '.failed').textContent).toBe('This media cannot be played');
     });
 });

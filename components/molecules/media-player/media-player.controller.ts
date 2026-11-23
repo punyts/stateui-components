@@ -1,4 +1,5 @@
 import type { ControllerContext } from '@punyts/stateui';
+import { isFileRef, storedFileUrl } from '../shared/field/files.js';
 import { captionTracks, formatTime, mediaSource } from '../shared/media/media.js';
 
 interface CommandHost {
@@ -6,13 +7,15 @@ interface CommandHost {
 }
 
 /**
- * Plays `src` (an https URL or a path of the app's own origin; anything else plays nothing) in a `video` or `audio` element with
+ * Plays `file` (a stored file's reference, read at the URL the runtime's `fileUrl` hook gives) or else `src` (an https URL
+ * or a path of the app's own origin; anything else plays nothing) in a `video` or `audio` element with
  * the player's own controls. The media's events write the runtime `playing`, `current`, `duration`, `timeText` and
  * `failed`, and raise `play`, `pause` and `ended`; the seek slider sets the time, the mute button writes `muted`, the
  * captions button shows the first caption track or hides them all (`captionsOn`) and the full-screen button asks for
  * the player full screen. Keys on the player: `k` plays or pauses, `m` mutes, `c` toggles captions, `f` goes full
  * screen, and the arrows (outside the slider) move five seconds. A play the browser refuses (no gesture) leaves
- * `playing` false
+ * `playing` false. When a file's media fails (its read grant ran out), the player asks for the URL once more and, when it
+ * changed, plays on from the same time
  */
 export default function controller({ element, store, basePath }: ControllerContext) {
     const host = element as Element & CommandHost;
@@ -23,8 +26,21 @@ export default function controller({ element, store, basePath }: ControllerConte
         element.dispatchEvent(new CustomEvent(name, { bubbles: true, composed: true }));
     };
 
+    /** The URL of `file` when it is a stored file's reference, else of `src`; empty when neither plays */
+    const sourceOf = (): string => {
+        const file = read('file');
+        if (isFileRef(file)) return storedFileUrl(element, file.id) ?? '';
+        return mediaSource(read('src'));
+    };
+    /** The time to go back to once a file's new URL has loaded; undefined while no retry waits */
+    let resumeAt: number | undefined;
+    /** A file's URL was asked for again after a failure; a second failure shows */
+    let retried = false;
+
     const refreshSource = (): void => {
-        store.set(path('source'), mediaSource(read('src')));
+        resumeAt = undefined;
+        retried = false;
+        store.set(path('source'), sourceOf());
         store.set(path('failed'), false);
         store.set(path('playing'), false);
         store.set(path('current'), 0);
@@ -79,7 +95,7 @@ export default function controller({ element, store, basePath }: ControllerConte
     };
     const mutedWatch = [path('muted')];
     store.on(mutedWatch, applyMuted);
-    const sourceWatch = [path('src')];
+    const sourceWatch = [path('src'), path('file'), path('file.$all')];
     const trackWatch = [path('tracks'), path('tracks.$all')];
     store.on(sourceWatch, refreshSource);
     store.on(trackWatch, refreshTracks);
@@ -111,6 +127,10 @@ export default function controller({ element, store, basePath }: ControllerConte
         onLoaded: (event: Event): void => {
             const target = event.currentTarget as HTMLMediaElement;
             store.set(path('duration'), Number.isFinite(target.duration) ? target.duration : 0);
+            if (resumeAt !== undefined) {
+                target.currentTime = Math.min(resumeAt, Number.isFinite(target.duration) ? target.duration : resumeAt);
+                resumeAt = undefined;
+            }
             writeTime();
             showCaptions(read('captionsOn') === true);
         },
@@ -118,7 +138,17 @@ export default function controller({ element, store, basePath }: ControllerConte
             const target = event.currentTarget as HTMLMediaElement;
             if (target.muted !== (read('muted') === true)) store.set(path('muted'), target.muted);
         },
-        onError: (): void => {
+        onError: (event: Event): void => {
+            const file = read('file');
+            if (!retried && isFileRef(file) && read('source') !== '') {
+                retried = true;
+                const fresh = storedFileUrl(element, file.id);
+                if (fresh !== undefined && fresh !== read('source')) {
+                    resumeAt = (event.currentTarget as HTMLMediaElement).currentTime;
+                    store.set(path('source'), fresh);
+                    return;
+                }
+            }
             if (read('source') !== '') store.set(path('failed'), true);
             store.set(path('playing'), false);
         },

@@ -155,6 +155,26 @@ export function transferCode(error: unknown): string {
 /** The event that reads a stored file through the host's `readFile` hook (G1.9; the dispatcher answers it, unanswered when there is no hook) */
 export const FILE_READ_EVENT = 'ui-file-read';
 
+/** The event that asks the host for the URL a stored file is read from (`ui-file-url`, the runtime's `fileUrl` hook) */
+export const FILE_URL_EVENT = 'ui-file-url';
+
+/**
+ * The URL of a stored file on the `/paths` route, with the read grant the runtime holds, asked for with the bubbling,
+ * composed `ui-file-url` event raised on `target`. Undefined when nothing answers (the host serves no files by URL) or
+ * the host has no URL for the id
+ */
+export function storedFileUrl(target: EventTarget, id: string): string | undefined {
+    let url: string | undefined;
+    const detail = {
+        id,
+        respond: (answer: string | undefined): void => {
+            url = typeof answer === 'string' && answer !== '' ? answer : undefined;
+        }
+    };
+    target.dispatchEvent(new CustomEvent(FILE_URL_EVENT, { detail, bubbles: true, composed: true }));
+    return url;
+}
+
 /** The types of the app's files that are pictures: what a `paintField` background and a `drawImage` file may be */
 export const IMAGE_FILE_TYPES: readonly string[] = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
 

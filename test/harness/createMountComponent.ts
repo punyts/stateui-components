@@ -2,7 +2,7 @@ import type { Store } from '@punyts/state';
 import { libraryFromCatalog, mountApp, registerLocaleStep } from '@punyts/stateui-app';
 import type { AppDocument, AppHost, AppState, ComponentLibrary, ComponentOverlays } from '@punyts/stateui-app';
 import type { Catalog } from '@punyts/stateui-app/build';
-import type { BuildError, ReadFile, ReleaseFile, TransferFile } from '@punyts/stateui-app';
+import type { BuildError, FileUrl, ReadFile, ReleaseFile, TransferFile } from '@punyts/stateui-app';
 
 /** One line per error: the build's own formatter reads files, so the browser harness cannot import it */
 const formatError = (error: BuildError): string => `${error.code} ${error.message}${error.statePath ? ` (${error.statePath})` : ''}`;
@@ -35,9 +35,10 @@ export interface MountOptions {
     /**
      * The host's hooks: `onEmit` receives the name and payload of an `emit` command, `transferFile` takes the files of a
      * `fileField` or `paintField`, `releaseFile` takes the files a `paintField` gives back, `readFile` gives the bytes of
-     * a stored file (a `paintField` background) (none by default)
+     * a stored file (a `paintField` background), `fileUrl` the URL a stored file is read from (a `mediaPlayer`'s `file`)
+     * (none by default)
      */
-    hooks?: { onEmit?(name: string, payload: unknown): void; transferFile?: TransferFile; releaseFile?: ReleaseFile; readFile?: ReadFile };
+    hooks?: { onEmit?(name: string, payload: unknown): void; transferFile?: TransferFile; releaseFile?: ReleaseFile; readFile?: ReadFile; fileUrl?: FileUrl };
     /** The page's app host, which an `embeddedApp` asks for apps by name (none by default) */
     apps?: AppHost;
 }

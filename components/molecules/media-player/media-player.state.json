@@ -15,6 +15,7 @@
     },
     "properties": {
         "src": { "type": "url", "default": "" },
+        "file": { "type": "object", "default": {} },
         "kind": { "type": "string", "values": ["video", "audio"], "default": "video", "reflect": true },
         "poster": { "type": "url", "default": "", "validators": { "pattern": "^(?:data:|https:|$)" } },
         "tracks": {
