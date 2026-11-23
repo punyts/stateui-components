@@ -11,7 +11,7 @@ import { readSceneKeys, takenKey } from '../shared/scene3d/keys.js';
 import type { Load3dFailure, Scene3dChunk } from '../shared/scene3d/load.js';
 import { isScene3dError, readScene3dTree } from '../shared/scene3d/tree.js';
 import type { ColorResolver, Scene3d, Scene3dIssue, Scene3dSettings, Scene3dStatus } from '../shared/scene3d/tree.js';
-import type { CameraMove } from '../shared/scene3d/tree.js';
+import type { CameraMove, NodeMove } from '../shared/scene3d/tree.js';
 import type { Scene3dEvent, Scene3dTree } from '../shared/scene3d/tree.js';
 
 /** True when a node of the tree (a group's children and a repeat's copies included) has `interactive: true` (G3.8) */
@@ -118,6 +118,11 @@ const THEME_PATHS = ['$.theme.active', '$.theme.active.$all'];
  * record), as for a 2D shape. Each interactive node has a hidden proxy button over its projected box, in tree order,
  * named by `_label`, so the keyboard (Enter, Space), a screen reader and `ui_interact` reach it; while any node is
  * interactive the scene box's role is `group` (its buttons are reached), else `img`
+ *
+ * Drag (docs/design/stateui-3d-drag.md): an interactive node with `draggable` (`x`, `z` or `ground`) is dragged on its
+ * parent's x-z plane in the renderer, kept in `bounds` and on multiples of `step` with `snap`; on release, or for an
+ * arrow key on its proxy, the scene hands the new `position` to `onMove`, the controller writes it once to
+ * `<path>.position`, and the scene raises `dragEnd` (`{ shape, key, point }`). A `repeat3d` copy is not dragged
  *
  * Keys (docs/design/stateui-game-input.md): while `keys` lists key names (`SCENE_KEYS`), the scene box is focusable
  * (`tabindex="0"`, unless it had one) and names them in `aria-keyshortcuts`. A listed key pressed while focus is in the
@@ -227,7 +232,16 @@ export default function controller({ element, store, basePath }: ControllerConte
         store.set(`${move.path}.target`, [...move.target]);
     };
 
-    /** Raises a node's `press` or `hover` on the element, for the dispatcher (`detail.shape` names the node, G3.8) */
+    /**
+     * Writes a dragged node's `position` once, at the end of its drag (docs/design/stateui-3d-drag.md): a `<-position`
+     * link on the node is an alias, so the write reaches the link's target. The scene raises `dragEnd` after it
+     */
+    const onMove = (move: NodeMove): void => {
+        if (disposed) return;
+        store.set(`${move.path}.position`, [...move.position]);
+    };
+
+    /** Raises a node's `press`, `hover` or `dragEnd` on the element, for the dispatcher (`detail.shape` names the node, G3.8) */
     const onEvent = (event: Scene3dEvent): void => {
         if (disposed) return;
         const detail = { shape: event.shape, key: event.key, point: [...event.point] };
@@ -368,7 +382,7 @@ export default function controller({ element, store, basePath }: ControllerConte
             return resolved.kind === 'color' ? resolved.computed : undefined;
         };
         try {
-            scene = chunk.createScene3d(surface, { resolveColor: resolve, reducedMotion: readReducedMotion(), onStatus, readFile, onIssue, onCamera, keyTarget: box, onEvent });
+            scene = chunk.createScene3d(surface, { resolveColor: resolve, reducedMotion: readReducedMotion(), onStatus, readFile, onIssue, onCamera, keyTarget: box, onEvent, onMove });
         } catch (error) {
             report(CATEGORY, 'Could not make the scene %s: %s', [basePath, isScene3dError(error) ? error.code : 'script_error']);
             showFallback(isScene3dError(error) ? error.code : `script_error: ${error instanceof Error ? error.message : String(error)}`);

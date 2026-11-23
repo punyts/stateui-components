@@ -307,4 +307,130 @@ describe.skipIf(script === '')('scene3d press and hover with the real 3D rendere
         expect(box.hasAttribute('tabindex')).toBe(false);
         expect(box.hasAttribute('aria-keyshortcuts')).toBe(false);
     });
+
+    // Dragging (docs/design/stateui-3d-drag.md) ---------------------------------------------------------------------
+
+    /** A scene seen from above and in front, with orbit controls and a draggable box at the origin */
+    const board = (piece: Record<string, unknown> = {}): NodeState => ({
+        _title: 'Board',
+        background: '#000000',
+        environment: 'none',
+        controls: 'orbit',
+        children: {
+            eye: { component: 'camera', position: [0, 8, 4], target: [0, 0, 0] },
+            sun,
+            piece: { component: 'mesh', geometry: { kind: 'box' }, interactive: true, _label: 'Piece', draggable: 'ground', on: { ...pressOn('piece'), dragEnd: { command: 'set', target: '$.data.ui.hovered', value: 'dropped' } }, ...piece }
+        }
+    });
+    const PIECE = `${ROOT}.piece`;
+    /** The writes of the piece's position a spy on the store's `set` saw */
+    const positionWrites = (spy: { mock: { calls: unknown[][] } }): unknown[][] => spy.mock.calls.filter(([path]) => path === `${PIECE}.position`);
+
+    it('should move a draggable mesh with the pointer, write its position once on release, raise dragEnd and leave the camera alone', async () => {
+        // Arrange
+        remove = answerWith(chunk);
+        const mounted = await mountScene(board());
+        mounted.element.addEventListener('dragEnd', (event) => mounted.raised.push({ type: 'dragEnd', detail: (event as CustomEvent).detail }));
+        const set = vi.spyOn(mounted.store, 'set');
+
+        // Act
+        pointer(mounted, 'pointerdown', 0.5, 0.5, 1);
+        for (const fx of [0.55, 0.6, 0.65, 0.7]) pointer(mounted, 'pointermove', fx, 0.5, 1);
+        await frame();
+        const during = positionWrites(set).length;
+        pointer(mounted, 'pointerup', 0.7, 0.5, 0);
+        await frame();
+
+        // Assert: along x on the ground, z kept at 0
+        const position = mounted.store.get(`${PIECE}.position`) as number[];
+        expect(during).toBe(0);
+        expect(positionWrites(set)).toHaveLength(1);
+        expect(position[0]).toBeGreaterThan(0.5);
+        expect(position[1]).toBe(0);
+        expect(position[2]).toBeCloseTo(0, 5);
+        expect(set.mock.calls.filter(([path]) => String(path).startsWith('$.app.children.eye'))).toEqual([]);
+        expect(mounted.raised.filter((event) => event.type === 'press')).toEqual([]);
+        expect(mounted.raised.filter((event) => event.type === 'dragEnd').map((event) => event.detail.shape)).toEqual([PIECE]);
+        expect(mounted.store.get('$.data.ui.hovered')).toBe('dropped');
+        expect(mounted.store.get('$.data.ui.part')).toBe('');
+        expect(canvasOf(mounted).style.touchAction).toBe('none');
+    });
+
+    it('should press a draggable mesh for a pointer that moves within the slop, and write no position', async () => {
+        // Arrange
+        remove = answerWith(chunk);
+        const mounted = await mountScene(board());
+        const set = vi.spyOn(mounted.store, 'set');
+
+        // Act
+        pointer(mounted, 'pointerdown', 0.5, 0.5, 1);
+        pointer(mounted, 'pointermove', 0.501, 0.5, 1);
+        pointer(mounted, 'pointerup', 0.501, 0.5, 0);
+        await frame();
+
+        // Assert
+        expect(mounted.store.get('$.data.ui.part')).toBe('piece');
+        expect(positionWrites(set)).toEqual([]);
+    });
+
+    it('should put the mesh back and write nothing when Escape is pressed during a drag', async () => {
+        // Arrange
+        remove = answerWith(chunk);
+        const mounted = await mountScene(board());
+        const set = vi.spyOn(mounted.store, 'set');
+        pointer(mounted, 'pointerdown', 0.5, 0.5, 1);
+        for (const fx of [0.6, 0.7]) pointer(mounted, 'pointermove', fx, 0.5, 1);
+
+        // Act
+        press(canvasOf(mounted), 'Escape');
+        pointer(mounted, 'pointerup', 0.7, 0.5, 0);
+        await frame();
+
+        // Assert
+        expect(positionWrites(set)).toEqual([]);
+        expect(mounted.store.get(`${PIECE}.position`)).toEqual([0, 0, 0]);
+        expect(mounted.store.get('$.data.ui.hovered')).toBe('');
+        expect(mounted.store.get('$.data.ui.part')).toBe('');
+    });
+
+    it('should keep a drag inside bounds and on multiples of step with snap', async () => {
+        // Arrange
+        remove = answerWith(chunk);
+        const mounted = await mountScene(board({ bounds: { x: -1, z: -1, width: 2, depth: 2 }, step: 0.5, snap: true }));
+
+        // Act: far to the right
+        pointer(mounted, 'pointerdown', 0.5, 0.5, 1);
+        for (const fx of [0.6, 0.8, 0.95]) pointer(mounted, 'pointermove', fx, 0.5, 1);
+        pointer(mounted, 'pointerup', 0.95, 0.5, 0);
+        await frame();
+
+        // Assert
+        expect(mounted.store.get(`${PIECE}.position`)).toEqual([1, 0, 0]);
+    });
+
+    it('should move a draggable mesh by its step for an arrow key on its proxy button, ten steps with Shift', async () => {
+        // Arrange
+        remove = answerWith(chunk);
+        const mounted = await mountScene(board({ draggable: 'x' }));
+        const proxy = proxyOf(mounted, PIECE) as HTMLButtonElement;
+        const set = vi.spyOn(mounted.store, 'set');
+
+        // Act
+        const right = press(proxy, 'ArrowRight');
+        await frame();
+        const afterRight = JSON.parse(JSON.stringify(mounted.store.get(`${PIECE}.position`))) as unknown;
+        const camera = set.mock.calls.filter(([path]) => String(path).startsWith('$.app.children.eye')).length;
+        press(proxy, 'ArrowUp');
+        await frame();
+        press(proxy, 'ArrowLeft', { shiftKey: true });
+        await frame();
+
+        // Assert: a taken key does not pan the camera; Up does not move an x-only node
+        expect(right.defaultPrevented).toBe(true);
+        expect(afterRight).toEqual([1, 0, 0]);
+        expect(camera).toBe(0);
+        expect(positionWrites(set)).toHaveLength(2);
+        expect(mounted.store.get(`${PIECE}.position`)).toEqual([-9, 0, 0]);
+        expect(mounted.store.get('$.data.ui.hovered')).toBe('dropped');
+    });
 });

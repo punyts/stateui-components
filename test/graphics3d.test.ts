@@ -86,7 +86,7 @@ describe('scene3d and the 3D nodes in the catalog', () => {
         expect(entry.locales).toEqual(['de', 'es', 'fr']);
     });
 
-    it.each(Object.entries(NODES))('should hold %s as a shape of size %s with the shared 3D properties and the events press and hover', (name, size) => {
+    it.each(Object.entries(NODES))('should hold %s as a shape of size %s with the shared 3D properties and the events press, hover and dragEnd', (name, size) => {
         // Arrange
         const entry = catalog.components.find((candidate) => candidate.name === name) as ShapeCatalogEntry;
 
@@ -95,7 +95,7 @@ describe('scene3d and the 3D nodes in the catalog', () => {
         expect(entry.size).toBe(size);
         expect(entry.category).toBe('graphics');
         expect(entry.purposes?.length).toBeGreaterThanOrEqual(3);
-        expect(entry.events).toEqual(['press', 'hover']);
+        expect(entry.events).toEqual(['press', 'hover', 'dragEnd']);
         expect(Object.keys(entry.shape.properties)).toEqual(expect.arrayContaining(COMMON));
         expect(entry.shape.properties.position?.validators).toEqual({ vector: 3 });
         expect(entry.shape.properties.animate?.validators.fields?.name?.values).toEqual(['spin', 'bob', 'pulse']);

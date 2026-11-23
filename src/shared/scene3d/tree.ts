@@ -95,19 +95,28 @@ export interface Scene3dOptions {
     readonly onIssue?: (issue: Scene3dIssue) => void;
     /** Reads a theme token (`--ui-motion-duration-slow`) for `transition` (G3.9); default the host's computed style */
     readonly readToken?: (name: string) => string | undefined;
-    /** Told a `press` or a `hover` of an interactive node (G3.8) */
+    /** Told a `press`, a `hover` or a `dragEnd` of an interactive node (G3.8, docs/design/stateui-3d-drag.md) */
     readonly onEvent?: (event: Scene3dEvent) => void;
+    /** Told a dragged node's new `position` once when a drag ends, or for an arrow key on its proxy; without it no node is dragged */
+    readonly onMove?: (move: NodeMove) => void;
     /** Reads the font family of a `label3d` (G3.6b); default the host's computed `font-family` (the page font) */
     readonly readFont?: () => string | undefined;
 }
 
 /**
- * A `press` or a `hover` of an interactive node (`Scene3dEvent` of `@punyts/stateui-3d`, G3.8): the node's state path
+/** A dragged node's new `position` in its parent's space, by its state path (`NodeMove` of `@punyts/stateui-3d`) */
+export interface NodeMove {
+    readonly path: string;
+    readonly position: readonly [number, number, number];
+}
+
+/**
+ * A `press`, a `hover` or a `dragEnd` of an interactive node (`Scene3dEvent` of `@punyts/stateui-3d`, G3.8): the node's state path
  * (`<repeat>.rows.<recordKey>` for a `repeat3d` copy), its key (a copy's record key) and the point in world space (where
  * the ray hit it, or the centre of its bounds for a press through its proxy)
  */
 export interface Scene3dEvent {
-    readonly name: 'press' | 'hover';
+    readonly name: 'press' | 'hover' | 'dragEnd';
     readonly shape: string;
     readonly key: string;
     readonly point: readonly [number, number, number];
@@ -160,7 +169,7 @@ export interface ReadScene3dTreeOptions {
 }
 
 /** The properties of the shared 3D partials (`transform3d`, `interaction3d`, `motion3d`) every 3D node merges in, and the shared `hidden` */
-const SHARED_PROPERTIES = ['position', 'rotation', 'scale', 'visible', 'interactive', '_label', 'transition', 'animate', 'hidden'] as const;
+const SHARED_PROPERTIES = ['position', 'rotation', 'scale', 'visible', 'interactive', '_label', 'transition', 'animate', 'hidden', 'draggable', 'bounds', 'step', 'snap'] as const;
 
 /**
  * The properties each 3D node declares (its own and the partials'), `children` left out. A test compares it with the
