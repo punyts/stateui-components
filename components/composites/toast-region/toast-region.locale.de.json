@@ -2,5 +2,6 @@
     "_label": "Benachrichtigungen",
     "_closeLabel": "Schließen",
     "_unsavedText": "Nicht gespeichert: Der Server holt frühere Änderungen nach. Bitte gleich noch einmal versuchen.",
-    "_rejectedText": "Diese Änderung wurde nicht übernommen."
+    "_rejectedText": "Diese Änderung wurde nicht übernommen.",
+    "_requestedText": "Zur Freigabe gesendet."
 }

@@ -245,7 +245,7 @@ describe('toastRegion in Chromium', () => {
         expect(items(mounted.element)).toHaveLength(0);
     });
 
-    it('should show the built-in notices of a refused change, and a message of the same key instead', async () => {
+    it('should show the built-in sync notices, and a message of the same key instead', async () => {
         // Arrange
         const plain = mountComponent('toastRegion', {});
         const custom = mountComponent('toastRegion', { messages: { syncRejected: { tone: 'danger', _text: 'Refused here' } } });
@@ -254,14 +254,16 @@ describe('toastRegion in Chromium', () => {
         // Act
         command(plain.element, 'show', 'syncUnsaved');
         command(plain.element, 'show', 'syncRejected');
+        command(plain.element, 'show', 'syncRequested');
         command(custom.element, 'show', 'syncRejected');
 
         // Assert
         expect(texts(plain.element)).toEqual([
             'Not saved: the server is catching up with earlier changes. Try again in a moment.',
-            'This change was not accepted.'
+            'This change was not accepted.',
+            'Sent for approval.'
         ]);
-        expect(items(plain.element).map((item) => toastOf(item).getAttribute('tone'))).toEqual(['warning', 'warning']);
+        expect(items(plain.element).map((item) => toastOf(item).getAttribute('tone'))).toEqual(['warning', 'warning', 'info']);
         expect(texts(custom.element)).toEqual(['Refused here']);
         expect(toastOf(items(custom.element)[0] as HTMLElement).getAttribute('tone')).toBe('danger');
     });

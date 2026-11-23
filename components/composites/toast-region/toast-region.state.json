@@ -29,6 +29,7 @@
         "_closeLabel": { "type": "string", "kind": "content", "default": "Close" },
         "_unsavedText": { "type": "string", "kind": "content", "default": "Not saved: the server is catching up with earlier changes. Try again in a moment." },
         "_rejectedText": { "type": "string", "kind": "content", "default": "This change was not accepted." },
+        "_requestedText": { "type": "string", "kind": "content", "default": "Sent for approval." },
         "items": { "type": "object", "default": {}, "runtime": true }
     }
 }

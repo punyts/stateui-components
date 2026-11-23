@@ -2,5 +2,6 @@
     "_label": "Notificaciones",
     "_closeLabel": "Cerrar",
     "_unsavedText": "No guardado: el servidor se está poniendo al día con cambios anteriores. Vuelve a intentarlo en un momento.",
-    "_rejectedText": "Este cambio no se aceptó."
+    "_rejectedText": "Este cambio no se aceptó.",
+    "_requestedText": "Enviado para su aprobación."
 }
