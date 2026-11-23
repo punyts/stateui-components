@@ -31,11 +31,12 @@ interface Contact {
     key: string;
     with: string;
     side: string;
+    repeat?: string;
 }
 
 /** Mounts a scene, records its contacts, and waits until it is drawn */
-async function mountScene(node: NodeState): Promise<MountedComponent & { contacts: Contact[] }> {
-    const mounted = mountComponent('scene3d', node, { data: { game: { score: 0 } } });
+async function mountScene(node: NodeState, data: Record<string, unknown> = { game: { score: 0 } }): Promise<MountedComponent & { contacts: Contact[] }> {
+    const mounted = mountComponent('scene3d', node, { data });
     const contacts: Contact[] = [];
     mounted.element.addEventListener('contact', (event) => contacts.push((event as CustomEvent<Contact>).detail));
     await Promise.resolve();
@@ -166,6 +167,45 @@ describe.skipIf(script === '')('scene3d play with the real 3D renderer chunk in 
         const stopped = mounted.store.get<number[]>(`${ROOT}.puck.position`) as number[];
         expect(stopped[0]).toBeGreaterThan(0);
         expect(mounted.store.get(`${ROOT}.puck.velocity`)).toEqual([2, 0, 0]);
+    });
+
+    it('should drop repeat3d copies onto the floor, write each record where it landed, name the repeat in the contacts of the floor, and run the contact entry of the row with $row', async () => {
+        // Arrange
+        remove = answerWith(chunk);
+        const row = {
+            component: 'mesh',
+            geometry: { kind: 'sphere', radius: 0.5 },
+            '<-position': '$row.at',
+            '<-velocity': '$row.speed',
+            body: { solid: true, falls: true },
+            on: { contact: { command: 'set', target: '$.data.ui.last', value: '$row.name' } }
+        };
+        const fruit = [
+            { id: 'apple', at: [-1, 2, 0], speed: [0, 0, 0], name: 'Apple' },
+            { id: 'pear', at: [1, 3, 0], speed: [0, 0, 0], name: 'Pear' }
+        ];
+        const mounted = await mountScene(game({ fruit: { component: 'repeat3d', '<-records': '$.data.fruit', row } }), { fruit, ui: { last: '' } });
+        const set = vi.spyOn(mounted.store, 'set');
+
+        // Act
+        await until(() => mounted.contacts.length === 4);
+        await frame();
+
+        // Assert
+        expect(mounted.contacts.filter((contact) => contact.key === 'floor')).toEqual([
+            { shape: `${ROOT}.floor`, key: 'floor', with: 'apple', repeat: 'fruit', side: 'top' },
+            { shape: `${ROOT}.floor`, key: 'floor', with: 'pear', repeat: 'fruit', side: 'top' }
+        ]);
+        expect(mounted.contacts.filter((contact) => contact.key !== 'floor').map((contact) => [contact.shape, contact.with, contact.side])).toEqual([
+            [`${ROOT}.fruit.rows.apple`, 'floor', 'bottom'],
+            [`${ROOT}.fruit.rows.pear`, 'floor', 'bottom']
+        ]);
+        for (const index of [0, 1]) {
+            expect((mounted.store.get<number[]>(`$.data.fruit.${index}.at`) as number[])[1]).toBeCloseTo(0.5, 5);
+            expect([...(mounted.store.get<number[]>(`$.data.fruit.${index}.speed`) as number[])]).toEqual([0, 0, 0]);
+        }
+        expect(mounted.store.get('$.data.ui.last')).toBe('Pear');
+        expect(set.mock.calls.filter(([path]) => String(path).includes('.rows.'))).toEqual([]);
     });
 
     it('should move nothing while the game does not run, and report a control key that is not a scene key', async () => {

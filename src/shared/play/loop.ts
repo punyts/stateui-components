@@ -1,6 +1,6 @@
 import type { JsonValue } from '@punyts/stateui-app/core';
 import type { Scene3dTree } from '../scene3d/tree.js';
-import { DEFAULT_GRAVITY, MAX_MOVERS, MAX_SOLIDS, MAX_STEPS_PER_FRAME, PlayWorld, STEP_SECONDS, geometryHalf, readBody, readBounds, readVector, turnedHalf } from './play.js';
+import { DEFAULT_GRAVITY, MAX_MOVERS, MAX_SOLIDS, MAX_STEPS_PER_FRAME, PlayWorld, STEP_SECONDS, geometryHalf, readBody, readBounds, readVector, sphereRadius, turnedHalf } from './play.js';
 import type { PlayBody, PlayContact, Vec3 } from './play.js';
 
 /**
@@ -8,7 +8,10 @@ import type { PlayBody, PlayContact, Vec3 } from './play.js';
  * scene draws, steps them on the animation frame while `play.running` is true and something moves, and gives the scene
  * the tree with the bodies where they are now. State hears of a body only at a contact (its own and the other body's
  * position and velocity, then `contact`), when it comes to rest, and when the game stops. A state value that differs
- * from what the loop last wrote or read (logic set a velocity, moved a body) is taken as the body's new value.
+ * from what the loop last wrote or read (logic set a velocity, moved a body) is taken as the body's new value. The
+ * copies of a `repeat3d` whose row has a `body` are bodies too (F2), keyed by their record and named with their repeat
+ * in a contact; they collide with the bodies beside the repeat when it is not moved, turned or scaled, else only with
+ * each other.
  */
 
 /** The 3D nodes that may be bodies */
@@ -16,8 +19,8 @@ const BODY_KINDS: ReadonlySet<Scene3dTree['kind']> = new Set(['mesh', 'group3d',
 
 /** What the loop needs from its scene */
 export interface SceneLoopOptions {
-    /** Writes one value to the store: a body's `position` or `velocity` */
-    write(path: string, value: Vec3): void;
+    /** Writes one value to the store: a body's `position` or `velocity`; false when it has nowhere to go (a copy's unlinked `velocity`) */
+    write(path: string, value: Vec3): boolean;
     /** Tells a contact (the controller raises `contact` on the element) */
     contact(contact: PlayContact): void;
     /** Gives the scene the tree to draw with the bodies where they are now */
@@ -181,31 +184,44 @@ export class SceneLoop {
         if (this.world === world && moving) this.wake();
     }
 
-    /** Writes a body's position and velocity where they differ from what state holds */
+    /**
+     * Writes a body's position and velocity where they differ from what state holds. A value that has nowhere to go is
+     * not known as written, so state's own value stays what the loop compares with
+     */
     private save(body: PlayBody): void {
         const known = this.known.get(body.path);
-        const position = text(body.position);
-        const velocity = text(body.velocity);
-        if (known?.position !== position) this.options.write(`${body.path}.position`, [...body.position]);
-        if (known?.velocity !== velocity) this.options.write(`${body.path}.velocity`, [...body.velocity]);
-        this.known.set(body.path, { position, velocity });
+        const next: Known = { position: text(body.position), velocity: text(body.velocity) };
+        for (const property of ['position', 'velocity'] as const) {
+            if (known?.[property] === next[property]) continue;
+            if (!this.options.write(`${body.path}.${property}`, [...body[property]]) && known !== undefined) next[property] = known[property];
+        }
+        this.known.set(body.path, next);
     }
 
     /** The bodies of the tree, each where the game has it unless state changed it since the loop last wrote or read it */
     private readBodies(tree: readonly Scene3dTree[]): PlayBody[] {
         const bodies: PlayBody[] = [];
         const seen = new Set<string>();
+        const add = (node: Scene3dTree, parent: string, repeat?: string): void => {
+            if (!BODY_KINDS.has(node.kind)) return;
+            const spec = readBody(node.properties.body);
+            if (spec === undefined) return;
+            for (const name of spec.unknownKeys) this.options.problem(`its body's control names "${name}", which is not a key a scene takes`, repeat === undefined ? node.path : node.path.slice(0, node.path.lastIndexOf('.rows.')));
+            const half = this.halfOf(node);
+            if (half === undefined) return;
+            seen.add(node.path);
+            bodies.push(this.bodyOf(node, parent, spec, half, repeat));
+        };
         const visit = (nodes: readonly Scene3dTree[], parent: string): void => {
             for (const node of nodes) {
                 if (node.kind === 'group3d') visit(node.children, `${node.path}.children`);
-                if (!BODY_KINDS.has(node.kind)) continue;
-                const spec = readBody(node.properties.body);
-                if (spec === undefined) continue;
-                for (const name of spec.unknownKeys) this.options.problem(`its body's control names "${name}", which is not a key a scene takes`, node.path);
-                const half = this.halfOf(node);
-                if (half === undefined) continue;
-                seen.add(node.path);
-                bodies.push(this.bodyOf(node, parent, spec, half));
+                if (node.kind === 'repeat3d') {
+                    // Copies share the repeat's parent while the repeat sits where its parent's space is; else only each other
+                    const placed = ['position', 'rotation'].some((name) => readVector(node.properties[name], [0, 0, 0]).some((value) => value !== 0)) || readVector(node.properties.scale, [1, 1, 1]).some((value) => value !== 1);
+                    for (const copy of node.children) add(copy, placed ? `${node.path}.rows` : parent, node.key);
+                    continue;
+                }
+                add(node, parent);
             }
         };
         const first = tree[0];
@@ -214,12 +230,13 @@ export class SceneLoop {
         return bodies;
     }
 
-    private bodyOf(node: Scene3dTree, parent: string, spec: PlayBody['spec'], half: Vec3): PlayBody {
+    private bodyOf(node: Scene3dTree, parent: string, spec: PlayBody['spec'], half: Vec3, repeat: string | undefined): PlayBody {
         const position = readVector(node.properties.position, [0, 0, 0]);
         const velocity = readVector(node.properties.velocity, [0, 0, 0]);
         const before = this.world?.body(node.path);
         const known = this.known.get(node.path);
         const state = { position: text(position), velocity: text(velocity) };
+        const radius = node.kind === 'mesh' ? sphereRadius(node.properties.geometry, readVector(node.properties.scale, [1, 1, 1])) : undefined;
         const body: PlayBody = {
             path: node.path,
             key: node.key,
@@ -229,7 +246,9 @@ export class SceneLoop {
             velocity: before !== undefined && known?.velocity === state.velocity ? before.velocity : velocity,
             spec,
             half,
-            ...(readBounds(node.properties.bounds) !== undefined && { bounds: readBounds(node.properties.bounds) })
+            ...(radius !== undefined && { radius }),
+            ...(readBounds(node.properties.bounds) !== undefined && { bounds: readBounds(node.properties.bounds) }),
+            ...(repeat !== undefined && { repeat })
         };
         if (before === undefined || known?.position !== state.position || known.velocity !== state.velocity) this.known.set(node.path, state);
         return body;
@@ -250,7 +269,7 @@ export class SceneLoop {
         const place = (nodes: readonly Scene3dTree[]): Scene3dTree[] =>
             nodes.map((node) => {
                 const body = world.body(node.path);
-                const children = node.kind === 'group3d' ? place(node.children) : node.children;
+                const children = node.kind === 'group3d' || node.kind === 'repeat3d' ? place(node.children) : node.children;
                 if (body === undefined) return children === node.children ? node : { ...node, children };
                 const { transition: _transition, ...properties } = node.properties;
                 return { ...node, children, properties: { ...properties, position: [...body.position], velocity: [...body.velocity] } };

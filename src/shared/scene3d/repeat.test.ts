@@ -380,3 +380,65 @@ describe('gizmos on copies (docs/design/stateui-3d-gizmo.md)', () => {
         expect(repeats[0]?.locked).toBe(true);
     });
 });
+
+describe('copies as bodies of the game loop (docs/design/stateui-game-loop.md, F2)', () => {
+    const records = [
+        { id: 'a', at: [1, 0, 0], speed: [0, 0, 2], paint: { color: '#ff0000' }, name: 'Crate A' },
+        { id: 'b', at: [2, 0, 0], speed: [0, 0, 0], paint: { color: '#00ff00' }, name: 'Crate B' }
+    ];
+
+    it('should give a body copy the record paths of its position and velocity, keep its body, and not call body or velocity mixed', () => {
+        // Arrange
+        const store = sceneStore(records, { ...crate, '<-velocity': '$row.speed', body: { solid: true } });
+
+        // Act
+        const { nodes, repeats, targets, bodies } = expand(store);
+
+        // Assert
+        expect([...targets]).toEqual([
+            [`${REPEAT}.rows.a.position`, '$.data.crates.0.at'],
+            [`${REPEAT}.rows.a.velocity`, '$.data.crates.0.speed'],
+            [`${REPEAT}.rows.b.position`, '$.data.crates.1.at'],
+            [`${REPEAT}.rows.b.velocity`, '$.data.crates.1.speed']
+        ]);
+        expect([...bodies]).toEqual([`${REPEAT}.rows.a`, `${REPEAT}.rows.b`]);
+        expect(nodes[0]?.children[0]?.properties.body).toEqual({ solid: true });
+        expect(repeats[0]?.stuck).toBe(false);
+        expect(repeats[0]?.mixed).toEqual([]);
+    });
+
+    it('should keep a still body copy with no links as a body whose position and velocity go nowhere', () => {
+        // Arrange
+        const { '<-position': _, ...fixed } = crate;
+        const store = sceneStore(records, { ...fixed, position: [0, 0, 0], body: { solid: true } });
+        const read = (path: string): JsonValue | undefined => store.get<JsonValue | undefined>(path) ?? undefined;
+        const feeder = new Repeat3dFeeder({ read, resolve: (path) => store.resolve(path), on: () => undefined, off: () => undefined, report: () => undefined });
+
+        // Act
+        const expanded = feeder.expand(readScene3dTree(read(CHILDREN), CHILDREN, { read }).nodes);
+
+        // Assert
+        expect(expanded[0]?.children[0]?.properties.body).toEqual({ solid: true });
+        expect(feeder.writesNowhere(`${REPEAT}.rows.a.position`)).toBe(true);
+        expect(feeder.writesNowhere(`${REPEAT}.rows.a.velocity`)).toBe(true);
+        expect(feeder.writesNowhere(`${CHILDREN}.ball.position`)).toBe(false);
+    });
+
+    it('should draw a copy that falls with no $row link for its position without its body, and report the repeat once', () => {
+        // Arrange
+        const { '<-position': _, ...fixed } = crate;
+        const store = sceneStore(records, { ...fixed, position: [0, 0, 0], body: { solid: true, falls: true } });
+        const reports: [string, string][] = [];
+        const read = (path: string): JsonValue | undefined => store.get<JsonValue | undefined>(path) ?? undefined;
+        const feeder = new Repeat3dFeeder({ read, resolve: (path) => store.resolve(path), on: () => undefined, off: () => undefined, report: (error, path) => void reports.push([error.code, path]) });
+
+        // Act
+        const first = feeder.expand(readScene3dTree(read(CHILDREN), CHILDREN, { read }).nodes);
+        feeder.expand(readScene3dTree(read(CHILDREN), CHILDREN, { read }).nodes);
+
+        // Assert
+        expect(first[0]?.children[0]?.properties.body).toBeUndefined();
+        expect(feeder.writesNowhere(`${REPEAT}.rows.a.position`)).toBe(false);
+        expect(reports).toEqual([['SUI-RUN-DRAW', REPEAT]]);
+    });
+});

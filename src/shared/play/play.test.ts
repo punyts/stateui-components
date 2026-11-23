@@ -1,4 +1,4 @@
-import { DEFAULT_GRAVITY, PlayWorld, STEP_SECONDS, geometryHalf, readBody, readBounds, turnedHalf } from './play.js';
+import { DEFAULT_GRAVITY, PlayWorld, STEP_SECONDS, geometryHalf, readBody, readBounds, sphereRadius, turnedHalf } from './play.js';
 import type { PlayBody, Vec3 } from './play.js';
 
 const NONE = new Set<string>();
@@ -46,7 +46,7 @@ describe('reading a body', () => {
         expect(geometryHalf({ kind: 'capsule' })).toEqual([0.25, 0.5, 0.25]);
         expect(geometryHalf(undefined)).toEqual([0.5, 0.5, 0.5]);
         // A plane turned flat (-90° about x) is a floor: wide in x and z, no height
-        expect(turnedHalf([5, 4, 0], [1, 1, 1], [-Math.PI / 2, 0, 0])).toEqual([5, 0, 4]);
+        expect(turnedHalf([5, 4, 0], [1, 1, 1], [-90, 0, 0])).toEqual([5, 0, 4]);
         expect(turnedHalf([1, 2, 3], [2, 1, 1], [0, 0, 0])).toEqual([2, 2, 3]);
     });
 
@@ -171,5 +171,70 @@ describe('a step of the world', () => {
 
         // Assert
         expect(contacts).toEqual([]);
+    });
+});
+
+describe('spheres, copies and the grid (F2)', () => {
+    it('should give a sphere mesh scaled evenly a radius, and none to another shape or an uneven scale', () => {
+        // Act
+        const even = sphereRadius({ kind: 'sphere', radius: 0.5 }, [2, 2, -2]);
+        const uneven = sphereRadius({ kind: 'sphere' }, [1, 2, 1]);
+        const box = sphereRadius({ kind: 'box' }, [1, 1, 1]);
+
+        // Assert
+        expect(even).toBe(1);
+        expect(uneven).toBeUndefined();
+        expect(box).toBeUndefined();
+    });
+
+    it('should rest a falling sphere on the edge of a box lower than a box would, where its surface meets the edge', () => {
+        // Arrange
+        const ball = body('ball', { position: [0.8, 3, 0], radius: 0.5, spec: { solid: true, falls: true } });
+        const block = body('block', { position: [0, 0, 0] });
+        const world = new PlayWorld([ball, block]);
+
+        // Act
+        const { contacts } = run(world, 120);
+
+        // Assert
+        expect(ball.position[1]).toBeCloseTo(0.9, 6);
+        expect(ball.velocity).toEqual([0, 0, 0]);
+        expect(contacts.map((contact) => [contact.key, contact.with])).toEqual([['ball', 'block'], ['block', 'ball']]);
+        expect(world.movesNow(ball, NONE)).toBe(false);
+    });
+
+    it('should stop a sphere at another sphere it meets off centre, where their surfaces touch', () => {
+        // Arrange
+        const ball = body('ball', { position: [-3, 0, 0], velocity: [6, 0, 0], radius: 0.5 });
+        const other = body('other', { position: [0, 0, 0.6], radius: 0.5 });
+        const world = new PlayWorld([ball, other]);
+
+        // Act
+        run(world, 60, NONE, [0, 0, 0]);
+
+        // Assert
+        expect(ball.position[0]).toBeCloseTo(-0.8, 6);
+        expect(ball.velocity).toEqual([0, 0, 0]);
+    });
+
+    it('should name the repeat of a copy it meets, and meet one copy among thousands of still ones by the grid', () => {
+        // Arrange
+        const copies: PlayBody[] = [];
+        for (let x = 0; x < 50; x += 1) {
+            for (let z = 0; z < 60; z += 1) copies.push({ ...body(`c${x}-${z}`, { position: [x * 2, 0, z * 2] }), path: `$.s.children.coins.rows.c${x}-${z}`, repeat: 'coins' });
+        }
+        const ball = body('ball', { position: [20, 5, 30], spec: { solid: true, falls: true } });
+        const world = new PlayWorld([...copies, ball]);
+
+        // Act
+        const { contacts, rested } = run(world, 120);
+
+        // Assert
+        expect(ball.position[1]).toBeCloseTo(1, 6);
+        expect(contacts).toEqual([
+            { path: '$.s.children.ball', key: 'ball', with: 'c10-15', repeat: 'coins', side: 'bottom' },
+            { path: '$.s.children.coins.rows.c10-15', key: 'c10-15', with: 'ball', side: 'top' }
+        ]);
+        expect(rested).toEqual(['$.s.children.ball']);
     });
 });

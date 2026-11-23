@@ -5,9 +5,11 @@ import { SCENE_KEYS } from '../scene3d/keys.js';
  * The game loop's step (docs/design/stateui-game-loop.md): bodies that move by their `velocity`, the keys held on
  * their `control`, and the scene's gravity, and that stop at, bounce off or pass through solids and their `bounds`.
  * Pure: no DOM, no store and no clock, so it runs in Node; the `scene3d` controller reads the bodies from its node tree,
- * runs `PlayWorld.step` on the animation frame and writes what it reports. Every body collides as its box, aligned with
- * the axes of its parent: the box of its geometry, scaled and turned by its own `scale` and `rotation`. Bodies collide
- * only with bodies of the same parent, whose positions are in the same space.
+ * runs `PlayWorld.step` on the animation frame and writes what it reports. A body collides as its box, aligned with
+ * the axes of its parent (the box of its geometry, scaled and turned by its own `scale` and `rotation`), or as a sphere
+ * when it is a sphere mesh scaled the same on every axis. Bodies collide only with bodies of the same parent, whose
+ * positions are in the same space. The solids that stand still sit in a uniform grid per parent, so a moving body looks
+ * only at those near it, and pairs of still solids are never checked.
  */
 
 export type Vec3 = [number, number, number];
@@ -81,7 +83,11 @@ export interface PlayBody {
     readonly spec: BodySpec;
     /** Half the size of its box along x, y and z */
     readonly half: Readonly<Vec3>;
+    /** Its radius when it collides as a sphere */
+    readonly radius?: number;
     readonly bounds?: PlayBounds;
+    /** The key of its `repeat3d` when it is a copy (its `key` is then the record's key) */
+    readonly repeat?: string;
 }
 
 /** Two bodies, or a body and a side of its bounds, that began to touch in a step */
@@ -89,8 +95,10 @@ export interface PlayContact {
     /** The path and key of the body that tells it */
     readonly path: string;
     readonly key: string;
-    /** The other body's key, or `bounds` */
+    /** The other body's key (a copy's record key), or `bounds` */
     readonly with: string;
+    /** The key of the other body's `repeat3d` when it is a copy */
+    readonly repeat?: string;
     /** The side of the telling body that met it */
     readonly side: ContactSide;
 }
@@ -188,12 +196,23 @@ export function geometryHalf(value: JsonValue | undefined): Vec3 {
 }
 
 /**
- * The half size of a box of half size `half` scaled by `scale` and turned by `rotation` (radians, x then y then z, as
- * three.js turns a node), as a box aligned with the parent's axes that holds it
+ * The radius a sphere mesh collides with: its geometry's radius times its scale; undefined when it is no sphere or is
+ * scaled unevenly (it then collides as its box)
+ */
+export function sphereRadius(geometry: JsonValue | undefined, scale: Readonly<Vec3>): number | undefined {
+    if (!isRecord(geometry) || geometry.kind !== 'sphere') return undefined;
+    const [x, y, z] = scale.map(Math.abs) as Vec3;
+    if (Math.abs(x - y) > 1e-9 || Math.abs(x - z) > 1e-9) return undefined;
+    return size(geometry, 'radius', 0.5) * x;
+}
+
+/**
+ * The half size of a box of half size `half` scaled by `scale` and turned by `rotation` (degrees, x then y then z, as
+ * the renderer turns a node), as a box aligned with the parent's axes that holds it
  */
 export function turnedHalf(half: Readonly<Vec3>, scale: Readonly<Vec3>, rotation: Readonly<Vec3>): Vec3 {
     const h = [Math.abs(half[0] * scale[0]), Math.abs(half[1] * scale[1]), Math.abs(half[2] * scale[2])];
-    const [a, b, c] = rotation;
+    const [a, b, c] = rotation.map((degrees) => (degrees * Math.PI) / 180) as Vec3;
     const [ca, sa, cb, sb, cc, sc] = [Math.cos(a), Math.sin(a), Math.cos(b), Math.sin(b), Math.cos(c), Math.sin(c)];
     // The rotation matrix of the Euler angles in the order XYZ
     const m = [
@@ -205,11 +224,95 @@ export function turnedHalf(half: Readonly<Vec3>, scale: Readonly<Vec3>, rotation
     return m.map((row) => clean(Math.abs(row[0] as number) * (h[0] as number) + Math.abs(row[1] as number) * (h[1] as number) + Math.abs(row[2] as number) * (h[2] as number))) as Vec3;
 }
 
-/** The key of a touching pair: the two paths in order, or a path and a side of its bounds */
 /** What joins the two paths of a pair, and a path and the side of its bounds */
 const PAIR_MARK = '\u0000';
 const BOUND_MARK = '\u0001';
 const pairKey = (a: string, b: string): string => (a < b ? `${a}${PAIR_MARK}${b}` : `${b}${PAIR_MARK}${a}`);
+
+/** The most grid cells a still solid is put in; a larger one is checked against every body near it */
+const MAX_CELLS_PER_BODY = 512;
+/** The smallest side of a grid cell */
+const MIN_CELL = 0.5;
+
+/**
+ * The distance between the centres of `a` and `b` along `axis` at which they just touch, given where they are on the
+ * other two axes, with their sizes grown by `grow` (negative to shrink); undefined when they are apart on those axes, so
+ * they cannot meet along this one. Boxes reach at their half sizes; a sphere and a box where the sphere's surface meets
+ * the box's nearest point; two spheres at the sum of their radii
+ */
+function reach(a: PlayBody, b: PlayBody, axis: number, grow: number): number | undefined {
+    const others = axis === 0 ? [1, 2] : axis === 1 ? [0, 2] : [0, 1];
+    const apart = others.map((other) => Math.abs((a.position[other] as number) - (b.position[other] as number)));
+    if (a.radius === undefined && b.radius === undefined) {
+        if (others.some((other, index) => (apart[index] as number) >= (a.half[other] as number) + (b.half[other] as number) + grow)) return undefined;
+        return (a.half[axis] as number) + (b.half[axis] as number) + grow;
+    }
+    if (a.radius !== undefined && b.radius !== undefined) {
+        const sum = a.radius + b.radius + grow;
+        const rest = sum * sum - apart.reduce((total, value) => total + value * value, 0);
+        return rest > 0 ? Math.sqrt(rest) : undefined;
+    }
+    const [sphere, box] = a.radius !== undefined ? [a, b] : [b, a];
+    const radius = (sphere.radius as number) + grow;
+    // How far the sphere's centre is outside the box on each of the other axes
+    const outside = others.map((other, index) => Math.max(0, (apart[index] as number) - (box.half[other] as number)));
+    const rest = radius * radius - outside.reduce((total, value) => total + value * value, 0);
+    return rest > 0 ? (box.half[axis] as number) + Math.sqrt(rest) : undefined;
+}
+
+/** A uniform grid of the solids of one parent that do not move, so a body looks only at those near it */
+class Grid {
+    private readonly cells = new Map<string, PlayBody[]>();
+    /** The solids too large for cells, checked against every body */
+    private readonly large: PlayBody[] = [];
+    private readonly size: number;
+
+    constructor(bodies: readonly PlayBody[]) {
+        // A cell is about as large as a typical solid: the median of their widest sides
+        const sides = bodies.map((body) => 2 * Math.max(...body.half)).sort((a, b) => a - b);
+        this.size = Math.max(MIN_CELL, sides[Math.floor(sides.length / 2)] ?? MIN_CELL);
+        for (const body of bodies) {
+            const range = this.range(body, 0);
+            if (range === undefined) {
+                this.large.push(body);
+                continue;
+            }
+            this.visit(range, (key) => {
+                const cell = this.cells.get(key);
+                if (cell === undefined) this.cells.set(key, [body]);
+                else cell.push(body);
+            });
+        }
+    }
+
+    /** The still solids whose cells the body's box, grown by `margin`, reaches */
+    near(body: PlayBody, margin: number, into: Set<PlayBody>): void {
+        for (const other of this.large) into.add(other);
+        const range = this.range(body, margin);
+        if (range === undefined) {
+            for (const cell of this.cells.values()) for (const other of cell) into.add(other);
+            return;
+        }
+        this.visit(range, (key) => {
+            for (const other of this.cells.get(key) ?? []) into.add(other);
+        });
+    }
+
+    /** The first and last cell along each axis of a body's box, or undefined when it spans too many cells */
+    private range(body: PlayBody, margin: number): [Vec3, Vec3] | undefined {
+        const low = body.position.map((at, axis) => Math.floor((at - (body.half[axis] as number) - margin) / this.size)) as Vec3;
+        const high = body.position.map((at, axis) => Math.floor((at + (body.half[axis] as number) + margin) / this.size)) as Vec3;
+        const count = (high[0] - low[0] + 1) * (high[1] - low[1] + 1) * (high[2] - low[2] + 1);
+        return count > MAX_CELLS_PER_BODY ? undefined : [low, high];
+    }
+
+    private visit([low, high]: [Vec3, Vec3], each: (key: string) => void): void {
+        for (let x = low[0]; x <= high[0]; x += 1) for (let y = low[1]; y <= high[1]; y += 1) for (let z = low[2]; z <= high[2]; z += 1) each(`${x},${y},${z}`);
+    }
+}
+
+/** True when a body may move in this world: it has a speed, falls or has keys; the others stand still all its life */
+const mayMove = (body: PlayBody): boolean => body.velocity.some((value) => value !== 0) || body.spec.falls || Object.keys(body.spec.control).length > 0;
 
 /** The bodies of a scene and what touched in the last step */
 export class PlayWorld {
@@ -217,6 +320,12 @@ export class PlayWorld {
     private touching = new Set<string>();
     private moving = new Set<string>();
     private readonly byPath: ReadonlyMap<string, PlayBody>;
+    /** The bodies that may move; only they are stepped and checked for contacts */
+    private readonly movers: readonly PlayBody[];
+    /** The solids among them, by parent */
+    private readonly solidMovers = new Map<string, PlayBody[]>();
+    /** The solids that stand still, by parent */
+    private readonly grids = new Map<string, Grid>();
 
     /**
      * A world of these bodies. Without `previous`, what touches when it is made is not a contact that begins; with it (the
@@ -226,8 +335,18 @@ export class PlayWorld {
     constructor(bodies: readonly PlayBody[], previous?: PlayWorld) {
         this.bodies = bodies;
         this.byPath = new Map(bodies.map((body) => [body.path, body]));
+        this.movers = bodies.filter(mayMove);
+        const still = new Map<string, PlayBody[]>();
+        for (const body of bodies) {
+            if (!body.spec.solid) continue;
+            const into = mayMove(body) ? this.solidMovers : still;
+            const list = into.get(body.parent);
+            if (list === undefined) into.set(body.parent, [body]);
+            else list.push(body);
+        }
+        for (const [parent, list] of still) this.grids.set(parent, new Grid(list));
         if (previous === undefined) {
-            this.touching = this.touchingPairs(bodies);
+            this.touching = this.touchingPairs();
             return;
         }
         const known = (path: string): boolean => this.byPath.has(path);
@@ -263,13 +382,13 @@ export class PlayWorld {
 
     /** True when any body would move in a step with these keys held */
     anyMoves(held: ReadonlySet<string>): boolean {
-        return this.bodies.some((body) => this.movesNow(body, held));
+        return this.movers.some((body) => this.movesNow(body, held));
     }
 
     /** Runs one step of `seconds` with this gravity and these keys held */
     step(seconds: number, gravity: Readonly<Vec3>, held: ReadonlySet<string>): StepResult {
         const moved = new Set<string>();
-        for (const body of this.bodies) {
+        for (const body of this.movers) {
             if (body.spec.falls) {
                 if (this.supported(body) && body.velocity[1] <= 0 && gravity[1] <= 0) body.velocity[1] = 0;
                 else for (let axis = 0; axis < 3; axis += 1) body.velocity[axis] = clampSpeed((body.velocity[axis] as number) + (gravity[axis] as number) * seconds);
@@ -279,7 +398,7 @@ export class PlayWorld {
             moved.add(body.path);
             for (let axis = 0; axis < 3; axis += 1) this.moveAxis(body, axis, (velocity[axis] as number) * seconds);
         }
-        const now = this.touchingPairs(this.bodies);
+        const now = this.touchingPairs();
         const contacts: PlayContact[] = [];
         for (const pair of now) {
             if (this.touching.has(pair)) continue;
@@ -299,6 +418,15 @@ export class PlayWorld {
         const rested = [...this.moving].filter((path) => !this.movesNow(this.byPath.get(path) as PlayBody, held));
         for (const path of rested) this.moving.delete(path);
         return rested;
+    }
+
+    /** The solids of the body's parent near it, other than itself: the still ones its grid cells hold, and every solid mover */
+    private near(body: PlayBody, margin: number): Set<PlayBody> {
+        const found = new Set<PlayBody>();
+        this.grids.get(body.parent)?.near(body, margin, found);
+        for (const other of this.solidMovers.get(body.parent) ?? []) found.add(other);
+        found.delete(body);
+        return found;
     }
 
     /** Moves a body along one axis in sub-steps, stopped, bounced or let through by what it meets */
@@ -322,10 +450,10 @@ export class PlayWorld {
         if (body.spec.onContact === 'pass') return false;
         let met = false;
         if (body.spec.solid) {
-            for (const other of this.bodies) {
-                if (other === body || !other.spec.solid || other.parent !== body.parent || !this.overlaps(body, other)) continue;
-                const reach = (body.half[axis] as number) + (other.half[axis] as number);
-                body.position[axis] = (other.position[axis] as number) + (part > 0 ? -reach : reach);
+            for (const other of this.near(body, 0)) {
+                if (!this.overlaps(body, other)) continue;
+                const distance = reach(body, other, axis, 0) ?? (body.half[axis] as number) + (other.half[axis] as number);
+                body.position[axis] = (other.position[axis] as number) + (part > 0 ? -distance : distance);
                 met = true;
             }
         }
@@ -345,41 +473,33 @@ export class PlayWorld {
         return true;
     }
 
-    /** True when the boxes of two bodies go into each other, deeper than touching */
+    /** True when two bodies go into each other, deeper than touching */
     private overlaps(a: PlayBody, b: PlayBody): boolean {
-        for (let axis = 0; axis < 3; axis += 1) {
-            if (Math.abs((a.position[axis] as number) - (b.position[axis] as number)) >= (a.half[axis] as number) + (b.half[axis] as number) - TOUCH) return false;
-        }
-        return true;
+        const distance = reach(a, b, 0, -TOUCH);
+        return distance !== undefined && Math.abs(a.position[0] - b.position[0]) < distance;
     }
 
-    /** True when the boxes of two bodies touch or go into each other */
+    /** True when two bodies touch or go into each other */
     private touches(a: PlayBody, b: PlayBody): boolean {
-        for (let axis = 0; axis < 3; axis += 1) {
-            if (Math.abs((a.position[axis] as number) - (b.position[axis] as number)) > (a.half[axis] as number) + (b.half[axis] as number) + TOUCH) return false;
-        }
-        return true;
+        const distance = reach(a, b, 0, TOUCH);
+        return distance !== undefined && Math.abs(a.position[0] - b.position[0]) <= distance;
     }
 
-    /** True when a solid of the same parent holds the body up: its bottom rests on the solid's top */
+    /** True when a solid of the same parent holds the body up: it rests on the solid from above */
     private supported(body: PlayBody): boolean {
         if (!body.spec.solid) return false;
-        return this.bodies.some((other) => {
-            if (other === body || !other.spec.solid || other.parent !== body.parent) return false;
-            const gap = (body.position[1] - body.half[1]) - (other.position[1] + other.half[1]);
-            if (gap > TOUCH || gap < -TOUCH * 10) return false;
-            for (const axis of [0, 2]) {
-                if (Math.abs((body.position[axis] as number) - (other.position[axis] as number)) >= (body.half[axis] as number) + (other.half[axis] as number) - TOUCH) return false;
-            }
-            return true;
-        });
+        for (const other of this.near(body, TOUCH * 10)) {
+            if (other.position[1] >= body.position[1] || reach(body, other, 1, -TOUCH) === undefined) continue;
+            const gap = body.position[1] - other.position[1] - (reach(body, other, 1, 0) as number);
+            if (gap <= TOUCH && gap >= -TOUCH * 10) return true;
+        }
+        return false;
     }
 
-    /** The pairs that touch now: two solids of the same parent, or a body at a side of its bounds */
-    private touchingPairs(bodies: readonly PlayBody[]): Set<string> {
+    /** The pairs that touch now: a moving body and a solid of the same parent, or a moving body at a side of its bounds */
+    private touchingPairs(): Set<string> {
         const pairs = new Set<string>();
-        for (let i = 0; i < bodies.length; i += 1) {
-            const a = bodies[i] as PlayBody;
+        for (const a of this.movers) {
             if (a.bounds !== undefined) {
                 const { minX, maxX, minZ, maxZ } = a.bounds;
                 const [x, , z] = a.position;
@@ -389,10 +509,7 @@ export class PlayWorld {
                 if (z >= maxZ - TOUCH) pairs.add(`${a.path}${BOUND_MARK}front`);
             }
             if (!a.spec.solid) continue;
-            for (let j = i + 1; j < bodies.length; j += 1) {
-                const b = bodies[j] as PlayBody;
-                if (b.spec.solid && b.parent === a.parent && this.touches(a, b)) pairs.add(pairKey(a.path, b.path));
-            }
+            for (const b of this.near(a, TOUCH * 2)) if (this.touches(a, b)) pairs.add(pairKey(a.path, b.path));
         }
         return pairs;
     }
@@ -420,8 +537,8 @@ export class PlayWorld {
         const [low, high] = SIDES_BY_AXIS[axis] as readonly [ContactSide, ContactSide];
         const aBelow = (a.position[axis] as number) <= (b.position[axis] as number);
         return [
-            { path: a.path, key: a.key, with: b.key, side: aBelow ? high : low },
-            { path: b.path, key: b.key, with: a.key, side: aBelow ? low : high }
+            { path: a.path, key: a.key, with: b.key, ...(b.repeat !== undefined && { repeat: b.repeat }), side: aBelow ? high : low },
+            { path: b.path, key: b.key, with: a.key, ...(a.repeat !== undefined && { repeat: a.repeat }), side: aBelow ? low : high }
         ];
     }
 }

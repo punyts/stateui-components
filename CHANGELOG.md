@@ -1,6 +1,21 @@
 # Changelog
 
 ## Unreleased
+- **`repeat3d` copies are bodies of the game loop; spheres; a grid of still solids** (docs/design/stateui-game-loop.md,
+  F2). A copy whose row has a `body` moves, collides and rests as a node does, keyed by its record: the loop writes its
+  `position` and `velocity` to the record fields its `"<-position": "$row.<field>"` and `<-velocity` links name
+  (`Repeat3dFeeder.writeTarget`; an unlinked `velocity` is not written, `writesNowhere`), and the row's `on.contact` runs
+  with `$row` at the record. A copy that may move with no `$row` link for its `position` loses its `body` and the repeat
+  is reported once as `SUI-RUN-DRAW`. A contact with a copy names its record key in `with` and its repeat in `repeat`.
+  Copies collide with the bodies beside the repeat when the repeat is not moved, turned or scaled, else with each other.
+  `velocity` and `body` are per-copy (`INSTANCE_PROPERTIES`). A sphere mesh scaled evenly collides as a sphere
+  (`sphereRadius`). The solids that stand still sit in a uniform grid per parent, so a moving body checks only those near
+  it. Tests: `src/shared/play/play.test.ts` ("spheres, copies and the grid"), `src/shared/scene3d/repeat.test.ts`
+  ("copies as bodies of the game loop"), `test/composites/scene3d-play.browser.test.ts` ("should drop repeat3d copies
+  onto the floor…").
+- **Fix: a turned body's box follows `rotation` in degrees.** `turnedHalf` took the radians three.js uses, but a node's
+  `rotation` is in degrees, so a turned mesh collided as the wrong box. Test: `src/shared/play/play.test.ts` ("should
+  give the half size of each geometry…").
 - **`scene3d` runs a game loop: `play`, and `velocity` and `body` on the 3D nodes** (docs/design/stateui-game-loop.md,
   F1). While `play.running` is true the scene moves the nodes with a `body` by their `velocity`, the keys held on their
   `control` and `play.gravity`, 60 steps a second on the animation frame, as boxes that stop, bounce or pass at solids of

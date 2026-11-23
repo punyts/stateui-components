@@ -139,8 +139,9 @@ const THEME_PATHS = ['$.theme.active', '$.theme.active.$all'];
  * `group3d` or `model`) move by their `velocity`, the keys held on their `control` and `play.gravity` (`SceneLoop` of
  * `src/shared/play/`, stepping 60 times a second on the animation frame while something moves). The scene draws each
  * frame's positions; the store hears of a body only at a contact, when it comes to rest and when the game stops. A
- * contact raises `contact` with `detail: { shape, key, with, side }` on each of the two bodies (one for a side of its
- * `bounds`), after both bodies' `position` and `velocity` are written. The keys a `control` names are taken as `keys`
+ * contact raises `contact` with `detail: { shape, key, with, repeat?, side }` on each of the two bodies (one for a side
+ * of its `bounds`; `repeat` names the other's `repeat3d` when it is a copy), after both bodies' `position` and
+ * `velocity` are written. A `repeat3d` copy with a `body` writes them to the record fields its `$row` links name. The keys a `control` names are taken as `keys`
  * are (the scene box is focusable and names them), held while down, and let go when focus leaves the scene
  */
 /** The category of the scene's reports, for stateui-3d too (it has no reporter): the chunk loaded, the scene made and disposed, each issue */
@@ -165,10 +166,15 @@ export default function controller({ element, store, basePath }: ControllerConte
 
     /** The game loop of `play` and the nodes' `body` (docs/design/stateui-game-loop.md) */
     const loop = new SceneLoop({
-        write: (path, value) => store.set(repeats.writeTarget(path) ?? path, value),
+        write: (path, value) => {
+            // A copy's velocity with no $row link has nowhere to go; its game value lives in the scene until it stops
+            if (repeats.writesNowhere(path)) return false;
+            store.set(repeats.writeTarget(path) ?? path, value);
+            return true;
+        },
         contact: (contact: PlayContact) => {
             if (disposed) return;
-            const detail = { shape: contact.path, key: contact.key, with: contact.with, side: contact.side };
+            const detail = { shape: contact.path, key: contact.key, with: contact.with, ...(contact.repeat !== undefined && { repeat: contact.repeat }), side: contact.side };
             element.dispatchEvent(new CustomEvent('contact', { detail, bubbles: true, composed: true }));
         },
         draw: (tree) => {
