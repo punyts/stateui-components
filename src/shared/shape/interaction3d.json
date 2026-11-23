@@ -15,7 +15,8 @@
             }
         },
         "step": { "type": "number", "validators": { "range": { "min": 0 } }, "default": 1 },
-        "snap": { "type": "boolean", "default": false }
+        "snap": { "type": "boolean", "default": false },
+        "gizmo": { "type": "string", "values": ["none", "move", "rotate", "scale"], "default": "none" }
     },
     "events": ["press", "hover", "dragEnd"]
 }

@@ -313,8 +313,8 @@ describe('dragging copies (docs/design/stateui-3d-drag-copies.md)', () => {
 
         // Assert
         expect([...targets]).toEqual([
-            [`${REPEAT}.rows.a`, '$.data.crates.0.at'],
-            [`${REPEAT}.rows.b`, '$.data.crates.1.at']
+            [`${REPEAT}.rows.a.position`, '$.data.crates.0.at'],
+            [`${REPEAT}.rows.b.position`, '$.data.crates.1.at']
         ]);
         expect(nodes[0]?.children[0]?.properties.draggable).toBe('ground');
         expect(repeats[0]?.locked).toBe(false);
@@ -329,7 +329,7 @@ describe('dragging copies (docs/design/stateui-3d-drag-copies.md)', () => {
         const { targets } = expand(store);
 
         // Assert
-        expect([...targets]).toEqual([[`${REPEAT}.rows.a.children.head`, '$.data.crates.0.head']]);
+        expect([...targets]).toEqual([[`${REPEAT}.rows.a.children.head.position`, '$.data.crates.0.head']]);
     });
 
     it('should draw a draggable copy whose position is not a $row link without draggable, and report the repeat once', () => {
@@ -346,7 +346,37 @@ describe('dragging copies (docs/design/stateui-3d-drag-copies.md)', () => {
 
         // Assert
         expect(first[0]?.children[0]?.properties.draggable).toBeUndefined();
-        expect(feeder.positionTarget(`${REPEAT}.rows.a`)).toBeUndefined();
+        expect(feeder.writeTarget(`${REPEAT}.rows.a.position`)).toBeUndefined();
         expect(reports).toEqual([['SUI-RUN-DRAW', REPEAT]]);
+    });
+});
+
+describe('gizmos on copies (docs/design/stateui-3d-gizmo.md)', () => {
+    const records = [{ id: 'a', at: [1, 0, 0], turn: [0, 45, 0], paint: { color: '#ff0000' }, name: 'Crate A' }];
+
+    it('should give a copy with a rotate gizmo the record path of its rotation, and keep the gizmo', () => {
+        // Arrange
+        const store = sceneStore(records, { ...crate, '<-rotation': '$row.turn', gizmo: 'rotate' });
+
+        // Act
+        const { nodes, repeats, targets } = expand(store);
+
+        // Assert
+        expect([...targets]).toEqual([[`${REPEAT}.rows.a.rotation`, '$.data.crates.0.turn']]);
+        expect(nodes[0]?.children[0]?.properties.gizmo).toBe('rotate');
+        expect(repeats[0]?.locked).toBe(false);
+    });
+
+    it('should draw a copy whose scale is not a $row link without its scale gizmo, and lock the repeat', () => {
+        // Arrange
+        const store = sceneStore(records, { ...crate, gizmo: 'scale' });
+
+        // Act
+        const { nodes, repeats, targets } = expand(store);
+
+        // Assert
+        expect([...targets]).toEqual([]);
+        expect(nodes[0]?.children[0]?.properties.gizmo).toBeUndefined();
+        expect(repeats[0]?.locked).toBe(true);
     });
 });

@@ -97,17 +97,22 @@ export interface Scene3dOptions {
     readonly readToken?: (name: string) => string | undefined;
     /** Told a `press`, a `hover` or a `dragEnd` of an interactive node (G3.8, docs/design/stateui-3d-drag.md) */
     readonly onEvent?: (event: Scene3dEvent) => void;
-    /** Told a dragged node's new `position` once when a drag ends, or for an arrow key on its proxy; without it no node is dragged */
+    /**
+     * Told a dragged node's new `position` once when a drag ends, or for an arrow key on its proxy, or the `position`,
+     * `rotation` or `scale` a gizmo's handle changed (docs/design/stateui-3d-gizmo.md); without it no node is dragged and
+     * no gizmo is shown
+     */
     readonly onMove?: (move: NodeMove) => void;
     /** Reads the font family of a `label3d` (G3.6b); default the host's computed `font-family` (the page font) */
     readonly readFont?: () => string | undefined;
 }
 
 /**
-/** A dragged node's new `position` in its parent's space, by its state path (`NodeMove` of `@punyts/stateui-3d`) */
+/** A node's new `position` (its parent's space), `rotation` (degrees) or `scale`, by its state path (`NodeMove` of `@punyts/stateui-3d`) */
 export interface NodeMove {
     readonly path: string;
-    readonly position: readonly [number, number, number];
+    readonly property: 'position' | 'rotation' | 'scale';
+    readonly value: readonly [number, number, number];
 }
 
 /**
@@ -171,7 +176,7 @@ export interface ReadScene3dTreeOptions {
 }
 
 /** The properties of the shared 3D partials (`transform3d`, `interaction3d`, `motion3d`) every 3D node merges in, and the shared `hidden` */
-const SHARED_PROPERTIES = ['position', 'rotation', 'scale', 'visible', 'interactive', '_label', 'transition', 'animate', 'hidden', 'draggable', 'bounds', 'step', 'snap'] as const;
+const SHARED_PROPERTIES = ['position', 'rotation', 'scale', 'visible', 'interactive', '_label', 'transition', 'animate', 'hidden', 'draggable', 'bounds', 'step', 'snap', 'gizmo'] as const;
 
 /**
  * The properties each 3D node declares (its own and the partials'), `children` left out. A test compares it with the

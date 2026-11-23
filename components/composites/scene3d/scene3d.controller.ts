@@ -267,14 +267,16 @@ export default function controller({ element, store, basePath }: ControllerConte
     };
 
     /**
-     * Writes a dragged node's `position` once, at the end of its drag (docs/design/stateui-3d-drag.md): a `<-position`
-     * link on the node is an alias, so the write reaches the link's target. A node of a `repeat3d` copy is not a node of
-     * the store: its position goes to the record field its `$row` link names (docs/design/stateui-3d-drag-copies.md).
-     * The scene raises `dragEnd` after it
+     * Writes a dragged node's `position` once, at the end of its drag (docs/design/stateui-3d-drag.md), or the `position`,
+     * `rotation` or `scale` a gizmo's handle changed (docs/design/stateui-3d-gizmo.md): a `<-position` link on the node
+     * is an alias, so the write reaches the link's target. A node of a `repeat3d` copy is not a node of the store: the
+     * value goes to the record field its `$row` link names (docs/design/stateui-3d-drag-copies.md). The scene raises
+     * `dragEnd` after it
      */
     const onMove = (move: NodeMove): void => {
         if (disposed) return;
-        store.set(repeats.positionTarget(move.path) ?? `${move.path}.position`, [...move.position]);
+        const path = `${move.path}.${move.property}`;
+        store.set(repeats.writeTarget(path) ?? path, [...move.value]);
     };
 
     /** Raises a node's `press`, `hover` or `dragEnd` on the element, for the dispatcher (`detail.shape` names the node, G3.8) */

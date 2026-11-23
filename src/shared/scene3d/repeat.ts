@@ -24,7 +24,10 @@ export const REPEAT3D_MAX_PARTS = 16;
  * (`geometry`, the rest of `material`, `castShadow`, `receiveShadow`, `transition`, `animate`) is shared by all
  * instances: the renderer takes the first copy's, and a row whose copies differ in one is `SUI-RUN-DRAW`
  */
-export const INSTANCE_PROPERTIES = ['position', 'rotation', 'scale', 'visible', 'hidden', 'interactive', '_label'] as const;
+export const INSTANCE_PROPERTIES = ['position', 'rotation', 'scale', 'visible', 'hidden', 'interactive', '_label', 'gizmo'] as const;
+
+/** The property a node's `draggable` or `gizmo` changes (docs/design/stateui-3d-gizmo.md) */
+const CHANGES: Readonly<Record<string, string>> = { draggable: 'position', move: 'position', rotate: 'rotation', scale: 'scale' };
 
 const isObject = (value: unknown): value is JsonObject => typeof value === 'object' && value !== null && !Array.isArray(value);
 
@@ -120,7 +123,7 @@ export interface BoundRepeat3d {
     readonly binding: RowBinding;
     /** The shared properties the copies differ in (`mixedProperties`) */
     readonly mixed: readonly string[];
-    /** True when a draggable node of the row has no record field for its `position`, so it lost `draggable` */
+    /** True when a draggable node or a node with a gizmo has no record field for what it changes, so it lost `draggable` or `gizmo` */
     readonly locked: boolean;
 }
 
@@ -129,8 +132,9 @@ export interface ExpandedScene3d {
     readonly nodes: readonly Scene3dTree[];
     readonly repeats: readonly BoundRepeat3d[];
     /**
-     * The record path a draggable node of a copy writes its `position` to, by the node's path (the field its
-     * `"<-position": "$row.<field>"` names; docs/design/stateui-3d-drag-copies.md)
+     * The record path a node of a copy writes a property to, by the property's path (`<node>.position`): the field its
+     * `"<-position": "$row.<field>"` names, for a draggable node (docs/design/stateui-3d-drag-copies.md) and for the
+     * property its gizmo changes (docs/design/stateui-3d-gizmo.md)
      */
     readonly targets: ReadonlyMap<string, string>;
 }
@@ -153,25 +157,28 @@ interface BoundCopy {
     readonly children: readonly BoundCopy[];
 }
 
-/** Where the draggable nodes of a repeat's copies write: their record paths, and whether one had none */
+/** Where the draggable nodes and gizmos of a repeat's copies write: their record paths, and whether one had none */
 interface CopyDrag {
     readonly targets: Map<string, string>;
     locked: boolean;
 }
 
 /**
- * A copy the row binder made, as a 3D node, with the nodes of a `group3d` row below it. With `drag`, a draggable node's
- * record path for `position` goes to its `targets`; a draggable node with none (a literal `position`, or a link to
- * anything but `$row`) is drawn without `draggable` and sets `locked`
+ * A copy the row binder made, as a 3D node, with the nodes of a `group3d` row below it. With `drag`, the record path of
+ * what a draggable node (`position`) or its gizmo (`position`, `rotation` or `scale`) changes goes to its `targets`; a
+ * node with none (a literal, or a link to anything but `$row`) is drawn without `draggable` or `gizmo` and sets `locked`
  */
 const asNode = (copy: BoundCopy, drag?: CopyDrag): Scene3dTree => {
     let properties = copy.properties;
-    if (drag !== undefined && properties.draggable !== undefined) {
-        const target = targetOf(copy as unknown as ShapeTree, 'position');
+    for (const name of ['draggable', 'gizmo'] as const) {
+        const value = properties[name];
+        const property = drag === undefined || value === undefined ? undefined : CHANGES[name === 'draggable' ? name : String(value)];
+        if (drag === undefined || property === undefined) continue;
+        const target = targetOf(copy as unknown as ShapeTree, property);
         if (target !== undefined) {
-            drag.targets.set(copy.path, target);
+            drag.targets.set(`${copy.path}.${property}`, target);
         } else {
-            const { draggable: _, ...rest } = properties;
+            const { [name]: _, ...rest } = properties;
             properties = rest;
             drag.locked = true;
         }
@@ -269,7 +276,7 @@ export class Repeat3dFeeder {
                 this.once(`${surplus}\u0000parts`, buildError('SUI-RUN-3D', { component: 'repeat3d', path: surplus, reason, statePath: surplus }), surplus);
             }
             if (locked) {
-                const reason = `a draggable node of the row has a "position" not linked to a field of its record ($row), so its copies cannot be dragged`;
+                const reason = `a draggable node or a gizmo of the row changes a property not linked to a field of its record ($row), so its copies cannot change it`;
                 this.once(`${path}\u0000locked`, buildError('SUI-RUN-DRAW', { path, reason, statePath: path }), path);
             }
             for (const property of mixed) {
@@ -292,9 +299,9 @@ export class Repeat3dFeeder {
         return expanded;
     }
 
-    /** The record path a dragged node of a copy writes its `position` to, from the last `expand`; undefined for any other path */
-    positionTarget(path: string): string | undefined {
-        return this.targets.get(path);
+    /** The record path a node of a copy writes a property to (`<node>.position`), from the last `expand`; undefined for any other path */
+    writeTarget(propertyPath: string): string | undefined {
+        return this.targets.get(propertyPath);
     }
 
     /** Stops every watch */
