@@ -116,6 +116,8 @@ type BaseValues = Map<string, Record<string, JsonValue>>;
 
 const RESERVED = new Set(['component', 'children', 'layout', 'placement', 'theme', 'on']);
 const NODE_SLOTS: Readonly<Partial<Record<ShapeKind, readonly string[]>>> = { drawGroup: ['clip'], drawRepeat: ['row'] };
+/** The template components whose `children` are compiled with them: a 2D `drawGroup`, a 3D `group3d` (docs/design/stateui-3d-group-rows.md) */
+const GROUP_KINDS: ReadonlySet<string> = new Set(['drawGroup', 'group3d']);
 const ROW = '$row';
 
 const isObject = (value: unknown): value is JsonObject => typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -187,7 +189,7 @@ class TemplateCompiler {
             delete written[link.key];
         }
         const children: Compiled[] = [];
-        if (kind === 'drawGroup' && isObject(value.children)) {
+        if (GROUP_KINDS.has(kind) && isObject(value.children)) {
             for (const [childKey, child] of Object.entries(value.children)) {
                 const compiled = this.compile(child, childKey, `${suffix}.children.${childKey}`);
                 if (compiled !== undefined) children.push(compiled);

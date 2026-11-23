@@ -8,11 +8,17 @@ import type { Node3dKind, Scene3dTree } from './tree.js';
 /** The renderer a `repeat3d`'s copies are capped for (`ROW_CAPS.webgl`, 20,000: one instanced mesh, G3.6) */
 export const REPEAT3D_RENDERER = 'webgl';
 
-/** The row components a `repeat3d` draws as instances (its `row` slot's `childComponents`) */
-export const REPEAT3D_ROW_KINDS: readonly Node3dKind[] = ['mesh'];
+/**
+ * The components of a `repeat3d`'s row (its `row` slot's `childComponents`) and of the nodes inside a `group3d` row
+ * (docs/design/stateui-3d-group-rows.md): each mesh is drawn as instances, each group places the meshes below it
+ */
+export const REPEAT3D_ROW_KINDS: readonly Node3dKind[] = ['mesh', 'group3d'];
+
+/** The most meshes a `repeat3d`'s row draws, one instanced mesh each (`MAX_ROW_PARTS` of `@punyts/stateui-3d`) */
+export const REPEAT3D_MAX_PARTS = 16;
 
 /**
- * The properties of a `repeat3d`'s row that each instance has its own value of: its place, turn and size, whether it
+ * The properties of a node of a `repeat3d`'s row that each copy has its own value of: its place, turn and size, whether it
  * shows, whether it is pressed and its name (G3.8), and `material.color` (the instance colour). Every other property
  * (`geometry`, the rest of `material`, `castShadow`, `receiveShadow`, `transition`, `animate`) is shared by all
  * instances: the renderer takes the first copy's, and a row whose copies differ in one is `SUI-RUN-DRAW`
@@ -41,34 +47,69 @@ const sharedValue = (name: string, value: JsonValue | undefined): JsonValue | un
     return rest;
 };
 
+/** The node at a place below a copy (`.children.a.children.b`; `''` the copy), or undefined */
+function nodeAt(copy: Scene3dTree, place: string): Scene3dTree | undefined {
+    let node: Scene3dTree | undefined = copy;
+    const steps = place === '' ? [] : place.slice(1).split('.');
+    for (let index = 1; index < steps.length && node !== undefined; index += 2) node = node.children.find((child) => child.key === steps[index]);
+    return node;
+}
+
+/** The places of every node of a copy, in tree order (`''` the copy, `.children.<key>…` the nodes of a `group3d` row) */
+function placesOf(copy: Scene3dTree): string[] {
+    const places: string[] = [];
+    const walk = (node: Scene3dTree, at: string): void => {
+        places.push(at);
+        for (const child of node.children) walk(child, `${at}.children.${child.key}`);
+    };
+    walk(copy, '');
+    return places;
+}
+
 /**
  * The names of the shared properties (all but `INSTANCE_PROPERTIES` and `material.color`) whose values differ between
  * the copies of a repeat, in the order first found: `geometry`, `castShadow`, `material.opacity` and the like (a
- * `material` field is named with its field). Empty when every copy can be one instance of the same mesh. Pure
+ * `material` field is named with its field). A node inside a `group3d` row names its place first:
+ * `children.head.geometry` (docs/design/stateui-3d-group-rows.md). Empty when every copy can be drawn as instances of
+ * the same meshes. Pure
  */
 export function mixedProperties(copies: readonly Scene3dTree[]): string[] {
     const first = copies[0];
     if (first === undefined) return [];
     const mixed = new Set<string>();
     const instanceOwn = INSTANCE_PROPERTIES as readonly string[];
+    const places = placesOf(first);
     for (const copy of copies.slice(1)) {
-        for (const name of new Set([...Object.keys(first.properties), ...Object.keys(copy.properties)])) {
-            if (instanceOwn.includes(name)) continue;
-            const a = sharedValue(name, first.properties[name]);
-            const b = sharedValue(name, copy.properties[name]);
-            if (sameValue(a, b)) continue;
-            if (name === 'material' && (isObject(a) || isObject(b))) {
-                const left = isObject(a) ? a : {};
-                const right = isObject(b) ? b : {};
-                for (const field of new Set([...Object.keys(left), ...Object.keys(right)])) {
-                    if (!sameValue(left[field], right[field])) mixed.add(`material.${field}`);
+        for (const place of places) {
+            const one = nodeAt(first, place) as Scene3dTree;
+            const other = nodeAt(copy, place);
+            if (other === undefined) continue;
+            const named = (name: string): string => (place === '' ? name : `${place.slice(1)}.${name}`);
+            for (const name of new Set([...Object.keys(one.properties), ...Object.keys(other.properties)])) {
+                if (instanceOwn.includes(name)) continue;
+                const a = sharedValue(name, one.properties[name]);
+                const b = sharedValue(name, other.properties[name]);
+                if (sameValue(a, b)) continue;
+                if (name === 'material' && (isObject(a) || isObject(b))) {
+                    const left = isObject(a) ? a : {};
+                    const right = isObject(b) ? b : {};
+                    for (const field of new Set([...Object.keys(left), ...Object.keys(right)])) {
+                        if (!sameValue(left[field], right[field])) mixed.add(named(`material.${field}`));
+                    }
+                } else {
+                    mixed.add(named(name));
                 }
-            } else {
-                mixed.add(name);
             }
         }
     }
     return [...mixed];
+}
+
+/** The template paths of the meshes of a copy past `REPEAT3D_MAX_PARTS`, in tree order (the renderer draws the first ones) */
+export function surplusParts(copy: Scene3dTree | undefined, rowPath: string): string[] {
+    if (copy === undefined) return [];
+    const meshes = placesOf(copy).filter((place) => nodeAt(copy, place)?.kind === 'mesh');
+    return meshes.slice(REPEAT3D_MAX_PARTS).map((place) => `${rowPath}${place}`);
 }
 
 /** One `repeat3d` of a scene and what its bind gave */
@@ -95,21 +136,30 @@ export interface ExpandRepeats3dOptions {
     readonly cap?: number;
 }
 
-/** A copy the row binder made, as a 3D node (the template is a `mesh`, which has no children) */
-const asNode = (copy: { kind: string; key: string; path: string; properties: Readonly<Record<string, JsonValue>> }): Scene3dTree => ({
+/** What the row binder makes of a template node */
+interface BoundCopy {
+    readonly kind: string;
+    readonly key: string;
+    readonly path: string;
+    readonly properties: Readonly<Record<string, JsonValue>>;
+    readonly children: readonly BoundCopy[];
+}
+
+/** A copy the row binder made, as a 3D node, with the nodes of a `group3d` row below it */
+const asNode = (copy: BoundCopy): Scene3dTree => ({
     kind: copy.kind as Node3dKind,
     key: copy.key,
     path: copy.path,
     properties: copy.properties,
-    children: []
+    children: copy.children.map(asNode)
 });
 
 /**
  * Binds every `repeat3d` of a 3D node tree (at the top or inside a `group3d`) with the row binder of the 2D repeats
  * (`createRowBinder`, G1.4b/G1.4c, without a node per record) and gives the tree with each repeat's copies as its
- * `children`, which the renderer draws as one instanced mesh. The template is the raw node `read(<repeat>.row)` gives
+ * `children`, which the renderer draws as instances. The template is the raw node `read(<repeat>.row)` gives
  * (a `$row` link is still a `<-key` there), the records `read(<repeat>.records)`, links followed; each copy is a `mesh`
- * at `<repeat>.rows.<recordKey>` keyed by its record key, with every property resolved (literals, `$row` links from
+ * or a `group3d` (with its meshes and groups below it at `….children.<key>`) at `<repeat>.rows.<recordKey>` keyed by its record key, with every property resolved (literals, `$row` links from
  * the record, other links from the store). The records are cut at `ROW_CAPS.webgl` (20,000). Each repeat's binding
  * is in `repeats`, for the feeder to watch `recordsPath` and `watch` and to report `cut`, `unknown`, `errors` and
  * `mixed`. Pure: the tree it is given is not changed
@@ -159,7 +209,8 @@ export interface Repeat3dFeederOptions extends ExpandRepeats3dOptions {
  * Binds the `repeat3d`s of a scene's tree on every draw (`expandRepeats3d`) and keeps up what the `scene3d` component
  * needs around it: it watches each repeat's record path and the store paths its template reads (links to data outside
  * the scene), so a record change redraws, and reports each problem once: records over the cap (`SUI-RUN-CAP`, again
- * after they fell under it), a template node that is not a `mesh` (`SUI-RUN-3D`, not drawn), a template link the
+ * after they fell under it), a template node that is neither a `mesh` nor a `group3d` (`SUI-RUN-3D`, not drawn), a mesh
+ * past `REPEAT3D_MAX_PARTS` (`SUI-RUN-3D`, not drawn), a template link the
  * document check refuses, and a shared property the copies differ in (`SUI-RUN-DRAW` naming the property: it is
  * known only once the rows are resolved, so it is not a validator error; the first copy's value is drawn)
  */
@@ -178,11 +229,16 @@ export class Repeat3dFeeder {
         for (const { path, binding, mixed } of repeats) {
             for (const watch of [binding.recordsPath, ...binding.watch]) paths.add(watch).add(`${watch}.$all`);
             for (const node of binding.unknown) {
-                const what = node.component === '' ? 'it is not a node' : `component "${node.component}" is not a mesh`;
-                const reason = `${what}, and a repeat3d draws only a mesh row, so it is not drawn`;
+                const what = node.component === '' ? 'it is not a node' : `component "${node.component}" is neither a mesh nor a group3d`;
+                const reason = `${what}, and a repeat3d's row holds only meshes and groups, so it is not drawn`;
                 this.once(`${node.path}\u0000${node.component}`, buildError('SUI-RUN-3D', { component: 'repeat3d', path: node.path, reason, statePath: node.path }), node.path);
             }
             for (const error of binding.errors) this.once(`${error.code}\u0000${error.message}`, error, error.statePath ?? path);
+            const first = binding.copies[0];
+            for (const surplus of surplusParts(first === undefined ? undefined : asNode(first), `${path}.row`)) {
+                const reason = `a repeat3d's row draws at most ${REPEAT3D_MAX_PARTS} meshes, so this one is not drawn`;
+                this.once(`${surplus}\u0000parts`, buildError('SUI-RUN-3D', { component: 'repeat3d', path: surplus, reason, statePath: surplus }), surplus);
+            }
             for (const property of mixed) {
                 const reason = `the row's "${property}" differs between records, but every instance of a repeat3d shares it, so the first record's is drawn for all`;
                 this.once(`${path}\u0000mixed\u0000${property}`, buildError('SUI-RUN-DRAW', { path, reason, statePath: path }), path);

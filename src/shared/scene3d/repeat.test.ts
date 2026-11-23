@@ -221,3 +221,79 @@ describe('Repeat3dFeeder (G3.6)', () => {
         expect(reports).toEqual([['SUI-RUN-3D', `${REPEAT}.row`]]);
     });
 });
+
+describe('a group3d row (docs/design/stateui-3d-group-rows.md)', () => {
+    /** A piece: a group at the record's place holding a base painted from the record and a fixed head */
+    const piece = {
+        component: 'group3d',
+        '<-position': '$row.at',
+        interactive: true,
+        '<-_label': '$row.name',
+        children: {
+            base: { component: 'mesh', geometry: { kind: 'cylinder' }, '<-material': '$row.paint' },
+            head: { component: 'mesh', position: [0, 0.5, 0], '<-geometry': '$row.head' }
+        }
+    };
+
+    it('should bind a group copy per record with its meshes below it, each with its record values', () => {
+        // Arrange
+        const store = sceneStore(
+            [
+                { at: [1, 0, 0], paint: { color: '#ff0000' }, name: 'Red', head: { kind: 'sphere' } },
+                { at: [2, 0, 0], paint: { color: '#0000ff' }, name: 'Blue', head: { kind: 'sphere' } }
+            ],
+            piece
+        );
+
+        // Act
+        const { nodes, repeats } = expand(store);
+
+        // Assert
+        const copy = nodes[0]?.children[1];
+        expect([copy?.kind, copy?.path, copy?.properties]).toEqual(['group3d', `${REPEAT}.rows.1`, { interactive: true, position: [2, 0, 0], _label: 'Blue' }]);
+        expect(copy?.children.map((part) => [part.kind, part.key, part.path, part.properties])).toEqual([
+            ['mesh', 'base', `${REPEAT}.rows.1.children.base`, { geometry: { kind: 'cylinder' }, material: { color: '#0000ff' } }],
+            ['mesh', 'head', `${REPEAT}.rows.1.children.head`, { position: [0, 0.5, 0], geometry: { kind: 'sphere' } }]
+        ]);
+        expect(repeats[0]?.mixed).toEqual([]);
+        expect(repeats[0]?.binding.unknown).toEqual([]);
+    });
+
+    it('should name a shared property a part differs in with the part', () => {
+        // Arrange
+        const store = sceneStore(
+            [
+                { at: [0, 0, 0], head: { kind: 'sphere' } },
+                { at: [1, 0, 0], head: { kind: 'cone' } }
+            ],
+            piece
+        );
+
+        // Act
+        const { repeats } = expand(store);
+
+        // Assert
+        expect(repeats[0]?.mixed).toEqual(['children.head.geometry']);
+    });
+
+    it('should report a node in the row that is neither a mesh nor a group3d, and the meshes past 16, once each', () => {
+        // Arrange
+        const meshes = Object.fromEntries(Array.from({ length: 18 }, (_, index) => [`m${index}`, { component: 'mesh' }]));
+        const store = sceneStore([{ at: [0, 0, 0] }], { component: 'group3d', children: { lamp: { component: 'light' }, ...meshes } });
+        const reports: [string, string][] = [];
+        const read = (path: string): JsonValue | undefined => store.get<JsonValue | undefined>(path) ?? undefined;
+        const repeats = new Repeat3dFeeder({ read, resolve: (path) => store.resolve(path), on: () => undefined, off: () => undefined, report: (error: BuildError, path) => void reports.push([error.code, path]) });
+        const draw = () => repeats.expand(readScene3dTree(read(CHILDREN), CHILDREN, { read }).nodes);
+
+        // Act
+        draw();
+        draw();
+
+        // Assert
+        expect(reports).toEqual([
+            ['SUI-RUN-3D', `${REPEAT}.row.children.lamp`],
+            ['SUI-RUN-3D', `${REPEAT}.row.children.m16`],
+            ['SUI-RUN-3D', `${REPEAT}.row.children.m17`]
+        ]);
+    });
+});

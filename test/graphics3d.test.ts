@@ -118,14 +118,14 @@ describe('scene3d and the 3D nodes in the catalog', () => {
         expect(shape('group3d').childComponents).toEqual(Object.keys(NODES));
     });
 
-    it('should hold repeat3d with records and a row slot that takes only a mesh (G3.6)', () => {
+    it('should hold repeat3d with records and a row slot that takes a mesh or a group3d (G3.6, group rows)', () => {
         // Arrange
         const entry = catalog.components.find((candidate) => candidate.name === 'repeat3d') as ShapeCatalogEntry;
 
         // Assert
         expect(entry.shape.properties.records?.type).toEqual(['array', 'object']);
         expect(entry.shape.properties.row?.type).toBe('node');
-        expect(entry.shape.properties.row?.childComponents).toEqual(['mesh']);
+        expect(entry.shape.properties.row?.childComponents).toEqual(['mesh', 'group3d']);
     });
 
     it('should hold label3d with _text as content, a color and a fontSize in scene units (G3.6b)', () => {
@@ -312,7 +312,7 @@ describe('a 3D scene document', () => {
         expect(result.errors.map(formatError)).toEqual([]);
     });
 
-    it('should refuse a repeat3d row that is not a mesh, and a repeat3d outside a scene', () => {
+    it('should refuse a repeat3d row that is neither a mesh nor a group3d, and a repeat3d outside a scene', () => {
         // Act
         const inScene = codesAt(sceneDocument({ lamps: { component: 'repeat3d', records: [], row: { component: 'light' } } }));
         const outside = codesAt({ locale: 'en', app: { component: 'drawing', children: { crates: { component: 'repeat3d', records: [], row: { component: 'mesh' } } } } });

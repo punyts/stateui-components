@@ -219,6 +219,50 @@ describe.skipIf(script === '')('scene3d repeat3d with the real 3D renderer chunk
         expect(spy).not.toHaveBeenCalled();
     });
 
+    it('should draw a group3d row as its parts per record, the head above each base, and press the whole piece from a part (group rows)', async () => {
+        // Arrange: a base in the record's colour and a green head lifted inside an inner group
+        answer();
+        const spy = vi.spyOn(report, 'error');
+        const piece = {
+            component: 'group3d',
+            '<-position': '$row.at',
+            interactive: true,
+            '<-_label': '$row.name',
+            children: {
+                base: { component: 'mesh', geometry: { kind: 'box' }, '<-material': '$row.paint' },
+                top: { component: 'group3d', position: [0, 1.2, 0], children: { head: { component: 'mesh', geometry: { kind: 'box', width: 0.6, height: 0.6, depth: 0.6 }, material: { color: '#00ff00' } } } }
+            }
+        };
+        const points = [
+            [0.25, 0.5],
+            [0.25, 0.243],
+            [0.75, 0.5],
+            [0.75, 0.243],
+            [0.5, 0.243]
+        ] as const;
+
+        // Act
+        const { pixels, mounted } = await readyPixels(() => mountComponent('scene3d', crates(piece), { data: { crates: pair('#ff0000', '#ff0000') } }), points);
+        const pressed: string[] = [];
+        mounted.element.addEventListener('press', (event) => pressed.push((event as CustomEvent<{ shape: string }>).detail.shape));
+        const canvas = mounted.element.shadowRoot?.querySelector('.surface canvas') as HTMLCanvasElement;
+        const box = canvas.getBoundingClientRect();
+        for (const type of ['pointerdown', 'pointerup']) {
+            canvas.dispatchEvent(new PointerEvent(type, { bubbles: true, composed: true, clientX: box.left + box.width * 0.75, clientY: box.top + box.height * 0.243, pointerId: 1, button: 0, buttons: type === 'pointerdown' ? 1 : 0, pointerType: 'mouse', isPrimary: true }));
+        }
+        const proxies = [...(mounted.element.shadowRoot?.querySelectorAll<HTMLButtonElement>('.proxies > button') ?? [])].map((button) => button.getAttribute('aria-label'));
+
+        // Assert
+        expectColor(pixels[0] ?? [], LIT_RED);
+        expectColor(pixels[1] ?? [], LIT_GREEN);
+        expectColor(pixels[2] ?? [], LIT_RED);
+        expectColor(pixels[3] ?? [], LIT_GREEN);
+        expectColor(pixels[4] ?? [], [0, 0, 0]);
+        expect(pressed).toEqual([`${REPEAT}.rows.right`]);
+        expect(proxies).toEqual(['Left', 'Right']);
+        expect(spy).not.toHaveBeenCalled();
+    });
+
     it('should draw nothing for an empty record set and leave no stale instance when the last record goes', async () => {
         // Arrange
         answer();
