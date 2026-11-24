@@ -99,6 +99,8 @@
     --ui-recordlist-row: var(--sui-card-h);
     /* The column's height is the board's: its list fills it, however tall, rather than stopping at the window's */
     --sui-list-max: none;
+    /* and never scrolls, so it keeps no room for a scrollbar: its cards are as wide as the column */
+    --sui-list-gutter: auto;
     block-size: var(--ui-board-height);
     min-block-size: 0;
 }

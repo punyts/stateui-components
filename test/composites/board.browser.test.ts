@@ -279,6 +279,22 @@ describe('board in Chromium', () => {
         expect(shown(mounted, 'todo')).toEqual(['B', 'A', 'E']);
     });
 
+    it('should make a card as wide as its column, keeping no room for a scrollbar the list never shows', async () => {
+        // Arrange: a bare board of 1000px columns and cards, as an editor's canvas sizes one
+        const sized = { bare: true, theme: { board: { column: '1000px', card: '1000px', height: '3000px' } } };
+
+        // Act
+        const mounted = await mountBoard(cards(), sized);
+
+        // Assert
+        const column = columnOf(mounted, 'todo');
+        const list = listOf(column).shadowRoot?.querySelector('.list') as HTMLElement;
+        const slot = slotsOf(column).find((each) => !each.hidden) as HTMLElement;
+        expect(list.offsetWidth).toBe(1000);
+        expect(list.clientWidth).toBe(1000);
+        expect(slot.getBoundingClientRect().width).toBe(1000);
+    });
+
     it('should size the cards by cardHeight', async () => {
         // Arrange
         const heights: number[] = [];

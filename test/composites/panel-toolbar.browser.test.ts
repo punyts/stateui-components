@@ -184,6 +184,32 @@ describe('panel in Chromium', () => {
         expect(box(inner).top).toBeGreaterThan(box(part(mounted.element, '.title') as HTMLElement).top);
     });
 
+    it('should fill the height a column gives it with grow, so its own growing child fills it in turn', () => {
+        // Arrange
+        const mounted = mountComponent('panel', {
+            padding: 'none',
+            layout: { type: 'column' },
+            children: {
+                header: text('Header'),
+                body: { component: 'panel', padding: 'none', placement: { grow: 1 }, layout: { type: 'column' }, children: { fill: { component: 'panel', placement: { grow: 1 } } } },
+                footer: text('Footer')
+            }
+        });
+
+        // Act: a min-height, as an app gives its screen, is no definite height for a percentage to resolve against
+        (mounted.element as HTMLElement).style.minHeight = '400px';
+        const body = part(mounted.element, '.body ui-panel') as HTMLElement;
+        const fill = part(body, '.body ui-panel') as HTMLElement;
+        const footer = all(mounted.element, '.body > sui-node')[2]?.firstElementChild as HTMLElement;
+
+        // Assert
+        expect(box(body).height).toBeGreaterThan(300);
+        expect(box(part(body, '.panel') as HTMLElement).height).toBeCloseTo(box(body).height, 0);
+        // Inside the body's border, a pixel each side
+        expect(box(fill).height).toBeGreaterThanOrEqual(box(body).height - 2);
+        expect(box(footer).bottom).toBeGreaterThanOrEqual(box(mounted.element).bottom - 2);
+    });
+
     it('should add a child after load without re-creating the others', () => {
         // Arrange
         const mounted = mountComponent('panel', { children: { a: text('A'), b: text('B') } });

@@ -1,11 +1,15 @@
+/* A column of one: the panel's box fills a height the host is given, also one from a column's grow, which block-size
+   100% alone would not resolve against */
 :host {
-    display: block;
+    display: flex;
+    flex-direction: column;
 }
 
 .panel {
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
+    flex: 1 1 auto;
     gap: var(--ui-panel-gap);
     /* fills a stretched grid or row cell, so panels side by side end at one height; an auto height stays auto */
     block-size: 100%;

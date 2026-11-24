@@ -136,12 +136,14 @@ export function createMountComponent(build: ComponentBuild): MountComponent {
             ...(options.screens === undefined ? {} : { screens: options.screens, start: options.start }),
             app: { component: name, ...nodeState }
         } as unknown as AppDocument;
-        const host = globalThis.document.body.appendChild(globalThis.document.createElement('div'));
+        // The host sits in a wrapper: an app right below the body fills the viewport, and a component is measured at its own size
+        const frame = globalThis.document.body.appendChild(globalThis.document.createElement('div'));
+        const host = frame.appendChild(globalThis.document.createElement('div'));
         const locale = registerLocaleStep(overlays);
         const app = mountApp(host, document, library, options.hooks, { route: false, ...(options.apps === undefined ? {} : { apps: options.apps }) });
         if (!app.store) {
             locale.unregister();
-            host.remove();
+            frame.remove();
             throw new Error(`mountComponent: "${name}" did not mount:\n${app.errors.map(formatError).join('\n')}`);
         }
         const store = app.store;
@@ -149,7 +151,7 @@ export function createMountComponent(build: ComponentBuild): MountComponent {
         if (!element) {
             app.dispose();
             locale.unregister();
-            host.remove();
+            frame.remove();
             throw new Error(`mountComponent: no <${entry.tag}> was rendered`);
         }
 
@@ -173,7 +175,7 @@ export function createMountComponent(build: ComponentBuild): MountComponent {
                 disposed = true;
                 app.dispose();
                 locale.unregister();
-                host.remove();
+                frame.remove();
                 mounted.delete(result);
             }
         };
