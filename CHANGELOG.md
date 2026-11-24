@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+- **Operations on a mesh through `editRequest`** (docs/design/stateui-mesh-editor.md, V4). `mesh` gains `editRequest`
+  (`{ op, amount?, n? }`, `op` one of `extrude`, `inset`, `delete`, `merge`, `fill`, `flip`, `subdivide`, `undo`, `redo`)
+  and `edit.done`. The scene3d controller runs a request that differs from `edit.done` once after a draw, writes
+  `geometry` (recorded in the history) and `edit.picked`, and records the request in `edit.done`; a refusal writes only
+  `edit.done` and is reported once as `SUI-RUN-3D`. The operations are pure code in `src/shared/model/operations.ts`;
+  extrude and inset keep the moved faces in their places and picked, subdivide clears the pick. Tests:
+  `src/shared/model/operations.test.ts`, `src/shared/scene3d/editRequest.test.ts`, `test/graphics3d.test.ts`,
+  `test/composites/scene3d-events.browser.test.ts`.
 - **Moving a mesh's pick, with undo** (docs/design/stateui-mesh-editor.md, V3). The scene3d controller passes the
   renderer an `onGeometry` that writes `<path>.geometry` once per moved pick and records it in `MeshHistory`
   (`src/shared/scene3d/history.ts`, 100 edits, kept in the page). Ctrl+Z and Ctrl+Shift+Z (Cmd on macOS) undo and redo

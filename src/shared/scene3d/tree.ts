@@ -207,7 +207,7 @@ export const NODE3D_PROPERTIES: Readonly<Record<Node3dKind, readonly string[]>> 
     const own: Record<Node3dKind, readonly string[]> = {
         camera: ['kind', 'target', 'fov', 'active'],
         light: ['kind', 'color', 'intensity', 'target', 'shadows'],
-        mesh: ['geometry', 'material', 'castShadow', 'receiveShadow', 'edit'],
+        mesh: ['geometry', 'material', 'castShadow', 'receiveShadow', 'edit', 'editRequest'],
         model: ['src', 'animation', 'playing'],
         group3d: [],
         repeat3d: ['records'],

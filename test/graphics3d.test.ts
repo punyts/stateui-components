@@ -279,6 +279,27 @@ describe('a 3D scene document', () => {
         ]);
     });
 
+    it('should take an edit request and the request done, and refuse an operation it does not know (mesh editor, V4)', () => {
+        // Arrange
+        const geometry = { kind: 'custom', vertices: [[0, 0, 0], [1, 0, 0], [0, 1, 0]], faces: [[0, 1, 2]] };
+
+        // Act
+        const found = codesAt(
+            sceneDocument({
+                extruding: { component: 'mesh', geometry, edit: { mode: 'face', picked: [0], done: { op: 'flip', n: 1 } }, editRequest: { op: 'extrude', amount: 0.3, n: 2 } },
+                undoing: { component: 'mesh', geometry, editRequest: { op: 'undo' } },
+                boolean: { component: 'mesh', geometry, editRequest: { op: 'union' } },
+                nameless: { component: 'mesh', geometry, editRequest: { amount: 1 } }
+            })
+        );
+
+        // Assert
+        expect(found).toEqual([
+            ['SUI-STATE-INVALID', '$.app.children.boolean.editRequest'],
+            ['SUI-STATE-INVALID', '$.app.children.nameless.editRequest']
+        ]);
+    });
+
     it('should take a GLB file for model.src and an image file for material.map, and refuse the other way round', () => {
         // Act
         const found = codesAt(
