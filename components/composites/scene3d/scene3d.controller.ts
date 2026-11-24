@@ -9,6 +9,7 @@ import { requestScene3dChunk } from '../shared/scene3d/load.js';
 import { Repeat3dFeeder } from '../shared/scene3d/repeat.js';
 import { keyName, readSceneKeys, takenKey } from '../shared/scene3d/keys.js';
 import { MeshHistory, historyKey } from '../shared/scene3d/history.js';
+import { runEditRequests } from '../shared/scene3d/editRequest.js';
 import { SceneExport } from '../shared/scene3d/glbExport.js';
 import { SceneLoop } from '../shared/play/loop.js';
 import type { PlayContact, Vec3 } from '../shared/play/play.js';
@@ -136,7 +137,11 @@ const THEME_PATHS = ['$.theme.active', '$.theme.active.$all'];
  * mesh raises no `press` and is not dragged. With a pick, its `gizmo` moves, turns or scales the picked vertices about
  * their centre on the mesh's own axes; on release the controller writes `<path>.geometry` once and keeps the edit, which
  * Ctrl+Z and Ctrl+Shift+Z (Cmd on macOS) undo and redo while the scene has focus (`MeshHistory`, 100 edits; an edit
- * whose mesh changed since is skipped). While a mesh is in edit mode the scene box is focusable
+ * whose mesh changed since is skipped). While a mesh is in edit mode the scene box is focusable. A mesh's `editRequest`
+ * (`{ op, amount?, n? }`), while set and different from `edit.done`, runs one operation on the pick
+ * (`runEditRequests`, the operations of `src/shared/model/`): `geometry` and `edit.picked` are written once and the
+ * request is recorded in `edit.done`, so a reload does not run it again. `undo` and `redo` are the keys' history. A
+ * request that does not fit the mode or the pick writes only `edit.done` and is reported once as `SUI-RUN-3D`
  *
  * Keys (docs/design/stateui-game-input.md): while `keys` lists key names (`SCENE_KEYS`), the scene box is focusable
  * (`tabindex="0"`, unless it had one) and names them in `aria-keyshortcuts`. A listed key pressed while focus is in the
@@ -427,6 +432,18 @@ export default function controller({ element, store, basePath }: ControllerConte
         const expanded = repeats.expand(nodes);
         syncRole(expanded);
         scene.update(loop.sync(expanded, read(`${basePath}.play`)), settings());
+        // A mesh's new editRequest: its writes ask for the next draw, which finds it done
+        runEditRequests(nodes, {
+            read,
+            write: (path, value) => store.set(path, value),
+            history,
+            refused: (path, reason) => {
+                const key = `${path} edit ${reason}`;
+                if (reported.has(key)) return;
+                reported.add(key);
+                fail(reason, path);
+            }
+        });
         // The camera controls give back a `tabindex` they set when they are turned off, which `keys` may still need
         syncKeys();
         readyAfterFrame();

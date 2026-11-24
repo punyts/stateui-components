@@ -615,4 +615,36 @@ describe.skipIf(script === '')('scene3d press and hover with the real 3D rendere
         expect(box.getAttribute('tabindex')).toBe('0');
         expect(box.getAttribute('aria-keyshortcuts')).toBe('Control+Z Control+Shift+Z');
     });
+
+    it('should run a linked editRequest once on the pick, record it done, undo it, and report one that does not fit the mode (mesh editor, V4)', async () => {
+        // Arrange
+        remove = answerWith(chunk);
+        const errors = vi.spyOn(report, 'error');
+        const mounted = await mountScene(
+            { _title: 'Shaper', background: '#000000', environment: 'none', children: { eye, sun, shape: { ...cube(), edit: { mode: 'face', picked: [0] }, '<-editRequest': '$.data.ui.request' } } },
+            { data: { ui: { part: '', hovered: '', request: null } } }
+        );
+        const faces = (): number => (mounted.store.get('$.app.children.shape.geometry.faces') as unknown[]).length;
+        const set = vi.spyOn(mounted.store, 'set');
+
+        // Act
+        mounted.store.set('$.data.ui.request', { op: 'extrude', amount: 0.5, n: 1 });
+        await frame();
+        const extruded = faces();
+        mounted.store.set('$.data.ui.request', { op: 'undo', n: 2 });
+        await frame();
+        const undone = faces();
+        mounted.store.set('$.data.ui.request', { op: 'merge', n: 3 });
+        await frame();
+        await frame();
+
+        // Assert
+        expect(extruded).toBe(10);
+        expect(undone).toBe(6);
+        expect(faces()).toBe(6);
+        expect(mounted.store.get('$.app.children.shape.edit.done')).toEqual({ op: 'merge', n: 3 });
+        expect(mounted.store.get('$.app.children.shape.edit.picked')).toEqual([0]);
+        expect(set.mock.calls.filter(([path]) => String(path).endsWith('.geometry'))).toHaveLength(2);
+        expect(errors.mock.calls.filter(([, context]) => (context as { code?: string } | undefined)?.code === 'SUI-RUN-3D')).toHaveLength(1);
+    });
 });

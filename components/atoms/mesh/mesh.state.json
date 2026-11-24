@@ -42,7 +42,18 @@
             "validators": {
                 "fields": {
                     "mode": { "type": "string", "values": ["none", "vertex", "edge", "face"] },
-                    "picked": { "type": "array" }
+                    "picked": { "type": "array" },
+                    "done": { "type": "object" }
+                }
+            }
+        },
+        "editRequest": {
+            "type": "object",
+            "validators": {
+                "fields": {
+                    "op": { "type": "string", "required": true, "values": ["extrude", "inset", "delete", "merge", "fill", "flip", "subdivide", "undo", "redo"] },
+                    "amount": { "type": "number" },
+                    "n": { "type": "number" }
                 }
             }
         },
