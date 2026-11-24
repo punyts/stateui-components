@@ -14,7 +14,7 @@ const FIND_FRAMES = 30;
 
 /**
  * Walks through the keyed `steps` one at a time. The progress is state: `step` is the key of the step shown and `done`
- * is set when the tour is finished or skipped, so a persona's instance remembers both. The tour runs while `step` names
+ * is set when the tour is finished or skipped, so a person's instance remembers both. The tour runs while `step` names
  * a step and `done` is false; `start` begins at the first step. Each step's `target` is the state path of a node
  * (`$.screens.home.children.search`): the controller finds the element drawn for it through the open shadow roots,
  * scrolls it into view and measures it, puts a ring around it and anchors the card beside it on the step's `side`

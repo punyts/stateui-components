@@ -612,7 +612,7 @@ export default function controller({ element, store, basePath }: ControllerConte
     };
     /**
      * Asks the host for a CSV file of the records: the resolved path `items` links to, the columns with a field, the
-     * filters and the sort. The authority builds the file from the persona's own instance, so rows that are not loaded
+     * filters and the sort. The authority builds the file from the person's own instance, so rows that are not loaded
      * are in it and no row leaves the browser for it
      */
     const exportRecords = (value: unknown): void => {
