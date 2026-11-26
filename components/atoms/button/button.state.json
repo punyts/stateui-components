@@ -17,7 +17,8 @@
         "disabled": { "type": "boolean", "default": false },
         "busy": { "type": "boolean", "default": false },
         "fill": { "type": "boolean", "default": false, "reflect": true },
-        "clicked": { "type": "boolean", "default": false },
+        "pressed": { "type": "object", "default": {} },
         "_title": { "type": "string", "kind": "content", "default": "Button" }
-    }
+    },
+    "@transient": ["pressed"]
 }

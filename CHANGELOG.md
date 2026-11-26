@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- **A press is `{ at, device }` and transient** (docs/design/state-definitions-and-instances.md). Breaking: the button's
+  `clicked` is replaced by `pressed`, which each press sets to the time and `$.runtime.device`, and the definition
+  marks it `@transient`, so a press reaches the logic that listens and is never stored. Test:
+  `test/atoms/button.browser.test.ts` ("should set pressed to the time and the device on every press, …").
 - **Composed components and screen patterns name nodes as `#name`** (docs/design/state-definitions-and-instances.md).
   `^name` targets in the composed trees and patterns are `#name`, as stateui-app now reads them. Tests: the composed
   and pattern browser tests.

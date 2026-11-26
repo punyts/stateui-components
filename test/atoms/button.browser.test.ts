@@ -152,28 +152,31 @@ describe('button in Chromium', () => {
         expect(seen.count).toBe(1);
     });
 
-    it('should set clicked to true on every press, also when it already is, before it raises press', async () => {
+    it('should set pressed to the time and the device on every press, before it raises press', async () => {
         // Arrange
         const mounted = mountComponent('button');
-        const heard: unknown[] = [];
+        mounted.store.set('$.runtime.device', 'tablet-1');
         const atPress: unknown[] = [];
-        mounted.store.on('$.app.clicked', (_path, value) => heard.push(value));
-        mounted.element.addEventListener('press', () => atPress.push(mounted.store.get('$.app.clicked')));
+        mounted.element.addEventListener('press', () => atPress.push(JSON.parse(JSON.stringify(mounted.store.get('$.app.pressed')))));
+        const start = Date.now();
 
         // Act
-        const before = mounted.store.get('$.app.clicked');
+        const before = JSON.stringify(mounted.store.get('$.app.pressed'));
         await userEvent.click(native(mounted.element));
         await userEvent.click(native(mounted.element));
         native(mounted.element).focus();
         await userEvent.keyboard('{Enter}');
 
         // Assert
-        expect(before).toBe(false);
-        expect(heard).toEqual([true, true, true]);
-        expect(atPress).toEqual([true, true, true]);
+        expect(before).toBe('{}');
+        expect(atPress).toHaveLength(3);
+        for (const press of atPress as { at: number; device: string }[]) {
+            expect(press.device).toBe('tablet-1');
+            expect(press.at).toBeGreaterThanOrEqual(start);
+        }
     });
 
-    it('should not set clicked while disabled or busy', () => {
+    it('should not set pressed while disabled or busy', () => {
         // Arrange
         const mounted = mountComponent('button', { busy: true });
 
@@ -181,7 +184,7 @@ describe('button in Chromium', () => {
         native(mounted.element).click();
 
         // Assert
-        expect(mounted.store.get('$.app.clicked')).toBe(false);
+        expect(mounted.store.get('$.app.pressed')).toEqual({});
     });
 
     it.each(['{Enter}', ' '])('should raise press once for the key %j on the focused button', async (key) => {
