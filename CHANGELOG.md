@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- **`nav` and `menu` take `menuItem` children only** (`childComponents`). Breaking. Each declares a branch of its own (`header`, `footer`; `trigger`), so stateui-app accepts `children` on it only because it names what they are (`SUI-NODE-BRANCH` otherwise). Test: `test/catalog.test.ts` (every composed component validates).
 - **Composed components no longer emit; a host hears a node through its `@id`** (docs/design/state-definitions-and-instances.md).
   Breaking. The `emit` command is gone from `@punyts/stateui-app`: `chatView` no longer emits `chat.send`/`chat.stop`,
   `crudTable` no longer emits `crudTable.edit`/`.save`/`.delete`/`.search`, and `wizard` no longer emits `wizard.done`;

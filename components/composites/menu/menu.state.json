@@ -4,6 +4,7 @@
     "purposes": ["open a list of actions from a button", "show more actions behind an overflow button", "offer a context menu of commands", "open actions on right-click or long-press"],
     "shared": { "elevation": { "default": "overlay" } },
     "events": ["select", "close"],
+    "childComponents": ["menuItem"],
     "commands": ["open", "close", "toggle"],
     "tokens": {
         "radius": "{radius.md}",
