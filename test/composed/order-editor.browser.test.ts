@@ -63,7 +63,7 @@ const rowTexts = (list: HTMLElement): string[] => {
 
 /**
  * The document of the story: the order editor at two depths with different instance keys, `editor` directly in the
- * page and `nested` two panels down. The outer one emits `order.saved` with the submitted values
+ * page and `nested` two panels down. The outer one's form carries the id `orderForm`, so the host is told of its submits
  */
 function orderDocument(): Record<string, unknown> {
     return {
@@ -74,7 +74,7 @@ function orderDocument(): Record<string, unknown> {
             children: {
                 editor: {
                     component: 'orderEditor',
-                    body: { children: { form: { on: { submitted: { command: 'emit', target: 'order.saved' } } } } }
+                    body: { children: { form: { '@id': 'orderForm' } } }
                 },
                 box: {
                     component: 'panel',
@@ -225,7 +225,7 @@ describe('orderEditor (E5.18) in Chromium', () => {
         expect(seen.nested.submitted).toEqual([{ values: { customer: 'Ada', status: 'open' } }]);
     });
 
-    it('should send the outer editor submission to hooks.onEmit through its emit command', async () => {
+    it('should tell hooks.onRaised of the outer editor submission through its form id, and not of the nested one', async () => {
         // Arrange
         const { mounted, outer, nested } = await mountOpen();
         mounted.store.set('$.data.order.customer', 'Ada');
@@ -238,7 +238,7 @@ describe('orderEditor (E5.18) in Chromium', () => {
         await flush();
 
         // Assert
-        expect(mounted.emitted).toEqual([{ name: 'order.saved', payload: { values: { customer: 'Ada', status: 'open' } } }]);
+        expect(mounted.raised.filter((report) => report.event === 'submitted')).toEqual([{ id: 'orderForm', event: 'submitted', value: { values: { customer: 'Ada', status: 'open' } } }]);
     });
 
     it('should close only the modal whose Cancel was pressed and reset its form on close', async () => {

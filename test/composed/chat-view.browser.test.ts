@@ -1,7 +1,7 @@
 import { userEvent } from 'vitest/browser';
 import { afterEach, describe, expect, it } from 'vitest';
 import { libraryFromCatalog, mountApp, registerLocaleStep } from '@punyts/stateui-app';
-import type { AppDocument } from '@punyts/stateui-app';
+import type { AppDocument, RaisedReport } from '@punyts/stateui-app';
 import type { Catalog } from '@punyts/stateui-app/build';
 import catalogJson from '../../.test-build/real/components/catalog.json';
 import { registerAll } from '../../.test-build/real/components/index.js';
@@ -18,7 +18,8 @@ const mounted: { dispose(): void; host: HTMLElement; unregister(): void }[] = []
 interface Chat {
     host: HTMLElement;
     store: NonNullable<ReturnType<typeof mountApp>['store']>;
-    emitted: { name: string; payload: unknown }[];
+    /** The send and stop reports of the composer, which the app gives the id `chat` */
+    told: RaisedReport[];
     switchTo(code: string): void;
 }
 
@@ -50,17 +51,17 @@ async function mount(count = 3): Promise<Chat> {
     const host = globalThis.document.body.appendChild(globalThis.document.createElement('div'));
     host.style.cssText = 'inline-size: 480px; block-size: 420px; display: flex; flex-direction: column';
     const locale = registerLocaleStep(overlays);
-    const emitted: { name: string; payload: unknown }[] = [];
+    const told: RaisedReport[] = [];
     const document = {
         locale: 'en',
         data: { messages: messagesOf(count) },
-        app: { component: 'chatView', children: { messages: { '<-records': '$.data.messages' } } }
+        app: { component: 'chatView', children: { messages: { '<-records': '$.data.messages' }, composer: { '@id': 'chat' } } }
     } as unknown as AppDocument;
-    const result = mountApp(host, document, library, { onEmit: (name: string, payload: unknown) => emitted.push({ name, payload }) });
+    const result = mountApp(host, document, library, { onRaised: (report: RaisedReport) => void (report.event === 'send' || report.event === 'stop' ? told.push(report) : undefined) });
     if (!result.store) throw new Error(`chatView did not mount: ${result.errors.map((error) => `${error.code} ${error.message}`).join('; ')}`);
     mounted.push({ host, dispose: () => result.dispose(), unregister: () => locale.unregister() });
     await settle();
-    return { host, store: result.store, emitted, switchTo: (code) => void locale.switchTo(code) };
+    return { host, store: result.store, told, switchTo: (code) => void locale.switchTo(code) };
 }
 
 const COMPOSER = '$.app.children.composer';
@@ -68,7 +69,7 @@ const valueOf = (chat: Chat): unknown => chat.store.get(`${COMPOSER}.value`);
 const composerOf = (root: ParentNode): HTMLElement => deep(root, 'ui-composer')[0] as HTMLElement;
 const textarea = (chat: Chat): HTMLTextAreaElement => composerOf(chat.host).shadowRoot?.querySelector('textarea') as HTMLTextAreaElement;
 const sendButton = (chat: Chat): HTMLButtonElement => composerOf(chat.host).shadowRoot?.querySelector('.send') as HTMLButtonElement;
-const sent = (text: string): { name: string; payload: unknown } => ({ name: 'chat.send', payload: { text, attachments: [] } });
+const sent = (text: string): RaisedReport => ({ id: 'chat', event: 'send', value: { text, attachments: [] } });
 const type = async (chat: Chat, text: string): Promise<void> => {
     await userEvent.click(textarea(chat));
     await userEvent.type(textarea(chat), text);
@@ -97,7 +98,7 @@ describe('chatView in Chromium', () => {
         expect(deep(chat.host, 'ui-record-grid')[0]?.shadowRoot?.querySelectorAll('.slot:not([hidden])')).toHaveLength(3);
     });
 
-    it('should emit chat.send with the text and clear the composer when the Send button is pressed', async () => {
+    it('should tell the host of a send with the text and clear the composer when the Send button is pressed', async () => {
         // Arrange
         const chat = await mount();
         await type(chat, 'Hello there');
@@ -107,12 +108,12 @@ describe('chatView in Chromium', () => {
         await settle();
 
         // Assert
-        expect(chat.emitted).toEqual([sent('Hello there')]);
+        expect(chat.told).toEqual([sent('Hello there')]);
         expect(valueOf(chat)).toBe('');
         expect(textarea(chat).value).toBe('');
     });
 
-    it('should emit chat.send with the text and clear the composer when Enter is pressed', async () => {
+    it('should tell the host of a send with the text and clear the composer when Enter is pressed', async () => {
         // Arrange
         const chat = await mount();
         await type(chat, 'Hello there');
@@ -122,7 +123,7 @@ describe('chatView in Chromium', () => {
         await settle();
 
         // Assert
-        expect(chat.emitted).toEqual([sent('Hello there')]);
+        expect(chat.told).toEqual([sent('Hello there')]);
         expect(valueOf(chat)).toBe('');
         expect(textarea(chat).value).toBe('');
     });
@@ -138,11 +139,11 @@ describe('chatView in Chromium', () => {
         await settle();
 
         // Assert
-        expect(chat.emitted).toEqual([]);
+        expect(chat.told).toEqual([]);
         expect(valueOf(chat)).toBe('first\nsecond');
         await userEvent.keyboard('{Enter}');
         await settle();
-        expect(chat.emitted).toEqual([sent('first\nsecond')]);
+        expect(chat.told).toEqual([sent('first\nsecond')]);
     });
 
     it('should send nothing for an empty composer or one with only spaces and lines, by button and by Enter', async () => {
@@ -161,7 +162,7 @@ describe('chatView in Chromium', () => {
         await settle();
 
         // Assert
-        expect(chat.emitted).toEqual([]);
+        expect(chat.told).toEqual([]);
     });
 
     it('should grow the composer with its text, up to the lines typed', async () => {
@@ -195,7 +196,7 @@ describe('chatView in Chromium', () => {
         expect(scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop).toBeLessThanOrEqual(2);
     });
 
-    it('should emit chat.stop from the stop button while a reply streams', async () => {
+    it('should tell the host of a stop from the stop button while a reply streams', async () => {
         // Arrange
         const chat = await mount();
         chat.store.set(`${COMPOSER}.streaming`, true);
@@ -206,7 +207,7 @@ describe('chatView in Chromium', () => {
         await settle();
 
         // Assert
-        expect(chat.emitted).toEqual([{ name: 'chat.stop', payload: null }]);
+        expect(chat.told.map((report) => [report.id, report.event])).toEqual([['chat', 'stop']]);
     });
 
     it('should show a typing indicator on a message only while it streams', async () => {
@@ -238,7 +239,7 @@ describe('chatView in Chromium', () => {
         expect(textarea(chat).getAttribute('aria-label')).toBe('Nachricht');
     });
 
-    it('should send the text under the event name an application gives the emit command', async () => {
+    it('should tell the host of a send under the id an application gives the composer', async () => {
         // Arrange
         if (!registered) {
             registerAll();
@@ -246,7 +247,7 @@ describe('chatView in Chromium', () => {
         }
         const host = globalThis.document.body.appendChild(globalThis.document.createElement('div'));
         host.style.cssText = 'inline-size: 480px; block-size: 420px';
-        const emitted: { name: string; payload: unknown }[] = [];
+        const told: RaisedReport[] = [];
         const document = {
             locale: 'en',
             data: { messages: [] },
@@ -254,11 +255,11 @@ describe('chatView in Chromium', () => {
                 component: 'chatView',
                 children: {
                     messages: { '<-records': '$.data.messages' },
-                    composer: { _placeholder: 'Ask the minion', on: { send: { command: 'emit', target: 'ask.minion' } } }
+                    composer: { _placeholder: 'Ask the minion', '@id': 'ask' }
                 }
             }
         } as unknown as AppDocument;
-        const result = mountApp(host, document, library, { onEmit: (name: string, payload: unknown) => emitted.push({ name, payload }) });
+        const result = mountApp(host, document, library, { onRaised: (report: RaisedReport) => void (report.event === 'send' ? told.push(report) : undefined) });
         if (!result.store) throw new Error(`chatView did not mount: ${result.errors.map((error) => `${error.code} ${error.message}`).join('; ')}`);
         mounted.push({ host, dispose: () => result.dispose(), unregister: () => undefined });
         await settle();
@@ -272,7 +273,7 @@ describe('chatView in Chromium', () => {
 
         // Assert
         expect(area.placeholder).toBe('Ask the minion');
-        expect(emitted).toEqual([{ name: 'ask.minion', payload: { text: 'Hi', attachments: [] } }]);
+        expect(told).toEqual([{ id: 'ask', event: 'send', value: { text: 'Hi', attachments: [] } }]);
         expect(area.value).toBe('');
     });
 });

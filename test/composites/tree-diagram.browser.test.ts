@@ -103,18 +103,18 @@ describe('treeDiagram in Chromium', () => {
         expect(cardOf(mounted, 'orders').hasAttribute('data-selected')).toBe(false);
     });
 
-    it('should draw each card with the consumer template, whose controls act on the record and do not select', async () => {
+    it('should draw each card with the consumer template, whose controls tell the host of their record and do not select', async () => {
         // Arrange
-        const emitted: [string, unknown][] = [];
+        const told: [string, string, unknown][] = [];
         const card = {
             component: 'card',
             padding: 'sm',
             children: {
                 name: { component: 'text', '<-_text': '$row.label' },
-                add: { component: 'button', size: 'sm', _title: 'Add', on: { press: { command: 'emit', target: 'node.add', value: '$row.label' } } }
+                add: { component: 'button', '@id': 'addNode', size: 'sm', _title: 'Add' }
             }
         };
-        const mounted = mountComponent('treeDiagram', { '<-nodes': '$.data.nodes', card }, { data: { nodes: NODES }, hooks: { onEmit: (name, payload) => emitted.push([name, payload]) } });
+        const mounted = mountComponent('treeDiagram', { '<-nodes': '$.data.nodes', card }, { data: { nodes: NODES }, hooks: { onRaised: (report) => void (report.event === 'press' ? told.push([report.id, report.event, (report.row as { label?: unknown } | undefined)?.label]) : undefined) } });
         await settle();
 
         // Act
@@ -126,7 +126,7 @@ describe('treeDiagram in Chromium', () => {
         await settle();
 
         // Assert
-        expect(emitted).toEqual([['node.add', 'Stock']]);
+        expect(told).toEqual([['addNode', 'press', 'Stock']]);
         expect(mounted.store.get('$.app.selected')).toBe('');
         expect(deepText(cardOf(mounted, 'stock'))).toContain('Inventory');
         expect(deepText(cardOf(mounted, 'app'))).toContain('Shop');

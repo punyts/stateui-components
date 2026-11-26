@@ -7,8 +7,7 @@
         "component": "toolbar",
         "children": {
             "search": {
-                "component": "searchBox",
-                "on": { "search": { "command": "emit", "target": "crudTable.search" } }
+                "component": "searchBox"
             },
             "add": {
                 "component": "button",
@@ -42,10 +41,7 @@
                 }
             },
             "on": {
-                "activate": [
-                    { "command": "emit", "target": "crudTable.edit" },
-                    { "command": "open", "target": "#crudTable.children.form" }
-                ]
+                "activate": [{ "command": "open", "target": "#crudTable.children.form" }]
             }
         },
         "form": {
@@ -53,10 +49,7 @@
             "_title": "Edit record",
             "body": {
                 "on": {
-                    "submitted": [
-                        { "command": "close", "target": "#formDialog" },
-                        { "command": "emit", "target": "crudTable.save" }
-                    ]
+                    "submitted": [{ "command": "close", "target": "#formDialog" }]
                 }
             }
         },
@@ -67,10 +60,7 @@
                 "children": {
                     "confirm": {
                         "on": {
-                            "press": [
-                                { "command": "close", "target": "#confirmDialog" },
-                                { "command": "emit", "target": "crudTable.delete" }
-                            ]
+                            "press": [{ "command": "close", "target": "#confirmDialog" }]
                         }
                     }
                 }
@@ -82,6 +72,8 @@
         "children.table.columns": "The columns, keyed by name: replace the map (null removes a column) and keep a delete button in a cell node that sets the table's selected to the row key and opens the confirm dialog",
         "children.form.body.children": "The fields of the add and edit form, keyed by the name that appears in the saved values: link each field's value to $.data",
         "children.form._title": "Title of the add and edit dialog",
-        "children.confirm._title": "Title of the delete confirmation dialog"
+        "children.confirm._title": "Title of the delete confirmation dialog",
+        "children.form.body.on": "What saving does besides closing the dialog: add commands to submitted, or give the form an @id so the host is told of each submit with the values",
+        "children.confirm.footer.children.confirm.on": "What deleting does besides closing the dialog: add commands to press that remove the selected record, or give the button an @id so the host is told"
     }
 }

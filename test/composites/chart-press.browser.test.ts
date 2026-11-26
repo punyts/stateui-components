@@ -26,12 +26,9 @@ const SHARES = [
     { kind: 'Fun', amount: 20 }
 ];
 
-/** An `on` entry that marks the press in the state and hands the payload to the host, which writes it to `$.data.ui.opened` */
+/** An `on` entry that marks the press in the state; the chart's `@id` hands the payload to the host, which writes it to `$.data.ui.opened` */
 const ON_PRESS = {
-    press: [
-        { command: 'set', target: '$.data.ui.pressed', value: true },
-        { command: 'emit', target: 'open' }
-    ]
+    press: [{ command: 'set', target: '$.data.ui.pressed', value: true }]
 };
 
 interface Mounted extends MountedComponent {
@@ -67,12 +64,12 @@ async function mountChart(extra: Record<string, unknown> = {}, data: Record<stri
     const holder: { mounted?: MountedComponent } = {};
     const mounted = mountComponent(
         'chart',
-        { x: 'month', series: SERIES, '<-records': '$.data.sales', _title: 'Sales', on: ON_PRESS, ...extra },
+        { '@id': 'sales', x: 'month', series: SERIES, '<-records': '$.data.sales', _title: 'Sales', on: ON_PRESS, ...extra },
         {
             data: { sales: SALES.map((row) => ({ ...row })), shares: SHARES.map((row) => ({ ...row })), ui: { pressed: false, opened: null }, ...data },
             ...options,
             // A copy: the store keeps the object it is given and writes the next one into it
-            hooks: { onEmit: (_name, payload) => void holder.mounted?.store.set('$.data.ui.opened', structuredClone(payload) as never) }
+            hooks: { onRaised: (report) => void (report.event === 'press' ? holder.mounted?.store.set('$.data.ui.opened', structuredClone(report.value) as never) : undefined) }
         }
     );
     holder.mounted = mounted;

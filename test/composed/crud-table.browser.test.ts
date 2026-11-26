@@ -1,7 +1,7 @@
 import { userEvent } from 'vitest/browser';
 import { afterEach, describe, expect, it } from 'vitest';
 import { libraryFromCatalog, mountApp, registerLocaleStep } from '@punyts/stateui-app';
-import type { AppDocument } from '@punyts/stateui-app';
+import type { AppDocument, RaisedReport } from '@punyts/stateui-app';
 import type { Catalog, ComposedCatalogEntry } from '@punyts/stateui-app/build';
 import { validateDocument } from '@punyts/stateui-app/core';
 import catalogJson from '../../.test-build/real/components/catalog.json';
@@ -19,7 +19,8 @@ const mounted: { dispose(): void; host: HTMLElement; unregister(): void }[] = []
 interface Mounted {
     host: HTMLElement;
     store: NonNullable<ReturnType<typeof mountApp>['store']>;
-    emitted: { name: string; payload: unknown }[];
+    /** What the host is told: a table's activate, a form's submitted, a delete press and a search, by the ids the app gives them */
+    told: RaisedReport[];
     switchTo(code: string): void;
 }
 
@@ -45,6 +46,9 @@ const people = [
     { id: 'p2', name: 'Grace' }
 ];
 
+/** The event of each id the app gives (`table0`, `form0`, `delete0`, `search0`) that the host listens to */
+const TOLD: Readonly<Record<string, string>> = { table: 'activate', form: 'submitted', delete: 'press', search: 'search' };
+
 const fields = { name: { component: 'textField', _label: 'Name', required: true, '<-value': '$.data.draft.name' } };
 
 /** One crudTable, or `count` of them side by side, each over its own array in `$.data` */
@@ -56,12 +60,17 @@ async function mount(count = 1): Promise<Mounted> {
     const host = globalThis.document.body.appendChild(globalThis.document.createElement('div'));
     host.style.cssText = 'inline-size: 900px; block-size: 400px';
     const locale = registerLocaleStep(overlays);
-    const emitted: { name: string; payload: unknown }[] = [];
+    const told: RaisedReport[] = [];
     const tables = Array.from({ length: count }, (_, index): [string, unknown] => [
         `table${index}`,
         {
             component: 'crudTable',
-            children: { table: { '<-items': `$.data.people${index}` }, form: { body: { children: fields } } }
+            actions: { children: { search: { '@id': `search${index}` } } },
+            children: {
+                table: { '@id': `table${index}`, '<-items': `$.data.people${index}` },
+                form: { body: { '@id': `form${index}`, children: fields } },
+                confirm: { footer: { children: { confirm: { '@id': `delete${index}` } } } }
+            }
         }
     ]);
     const document = {
@@ -69,11 +78,13 @@ async function mount(count = 1): Promise<Mounted> {
         data: Object.fromEntries([['draft', { name: '' }], ...tables.map((_, index) => [`people${index}`, structuredClone(people)])]),
         app: count === 1 ? tables[0]?.[1] : { component: 'panel', children: Object.fromEntries(tables) }
     } as unknown as AppDocument;
-    const app = mountApp(host, document, library, { onEmit: (name: string, payload: unknown) => emitted.push({ name, payload }) });
+    const app = mountApp(host, document, library, {
+        onRaised: (report: RaisedReport) => void (TOLD[report.id.replace(/[0-9]+$/, '')] === report.event ? told.push(report) : undefined)
+    });
     if (!app.store) throw new Error(`crudTable did not mount: ${app.errors.map((error) => `${error.code} ${error.message}`).join('; ')}`);
     mounted.push({ host, dispose: () => app.dispose(), unregister: () => locale.unregister() });
     await settle();
-    return { host, store: app.store, emitted, switchTo: (code) => void locale.switchTo(code) };
+    return { host, store: app.store, told, switchTo: (code) => void locale.switchTo(code) };
 }
 
 const modals = (host: HTMLElement): HTMLElement[] => deep(host, 'ui-modal');
@@ -119,10 +130,10 @@ describe('crudTable in Chromium', () => {
 
         // Assert
         expect([isOpen(form), isOpen(confirm)]).toEqual([true, false]);
-        expect(crud.emitted).toEqual([]);
+        expect(crud.told).toEqual([]);
     });
 
-    it('should emit edit with the row key and open the form dialog when a row is activated', async () => {
+    it('should tell the host of an activate with the row key and open the form dialog when a row is activated', async () => {
         // Arrange
         const crud = await mount();
         const [form] = modals(crud.host) as [HTMLElement];
@@ -132,11 +143,11 @@ describe('crudTable in Chromium', () => {
         await settle();
 
         // Assert
-        expect(crud.emitted).toEqual([{ name: 'crudTable.edit', payload: 'p2' }]);
+        expect(crud.told).toEqual([{ id: 'table0', event: 'activate', value: 'p2' }]);
         expect(isOpen(form)).toBe(true);
     });
 
-    it('should emit save with the values and close the form dialog when it is submitted', async () => {
+    it('should tell the host of a submit with the values and close the form dialog when it is submitted', async () => {
         // Arrange
         const crud = await mount();
         const [form] = modals(crud.host) as [HTMLElement];
@@ -150,11 +161,11 @@ describe('crudTable in Chromium', () => {
         await settle();
 
         // Assert
-        expect(crud.emitted).toEqual([{ name: 'crudTable.save', payload: { values: { name: 'Linus' } } }]);
+        expect(crud.told).toEqual([{ id: 'form0', event: 'submitted', value: { values: { name: 'Linus' } } }]);
         expect(isOpen(form)).toBe(false);
     });
 
-    it('should keep the form dialog open and emit nothing when Save finds an empty required field', async () => {
+    it('should keep the form dialog open and tell the host nothing when Save finds an empty required field', async () => {
         // Arrange
         const crud = await mount();
         const [form] = modals(crud.host) as [HTMLElement];
@@ -166,11 +177,11 @@ describe('crudTable in Chromium', () => {
         await settle();
 
         // Assert
-        expect(crud.emitted).toEqual([]);
+        expect(crud.told).toEqual([]);
         expect(isOpen(form)).toBe(true);
     });
 
-    it('should close the form dialog on Cancel without emitting', async () => {
+    it('should close the form dialog on Cancel and tell the host nothing', async () => {
         // Arrange
         const crud = await mount();
         const [form] = modals(crud.host) as [HTMLElement];
@@ -183,10 +194,10 @@ describe('crudTable in Chromium', () => {
 
         // Assert
         expect(isOpen(form)).toBe(false);
-        expect(crud.emitted).toEqual([]);
+        expect(crud.told).toEqual([]);
     });
 
-    it('should select the row and open the confirm dialog from a delete button, and emit delete on confirm', async () => {
+    it('should select the row and open the confirm dialog from a delete button, and tell the host of the delete press on confirm', async () => {
         // Arrange
         const crud = await mount();
         const [form, confirm] = modals(crud.host) as [HTMLElement, HTMLElement];
@@ -198,7 +209,7 @@ describe('crudTable in Chromium', () => {
         // Assert
         expect([isOpen(form), isOpen(confirm)]).toEqual([false, true]);
         expect(crud.store.get('$.app.children.table.selected')).toBe('p2');
-        expect(crud.emitted).toEqual([]);
+        expect(crud.told).toEqual([]);
 
         // Act
         press(inModal(confirm, 'Delete'));
@@ -206,10 +217,10 @@ describe('crudTable in Chromium', () => {
 
         // Assert
         expect(isOpen(confirm)).toBe(false);
-        expect(crud.emitted.map((entry) => entry.name)).toEqual(['crudTable.delete']);
+        expect(crud.told.map((entry) => entry.id)).toEqual(['delete0']);
     });
 
-    it('should close the confirm dialog on Cancel without emitting', async () => {
+    it('should close the confirm dialog on Cancel and tell the host nothing', async () => {
         // Arrange
         const crud = await mount();
         const [, confirm] = modals(crud.host) as [HTMLElement, HTMLElement];
@@ -222,10 +233,10 @@ describe('crudTable in Chromium', () => {
 
         // Assert
         expect(isOpen(confirm)).toBe(false);
-        expect(crud.emitted).toEqual([]);
+        expect(crud.told).toEqual([]);
     });
 
-    it('should emit search with the typed value when Enter is pressed in the search box', async () => {
+    it('should tell the host of a search with the typed value when Enter is pressed in the search box', async () => {
         // Arrange
         const crud = await mount();
 
@@ -234,7 +245,7 @@ describe('crudTable in Chromium', () => {
         await settle();
 
         // Assert
-        expect(crud.emitted.filter((entry) => entry.name === 'crudTable.search')).toEqual([{ name: 'crudTable.search', payload: 'gra' }]);
+        expect(crud.told).toEqual([{ id: 'search0', event: 'search', value: 'gra' }]);
     });
 
     it('should keep the dialogs of two tables separate', async () => {
@@ -277,7 +288,7 @@ describe('crudTable in Chromium', () => {
         await settle();
 
         // Assert
-        expect(crud.emitted.map((entry) => entry.name)).toEqual(['crudTable.delete']);
+        expect(crud.told.map((entry) => entry.id)).toEqual(['delete1']);
     });
 
     it('should show the German texts after switching to de', async () => {
@@ -310,7 +321,9 @@ describe('crudTable in Chromium', () => {
             'children.table.columns',
             'children.form.body.children',
             'children.form._title',
-            'children.confirm._title'
+            'children.confirm._title',
+            'children.form.body.on',
+            'children.confirm.footer.children.confirm.on'
         ]);
     });
 });

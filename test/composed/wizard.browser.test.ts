@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { libraryFromCatalog, mountApp, registerLocaleStep } from '@punyts/stateui-app';
-import type { AppDocument } from '@punyts/stateui-app';
+import type { AppDocument, RaisedReport } from '@punyts/stateui-app';
 import type { Catalog } from '@punyts/stateui-app/build';
 import catalogJson from '../../.test-build/real/components/catalog.json';
 import { registerAll } from '../../.test-build/real/components/index.js';
@@ -20,7 +20,8 @@ const mounted: { dispose(): void; host: HTMLElement; unregister(): void }[] = []
 interface Wizard {
     host: HTMLElement;
     store: NonNullable<ReturnType<typeof mountApp>['store']>;
-    emitted: { name: string; payload: unknown }[];
+    /** The submits of the last step's form, which the app gives the id `finish` */
+    finished: RaisedReport[];
     switchTo(code: string): void;
 }
 
@@ -41,7 +42,7 @@ function deep(root: ParentNode, tag: string): HTMLElement[] {
     return found;
 }
 
-async function mount(app: Record<string, unknown> = {}): Promise<Wizard> {
+async function mount(): Promise<Wizard> {
     if (!registered) {
         registerAll();
         registered = true;
@@ -49,13 +50,13 @@ async function mount(app: Record<string, unknown> = {}): Promise<Wizard> {
     const host = globalThis.document.body.appendChild(globalThis.document.createElement('div'));
     host.style.cssText = 'inline-size: 700px';
     const locale = registerLocaleStep(overlays);
-    const emitted: { name: string; payload: unknown }[] = [];
-    const document = { locale: 'en', app: { component: 'wizard', ...app } } as unknown as AppDocument;
-    const result = mountApp(host, document, library, { onEmit: (name: string, payload: unknown) => emitted.push({ name, payload }) });
+    const finished: RaisedReport[] = [];
+    const document = { locale: 'en', app: { component: 'wizard', children: { tabs: { children: { review: { '@id': 'finish' } } } } } } as unknown as AppDocument;
+    const result = mountApp(host, document, library, { onRaised: (report: RaisedReport) => void (report.event === 'submitted' ? finished.push(report) : undefined) });
     if (!result.store) throw new Error(`wizard did not mount: ${result.errors.map((error) => `${error.code} ${error.message}`).join('; ')}`);
     mounted.push({ host, dispose: () => result.dispose(), unregister: () => locale.unregister() });
     await settle();
-    return { host, store: result.store, emitted, switchTo: (code) => void locale.switchTo(code) };
+    return { host, store: result.store, finished, switchTo: (code) => void locale.switchTo(code) };
 }
 
 const get = (wizard: Wizard, path: string): unknown => wizard.store.get(`$.app.${path}`);
@@ -124,10 +125,10 @@ describe('wizard in Chromium', () => {
         expect(get(wizard, `${field('details', 'name')}.error`)).toBe('required');
         expect(get(wizard, `${field('details', 'name')}.message`)).toBe('This field is required');
         expect(get(wizard, 'children.tabs.children.details.errorCount')).toBe(1);
-        expect(wizard.emitted).toEqual([]);
+        expect(wizard.finished).toEqual([]);
     });
 
-    it('should go forward through valid steps, completing each, and emit wizard.done after the last', async () => {
+    it('should go forward through valid steps, completing each, and tell the host of the last form submit', async () => {
         // Arrange
         const wizard = await mount();
 
@@ -143,14 +144,14 @@ describe('wizard in Chromium', () => {
         expect(shown(wizard)).toBe('review');
         expect(active(wizard)).toBe('review');
         expect(completed(wizard)).toEqual(['details', 'options']);
-        expect(wizard.emitted).toEqual([]);
+        expect(wizard.finished).toEqual([]);
 
         put(wizard, 'review', 'confirm', true, 'checked');
         await next(wizard, 'Finish');
-        expect(wizard.emitted).toEqual([{ name: 'wizard.done', payload: { values: { confirm: true } } }]);
+        expect(wizard.finished).toEqual([{ id: 'finish', event: 'submitted', value: { values: { confirm: true } } }]);
     });
 
-    it('should block the last step and not emit when its required field is empty', async () => {
+    it('should block the last step and tell the host nothing when its required field is empty', async () => {
         // Arrange
         const wizard = await mount();
         fillDetails(wizard);
@@ -164,7 +165,7 @@ describe('wizard in Chromium', () => {
         // Assert
         expect(shown(wizard)).toBe('review');
         expect(get(wizard, `${field('review', 'confirm')}.error`)).toBe('required');
-        expect(wizard.emitted).toEqual([]);
+        expect(wizard.finished).toEqual([]);
     });
 
     it('should not reach a later step without valid earlier ones: the stepper blocks it and no tab strip is reachable', async () => {

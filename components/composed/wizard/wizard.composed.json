@@ -200,21 +200,13 @@
                                 }
                             }
                         }
-                    },
-                    "on": {
-                        "submitted": [
-                            {
-                                "command": "emit",
-                                "target": "wizard.done"
-                            }
-                        ]
                     }
                 }
             }
         }
     },
     "exposes": {
-        "children.tabs.children": "The step forms, keyed by name (details, options, review): replace the fields of a form, link each field value to $.data, and act on the last form submitted values or on the wizard.done event with on. A new step needs a stepper step, a form here and the Back and Next lines of its neighbours",
+        "children.tabs.children": "The step forms, keyed by name (details, options, review): replace the fields of a form, link each field value to $.data, and act on the last form's submitted values with on, or give it an @id so the host is told. A new step needs a stepper step, a form here and the Back and Next lines of its neighbours",
         "children.stepper.steps": "The step labels shown above the forms, one per form key in the same order"
     }
 }

@@ -238,13 +238,13 @@ describe('comboboxField server-side search in Chromium', () => {
         expect(input(mounted.element).value).toBe('Zürich');
     });
 
-    it('should send an on.query emit to hooks.onEmit with the typed text', async () => {
+    it('should tell hooks.onRaised of a query with the typed text when the field carries an @id', async () => {
         // Arrange
-        const onEmit = vi.fn();
+        const queries: unknown[] = [];
         const mounted = mountComponent(
             'comboboxField',
-            { '<-options': '$.data.cities', on: { query: { command: 'emit', target: 'cities.search' } } },
-            { data: { cities }, hooks: { onEmit } }
+            { '<-options': '$.data.cities', '@id': 'cities' },
+            { data: { cities }, hooks: { onRaised: (report) => void (report.event === 'query' ? queries.push([report.id, report.value]) : undefined) } }
         );
         await wait(0);
 
@@ -253,8 +253,7 @@ describe('comboboxField server-side search in Chromium', () => {
         await wait(300);
 
         // Assert
-        expect(onEmit).toHaveBeenCalledTimes(1);
-        expect(onEmit.mock.calls[0]).toEqual(['cities.search', 'ber']);
+        expect(queries).toEqual([['cities', 'ber']]);
     });
 
     it('should show the spinner row text in German', async () => {

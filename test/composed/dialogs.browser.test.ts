@@ -19,7 +19,6 @@ const mounted: { dispose(): void; host: HTMLElement; unregister(): void }[] = []
 interface Dialogs {
     host: HTMLElement;
     store: NonNullable<ReturnType<typeof mountApp>['store']>;
-    emitted: { name: string; payload: unknown }[];
     switchTo(code: string): void;
 }
 
@@ -41,12 +40,11 @@ function mount(app: Record<string, unknown>, data: Record<string, unknown> = {})
     }
     const host = globalThis.document.body.appendChild(globalThis.document.createElement('div'));
     const locale = registerLocaleStep(overlays);
-    const emitted: { name: string; payload: unknown }[] = [];
     const document = { locale: 'en', data, app } as unknown as AppDocument;
-    const result = mountApp(host, document, library, { onEmit: (name: string, payload: unknown) => emitted.push({ name, payload }) });
+    const result = mountApp(host, document, library);
     if (!result.store) throw new Error(`the dialogs did not mount: ${result.errors.map((error) => error.message).join('; ')}`);
     mounted.push({ host, dispose: () => result.dispose(), unregister: () => locale.unregister() });
-    return { host, store: result.store, emitted, switchTo: (code) => void locale.switchTo(code) };
+    return { host, store: result.store, switchTo: (code) => void locale.switchTo(code) };
 }
 
 const modals = (host: HTMLElement): HTMLElement[] => deep(host, 'ui-modal');
@@ -135,7 +133,7 @@ describe('confirmDialog and formDialog in Chromium', () => {
                             on: {
                                 press: [
                                     { command: 'close', target: '#confirmDialog' },
-                                    { command: 'emit', target: 'record.delete', value: 7 }
+                                    { command: 'set', target: '$.data.deleted', value: 7 }
                                 ]
                             }
                         }
@@ -152,7 +150,7 @@ describe('confirmDialog and formDialog in Chromium', () => {
 
             // Assert
             expect(isOpen(modal)).toBe(false);
-            expect(dialogs.emitted).toEqual([{ name: 'record.delete', payload: 7 }]);
+            expect(dialogs.store.get('$.data.deleted')).toBe(7);
         });
 
         it('should apply overrides of the exposed text paths', () => {

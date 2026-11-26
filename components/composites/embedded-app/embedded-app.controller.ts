@@ -13,13 +13,21 @@ interface EmbeddedApp {
     dispose(): void;
 }
 
+/** What a node of the app inside that carries an `@id` raised (`RaisedReport` of `@punyts/stateui-app`) */
+interface RaisedReport {
+    readonly id: string;
+    readonly event: string;
+    readonly value?: unknown;
+    readonly row?: unknown;
+}
+
 /** The detail of `ui-app-open`, in the shape `@punyts/stateui-app` reads it */
 interface AppOpenRequest {
     readonly app: string;
     readonly screen?: string;
     readonly live: boolean;
     readonly element: Element;
-    readonly onEmit: (name: string, payload: unknown) => void;
+    readonly onRaised: (report: RaisedReport) => void;
     readonly onNavigate: (screen: string) => void;
     readonly respond: (result: Promise<EmbeddedApp>) => void;
 }
@@ -45,8 +53,8 @@ interface Opening {
  * A preview (`live` false) is inert: it takes no input, and a press or Enter on it raises `press`, a right press or the
  * context-menu key `menu`, both with `{ app, screen }`. A live app takes its own input: its frame is marked
  * `data-own-gestures="all"`, so a `viewport` around it neither pans on a drag nor scrolls on a wheel over it. The app inside raises
- * `navigated` with `{ screen }` when it moves to another screen itself, and `emit` with `{ name, payload }` for each of
- * its emits. Its state is its own: nothing of it is in this app's store
+ * `navigated` with `{ screen }` when it moves to another screen itself, and `raised` with `{ id, event, value?, row? }`
+ * for each event of one of its nodes that carries an `@id`. Its state is its own: nothing of it is in this app's store
  */
 export default function controller({ element, store, basePath }: ControllerContext) {
     const read = (name: string): unknown => store.get<unknown>(`${basePath}.${name}`);
@@ -107,7 +115,7 @@ export default function controller({ element, store, basePath }: ControllerConte
             live: isLive,
             ...(screen === '' ? {} : { screen }),
             element: holder,
-            onEmit: (name, payload) => raise('emit', { name, payload }),
+            onRaised: (raised) => raise('raised', raised),
             onNavigate: (shown) => {
                 current.screen = shown;
                 raise('navigated', { screen: shown });

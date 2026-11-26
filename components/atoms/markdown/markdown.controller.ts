@@ -12,7 +12,7 @@ const wholeNumber = (value: unknown, fallback: number): number => (typeof value 
  * rendered tree once per microtask, and only when one of the four differs from what is shown.
  *
  * A link is a `span` with `role="link"` and `data-href` and no `href`, so it cannot navigate or open a window. A click, or
- * Enter on the focused link, raises `press` with `{ href }`; the application may connect `press` to an `emit`. The source
+ * Enter on the focused link, raises `press` with `{ href }`; with an `@id` on the node the host is told of it. The source
  * is cut at a block boundary by `maxLength`, and the host gets `data-truncated` when it was cut
  */
 export default function controller({ element, store, basePath }: ControllerContext) {

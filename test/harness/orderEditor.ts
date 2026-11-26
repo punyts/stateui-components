@@ -1,5 +1,5 @@
 import { libraryFromCatalog, mountApp, registerLocaleStep } from '@punyts/stateui-app';
-import type { AppDocument, AppState, ComponentLibrary } from '@punyts/stateui-app';
+import type { AppDocument, AppState, ComponentLibrary, RaisedReport } from '@punyts/stateui-app';
 import type { Catalog } from '@punyts/stateui-app/build';
 import type { Store } from '@punyts/state';
 import realCatalog from '../../.test-build/real/components/catalog.json';
@@ -80,8 +80,8 @@ export interface MountedOrderDocument {
     store: Store<AppState>;
     /** The document as it was mounted, for `validateDocument` */
     document: AppDocument;
-    /** Every `hooks.onEmit` call, in order */
-    emitted: { name: string; payload: unknown }[];
+    /** Every `hooks.onRaised` report, in order */
+    raised: RaisedReport[];
     /** Switches the language through the locale step the real runtime uses; throws with its errors */
     switchTo(code: string): void;
     dispose(): void;
@@ -92,7 +92,7 @@ let registered = false;
 
 /**
  * Mounts a whole document (`{ locale, data, app, ... }`) against the real library plus the fixture's `orderEditor`,
- * with the locale step registered and `hooks.onEmit` recorded. Throws with the errors when it does not mount.
+ * with the locale step registered and `hooks.onRaised` recorded. Throws with the errors when it does not mount.
  * Call `unmountOrderDocuments()` in `afterEach`
  */
 export function mountOrderDocument(document: Readonly<Record<string, unknown>>): MountedOrderDocument {
@@ -102,9 +102,9 @@ export function mountOrderDocument(document: Readonly<Record<string, unknown>>):
     }
     const host = globalThis.document.body.appendChild(globalThis.document.createElement('div'));
     const locale = registerLocaleStep(overlays);
-    const emitted: MountedOrderDocument['emitted'] = [];
+    const raised: RaisedReport[] = [];
     const app = mountApp(host, document as unknown as AppDocument, orderEditorLibrary, {
-        onEmit: (name: string, payload: unknown) => void emitted.push({ name, payload })
+        onRaised: (report: RaisedReport) => void raised.push(report)
     });
     if (!app.store) {
         locale.unregister();
@@ -116,7 +116,7 @@ export function mountOrderDocument(document: Readonly<Record<string, unknown>>):
         host,
         store: app.store,
         document: document as unknown as AppDocument,
-        emitted,
+        raised,
         switchTo(code) {
             const errors = locale.switchTo(code);
             if (errors.length > 0) throw new Error(errors.map((error) => `${error.code} ${error.message}`).join('\n'));

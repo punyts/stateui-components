@@ -170,28 +170,24 @@ describe('form submit, reset and commit in Chromium', () => {
         expect(errors.mock.calls[0]?.[1]).toMatchObject({ code: 'SUI-RUN-BINDING' });
     });
 
-    it('should reach hooks.onEmit and a set command through on wiring', () => {
+    it('should tell hooks.onRaised of the submit through the form id and run a set command through on wiring', () => {
         // Arrange
-        const onEmit = vi.fn();
+        const onRaised = vi.fn();
         const mounted = mountForm(
             { name: field({ value: 'Ada' }) },
             {
-                on: {
-                    submitted: [
-                        { command: 'emit', target: 'form.saved', value: 1 },
-                        { command: 'set', target: '$.data.flag', value: true }
-                    ]
-                }
+                '@id': 'profile',
+                on: { submitted: [{ command: 'set', target: '$.data.flag', value: true }] }
             },
-            { hooks: { onEmit } }
+            { hooks: { onRaised } }
         );
 
         // Act
         command(mounted.element, 'submit');
 
         // Assert
-        expect(onEmit).toHaveBeenCalledTimes(1);
-        expect(onEmit.mock.calls[0]?.[0]).toBe('form.saved');
+        const submits = onRaised.mock.calls.map(([report]) => report as { id: string; event: string }).filter((report) => report.event === 'submitted');
+        expect(submits.map((report) => report.id)).toEqual(['profile']);
         expect(mounted.store.get('$.data.flag')).toBe(true);
     });
 

@@ -3,7 +3,7 @@
     "category": "layout",
     "purposes": ["show another app inside a page", "preview a screen of an app", "place a live app on a board", "embed an app by its name"],
     "tokenGroup": "embed",
-    "events": ["press", "menu", "navigated", "emit"],
+    "events": ["press", "menu", "navigated", "raised"],
     "tokens": {
         "fill": "{color.surface.base}",
         "border": "{color.border.base}",

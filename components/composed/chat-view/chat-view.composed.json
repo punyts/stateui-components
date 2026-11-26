@@ -23,26 +23,16 @@
             "_placeholder": "Type a message",
             "streaming": false,
             "attach": true,
-            "suggestions": {},
-            "on": {
-                "send": {
-                    "command": "emit",
-                    "target": "chat.send"
-                },
-                "stop": {
-                    "command": "emit",
-                    "target": "chat.stop"
-                }
-            }
+            "suggestions": {}
         }
     },
     "exposes": {
         "children.messages.records": "The messages shown: link it with <-records to an array in $.data of records { id, author, text, time, streaming }; a reply that streams in is one record whose text is rewritten per chunk, with streaming true until it ends (the row shows a typing indicator meanwhile)",
-        "children.composer.streaming": "Link it with <-streaming to a boolean that is true while a reply streams: the send button becomes a stop button that emits chat.stop",
+        "children.composer.streaming": "Link it with <-streaming to a boolean that is true while a reply streams: the send button becomes a stop button that raises stop",
         "children.composer.suggestions": "Prompts offered while the composer is empty: a map of { _label, _prompt }; a press sends the prompt",
         "children.composer.attach": "Whether files can be attached (default true); accept and maxFiles narrow them",
         "children.composer._placeholder": "The hint in the empty composer",
-        "children.composer.on.send": "What sending does: the default emits chat.send with { text, attachments } (attachments are file references); rename the target to change the event name. The composer clears itself",
-        "children.composer.on.stop": "What the stop button does: the default emits chat.stop"
+        "children.composer.on.send": "What sending does with { text, attachments } (attachments are file references); give the composer an @id and the host is told of each send and stop instead. The composer clears itself",
+        "children.composer.on.stop": "What the stop button does"
     }
 }

@@ -1,6 +1,7 @@
 import { report } from '@punyts/core';
 import { userEvent } from 'vitest/browser';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { RaisedReport } from '@punyts/stateui-app';
 import { mountComponent } from '../harness/mountComponent.js';
 import type { MountedComponent, MountOptions, NodeState } from '../harness/createMountComponent.js';
 
@@ -21,13 +22,20 @@ async function drawn(mounted: MountedComponent): Promise<void> {
 interface Mounted extends MountedComponent {
     /** The `press` and `hover` events the drawing raised, in order */
     readonly raised: { type: string; detail: { shape: string; key: string; x: number; y: number } }[];
-    /** The names `emit` commands sent to the host */
-    readonly emitted: string[];
+    /** What the host was told of the shapes with an `@id` (`seat-<name>`): `pressed-<name>` and `hovered-<name>` */
+    readonly told: string[];
+}
+
+/** Records a press or hover of a shape whose `@id` is `seat-<name>` as `pressed-<name>` or `hovered-<name>` */
+function tell(told: string[], report: RaisedReport): void {
+    const seat = report.id.replace(/^seat-/, '');
+    if (report.event === 'press') told.push(`pressed-${seat}`);
+    else if (report.event === 'hover') told.push(`hovered-${seat}`);
 }
 
 async function mountDrawing(node: NodeState, options: MountOptions = {}): Promise<Mounted> {
-    const emitted: string[] = [];
-    const mounted = mountComponent('drawing', node, { data: { ui: { seat: '', hovered: '' } }, ...options, hooks: { onEmit: (name) => emitted.push(name) } });
+    const told: string[] = [];
+    const mounted = mountComponent('drawing', node, { data: { ui: { seat: '', hovered: '' } }, ...options, hooks: { onRaised: (report) => tell(told, report) } });
     const raised: Mounted['raised'] = [];
     for (const type of ['press', 'hover']) {
         mounted.element.addEventListener(type, (event) => raised.push({ type, detail: (event as CustomEvent).detail }));
@@ -36,8 +44,8 @@ async function mountDrawing(node: NodeState, options: MountOptions = {}): Promis
     // The pointer stays where the last test left it: park it on empty drawing space and forget what that raised
     await userEvent.hover(surfaceOf(mounted), { position: { x: 2, y: 2 } });
     raised.length = 0;
-    emitted.length = 0;
-    return Object.assign(mounted, { raised, emitted });
+    told.length = 0;
+    return Object.assign(mounted, { raised, told });
 }
 
 const shapeAt = (mounted: MountedComponent, path: string): SVGElement => {
@@ -48,12 +56,9 @@ const shapeAt = (mounted: MountedComponent, path: string): SVGElement => {
 
 const surfaceOf = (mounted: MountedComponent): HTMLElement => mounted.element.shadowRoot?.querySelector('.surface') as HTMLElement;
 
-/** An `on` entry that records the seat and tells the host once per run */
+/** An `on` entry that records the seat; the shape's `@id` tells the host */
 const pressOn = (seat: string) => ({
-    press: [
-        { command: 'set', target: '$.data.ui.seat', value: seat },
-        { command: 'emit', target: `pressed-${seat}` }
-    ]
+    press: [{ command: 'set', target: '$.data.ui.seat', value: seat }]
 });
 
 /** Two seats side by side: `a` interactive, `b` not; both have a press entry, and `a` a hover entry */
@@ -69,9 +74,10 @@ const seats = {
             fill: '#336699',
             interactive: true,
             _label: 'Seat A',
-            on: { ...pressOn('a'), hover: { command: 'emit', target: 'hovered-a' } }
+            '@id': 'seat-a',
+            on: pressOn('a')
         },
-        b: { component: 'rect', x: 60, y: 10, width: 30, height: 30, fill: '#993366', on: pressOn('b') }
+        b: { component: 'rect', '@id': 'seat-b', x: 60, y: 10, width: 30, height: 30, fill: '#993366', on: pressOn('b') }
     }
 };
 
@@ -113,7 +119,7 @@ describe('drawing events with the SVG renderer in Chromium', () => {
         // Assert
         expect(mounted.store.get('$.data.ui.seat')).toBe('a');
         // The pointer entered the shape on its way to the click, so it hovered it first
-        expect(mounted.emitted).toEqual(['hovered-a', 'pressed-a']);
+        expect(mounted.told).toEqual(['hovered-a', 'pressed-a']);
         const presses = mounted.raised.filter((event) => event.type === 'press');
         expect(presses).toHaveLength(1);
         expect(presses[0]?.detail.shape).toBe(`${ROOT}.a`);
@@ -135,7 +141,7 @@ describe('drawing events with the SVG renderer in Chromium', () => {
 
         // Assert
         expect(mounted.store.get('$.data.ui.seat')).toBe('');
-        expect(mounted.emitted).toEqual([]);
+        expect(mounted.told).toEqual([]);
         expect(mounted.raised).toEqual([]);
     });
 
@@ -149,13 +155,13 @@ describe('drawing events with the SVG renderer in Chromium', () => {
         await userEvent.hover(a);
         await userEvent.hover(a, { position: { x: 2, y: 2 } });
         await userEvent.hover(a, { position: { x: 20, y: 20 } });
-        const afterFirstEntry = mounted.emitted.length;
+        const afterFirstEntry = mounted.told.length;
         await userEvent.hover(surface, { position: { x: 2, y: 2 } });
         await userEvent.hover(a);
 
         // Assert
         expect(afterFirstEntry).toBe(1);
-        expect(mounted.emitted).toEqual(['hovered-a', 'hovered-a']);
+        expect(mounted.told).toEqual(['hovered-a', 'hovered-a']);
         const hovers = mounted.raised.filter((event) => event.type === 'hover');
         expect(hovers.map((event) => event.detail.shape)).toEqual([`${ROOT}.a`, `${ROOT}.a`]);
         expect(hovers[0]?.detail.x).toBeGreaterThanOrEqual(10);
@@ -185,7 +191,7 @@ describe('drawing events with the SVG renderer in Chromium', () => {
 
         // Assert
         expect(mounted.element.shadowRoot?.activeElement).toBe(a);
-        expect(mounted.emitted).toEqual(['pressed-a', 'pressed-a']);
+        expect(mounted.told).toEqual(['pressed-a', 'pressed-a']);
         expect(mounted.raised.map((event) => [event.type, event.detail.shape, event.detail.x, event.detail.y])).toEqual([
             ['press', `${ROOT}.a`, 25, 25],
             ['press', `${ROOT}.a`, 25, 25]
@@ -204,7 +210,7 @@ describe('drawing events with the SVG renderer in Chromium', () => {
         // Assert
         expect(mounted.element.shadowRoot?.activeElement).not.toBe(b);
         expect(mounted.raised).toEqual([]);
-        expect(mounted.emitted).toEqual([]);
+        expect(mounted.told).toEqual([]);
     });
 
     it("should run the row template's entry for a pressed repeat copy with $row at its record", async () => {
@@ -280,11 +286,11 @@ const canvasOf = (mounted: MountedComponent): HTMLCanvasElement => mounted.eleme
 
 /** Mounts a drawing on the canvas renderer at 200 by 100 CSS pixels, waits until it is drawn and parks the pointer */
 async function mountCanvasDrawing(node: NodeState, options: MountOptions = {}): Promise<Mounted> {
-    const emitted: string[] = [];
+    const told: string[] = [];
     const mounted = mountComponent(
         'drawing',
         { renderer: 'canvas', ...node },
-        { data: { ui: { seat: '', hovered: '' } }, ...options, hooks: { onEmit: (name) => emitted.push(name) } }
+        { data: { ui: { seat: '', hovered: '' } }, ...options, hooks: { onRaised: (report) => tell(told, report) } }
     );
     mounted.host.style.width = '200px';
     (mounted.element as HTMLElement).style.setProperty('--ui-drawing-height', '100px');
@@ -295,8 +301,8 @@ async function mountCanvasDrawing(node: NodeState, options: MountOptions = {}): 
     await drawn(mounted);
     await userEvent.hover(canvasOf(mounted), { position: { x: 2, y: 2 } });
     raised.length = 0;
-    emitted.length = 0;
-    return Object.assign(mounted, { raised, emitted });
+    told.length = 0;
+    return Object.assign(mounted, { raised, told });
 }
 
 /** The proxy buttons of a canvas drawing, in document order */
@@ -356,7 +362,7 @@ describe('drawing events with the canvas renderer in Chromium', () => {
 
         // Assert
         expect(mounted.store.get('$.data.ui.seat')).toBe('a');
-        expect(mounted.emitted).toEqual(['hovered-a', 'pressed-a']);
+        expect(mounted.told).toEqual(['hovered-a', 'pressed-a']);
         const presses = mounted.raised.filter((event) => event.type === 'press');
         expect(presses).toHaveLength(1);
         expect(presses[0]?.detail.shape).toBe(`${ROOT}.a`);
@@ -378,13 +384,13 @@ describe('drawing events with the canvas renderer in Chromium', () => {
 
         // Assert
         expect(mounted.store.get('$.data.ui.seat')).toBe('');
-        expect(mounted.emitted).toEqual([]);
+        expect(mounted.told).toEqual([]);
         expect(mounted.raised).toEqual([]);
     });
 
     it('should pass a click through a non-interactive shape on top to the interactive shape below, as SVG does', async () => {
         // Arrange: a plain shape drawn over seat a
-        const cover = { component: 'rect', x: 15, y: 15, width: 20, height: 20, fill: '#000000', on: pressOn('cover') };
+        const cover = { component: 'rect', x: 15, y: 15, width: 20, height: 20, fill: '#000000', '@id': 'seat-cover', on: pressOn('cover') };
         const mounted = await mountCanvasDrawing({ ...seats, children: { ...seats.children, cover } });
 
         // Act
@@ -404,13 +410,13 @@ describe('drawing events with the canvas renderer in Chromium', () => {
         await userEvent.hover(canvas, at(25, 25));
         await userEvent.hover(canvas, at(12, 12));
         await userEvent.hover(canvas, at(38, 30));
-        const afterFirstEntry = mounted.emitted.length;
+        const afterFirstEntry = mounted.told.length;
         await userEvent.hover(canvas, at(1, 1));
         await userEvent.hover(canvas, at(25, 25));
 
         // Assert
         expect(afterFirstEntry).toBe(1);
-        expect(mounted.emitted).toEqual(['hovered-a', 'hovered-a']);
+        expect(mounted.told).toEqual(['hovered-a', 'hovered-a']);
         const hovers = mounted.raised.filter((event) => event.type === 'hover');
         expect(hovers.map((event) => event.detail.shape)).toEqual([`${ROOT}.a`, `${ROOT}.a`]);
         expect(Math.abs(hovers[0]!.detail.x - 25)).toBeLessThanOrEqual(1);
@@ -441,7 +447,7 @@ describe('drawing events with the canvas renderer in Chromium', () => {
 
         // Assert
         expect(mounted.element.shadowRoot?.activeElement).toBe(a);
-        expect(mounted.emitted).toEqual(['pressed-a', 'pressed-a']);
+        expect(mounted.told).toEqual(['pressed-a', 'pressed-a']);
         expect(mounted.raised.map((event) => [event.type, event.detail.shape, event.detail.x, event.detail.y])).toEqual([
             ['press', `${ROOT}.a`, 25, 25],
             ['press', `${ROOT}.a`, 25, 25]
@@ -456,7 +462,7 @@ describe('drawing events with the canvas renderer in Chromium', () => {
         proxyOf(mounted, 'a').click();
 
         // Assert
-        expect(mounted.emitted).toEqual(['pressed-a']);
+        expect(mounted.told).toEqual(['pressed-a']);
         expect(mounted.raised.map((event) => [event.type, event.detail.shape, event.detail.x, event.detail.y])).toEqual([['press', `${ROOT}.a`, 25, 25]]);
     });
 

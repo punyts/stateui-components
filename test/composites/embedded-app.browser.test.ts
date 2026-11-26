@@ -10,7 +10,7 @@ import type { MountedComponent } from '../harness/createMountComponent.js';
 const library = libraryFromCatalog(catalog as unknown as Catalog);
 const flush = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
 
-/** An app of two screens that shows `$.data.name`, emits `saved` and moves itself to `about` */
+/** An app of two screens that shows `$.data.name`, has a Save button with the id `save` and moves itself to `about` */
 const SHOP: AppDocument = {
     data: { name: 'Ada' },
     start: 'home',
@@ -21,7 +21,7 @@ const SHOP: AppDocument = {
                 component: 'panel',
                 children: {
                     hello: { component: 'text', '<-_text': '$.data.name' },
-                    save: { component: 'button', _title: 'Save', on: { press: { command: 'emit', target: 'saved', value: 'yes' } } },
+                    save: { component: 'button', '@id': 'save', _title: 'Save' },
                     more: { component: 'button', _title: 'More', on: { press: { command: 'navigate', target: 'about' } } }
                 }
             }
@@ -212,14 +212,14 @@ describe('embeddedApp in Chromium', () => {
         expect(textOf(holder(mounted))).toContain('Ada');
     });
 
-    it('should raise emit and navigated from the live app, and not run the page node for the app’s own presses', async () => {
+    it('should raise raised and navigated from the live app, and not run the page node for the app’s own presses', async () => {
         // Arrange
         const apps = shopHost();
-        const emits: unknown[] = [];
+        const reports: { id: string; event: string }[] = [];
         const screens: unknown[] = [];
         const mounted = mountComponent('embeddedApp', { app: 'shop', live: true, on: { press: { command: 'set', target: '$.data.pressed', value: true } } }, { apps, data: { pressed: false } });
         await flush();
-        mounted.element.addEventListener('emit', (event) => emits.push((event as CustomEvent).detail));
+        mounted.element.addEventListener('raised', (event) => reports.push((event as CustomEvent).detail));
         mounted.element.addEventListener('navigated', (event) => screens.push((event as CustomEvent).detail));
         const [save, more] = ['Save', 'More'].map((label) => findAll(holder(mounted), 'ui-button').find((button) => textOf(button.shadowRoot!).includes(label)));
 
@@ -229,7 +229,7 @@ describe('embeddedApp in Chromium', () => {
         await flush();
 
         // Assert
-        expect(emits).toEqual([{ name: 'saved', payload: 'yes' }]);
+        expect(reports.map((report) => [report.id, report.event])).toEqual([['save', 'press']]);
         expect(screens).toEqual([{ screen: 'about' }]);
         expect(textOf(holder(mounted))).toContain('About the shop');
         expect(mounted.store.get('$.data.pressed')).toBe(false);

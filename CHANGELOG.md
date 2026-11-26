@@ -1,6 +1,16 @@
 # Changelog
 
 ## Unreleased
+- **Composed components no longer emit; a host hears a node through its `@id`** (docs/design/state-definitions-and-instances.md).
+  Breaking. The `emit` command is gone from `@punyts/stateui-app`: `chatView` no longer emits `chat.send`/`chat.stop`,
+  `crudTable` no longer emits `crudTable.edit`/`.save`/`.delete`/`.search`, and `wizard` no longer emits `wizard.done`;
+  an app adds its own `on` commands or gives the inner node an `@id`, and the host's `onRaised` gets
+  `{ id, event, value?, row? }` for each of its events. `embeddedApp` raises `raised` with that report in place of `emit`
+  with `{ name, payload }`. The test harness takes `hooks.onRaised`. Tests: `test/composed/chat-view.browser.test.ts`,
+  `crud-table.browser.test.ts`, `wizard.browser.test.ts`, `order-editor.browser.test.ts`, `dialogs.browser.test.ts`,
+  `test/composites/embedded-app.browser.test.ts`, `chart-press.browser.test.ts`, `drawing-events.browser.test.ts`,
+  `form-submit.browser.test.ts`, `tree-diagram.browser.test.ts` ("… tell the host of their record …", the row),
+  `test/molecules/combobox-field-search.browser.test.ts`.
 - **A press is `{ at, device }` and transient** (docs/design/state-definitions-and-instances.md). Breaking: the button's
   `clicked` is replaced by `pressed`, which each press sets to the time and `$.runtime.device`, and the definition
   marks it `@transient`, so a press reaches the logic that listens and is never stored. Test:
