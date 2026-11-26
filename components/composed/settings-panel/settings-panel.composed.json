@@ -14,9 +14,9 @@
                     "_label": "General",
                     "on": {
                         "press": [
-                            { "command": "set", "target": "^settingsPanel.children.sections.children.general.hidden", "value": false },
-                            { "command": "set", "target": "^settingsPanel.children.sections.children.notifications.hidden", "value": true },
-                            { "command": "set", "target": "^settingsPanel.children.sections.children.appearance.hidden", "value": true }
+                            { "command": "set", "target": "#settingsPanel.children.sections.children.general.hidden", "value": false },
+                            { "command": "set", "target": "#settingsPanel.children.sections.children.notifications.hidden", "value": true },
+                            { "command": "set", "target": "#settingsPanel.children.sections.children.appearance.hidden", "value": true }
                         ]
                     }
                 },
@@ -25,9 +25,9 @@
                     "_label": "Notifications",
                     "on": {
                         "press": [
-                            { "command": "set", "target": "^settingsPanel.children.sections.children.general.hidden", "value": true },
-                            { "command": "set", "target": "^settingsPanel.children.sections.children.notifications.hidden", "value": false },
-                            { "command": "set", "target": "^settingsPanel.children.sections.children.appearance.hidden", "value": true }
+                            { "command": "set", "target": "#settingsPanel.children.sections.children.general.hidden", "value": true },
+                            { "command": "set", "target": "#settingsPanel.children.sections.children.notifications.hidden", "value": false },
+                            { "command": "set", "target": "#settingsPanel.children.sections.children.appearance.hidden", "value": true }
                         ]
                     }
                 },
@@ -36,9 +36,9 @@
                     "_label": "Appearance",
                     "on": {
                         "press": [
-                            { "command": "set", "target": "^settingsPanel.children.sections.children.general.hidden", "value": true },
-                            { "command": "set", "target": "^settingsPanel.children.sections.children.notifications.hidden", "value": true },
-                            { "command": "set", "target": "^settingsPanel.children.sections.children.appearance.hidden", "value": false }
+                            { "command": "set", "target": "#settingsPanel.children.sections.children.general.hidden", "value": true },
+                            { "command": "set", "target": "#settingsPanel.children.sections.children.notifications.hidden", "value": true },
+                            { "command": "set", "target": "#settingsPanel.children.sections.children.appearance.hidden", "value": false }
                         ]
                     }
                 }

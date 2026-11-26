@@ -44,9 +44,9 @@
                             "_title": "Check out",
                             "on": {
                                 "press": [
-                                    { "command": "complete", "target": "^steps", "value": "bag" },
-                                    { "command": "set", "target": "^steps.active", "value": "details" },
-                                    { "command": "select", "target": "^pages", "value": "details" }
+                                    { "command": "complete", "target": "#steps", "value": "bag" },
+                                    { "command": "set", "target": "#steps.active", "value": "details" },
+                                    { "command": "select", "target": "#pages", "value": "details" }
                                 ]
                             }
                         }
@@ -69,8 +69,8 @@
                                     "_title": "Back",
                                     "on": {
                                         "press": [
-                                            { "command": "set", "target": "^steps.active", "value": "bag" },
-                                            { "command": "select", "target": "^pages", "value": "bag" }
+                                            { "command": "set", "target": "#steps.active", "value": "bag" },
+                                            { "command": "select", "target": "#pages", "value": "bag" }
                                         ]
                                     }
                                 },
@@ -79,9 +79,9 @@
                         },
                         "on": {
                             "submitted": [
-                                { "command": "complete", "target": "^steps", "value": "details" },
-                                { "command": "set", "target": "^steps.active", "value": "payment" },
-                                { "command": "select", "target": "^pages", "value": "payment" }
+                                { "command": "complete", "target": "#steps", "value": "details" },
+                                { "command": "set", "target": "#steps.active", "value": "payment" },
+                                { "command": "select", "target": "#pages", "value": "payment" }
                             ]
                         }
                     },
@@ -101,15 +101,15 @@
                                     "_title": "Back",
                                     "on": {
                                         "press": [
-                                            { "command": "set", "target": "^steps.active", "value": "details" },
-                                            { "command": "select", "target": "^pages", "value": "details" }
+                                            { "command": "set", "target": "#steps.active", "value": "details" },
+                                            { "command": "select", "target": "#pages", "value": "details" }
                                         ]
                                     }
                                 },
                                 "place": { "component": "button", "_title": "Place order", "on": { "press": { "command": "submit", "target": "$parent" } } }
                             }
                         },
-                        "on": { "submitted": { "command": "complete", "target": "^steps", "value": "payment" } }
+                        "on": { "submitted": { "command": "complete", "target": "#steps", "value": "payment" } }
                     }
                 }
             }

@@ -134,7 +134,7 @@ describe('confirmDialog and formDialog in Chromium', () => {
                         confirm: {
                             on: {
                                 press: [
-                                    { command: 'close', target: '^confirmDialog' },
+                                    { command: 'close', target: '#confirmDialog' },
                                     { command: 'emit', target: 'record.delete', value: 7 }
                                 ]
                             }

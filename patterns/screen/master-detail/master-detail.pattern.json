@@ -24,15 +24,15 @@
                     "_title": "Edit",
                     "on": {
                         "press": [
-                            { "command": "set", "target": "^view.hidden", "value": true },
-                            { "command": "set", "target": "^editor.hidden", "value": false }
+                            { "command": "set", "target": "#view.hidden", "value": true },
+                            { "command": "set", "target": "#editor.hidden", "value": false }
                         ]
                     }
                 },
                 "children": {
                     "view": {
                         "component": "descriptionList",
-                        "<-record": "^list.current",
+                        "<-record": "#list.current",
                         "items": {
                             "title": { "_term": "Title", "field": "title" },
                             "description": { "_term": "Description", "field": "description" }
@@ -42,14 +42,14 @@
                         "component": "form",
                         "hidden": true,
                         "children": {
-                            "title": { "component": "textField", "_label": "Title", "required": true, "<-value": "^list.current.title" },
-                            "description": { "component": "textField", "_label": "Description", "<-value": "^list.current.description" }
+                            "title": { "component": "textField", "_label": "Title", "required": true, "<-value": "#list.current.title" },
+                            "description": { "component": "textField", "_label": "Description", "<-value": "#list.current.description" }
                         },
                         "actions": { "component": "button", "_title": "Done", "on": { "press": { "command": "submit", "target": "$parent" } } },
                         "on": {
                             "submitted": [
-                                { "command": "set", "target": "^editor.hidden", "value": true },
-                                { "command": "set", "target": "^view.hidden", "value": false }
+                                { "command": "set", "target": "#editor.hidden", "value": true },
+                                { "command": "set", "target": "#view.hidden", "value": false }
                             ]
                         }
                     }
@@ -61,7 +61,7 @@
         "row": { "path": "children.list.row", "description": "The row of one record in the list: link its content to $row fields" },
         "detail": {
             "path": "children.detail.children",
-            "description": "The views of the picked record: link them to ^list.current or a field of it, as view and editor do"
+            "description": "The views of the picked record: link them to #list.current or a field of it, as view and editor do"
         }
     },
     "params": {

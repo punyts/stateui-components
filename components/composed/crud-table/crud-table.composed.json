@@ -13,7 +13,7 @@
             "add": {
                 "component": "button",
                 "_title": "Add",
-                "on": { "press": { "command": "open", "target": "^crudTable.children.form" } }
+                "on": { "press": { "command": "open", "target": "#crudTable.children.form" } }
             }
         }
     },
@@ -34,8 +34,8 @@
                         "_title": "Delete",
                         "on": {
                             "press": [
-                                { "command": "set", "target": "^crudTable.children.table.selected", "value": "$row.id" },
-                                { "command": "open", "target": "^crudTable.children.confirm" }
+                                { "command": "set", "target": "#crudTable.children.table.selected", "value": "$row.id" },
+                                { "command": "open", "target": "#crudTable.children.confirm" }
                             ]
                         }
                     }
@@ -44,7 +44,7 @@
             "on": {
                 "activate": [
                     { "command": "emit", "target": "crudTable.edit" },
-                    { "command": "open", "target": "^crudTable.children.form" }
+                    { "command": "open", "target": "#crudTable.children.form" }
                 ]
             }
         },
@@ -54,7 +54,7 @@
             "body": {
                 "on": {
                     "submitted": [
-                        { "command": "close", "target": "^formDialog" },
+                        { "command": "close", "target": "#formDialog" },
                         { "command": "emit", "target": "crudTable.save" }
                     ]
                 }
@@ -68,7 +68,7 @@
                     "confirm": {
                         "on": {
                             "press": [
-                                { "command": "close", "target": "^confirmDialog" },
+                                { "command": "close", "target": "#confirmDialog" },
                                 { "command": "emit", "target": "crudTable.delete" }
                             ]
                         }

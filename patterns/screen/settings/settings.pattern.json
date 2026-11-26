@@ -14,9 +14,9 @@
                         "_label": "General",
                         "on": {
                             "press": [
-                                { "command": "set", "target": "^generalSection.hidden", "value": false },
-                                { "command": "set", "target": "^notificationsSection.hidden", "value": true },
-                                { "command": "set", "target": "^appearanceSection.hidden", "value": true }
+                                { "command": "set", "target": "#generalSection.hidden", "value": false },
+                                { "command": "set", "target": "#notificationsSection.hidden", "value": true },
+                                { "command": "set", "target": "#appearanceSection.hidden", "value": true }
                             ]
                         }
                     },
@@ -25,9 +25,9 @@
                         "_label": "Notifications",
                         "on": {
                             "press": [
-                                { "command": "set", "target": "^generalSection.hidden", "value": true },
-                                { "command": "set", "target": "^notificationsSection.hidden", "value": false },
-                                { "command": "set", "target": "^appearanceSection.hidden", "value": true }
+                                { "command": "set", "target": "#generalSection.hidden", "value": true },
+                                { "command": "set", "target": "#notificationsSection.hidden", "value": false },
+                                { "command": "set", "target": "#appearanceSection.hidden", "value": true }
                             ]
                         }
                     },
@@ -36,9 +36,9 @@
                         "_label": "Appearance",
                         "on": {
                             "press": [
-                                { "command": "set", "target": "^generalSection.hidden", "value": true },
-                                { "command": "set", "target": "^notificationsSection.hidden", "value": true },
-                                { "command": "set", "target": "^appearanceSection.hidden", "value": false }
+                                { "command": "set", "target": "#generalSection.hidden", "value": true },
+                                { "command": "set", "target": "#notificationsSection.hidden", "value": true },
+                                { "command": "set", "target": "#appearanceSection.hidden", "value": false }
                             ]
                         }
                     }

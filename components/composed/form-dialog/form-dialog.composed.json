@@ -9,7 +9,7 @@
         "children": {
             "name": { "component": "textField", "_label": "Name", "required": true }
         },
-        "on": { "submitted": [{ "command": "close", "target": "^formDialog" }] }
+        "on": { "submitted": [{ "command": "close", "target": "#formDialog" }] }
     },
     "footer": {
         "component": "toolbar",
@@ -19,12 +19,12 @@
                 "component": "button",
                 "variant": "ghost",
                 "_title": "Cancel",
-                "on": { "press": [{ "command": "close", "target": "^formDialog" }] }
+                "on": { "press": [{ "command": "close", "target": "#formDialog" }] }
             },
             "save": {
                 "component": "button",
                 "_title": "Save",
-                "on": { "press": [{ "command": "submit", "target": "^formDialog.body" }] }
+                "on": { "press": [{ "command": "submit", "target": "#formDialog.body" }] }
             }
         }
     },

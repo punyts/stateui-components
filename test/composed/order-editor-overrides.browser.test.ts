@@ -142,7 +142,7 @@ describe('orderEditor (E5.27): validation errors', () => {
 
     it('should report SUI-ON-TARGET for an on entry whose target does not resolve', () => {
         // Arrange
-        const document = orderDocument({}, { help: { component: 'button', on: { press: { command: 'open', target: '^missing' } } } });
+        const document = orderDocument({}, { help: { component: 'button', on: { press: { command: 'open', target: '#missing' } } } });
 
         // Act
         const errors = errorsOf(document);
@@ -153,7 +153,7 @@ describe('orderEditor (E5.27): validation errors', () => {
 
     it('should report SUI-LINK-MISSING for a link to a node path that does not exist', () => {
         // Arrange
-        const document = orderDocument({}, { note: { component: 'text', '<-_text': '^editor.body.children.nope._text' } });
+        const document = orderDocument({}, { note: { component: 'text', '<-_text': '#editor.body.children.nope._text' } });
 
         // Act
         const errors = errorsOf(document);

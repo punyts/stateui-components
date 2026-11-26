@@ -212,7 +212,7 @@ class TemplateCompiler {
  * Each copy is the template's shape tree with every property resolved: a value as written (read through `read`, so a
  * link the mount applied is followed); a `<-prop` link to `$row…` from the record (a missing field leaves the property
  * unset, so the shape's default applies); a link to any other target from the store, read once per bind and listed in
- * `watch`. Node references (`^name.path`) resolve when `library` and `owner` are given, as for a record view's row.
+ * `watch`. Node references (`#name.path`) resolve when `library` and `owner` are given, as for a record view's row.
  *
  * The copy of the record with key `k` has the path `<path>.rows.<k>`, its inner shapes `<path>.rows.<k>.children.…`,
  * and `targetOf(copy, prop)` gives the record path of each property a `$row` link set. Pure: it never writes to the

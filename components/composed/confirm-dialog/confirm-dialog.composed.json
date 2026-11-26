@@ -14,13 +14,13 @@
                 "component": "button",
                 "variant": "ghost",
                 "_title": "Cancel",
-                "on": { "press": [{ "command": "close", "target": "^confirmDialog" }] }
+                "on": { "press": [{ "command": "close", "target": "#confirmDialog" }] }
             },
             "confirm": {
                 "component": "button",
                 "tone": "danger",
                 "_title": "Delete",
-                "on": { "press": [{ "command": "close", "target": "^confirmDialog" }] }
+                "on": { "press": [{ "command": "close", "target": "#confirmDialog" }] }
             }
         }
     },
@@ -29,6 +29,6 @@
         "body._text": "The question the dialog asks",
         "footer.children.confirm._title": "Confirm button text",
         "footer.children.confirm.tone": "Confirm button tone",
-        "footer.children.confirm.on.press": "What confirming does: a list that replaces the default whole, so a minion keeps the close command (target ^confirmDialog) first and adds its own commands after it"
+        "footer.children.confirm.on.press": "What confirming does: a list that replaces the default whole, so a minion keeps the close command (target #confirmDialog) first and adds its own commands after it"
     }
 }

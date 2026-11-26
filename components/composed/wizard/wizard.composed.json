@@ -59,17 +59,17 @@
                         "submitted": [
                             {
                                 "command": "complete",
-                                "target": "^wizard.children.stepper",
+                                "target": "#wizard.children.stepper",
                                 "value": "details"
                             },
                             {
                                 "command": "set",
-                                "target": "^wizard.children.stepper.active",
+                                "target": "#wizard.children.stepper.active",
                                 "value": "options"
                             },
                             {
                                 "command": "select",
-                                "target": "^wizard.children.tabs",
+                                "target": "#wizard.children.tabs",
                                 "value": "options"
                             }
                         ]
@@ -111,12 +111,12 @@
                                     "press": [
                                         {
                                             "command": "set",
-                                            "target": "^wizard.children.stepper.active",
+                                            "target": "#wizard.children.stepper.active",
                                             "value": "details"
                                         },
                                         {
                                             "command": "select",
-                                            "target": "^wizard.children.tabs",
+                                            "target": "#wizard.children.tabs",
                                             "value": "details"
                                         }
                                     ]
@@ -138,17 +138,17 @@
                         "submitted": [
                             {
                                 "command": "complete",
-                                "target": "^wizard.children.stepper",
+                                "target": "#wizard.children.stepper",
                                 "value": "options"
                             },
                             {
                                 "command": "set",
-                                "target": "^wizard.children.stepper.active",
+                                "target": "#wizard.children.stepper.active",
                                 "value": "review"
                             },
                             {
                                 "command": "select",
-                                "target": "^wizard.children.tabs",
+                                "target": "#wizard.children.tabs",
                                 "value": "review"
                             }
                         ]
@@ -178,12 +178,12 @@
                                     "press": [
                                         {
                                             "command": "set",
-                                            "target": "^wizard.children.stepper.active",
+                                            "target": "#wizard.children.stepper.active",
                                             "value": "options"
                                         },
                                         {
                                             "command": "select",
-                                            "target": "^wizard.children.tabs",
+                                            "target": "#wizard.children.tabs",
                                             "value": "options"
                                         }
                                     ]

@@ -35,7 +35,7 @@
     "footer": {
         "component": "toolbar",
         "children": {
-            "save": { "component": "button", "_title": "Save", "on": { "press": { "command": "submit", "target": "^orderEditor.body.children.form" } } },
+            "save": { "component": "button", "_title": "Save", "on": { "press": { "command": "submit", "target": "#orderEditor.body.children.form" } } },
             "cancel": { "component": "button", "_title": "Cancel", "variant": "ghost", "on": { "press": { "command": "close", "target": "$parent" } } }
         }
     },
